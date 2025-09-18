@@ -31,13 +31,13 @@ export async function createClient() {
 // Service role client for admin operations (API routes only!)
 // WARNING: Never expose this to the client or use in Server Components
 export function createServiceRoleClient() {
-  if (!process.env.SUPABASE_SERVICE_ROLE) {
-    throw new Error('SUPABASE_SERVICE_ROLE is not set')
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
         getAll() {

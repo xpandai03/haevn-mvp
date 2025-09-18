@@ -6,48 +6,100 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { checkCityStatus } from '@/lib/data/cities'
+import { useAuth } from '@/lib/auth/context'
+import { useToast } from '@/hooks/use-toast'
+import { Loader2, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SignupPage() {
   const router = useRouter()
+  const { signUp, signIn } = useAuth()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     zipCode: ''
   })
-  const [cityStatus, setCityStatus] = useState<'live' | 'waitlist' | null>(null)
+  const [cityInfo, setCityInfo] = useState<{ name: string; status: 'live' | 'waitlist' } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
-    // Check city status
+    // Check city status first
     const city = checkCityStatus(formData.zipCode)
 
     if (!city) {
-      alert('Sorry, HAEVN is not available in your area yet.')
+      setError('Sorry, HAEVN is not available in your area yet.')
       setLoading(false)
       return
     }
 
-    setCityStatus(city.status)
+    setCityInfo(city)
 
-    // Store user data in localStorage for now (will use Supabase later)
-    localStorage.setItem('haevn_user', JSON.stringify({
-      ...formData,
-      city: city.name,
-      cityStatus: city.status,
-      surveyCompleted: false,
-      membershipTier: 'free'
-    }))
+    try {
+      // Create Supabase auth user with metadata
+      const { data: signUpData, error: signUpError } = await signUp(
+        formData.email,
+        formData.password,
+        {
+          full_name: formData.name,
+          city: city.name,
+          zip_code: formData.zipCode,
+          msa_status: city.status
+        }
+      )
 
-    // Redirect based on city status
-    if (city.status === 'waitlist') {
-      router.push('/waitlist')
-    } else {
-      router.push('/onboarding/survey')
+      if (signUpError) {
+        throw signUpError
+      }
+
+      // Store minimal data for onboarding flow
+      localStorage.setItem('haevn_onboarding', JSON.stringify({
+        city: city.name,
+        cityStatus: city.status
+      }))
+
+      // Auto-login after signup
+      const { error: signInError } = await signIn(formData.email, formData.password)
+
+      if (signInError) {
+        // If auto-login fails, still redirect to survey since account was created
+        console.warn('Auto-login failed after signup:', signInError)
+        toast({
+          title: 'Account created!',
+          description: 'Please sign in to continue.',
+        })
+        router.push('/auth/login')
+      } else {
+        // After successful login, ensure profile has city data
+        // This is a workaround for the trigger not having access to metadata
+        const { updateProfile } = await import('@/lib/actions/profile')
+        await updateProfile({
+          full_name: formData.name,
+          city: city.name,
+          msa_status: city.status
+        })
+
+        toast({
+          title: 'Welcome to HAEVN!',
+          description: 'Let\'s get started with your survey.',
+        })
+
+        // Always redirect to survey after successful signup and login
+        // The survey page will handle city status checks
+        router.push('/onboarding/survey')
+      }
+    } catch (err: any) {
+      console.error('Signup error:', err)
+      setError(err.message || 'Failed to create account')
+      setLoading(false)
     }
   }
 
@@ -107,9 +159,30 @@ export default function SignupPage() {
               />
             </div>
 
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign Up'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                'Sign Up'
+              )}
             </Button>
+
+            <div className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link href="/auth/login" className="text-primary hover:underline">
+                Sign In
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

@@ -5,35 +5,89 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Users, Calendar, BookOpen, Lock, CheckCircle } from 'lucide-react'
+import { Users, Calendar, BookOpen, Lock, CheckCircle, LogOut } from 'lucide-react'
+import { useAuth } from '@/lib/auth/context'
+import { createClient } from '@/lib/supabase/client'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [surveyResponses, setSurveyResponses] = useState<any>(null)
+  const { user: authUser, signOut } = useAuth()
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Load user data
-    const userData = localStorage.getItem('haevn_user')
-    const surveyData = localStorage.getItem('haevn_survey_responses')
+    async function loadProfile() {
+      if (!authUser) {
+        router.push('/auth/login')
+        return
+      }
 
-    if (userData) {
-      setUser(JSON.parse(userData))
-    } else {
-      // Redirect to signup if no user
-      router.push('/auth/signup')
+      try {
+        // Load user profile from database
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', authUser.id)
+          .single()
+
+        if (error) {
+          console.error('Error loading profile:', error)
+          // Profile might not exist yet, create one
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: authUser.id,
+              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+              city: authUser.user_metadata?.city || 'New York',
+              msa_status: authUser.user_metadata?.msa_status || 'waitlist',
+              survey_complete: false
+            })
+            .select()
+            .single()
+
+          setProfile(newProfile)
+        } else {
+          setProfile(profileData)
+        }
+
+        // Check for partnership
+        const { data: partnerships } = await supabase
+          .from('partnership_members')
+          .select('partnership_id, partnerships(*)')
+          .eq('user_id', authUser.id)
+
+        if (partnerships && partnerships.length > 0) {
+          setProfile((prev: any) => ({
+            ...prev,
+            partnership: partnerships[0].partnerships,
+            membershipTier: partnerships[0].partnerships?.membership_tier || 'free'
+          }))
+        }
+      } catch (error) {
+        console.error('Error in loadProfile:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (surveyData) {
-      setSurveyResponses(JSON.parse(surveyData))
-    }
-  }, [router])
+    loadProfile()
+  }, [authUser, router, supabase])
 
-  if (!user) {
-    return <div>Loading...</div>
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/')
   }
 
-  const canAccessDiscovery = user.surveyCompleted && user.membershipTier !== 'free'
+  if (loading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    )
+  }
+
+  const canAccessDiscovery = profile.survey_complete && profile.membershipTier !== 'free'
 
   const pillars = [
     {
@@ -41,19 +95,19 @@ export default function DashboardPage() {
       title: 'Connections',
       description: 'Discover compatible matches',
       icon: Users,
-      locked: !user.surveyCompleted,
+      locked: !profile.survey_complete,
       action: () => {
-        if (!user.surveyCompleted) {
+        if (!profile.survey_complete) {
           alert('Please complete your survey first!')
           router.push('/onboarding/survey')
-        } else if (user.membershipTier === 'free') {
+        } else if (profile.membershipTier === 'free') {
           alert('Upgrade to HAEVN+ to access discovery')
           router.push('/onboarding/membership')
         } else {
           router.push('/connections')
         }
       },
-      stats: user.surveyCompleted ? 'Ready to explore' : 'Complete survey to unlock'
+      stats: profile.survey_complete ? 'Ready to explore' : 'Complete survey to unlock'
     },
     {
       id: 'events',
@@ -82,21 +136,24 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold">Welcome back, {user.name}!</h1>
-              <p className="text-muted-foreground mt-1">{user.city}</p>
+              <h1 className="text-3xl font-bold">Welcome back, {profile.full_name || 'Friend'}!</h1>
+              <p className="text-muted-foreground mt-1">{profile.city || 'Location pending'}</p>
             </div>
             <div className="flex gap-2">
-              <Badge variant={user.membershipTier === 'free' ? 'secondary' : 'default'}>
-                {user.membershipTier === 'free' ? 'Free' : user.membershipTier === 'plus' ? 'HAEVN+' : 'HAEVN Select'}
+              <Badge variant={profile.membershipTier === 'free' ? 'secondary' : 'default'}>
+                {profile.membershipTier === 'free' ? 'Free' : profile.membershipTier === 'plus' ? 'HAEVN+' : 'HAEVN Select'}
               </Badge>
-              {user.cityStatus === 'waitlist' && (
+              {profile.msa_status === 'waitlist' && (
                 <Badge variant="outline">Waitlist</Badge>
               )}
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           {/* Status alerts */}
-          {!user.surveyCompleted && (
+          {!profile.survey_complete && (
             <Card className="mt-4 border-orange-200 bg-orange-50">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
@@ -119,7 +176,7 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {user.surveyCompleted && user.membershipTier === 'free' && (
+          {profile.survey_complete && profile.membershipTier === 'free' && (
             <Card className="mt-4 border-blue-200 bg-blue-50">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
@@ -179,7 +236,7 @@ export default function DashboardPage() {
           <Button variant="outline" onClick={() => router.push('/settings')}>
             Settings
           </Button>
-          {user.membershipTier === 'free' && (
+          {profile.membershipTier === 'free' && (
             <Button onClick={() => router.push('/onboarding/membership')}>
               Upgrade Membership
             </Button>

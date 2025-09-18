@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Check } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
+import { useAuth } from '@/lib/auth/context'
+import { getCurrentPartnershipId, updatePartnership } from '@/lib/actions/partnership'
+import { useToast } from '@/hooks/use-toast'
 
 const tiers = [
   {
@@ -57,31 +60,88 @@ const tiers = [
 
 export default function MembershipPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [partnershipId, setPartnershipId] = useState<string | null>(null)
+
+  // Get partnership ID on mount
+  useEffect(() => {
+    async function loadPartnership() {
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
+      try {
+        const { id, error } = await getCurrentPartnershipId()
+        if (error || !id) {
+          throw new Error(error || 'Failed to get partnership')
+        }
+        setPartnershipId(id)
+      } catch (error) {
+        console.error('Error loading partnership:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load your profile. Please try again.',
+          variant: 'destructive'
+        })
+      }
+    }
+
+    loadPartnership()
+  }, [user, router, toast])
 
   const handleSelectTier = async (tierId: string) => {
+    // Temporary workaround: if no partnershipId, still allow selection
+    // The dashboard will handle partnership creation if needed
+    if (!partnershipId) {
+      console.warn('No partnership ID found, proceeding anyway')
+    }
+
     setSelectedTier(tierId)
     setLoading(true)
 
-    // Update user data with selected tier
-    const userData = localStorage.getItem('haevn_user')
-    if (userData) {
-      const user = JSON.parse(userData)
-      user.membershipTier = tierId
-      localStorage.setItem('haevn_user', JSON.stringify(user))
-    }
+    try {
+      // Update partnership with selected tier if we have one
+      if (partnershipId) {
+        const { success, error } = await updatePartnership(partnershipId, {
+          membership_tier: tierId as 'free' | 'plus' | 'select'
+        })
 
-    // For now, skip payment for non-free tiers (stub)
-    if (tierId !== 'free') {
-      // In production, redirect to Stripe checkout
-      console.log('Would redirect to payment for:', tierId)
-    }
+        if (error || !success) {
+          console.error('Failed to update membership tier:', error)
+          // Continue anyway, dashboard will handle it
+        }
+      }
 
-    // Redirect to dashboard
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 500)
+      // For now, skip payment for non-free tiers (stub)
+      if (tierId !== 'free') {
+        // In production, redirect to Stripe checkout
+        console.log('Would redirect to payment for:', tierId)
+      }
+
+      toast({
+        title: 'Membership selected!',
+        description: tierId === 'free'
+          ? 'Welcome to HAEVN Free!'
+          : `Welcome to HAEVN ${tierId === 'plus' ? '+' : 'Select'}!`,
+      })
+
+      // Redirect to dashboard
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
+    } catch (error) {
+      console.error('Error updating membership:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update membership. Please try again.',
+        variant: 'destructive'
+      })
+      setLoading(false)
+    }
   }
 
   return (

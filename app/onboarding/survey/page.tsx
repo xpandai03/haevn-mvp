@@ -1,175 +1,321 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Checkbox } from '@/components/ui/checkbox'
-import { surveySteps, calculateCompletion } from '@/lib/data/survey'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
+import { ProgressBar } from '@/components/survey/ProgressBar'
+import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
+import { useAuth } from '@/lib/auth/context'
+import { getCurrentPartnershipId } from '@/lib/actions/partnership'
+import { getSurveyData, saveSurveyData } from '@/lib/actions/survey'
+import {
+  surveySections,
+  getAllQuestions,
+  getActiveQuestions
+} from '@/lib/survey/questions'
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function SurveyPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [responses, setResponses] = useState<Record<string, any>>({})
-  const [completion, setCompletion] = useState(0)
-  const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [partnershipId, setPartnershipId] = useState<string | null>(null)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, any>>({})
+  const [completionPct, setCompletionPct] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null)
 
-  // Load saved responses on mount
+  // Get active questions based on skip logic
+  const activeQuestions = getActiveQuestions(answers)
+  const currentQuestion = activeQuestions[currentQuestionIndex]
+
+  // Find current section
+  const currentSection = surveySections.find(section =>
+    section.questions.some(q => q.id === currentQuestion?.id)
+  )
+
+  // Load survey data on mount
   useEffect(() => {
-    const savedResponses = localStorage.getItem('haevn_survey_responses')
-    if (savedResponses) {
-      const parsed = JSON.parse(savedResponses)
-      setResponses(parsed)
-      setCompletion(calculateCompletion(parsed))
+    async function loadSurveyData() {
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
 
-      // Find the first incomplete step
-      for (let i = 0; i < surveySteps.length; i++) {
-        const step = surveySteps[i]
-        const stepComplete = step.questions.every(q => parsed[q.id])
-        if (!stepComplete) {
-          setCurrentStep(i)
-          break
+      try {
+        console.log('[Survey] Loading survey data...')
+
+        // Get or create partnership
+        const { id: partnershipId, error: partnershipError } = await getCurrentPartnershipId()
+
+        if (partnershipError || !partnershipId) {
+          throw new Error(partnershipError || 'Failed to get partnership')
         }
+
+        setPartnershipId(partnershipId)
+
+        // Load existing survey responses
+        const { data: surveyData, error: surveyError } = await getSurveyData(partnershipId)
+
+        if (surveyError) {
+          throw new Error(surveyError)
+        }
+
+        if (surveyData) {
+          setAnswers(surveyData.answers_json)
+          setCompletionPct(surveyData.completion_pct)
+
+          // Find first unanswered question for resume
+          const activeQs = getActiveQuestions(surveyData.answers_json)
+          const firstUnanswered = activeQs.findIndex(q => !surveyData.answers_json[q.id])
+          setCurrentQuestionIndex(firstUnanswered >= 0 ? firstUnanswered : 0)
+
+          // If survey is complete, redirect
+          if (surveyData.completion_pct === 100) {
+            router.push('/onboarding/membership')
+          }
+        }
+      } catch (err) {
+        console.error('Error loading survey data:', err)
+        toast({
+          title: 'Error',
+          description: 'Failed to load survey data. Please try again.',
+          variant: 'destructive'
+        })
+      } finally {
+        setLoading(false)
       }
     }
-  }, [])
 
-  // Save responses whenever they change
-  useEffect(() => {
-    if (Object.keys(responses).length > 0) {
-      localStorage.setItem('haevn_survey_responses', JSON.stringify(responses))
-      setCompletion(calculateCompletion(responses))
+    loadSurveyData()
+  }, [user, router, toast])
+
+  // Auto-save with debouncing
+  const saveAnswers = useCallback(async (
+    newAnswers: Record<string, any>,
+    newQuestionIndex: number
+  ) => {
+    if (!partnershipId) return
+
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
     }
-  }, [responses])
 
-  const currentStepData = surveySteps[currentStep]
+    // Set new timeout for debounced save (500ms)
+    const timeout = setTimeout(async () => {
+      setSaveStatus('saving')
+      setSaveError(null)
 
-  const handleSingleSelect = (questionId: string, value: string) => {
-    setResponses({ ...responses, [questionId]: value })
-  }
+      try {
+        const { success, error } = await saveSurveyData(partnershipId, newAnswers, newQuestionIndex)
 
-  const handleMultiSelect = (questionId: string, value: string, checked: boolean) => {
-    const current = responses[questionId] || []
-    if (checked) {
-      setResponses({ ...responses, [questionId]: [...current, value] })
-    } else {
-      setResponses({ ...responses, [questionId]: current.filter((v: string) => v !== value) })
-    }
-  }
+        if (error || !success) {
+          throw new Error(error || 'Failed to save')
+        }
 
-  const isStepComplete = () => {
-    return currentStepData.questions.every(q => {
-      const response = responses[q.id]
-      if (q.type === 'multiselect') {
-        return response && response.length > 0
+        setSaveStatus('saved')
+
+        // Calculate new completion
+        const activeQs = getActiveQuestions(newAnswers)
+        const answeredCount = activeQs.filter(q => {
+          const answer = newAnswers[q.id]
+          if (Array.isArray(answer)) return answer.length > 0
+          return answer !== undefined && answer !== null && answer !== ''
+        }).length
+
+        const newCompletion = Math.round((answeredCount / activeQs.length) * 100)
+        setCompletionPct(newCompletion)
+
+        // Check if complete
+        if (newCompletion === 100) {
+          toast({
+            title: 'Survey Complete!',
+            description: 'Redirecting to membership selection...',
+          })
+          setTimeout(() => {
+            router.push('/onboarding/membership')
+          }, 1500)
+        }
+      } catch (error) {
+        console.error('Error saving survey:', error)
+        setSaveStatus('error')
+        setSaveError('Failed to save. Please check your connection.')
+
+        toast({
+          title: 'Save Error',
+          description: 'Failed to save your progress. Please try again.',
+          variant: 'destructive'
+        })
       }
-      return response
-    })
+    }, 500)
+
+    setSaveTimeout(timeout)
+  }, [partnershipId, saveTimeout, router, toast])
+
+  // Handle answer change
+  const handleAnswerChange = (value: any) => {
+    const newAnswers = {
+      ...answers,
+      [currentQuestion.id]: value
+    }
+    setAnswers(newAnswers)
+
+    // Trigger auto-save
+    saveAnswers({ [currentQuestion.id]: value }, currentQuestionIndex)
   }
 
+  // Navigation
   const handleNext = () => {
-    if (currentStep < surveySteps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    } else if (completion === 100) {
-      // Survey complete, update user data
-      const userData = localStorage.getItem('haevn_user')
-      if (userData) {
-        const user = JSON.parse(userData)
-        user.surveyCompleted = true
-        localStorage.setItem('haevn_user', JSON.stringify(user))
-      }
-      router.push('/onboarding/membership')
+    if (currentQuestionIndex < activeQuestions.length - 1) {
+      const newIndex = currentQuestionIndex + 1
+      setCurrentQuestionIndex(newIndex)
+      saveAnswers({}, newIndex) // Save current step
     }
   }
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
+    if (currentQuestionIndex > 0) {
+      const newIndex = currentQuestionIndex - 1
+      setCurrentQuestionIndex(newIndex)
+      saveAnswers({}, newIndex) // Save current step
     }
   }
 
-  const handleSaveAndExit = () => {
-    router.push('/dashboard')
+  const handleSaveAndExit = async () => {
+    setSaveStatus('saving')
+    try {
+      if (partnershipId) {
+        await saveSurveyData(partnershipId, answers, currentQuestionIndex)
+      }
+      router.push('/dashboard')
+    } catch (err) {
+      console.error('Error saving survey:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to save progress. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  // Check if current question is answered
+  const isCurrentQuestionAnswered = () => {
+    if (!currentQuestion) return false
+    const answer = answers[currentQuestion.id]
+
+    if (currentQuestion.type === 'multiselect') {
+      return answer && answer.length > 0
+    }
+    return answer !== undefined && answer !== null && answer !== ''
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading survey...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to load survey questions. Please refresh the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-3xl">
         <CardHeader>
           <div className="flex justify-between items-center mb-4">
-            <CardTitle>Complete Your Profile</CardTitle>
-            <Button variant="ghost" size="sm" onClick={handleSaveAndExit}>
-              Save & Exit
-            </Button>
-          </div>
-          <CardDescription>
-            Step {currentStep + 1} of {surveySteps.length}: {currentStepData.title}
-          </CardDescription>
-          <Progress value={completion} className="mt-2" />
-          <p className="text-xs text-muted-foreground mt-1">{completion}% Complete</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {currentStepData.questions.map((question) => (
-            <div key={question.id} className="space-y-3">
-              <Label>{question.label}</Label>
-
-              {question.type === 'select' && (
-                <RadioGroup
-                  value={responses[question.id] || ''}
-                  onValueChange={(value) => handleSingleSelect(question.id, value)}
-                >
-                  {question.options.map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option} id={`${question.id}-${option}`} />
-                      <Label htmlFor={`${question.id}-${option}`} className="font-normal cursor-pointer">
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
-
-              {question.type === 'multiselect' && (
-                <div className="space-y-2">
-                  {question.options.map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`${question.id}-${option}`}
-                        checked={responses[question.id]?.includes(option) || false}
-                        onCheckedChange={(checked) =>
-                          handleMultiSelect(question.id, option, checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={`${question.id}-${option}`} className="font-normal cursor-pointer">
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+            <div className="flex items-center gap-4">
+              <AutoSaveIndicator status={saveStatus} error={saveError} />
+              <Button variant="ghost" size="sm" onClick={handleSaveAndExit}>
+                Save & Exit
+              </Button>
             </div>
-          ))}
+          </div>
 
-          <div className="flex justify-between pt-6">
+          <ProgressBar
+            currentStep={currentQuestionIndex + 1}
+            totalSteps={activeQuestions.length}
+            completionPercentage={completionPct}
+            sectionName={currentSection?.title || ''}
+          />
+
+          {currentSection?.description && (
+            <CardDescription className="mt-2">
+              {currentSection.description}
+            </CardDescription>
+          )}
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <QuestionRenderer
+            question={currentQuestion}
+            value={answers[currentQuestion.id]}
+            onChange={handleAnswerChange}
+            onEnterPress={handleNext}
+            canAdvance={isCurrentQuestionAnswered() && currentQuestionIndex < activeQuestions.length - 1}
+          />
+
+          <div className="flex justify-between items-center pt-6 border-t">
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentStep === 0}
+              disabled={currentQuestionIndex === 0}
+              className="flex items-center gap-2"
             >
+              <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
+
+            <div className="text-sm text-muted-foreground">
+              Question {currentQuestionIndex + 1} of {activeQuestions.length}
+            </div>
+
             <Button
               onClick={handleNext}
-              disabled={!isStepComplete()}
+              disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
+              className="flex items-center gap-2"
             >
-              {currentStep === surveySteps.length - 1 && completion === 100
-                ? 'Complete Survey'
-                : 'Next'}
+              Next
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          {currentQuestionIndex === activeQuestions.length - 1 && isCurrentQuestionAnswered() && (
+            <div className="flex justify-center pt-4">
+              <Button
+                size="lg"
+                onClick={() => router.push('/onboarding/membership')}
+                className="min-w-[200px]"
+              >
+                Complete Survey
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

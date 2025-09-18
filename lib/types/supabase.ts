@@ -13,123 +13,87 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      users: {
+      profiles: {
         Row: {
-          id: string
-          email: string
-          name: string | null
-          city_id: string | null
-          survey_completed: boolean
-          membership_tier: 'free' | 'plus' | 'select'
+          user_id: string
+          full_name: string | null
+          city: string | null
+          msa_status: 'live' | 'waitlist'
+          survey_complete: boolean
           created_at: string
-          updated_at: string
         }
         Insert: {
-          id?: string
-          email: string
-          name?: string | null
-          city_id?: string | null
-          survey_completed?: boolean
-          membership_tier?: 'free' | 'plus' | 'select'
+          user_id: string
+          full_name?: string | null
+          city?: string | null
+          msa_status?: 'live' | 'waitlist'
+          survey_complete?: boolean
           created_at?: string
-          updated_at?: string
         }
         Update: {
-          id?: string
-          email?: string
-          name?: string | null
-          city_id?: string | null
-          survey_completed?: boolean
-          membership_tier?: 'free' | 'plus' | 'select'
+          user_id?: string
+          full_name?: string | null
+          city?: string | null
+          msa_status?: 'live' | 'waitlist'
+          survey_complete?: boolean
           created_at?: string
-          updated_at?: string
         }
       }
       partnerships: {
         Row: {
           id: string
           owner_id: string
-          name: string
-          status: 'active' | 'pending' | 'inactive'
-          city_id: string
+          city: string | null
           membership_tier: 'free' | 'plus' | 'select'
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
           owner_id: string
-          name: string
-          status?: 'active' | 'pending' | 'inactive'
-          city_id: string
+          city?: string | null
           membership_tier?: 'free' | 'plus' | 'select'
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
           owner_id?: string
-          name?: string
-          status?: 'active' | 'pending' | 'inactive'
-          city_id?: string
+          city?: string | null
           membership_tier?: 'free' | 'plus' | 'select'
           created_at?: string
-          updated_at?: string
         }
       }
       survey_responses: {
         Row: {
-          id: string
-          user_id: string
-          partnership_id: string | null
-          responses: Json
-          completion_percentage: number
-          last_saved_at: string
-          created_at: string
+          partnership_id: string
+          answers_json: Json
+          completion_pct: number
           updated_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          partnership_id?: string | null
-          responses?: Json
-          completion_percentage?: number
-          last_saved_at?: string
-          created_at?: string
+          partnership_id: string
+          answers_json?: Json
+          completion_pct?: number
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          partnership_id?: string | null
-          responses?: Json
-          completion_percentage?: number
-          last_saved_at?: string
-          created_at?: string
+          partnership_id?: string
+          answers_json?: Json
+          completion_pct?: number
           updated_at?: string
         }
       }
-      cities: {
+      city_status: {
         Row: {
-          id: string
-          name: string
-          status: 'live' | 'waitlist'
-          zip_codes: string[]
-          created_at: string
+          city: string
+          is_live: boolean
         }
         Insert: {
-          id?: string
-          name: string
-          status: 'live' | 'waitlist'
-          zip_codes: string[]
-          created_at?: string
+          city: string
+          is_live: boolean
         }
         Update: {
-          id?: string
-          name?: string
-          status?: 'live' | 'waitlist'
-          zip_codes?: string[]
-          created_at?: string
+          city?: string
+          is_live?: boolean
         }
       }
     }

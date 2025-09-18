@@ -13,9 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PhotoUpload } from '@/components/PhotoUpload'
 import { useSurveyGate, useCityGate } from '@/hooks/useGates'
+import { useAuth } from '@/lib/auth/context'
+import { useProfile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
-import { updatePartnershipProfile, getPartnershipPhotos } from '@/lib/db/profiles'
-import type { ProfileFormData, PhotoMetadata } from '@/lib/types/profile'
+import { ensureUserPartnership } from '@/lib/services/partnership'
+import { getPartnershipPhotos } from '@/lib/services/photos'
+import { createClient } from '@/lib/supabase/client'
 import { Save, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
 
 // Lifestyle tag options
@@ -32,11 +35,43 @@ const INTENTION_OPTIONS = [
   'Exploring', 'Not sure yet'
 ]
 
+interface PhotoMetadata {
+  id: string
+  partnership_id: string
+  photo_url: string
+  photo_type: 'public' | 'private'
+  width?: number | null
+  height?: number | null
+  nsfw_flag?: boolean | null
+  order_index: number
+  created_at: string
+}
+
+interface ProfileFormData {
+  display_name: string
+  short_bio: string
+  long_bio: string
+  orientation: {
+    value: string
+    seeking: string[]
+  }
+  structure: {
+    type: string
+    open_to: string[]
+  }
+  intentions: string[]
+  lifestyle_tags: string[]
+  discretion_summary: string
+}
+
 export default function ProfileEditPage() {
   const router = useRouter()
   const surveyGate = useSurveyGate()
   const cityGate = useCityGate()
+  const { user } = useAuth()
+  const { profile } = useProfile()
   const { toast } = useToast()
+  const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -67,38 +102,44 @@ export default function ProfileEditPage() {
 
   useEffect(() => {
     async function loadProfile() {
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
       try {
-        // Get current user's partnership ID
-        const userData = localStorage.getItem('haevn_user')
-        if (!userData) {
-          router.push('/auth/signup')
-          return
+        // Ensure user has a partnership
+        const { partnership, error: partnershipError } = await ensureUserPartnership(user.id)
+
+        if (partnershipError || !partnership) {
+          throw new Error('Failed to load partnership')
         }
 
-        const user = JSON.parse(userData)
-        const pid = `partnership-${user.email}`
-        setPartnershipId(pid)
+        setPartnershipId(partnership.id)
 
-        // Load existing profile data
-        const profiles = JSON.parse(localStorage.getItem('haevn_profiles') || '{}')
-        const profile = profiles[pid]
+        // Load partnership profile data
+        const { data: partnershipData } = await supabase
+          .from('partnerships')
+          .select('*')
+          .eq('id', partnership.id)
+          .single()
 
-        if (profile) {
+        if (partnershipData) {
           setFormData({
-            display_name: profile.display_name || '',
-            short_bio: profile.short_bio || '',
-            long_bio: profile.long_bio || '',
-            orientation: profile.orientation || { value: '', seeking: [] },
-            structure: profile.structure || { type: 'single', open_to: [] },
-            intentions: profile.intentions || [],
-            lifestyle_tags: profile.lifestyle_tags || [],
-            discretion_summary: profile.discretion_summary || ''
+            display_name: partnershipData.display_name || '',
+            short_bio: partnershipData.short_bio || '',
+            long_bio: partnershipData.long_bio || '',
+            orientation: partnershipData.orientation || { value: '', seeking: [] },
+            structure: partnershipData.structure || { type: 'single', open_to: [] },
+            intentions: partnershipData.intentions || [],
+            lifestyle_tags: partnershipData.lifestyle_tags || [],
+            discretion_summary: partnershipData.discretion_summary || ''
           })
-          setProfileState(profile.profile_state || 'draft')
+          setProfileState(partnershipData.profile_state || 'draft')
         }
 
-        // Load photos
-        const photos = await getPartnershipPhotos(pid)
+        // Load photos from database
+        const photos = await getPartnershipPhotos(partnership.id)
         setPublicPhotos(photos.filter(p => p.photo_type === 'public'))
         setPrivatePhotos(photos.filter(p => p.photo_type === 'private'))
 
@@ -114,10 +155,10 @@ export default function ProfileEditPage() {
       }
     }
 
-    if (surveyGate.isValid) {
+    if (surveyGate.isValid && user) {
       loadProfile()
     }
-  }, [surveyGate.isValid, router, toast])
+  }, [surveyGate.isValid, user, router, toast, supabase])
 
   const handleSave = async () => {
     // Validation
@@ -136,32 +177,27 @@ export default function ProfileEditPage() {
 
     setSaving(true)
     try {
-      const result = await updatePartnershipProfile(partnershipId, {
-        ...formData,
-        profile_state: newState
-      })
-
-      if (result.success) {
-        setProfileState(newState)
-
-        // Update localStorage
-        const profiles = JSON.parse(localStorage.getItem('haevn_profiles') || '{}')
-        profiles[partnershipId] = {
-          ...profiles[partnershipId],
+      // Save to database
+      const { data, error } = await supabase
+        .from('partnerships')
+        .update({
           ...formData,
-          profile_state: newState,
-          updated_at: new Date().toISOString()
-        }
-        localStorage.setItem('haevn_profiles', JSON.stringify(profiles))
-
-        toast({
-          title: 'Profile saved',
-          description: newState === 'live' ? 'Your profile is now live!' : 'Your changes have been saved'
+          profile_state: newState
         })
-      } else {
-        throw new Error(result.error)
-      }
+        .eq('id', partnershipId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setProfileState(newState)
+
+      toast({
+        title: 'Profile saved',
+        description: newState === 'live' ? 'Your profile is now live!' : 'Your changes have been saved'
+      })
     } catch (error) {
+      console.error('Save error:', error)
       toast({
         title: 'Save failed',
         description: 'Please try again',

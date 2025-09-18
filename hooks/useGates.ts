@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth/context'
+import { useProfile } from './useProfile'
+import { createClient } from '@/lib/supabase/client'
 
 interface GateResult {
   isLoading: boolean
@@ -16,27 +19,37 @@ export function useSurveyGate(): GateResult {
     isValid: false
   })
   const router = useRouter()
+  const { user } = useAuth()
+  const { profile, loading: profileLoading } = useProfile()
 
   useEffect(() => {
     async function checkSurvey() {
       try {
-        // Get user data from localStorage
-        const userData = localStorage.getItem('haevn_user')
-
-        if (!userData) {
+        if (!user) {
           setResult({
             isLoading: false,
             isValid: false,
             error: 'Not authenticated'
           })
-          router.push('/auth/signup')
+          router.push('/auth/login')
           return
         }
 
-        const user = JSON.parse(userData)
+        if (profileLoading) {
+          return // Wait for profile to load
+        }
 
-        // Check survey completion
-        if (!user.surveyCompleted) {
+        if (!profile) {
+          setResult({
+            isLoading: false,
+            isValid: false,
+            error: 'Profile not found'
+          })
+          return
+        }
+
+        // Check survey completion from profile
+        if (!profile.survey_complete) {
           setResult({
             isLoading: false,
             isValid: false,
@@ -49,7 +62,7 @@ export function useSurveyGate(): GateResult {
         setResult({
           isLoading: false,
           isValid: true,
-          data: user
+          data: profile
         })
 
       } catch (error) {
@@ -63,7 +76,7 @@ export function useSurveyGate(): GateResult {
     }
 
     checkSurvey()
-  }, [router])
+  }, [user, profile, profileLoading, router])
 
   return result
 }
@@ -73,33 +86,45 @@ export function useCityGate(): GateResult {
     isLoading: true,
     isValid: false
   })
+  const router = useRouter()
+  const { user } = useAuth()
+  const { profile, loading: profileLoading } = useProfile()
 
   useEffect(() => {
     async function checkCity() {
       try {
-        // Get user data from localStorage
-        const userData = localStorage.getItem('haevn_user')
-
-        if (!userData) {
+        if (!user) {
           setResult({
             isLoading: false,
             isValid: false,
             error: 'Not authenticated'
           })
+          router.push('/auth/login')
           return
         }
 
-        const user = JSON.parse(userData)
+        if (profileLoading) {
+          return // Wait for profile to load
+        }
 
-        // Check if city is live
-        const isLive = user.cityStatus === 'live'
+        if (!profile) {
+          setResult({
+            isLoading: false,
+            isValid: false,
+            error: 'Profile not found'
+          })
+          return
+        }
+
+        // Check if city is live from profile
+        const isLive = profile.msa_status === 'live'
 
         if (!isLive) {
           setResult({
             isLoading: false,
             isValid: false,
-            error: `${user.city} is not yet available. You're on the waitlist!`,
-            data: user
+            error: `${profile.city || 'Your city'} is not yet available. You're on the waitlist!`,
+            data: profile
           })
           // Don't redirect, just show message
           return
@@ -108,7 +133,7 @@ export function useCityGate(): GateResult {
         setResult({
           isLoading: false,
           isValid: true,
-          data: user
+          data: profile
         })
 
       } catch (error) {
@@ -122,7 +147,7 @@ export function useCityGate(): GateResult {
     }
 
     checkCity()
-  }, [])
+  }, [user, profile, profileLoading, router])
 
   return result
 }
@@ -132,27 +157,49 @@ export function useMembershipGate(requiredTier: 'plus' | 'select' = 'plus'): Gat
     isLoading: true,
     isValid: false
   })
+  const router = useRouter()
+  const { user } = useAuth()
+  const { profile, loading: profileLoading } = useProfile()
+  const supabase = createClient()
 
   useEffect(() => {
     async function checkMembership() {
       try {
-        // Get user data from localStorage
-        const userData = localStorage.getItem('haevn_user')
-
-        if (!userData) {
+        if (!user) {
           setResult({
             isLoading: false,
             isValid: false,
             error: 'Not authenticated'
           })
+          router.push('/auth/login')
           return
         }
 
-        const user = JSON.parse(userData)
+        if (profileLoading) {
+          return // Wait for profile to load
+        }
+
+        let membershipTier = 'free'
+
+        // Check partnership membership tier first
+        if (profile?.partnership) {
+          membershipTier = profile.partnership.membership_tier || 'free'
+        } else {
+          // No partnership yet, check user's subscription
+          const { data: subscription } = await supabase
+            .from('subscriptions')
+            .select('plan')
+            .eq('user_id', user.id)
+            .single()
+
+          if (subscription) {
+            membershipTier = subscription.plan
+          }
+        }
 
         // Check if user has required tier
         const tierHierarchy = { free: 0, plus: 1, select: 2 }
-        const userTierLevel = tierHierarchy[user.membershipTier] || 0
+        const userTierLevel = tierHierarchy[membershipTier as keyof typeof tierHierarchy] || 0
         const requiredLevel = tierHierarchy[requiredTier]
 
         const hasAccess = userTierLevel >= requiredLevel
@@ -162,7 +209,7 @@ export function useMembershipGate(requiredTier: 'plus' | 'select' = 'plus'): Gat
             isLoading: false,
             isValid: false,
             error: `Requires ${requiredTier.toUpperCase()} membership`,
-            data: user
+            data: { ...profile, membershipTier }
           })
           // Don't redirect, let component handle upgrade CTA
           return
@@ -171,7 +218,7 @@ export function useMembershipGate(requiredTier: 'plus' | 'select' = 'plus'): Gat
         setResult({
           isLoading: false,
           isValid: true,
-          data: user
+          data: { ...profile, membershipTier }
         })
 
       } catch (error) {
@@ -185,7 +232,7 @@ export function useMembershipGate(requiredTier: 'plus' | 'select' = 'plus'): Gat
     }
 
     checkMembership()
-  }, [requiredTier])
+  }, [user, profile, profileLoading, requiredTier, router, supabase])
 
   return result
 }

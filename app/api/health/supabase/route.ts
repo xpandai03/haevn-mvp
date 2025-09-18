@@ -25,7 +25,7 @@ export async function GET() {
       ok: true,
       message: 'Supabase connection successful',
       timestamp: new Date().toISOString(),
-      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE,
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       hasPublicUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     })

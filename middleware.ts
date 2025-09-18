@@ -1,44 +1,82 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next()
   const pathname = request.nextUrl.pathname
 
-  // Protected routes that require survey completion
-  const surveyRequiredRoutes = ['/discovery', '/chat', '/matches']
+  // Public routes that don't require authentication
+  const publicRoutes = ['/', '/auth/signup', '/auth/login', '/auth/callback']
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith('/auth/') || pathname.startsWith('/api/'))
 
-  // Protected routes that require paid membership
-  const paidMembershipRoutes = ['/discovery', '/chat', '/matches']
+  // Onboarding routes are protected but don't require survey completion
+  // These routes are exempt from survey completion checks
+  const onboardingRoutes = ['/onboarding/survey', '/onboarding/membership', '/waitlist']
+  const isOnboardingRoute = onboardingRoutes.some(route => pathname.startsWith(route))
 
-  // Check if route requires protection
-  const requiresSurvey = surveyRequiredRoutes.some(route => pathname.startsWith(route))
-  const requiresPaidMembership = paidMembershipRoutes.some(route => pathname.startsWith(route))
-
-  if (requiresSurvey || requiresPaidMembership) {
-    // In a real app, we'd check the database/session
-    // For now, we'll let the client-side handle the redirect
-    // This is a placeholder for proper server-side validation
-
-    // You could implement cookie-based checking here:
-    // const userCookie = request.cookies.get('haevn_user')
-    // if (userCookie) {
-    //   const user = JSON.parse(userCookie.value)
-    //   if (!user.surveyCompleted) {
-    //     return NextResponse.redirect(new URL('/onboarding/survey', request.url))
-    //   }
-    // }
+  // Skip auth check for public routes
+  if (isPublicRoute) {
+    return response
   }
 
-  return NextResponse.next()
+  // Create a Supabase client configured to use cookies
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Check if we have a session
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Redirect to login if no session and accessing protected route
+  if (!session) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
+  // Skip survey check for onboarding routes
+  if (isOnboardingRoute) {
+    return response
+  }
+
+  // Protected routes that require survey completion
+  const surveyRequiredRoutes = ['/dashboard', '/discovery', '/chat', '/connections', '/profile']
+  const requiresSurvey = surveyRequiredRoutes.some(route => pathname.startsWith(route))
+
+  if (requiresSurvey) {
+    // Check profile for survey completion
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('survey_complete')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (!profile || !profile.survey_complete) {
+      return NextResponse.redirect(new URL('/onboarding/survey', request.url))
+    }
+  }
+
+  return response
 }
 
 export const config = {
   matcher: [
-    // Protected routes
-    '/discovery/:path*',
-    '/chat/:path*',
-    '/matches/:path*',
-    // Skip static files and API routes
-    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+    // Match all routes except static files and API routes
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ]
 }
