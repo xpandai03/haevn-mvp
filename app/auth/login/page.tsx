@@ -27,7 +27,7 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error: signInError } = await signIn(email, password)
+      const { data: signInData, error: signInError } = await signIn(email, password)
 
       if (signInError) {
         throw signInError

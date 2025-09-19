@@ -116,23 +116,25 @@ export default function MembershipPage() {
         }
       }
 
-      // For now, skip payment for non-free tiers (stub)
+      // Mark membership step as complete
+      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getOnboardingFlowController()
+      await flowController.markStepComplete(user.id, 9)
+
+      // Redirect based on tier
       if (tierId !== 'free') {
-        // In production, redirect to Stripe checkout
-        console.log('Would redirect to payment for:', tierId)
+        // Paid tiers go to payment
+        router.push(`/onboarding/payment?tier=${tierId}`)
+      } else {
+        // Free tier goes straight to dashboard
+        toast({
+          title: 'Welcome to HAEVN Free!',
+          description: 'You can upgrade anytime from your dashboard.',
+        })
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 500)
       }
-
-      toast({
-        title: 'Membership selected!',
-        description: tierId === 'free'
-          ? 'Welcome to HAEVN Free!'
-          : `Welcome to HAEVN ${tierId === 'plus' ? '+' : 'Select'}!`,
-      })
-
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 500)
     } catch (error) {
       console.error('Error updating membership:', error)
       toast({

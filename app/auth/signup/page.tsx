@@ -10,8 +10,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { checkCityStatus } from '@/lib/data/cities'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
+import { getOnboardingFlowController } from '@/lib/onboarding/flow'
 import { Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { Progress } from '@/components/ui/progress'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -67,7 +69,7 @@ export default function SignupPage() {
       }))
 
       // Auto-login after signup
-      const { error: signInError } = await signIn(formData.email, formData.password)
+      const { data: signInData, error: signInError } = await signIn(formData.email, formData.password)
 
       if (signInError) {
         // If auto-login fails, still redirect to survey since account was created
@@ -87,14 +89,21 @@ export default function SignupPage() {
           msa_status: city.status
         })
 
+        // Mark step 1 as complete
+        // Use the user from signInData since we're logged in now
+        const userId = signInData?.session?.user?.id || signUpData?.user?.id
+        if (userId) {
+          const flowController = getOnboardingFlowController()
+          await flowController.markStepComplete(userId, 1)
+        }
+
         toast({
           title: 'Welcome to HAEVN!',
-          description: 'Let\'s get started with your survey.',
+          description: 'Let\'s get to know you better.',
         })
 
-        // Always redirect to survey after successful signup and login
-        // The survey page will handle city status checks
-        router.push('/onboarding/survey')
+        // Redirect to expectations page (Step 1.5)
+        router.push('/onboarding/expectations')
       }
     } catch (err: any) {
       console.error('Signup error:', err)
@@ -104,16 +113,21 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2">Step 1 of 9</p>
+            <Progress value={11} className="h-2" />
+          </div>
           <CardTitle>Welcome to HAEVN</CardTitle>
           <CardDescription>Create your account to get started</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">What should we call you?</Label>
+              <p className="text-xs text-muted-foreground mb-2">First name or nickname is fine.</p>
               <Input
                 id="name"
                 type="text"
@@ -125,6 +139,7 @@ export default function SignupPage() {
 
             <div>
               <Label htmlFor="email">Email</Label>
+              <p className="text-xs text-muted-foreground mb-2">We'll never share this. Used only for login and verification.</p>
               <Input
                 id="email"
                 type="email"
@@ -148,6 +163,7 @@ export default function SignupPage() {
 
             <div>
               <Label htmlFor="zipCode">ZIP Code</Label>
+              <p className="text-xs text-muted-foreground mb-2">This helps us connect you locally. We never show your exact location.</p>
               <Input
                 id="zipCode"
                 type="text"

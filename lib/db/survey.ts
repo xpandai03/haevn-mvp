@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/supabase'
+import { calculateSurveyCompletion } from '@/lib/survey/questions'
 
 type SurveyResponse = Database['public']['Tables']['survey_responses']['Row']
 
@@ -67,7 +68,7 @@ export async function saveSurvey(
     }
 
     // Calculate completion
-    const completionPct = calculateCompletion(mergedAnswers)
+    const completionPct = calculateSurveyCompletion(mergedAnswers)
 
     // Update survey response
     const { error: updateError } = await supabase
@@ -122,73 +123,3 @@ export async function saveSurvey(
   }
 }
 
-/**
- * Calculate survey completion percentage based on required questions
- */
-export function calculateCompletion(answers: Record<string, any>): number {
-  // Define required questions based on skip logic
-  const requiredQuestions = getRequiredQuestions(answers)
-
-  // Count answered required questions
-  const answeredCount = requiredQuestions.filter(questionId => {
-    const answer = answers[questionId]
-    if (Array.isArray(answer)) {
-      return answer.length > 0
-    }
-    return answer !== undefined && answer !== null && answer !== ''
-  }).length
-
-  if (requiredQuestions.length === 0) return 0
-
-  return Math.round((answeredCount / requiredQuestions.length) * 100)
-}
-
-/**
- * Get list of required questions based on skip logic
- */
-function getRequiredQuestions(answers: Record<string, any>): string[] {
-  const required = [
-    // Identity - always required
-    'identity_pronouns',
-    'identity_age_range',
-    'identity_gender',
-    'identity_orientation',
-    'identity_relationship_structure',
-
-    // Intentions - always required
-    'intentions_looking_for',
-    'intentions_timeline',
-    'intentions_marriage_minded',
-
-    // Boundaries - always required
-    'boundaries_relationship_orientation',
-    'boundaries_privacy_level',
-    'boundaries_photo_sharing',
-    'boundaries_dealbreakers',
-
-    // Logistics - always required
-    'logistics_city',
-    'logistics_location_radius',
-    'logistics_availability'
-  ]
-
-  // Conditional questions based on answers
-
-  // If marriage-minded, ask about children
-  if (answers['intentions_marriage_minded'] === 'Yes') {
-    required.push('intentions_children_interest')
-  }
-
-  // If not monogamous, add multi-partner questions (Phase 2)
-  // const relationshipOrientation = answers['boundaries_relationship_orientation']
-  // if (relationshipOrientation && relationshipOrientation !== 'Monogamous') {
-  //   required.push('boundaries_multi_partner_preferences')
-  // }
-
-  // If not very private, add lifestyle tags
-  if (answers['boundaries_privacy_level'] !== 'Very Private') {
-    required.push('logistics_lifestyle_tags')
-  }
-
-  return required
-}

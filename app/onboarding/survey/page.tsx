@@ -8,9 +8,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
 import { ProgressBar } from '@/components/survey/ProgressBar'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
+import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
-import { getCurrentPartnershipId } from '@/lib/actions/partnership'
+import { getCurrentPartnershipId } from '@/lib/actions/partnership-simple'
 import { getSurveyData, saveSurveyData } from '@/lib/actions/survey'
+import { getOnboardingFlowController } from '@/lib/onboarding/flow'
 import {
   surveySections,
   getAllQuestions,
@@ -58,16 +60,18 @@ export default function SurveyPage() {
         const { id: partnershipId, error: partnershipError } = await getCurrentPartnershipId()
 
         if (partnershipError || !partnershipId) {
-          throw new Error(partnershipError || 'Failed to get partnership')
+          console.error('Partnership error:', partnershipError)
+          // Don't throw - continue with null partnership ID
         }
 
         setPartnershipId(partnershipId)
 
-        // Load existing survey responses
+        // Load existing survey responses (will handle null partnershipId)
         const { data: surveyData, error: surveyError } = await getSurveyData(partnershipId)
 
         if (surveyError) {
-          throw new Error(surveyError)
+          console.error('Survey load error:', surveyError)
+          // Don't throw - use empty data
         }
 
         if (surveyData) {
@@ -117,7 +121,7 @@ export default function SurveyPage() {
       setSaveError(null)
 
       try {
-        const { success, error } = await saveSurveyData(partnershipId, newAnswers, newQuestionIndex)
+        const { success, error } = await saveSurveyData(partnershipId, newAnswers, 0) // Use 0 for now as current_step
 
         if (error || !success) {
           throw new Error(error || 'Failed to save')
@@ -138,12 +142,16 @@ export default function SurveyPage() {
 
         // Check if complete
         if (newCompletion === 100) {
+          // Mark survey step as complete
+          const flowController = getOnboardingFlowController()
+          await flowController.markStepComplete(partnershipId, 7)
+
           toast({
             title: 'Survey Complete!',
-            description: 'Redirecting to membership selection...',
+            description: 'Great job! Let\'s celebrate...',
           })
           setTimeout(() => {
-            router.push('/onboarding/membership')
+            router.push('/onboarding/celebration')
           }, 1500)
         }
       } catch (error) {
@@ -171,7 +179,7 @@ export default function SurveyPage() {
     setAnswers(newAnswers)
 
     // Trigger auto-save
-    saveAnswers({ [currentQuestion.id]: value }, currentQuestionIndex)
+    saveAnswers({ [currentQuestion.id]: value }, 0)
   }
 
   // Navigation
@@ -179,7 +187,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, newIndex) // Save current step
+      saveAnswers({}, 0) // Save current step
     }
   }
 
@@ -187,7 +195,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, newIndex) // Save current step
+      saveAnswers({}, 0) // Save current step
     }
   }
 
@@ -195,7 +203,7 @@ export default function SurveyPage() {
     setSaveStatus('saving')
     try {
       if (partnershipId) {
-        await saveSurveyData(partnershipId, answers, currentQuestionIndex)
+        await saveSurveyData(partnershipId, answers, 0)
       }
       router.push('/dashboard')
     } catch (err) {
@@ -309,7 +317,7 @@ export default function SurveyPage() {
             <div className="flex justify-center pt-4">
               <Button
                 size="lg"
-                onClick={() => router.push('/onboarding/membership')}
+                onClick={() => router.push('/onboarding/celebration')}
                 className="min-w-[200px]"
               >
                 Complete Survey

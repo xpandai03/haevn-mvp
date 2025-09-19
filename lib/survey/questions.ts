@@ -1,7 +1,7 @@
 export interface SurveyQuestion {
   id: string
   label: string
-  type: 'select' | 'multiselect' | 'text' | 'scale'
+  type: 'select' | 'multiselect' | 'text' | 'scale' | 'boolean'
   options?: string[]
   placeholder?: string
   required: boolean
@@ -18,12 +18,12 @@ export interface SurveySection {
 
 export const surveySections: SurveySection[] = [
   {
-    id: 'identity',
-    title: 'Identity',
-    description: 'Tell us about yourself',
+    id: 'identity_orientation',
+    title: 'Identity & Orientation',
+    description: 'Demographics and basic information about you',
     questions: [
       {
-        id: 'identity_pronouns',
+        id: 'pronouns',
         label: 'What are your pronouns?',
         type: 'text',
         placeholder: 'e.g., she/her, he/him, they/them',
@@ -31,275 +31,438 @@ export const surveySections: SurveySection[] = [
         tooltip: 'This helps us refer to you respectfully'
       },
       {
-        id: 'identity_age_range',
+        id: 'age_range',
         label: 'What is your age range?',
         type: 'select',
-        options: ['18-24', '25-29', '30-34', '35-39', '40-44', '45-49', '50-54', '55-59', '60+'],
-        required: true,
-        tooltip: 'We never share your exact age, only the range'
+        options: ['18-24', '25-29', '30-34', '35-39', '40-44', '45-49', '50-54', '55-59', '60-64', '65+'],
+        required: true
       },
       {
-        id: 'identity_gender',
+        id: 'gender_identity',
         label: 'How do you identify?',
         type: 'select',
-        options: ['Man', 'Woman', 'Non-binary', 'Transgender', 'Prefer not to say', 'Prefer to self-describe'],
+        options: [
+          'Man',
+          'Woman',
+          'Non-binary',
+          'Trans man',
+          'Trans woman',
+          'Genderqueer',
+          'Genderfluid',
+          'Prefer to self-describe',
+          'Prefer not to say'
+        ],
         required: true
       },
       {
-        id: 'identity_orientation',
+        id: 'sexual_orientation',
         label: 'What is your sexual orientation?',
-        type: 'select',
-        options: ['Straight', 'Gay', 'Lesbian', 'Bisexual', 'Pansexual', 'Asexual', 'Queer', 'Questioning', 'Prefer not to say'],
+        type: 'multiselect',
+        options: [
+          'Straight/Heterosexual',
+          'Gay',
+          'Lesbian',
+          'Bisexual',
+          'Pansexual',
+          'Demisexual',
+          'Asexual',
+          'Queer',
+          'Questioning',
+          'Prefer to self-describe'
+        ],
         required: true
       },
       {
-        id: 'identity_relationship_structure',
-        label: 'Are you joining HAEVN as...',
-        type: 'select',
-        options: ['Solo', 'With a Partner', 'As a Pod (3+ people)'],
-        required: true,
-        tooltip: 'This determines whether we need to invite partners to complete the survey'
+        id: 'ethnicity',
+        label: 'How would you describe your ethnicity? (Optional)',
+        type: 'multiselect',
+        options: [
+          'Asian',
+          'Black/African American',
+          'Hispanic/Latino',
+          'Middle Eastern',
+          'Native American',
+          'Pacific Islander',
+          'White/Caucasian',
+          'Multiracial',
+          'Prefer not to say'
+        ],
+        required: false
       }
     ]
   },
   {
-    id: 'intentions',
-    title: 'Intentions',
-    description: 'What brings you to HAEVN?',
+    id: 'relationship_style',
+    title: 'Relationship Style',
+    description: 'Your approach to relationships and what you\'re looking for',
     questions: [
       {
-        id: 'intentions_looking_for',
+        id: 'relationship_structure',
+        label: 'How would you describe your ideal relationship structure?',
+        type: 'select',
+        options: [
+          'Monogamous',
+          'Ethically Non-Monogamous (ENM)',
+          'Polyamorous',
+          'Open Relationship',
+          'Relationship Anarchy',
+          'Solo Poly',
+          'Swinging',
+          'Exploring/Curious',
+          'It depends on the person'
+        ],
+        required: true
+      },
+      {
+        id: 'looking_for',
         label: 'What are you looking for on HAEVN?',
         type: 'multiselect',
-        options: ['Dating', 'Friendship', 'Casual encounters', 'Long-term relationship', 'Marriage', 'Community', 'Exploration'],
-        required: true,
-        tooltip: 'Select all that apply - be honest about your intentions'
-      },
-      {
-        id: 'intentions_timeline',
-        label: 'How soon are you looking to meet someone?',
-        type: 'select',
-        options: ['As soon as possible', 'Within a week', 'Within a month', 'No rush', 'Just browsing'],
-        required: true
-      },
-      {
-        id: 'intentions_marriage_minded',
-        label: 'Are you looking for marriage?',
-        type: 'select',
-        options: ['Yes', 'No', 'Open to it'],
-        required: true
-      },
-      {
-        id: 'intentions_children_interest',
-        label: 'Do you want children?',
-        type: 'select',
-        options: ['Yes', 'No', 'Maybe', 'Have children already', 'Open to partner with children'],
-        required: true,
-        skipCondition: (answers) => answers['intentions_marriage_minded'] !== 'Yes',
-        tooltip: 'This helps us match you with compatible partners'
-      }
-    ]
-  },
-  {
-    id: 'boundaries',
-    title: 'Boundaries & Discretion',
-    description: 'Your comfort zones and privacy preferences',
-    questions: [
-      {
-        id: 'boundaries_relationship_orientation',
-        label: 'What type of relationship structure are you seeking?',
-        type: 'select',
-        options: ['Monogamous', 'Polyamorous', 'Open Relationship', 'Flexible/Exploring'],
-        required: true,
-        tooltip: 'This is one of our most important matching criteria'
-      },
-      {
-        id: 'boundaries_privacy_level',
-        label: 'How private do you want to be?',
-        type: 'select',
-        options: ['Very Private', 'Somewhat Private', 'Open', 'Flexible'],
-        required: true,
-        tooltip: 'This affects what information is visible on your profile'
-      },
-      {
-        id: 'boundaries_photo_sharing',
-        label: 'When are you comfortable sharing photos?',
-        type: 'select',
-        options: ['After handshake (mutual like)', 'After first message', 'After meeting in person', 'Never'],
-        required: true,
-        tooltip: 'Note: In HAEVN, photos are always private until a handshake'
-      },
-      {
-        id: 'boundaries_dealbreakers',
-        label: 'What are your dealbreakers?',
-        type: 'multiselect',
         options: [
-          'Smoking',
-          'Heavy drinking',
-          'Drug use',
-          'Different religion',
-          'Different politics',
-          'Has children',
-          'Wants children',
-          'Long distance',
-          'Not verified',
-          'Closed relationship when I want open',
-          'Open relationship when I want closed'
-        ],
-        required: true,
-        tooltip: 'We\'ll never match you with someone who conflicts with these'
-      }
-    ]
-  },
-  {
-    id: 'logistics',
-    title: 'Logistics',
-    description: 'Practical considerations for matching',
-    questions: [
-      {
-        id: 'logistics_city',
-        label: 'Confirm your city',
-        type: 'text',
-        placeholder: 'City name',
-        required: true,
-        tooltip: 'This was detected from your ZIP code during signup'
-      },
-      {
-        id: 'logistics_location_radius',
-        label: 'How far are you willing to travel for dates?',
-        type: 'select',
-        options: ['5 miles', '10 miles', '25 miles', '50 miles', '100+ miles', 'Anywhere'],
-        required: true
-      },
-      {
-        id: 'logistics_availability',
-        label: 'When are you typically available?',
-        type: 'multiselect',
-        options: [
-          'Weekday mornings',
-          'Weekday afternoons',
-          'Weekday evenings',
-          'Weekend mornings',
-          'Weekend afternoons',
-          'Weekend evenings',
-          'Flexible schedule'
+          'Dating',
+          'Long-term relationship',
+          'Marriage',
+          'Casual connections',
+          'Friendship',
+          'Community',
+          'Events & experiences',
+          'Exploration',
+          'Not sure yet'
         ],
         required: true
       },
       {
-        id: 'logistics_lifestyle_tags',
-        label: 'Select lifestyle tags that describe you',
+        id: 'experience_level',
+        label: 'What\'s your experience with non-traditional relationships?',
+        type: 'select',
+        options: [
+          'Very experienced',
+          'Some experience',
+          'New but researched',
+          'Completely new',
+          'Prefer not to say'
+        ],
+        required: true
+      },
+      {
+        id: 'primary_partnership',
+        label: 'Do you currently have a primary partner?',
+        type: 'select',
+        options: [
+          'Yes, and they\'re on HAEVN with me',
+          'Yes, but they\'re not on HAEVN',
+          'No',
+          'It\'s complicated',
+          'Prefer not to say'
+        ],
+        required: true
+      }
+    ]
+  },
+  {
+    id: 'lifestyle_community',
+    title: 'Lifestyle & Community',
+    description: 'Your lifestyle preferences and community involvement',
+    questions: [
+      {
+        id: 'lifestyle_tags',
+        label: 'Select lifestyle tags that describe you:',
         type: 'multiselect',
         options: [
-          'Active/Fitness',
+          'Active & Outdoorsy',
+          'Arts & Culture',
           'Foodie',
-          'Traveler',
+          'Travel Enthusiast',
           'Homebody',
-          'Night owl',
-          'Early bird',
-          'Creative',
-          'Professional',
-          'Spiritual',
-          'Social butterfly',
+          'Night Owl',
+          'Early Bird',
+          'Career-focused',
+          'Family-oriented',
+          'Social Butterfly',
           'Introvert',
-          'Extrovert',
-          'Pet parent',
-          '420 friendly',
+          'Spiritual',
+          '420 Friendly',
           'Sober',
-          'Kink friendly',
-          'Vanilla',
-          'Bookworm',
+          'Fitness Enthusiast',
           'Gamer',
-          'Outdoorsy'
+          'Book Lover',
+          'Music Lover'
         ],
-        required: true,
-        skipCondition: (answers) => answers['boundaries_privacy_level'] === 'Very Private',
-        tooltip: 'Select 3-10 tags that best represent your lifestyle'
+        required: true
+      },
+      {
+        id: 'privacy_level',
+        label: 'What\'s your privacy preference?',
+        type: 'select',
+        options: [
+          'Very Private - Discretion is essential',
+          'Somewhat Private - Careful who knows',
+          'Open - Don\'t mind who knows',
+          'Flexible - Depends on context'
+        ],
+        required: true
+      },
+      {
+        id: 'community_involvement',
+        label: 'How involved do you want to be in the HAEVN community?',
+        type: 'select',
+        options: [
+          'Very involved - Events, forums, everything',
+          'Moderately involved - Some events and discussions',
+          'Minimally involved - Just connections',
+          'Not sure yet'
+        ],
+        required: true
+      },
+      {
+        id: 'location_flexibility',
+        label: 'How far are you willing to travel for connections?',
+        type: 'select',
+        options: [
+          'My neighborhood only',
+          'Within my city',
+          'Within 50 miles',
+          'Within my state/region',
+          'Anywhere in the country',
+          'International'
+        ],
+        required: true
+      }
+    ]
+  },
+  {
+    id: 'erotic_map',
+    title: 'Erotic Map',
+    description: 'Your boundaries, preferences, and approach to intimacy',
+    questions: [
+      {
+        id: 'intimacy_timeline',
+        label: 'When are you typically comfortable with physical intimacy?',
+        type: 'select',
+        options: [
+          'First date',
+          'After a few dates',
+          'Once we\'ve established a connection',
+          'After commitment',
+          'It varies',
+          'Not seeking physical intimacy'
+        ],
+        required: true
+      },
+      {
+        id: 'safer_sex_practices',
+        label: 'What are your safer sex practices?',
+        type: 'multiselect',
+        options: [
+          'Regular STI testing',
+          'Barrier methods always',
+          'Barrier methods with new partners',
+          'PrEP',
+          'Open communication about status',
+          'Fluid bonding with specific partners only',
+          'Prefer not to discuss here'
+        ],
+        required: true
+      },
+      {
+        id: 'boundaries_importance',
+        label: 'How important is discussing boundaries before intimacy?',
+        type: 'select',
+        options: [
+          'Essential - Must discuss everything first',
+          'Very Important - Major boundaries discussed',
+          'Important - Basic boundaries discussed',
+          'Somewhat Important - Discuss as we go',
+          'Not Important - Go with the flow'
+        ],
+        required: true
+      },
+      {
+        id: 'communication_style',
+        label: 'Your communication style around desires and boundaries:',
+        type: 'select',
+        options: [
+          'Very direct and explicit',
+          'Direct but gentle',
+          'Hints and suggestions',
+          'Non-verbal cues',
+          'Still learning to communicate'
+        ],
+        required: true
+      }
+    ]
+  },
+  {
+    id: 'kink_exploration',
+    title: 'Optional Exploration',
+    description: 'Optional section about kinks and exploration (you can skip this)',
+    questions: [
+      {
+        id: 'kink_interest',
+        label: 'Are you interested in kink/BDSM?',
+        type: 'select',
+        options: [
+          'Very experienced',
+          'Some experience',
+          'Curious and want to learn',
+          'Not interested',
+          'Prefer not to say'
+        ],
+        required: false,
+        skipCondition: (answers) => answers.skip_kink_section === true
+      },
+      {
+        id: 'kink_role',
+        label: 'If interested in kink, how do you identify?',
+        type: 'multiselect',
+        options: [
+          'Dominant',
+          'Submissive',
+          'Switch',
+          'Top',
+          'Bottom',
+          'Verse',
+          'Exploring',
+          'Not applicable'
+        ],
+        required: false,
+        skipCondition: (answers) =>
+          answers.kink_interest === 'Not interested' ||
+          answers.skip_kink_section === true
+      },
+      {
+        id: 'kink_interests',
+        label: 'What aspects interest you? (Optional)',
+        type: 'multiselect',
+        options: [
+          'Bondage',
+          'Discipline',
+          'Dominance/submission',
+          'Sensation play',
+          'Role play',
+          'Impact play',
+          'Power exchange',
+          'Still exploring',
+          'Prefer not to specify'
+        ],
+        required: false,
+        skipCondition: (answers) =>
+          answers.kink_interest === 'Not interested' ||
+          answers.skip_kink_section === true
+      }
+    ]
+  },
+  {
+    id: 'personality_insights',
+    title: 'Personality Insights',
+    description: 'Help us understand your relationship personality',
+    questions: [
+      {
+        id: 'conflict_style',
+        label: 'How do you typically handle conflict in relationships?',
+        type: 'select',
+        options: [
+          'Address immediately and directly',
+          'Take time to cool down first',
+          'Avoid if possible',
+          'Seek mediation or third party help',
+          'Depends on the situation'
+        ],
+        required: true
+      },
+      {
+        id: 'love_languages',
+        label: 'What are your primary love languages?',
+        type: 'multiselect',
+        options: [
+          'Words of affirmation',
+          'Acts of service',
+          'Receiving gifts',
+          'Quality time',
+          'Physical touch'
+        ],
+        required: true
+      },
+      {
+        id: 'attachment_style',
+        label: 'Which best describes your attachment style?',
+        type: 'select',
+        options: [
+          'Secure - Comfortable with intimacy and independence',
+          'Anxious - Crave closeness but worry about the relationship',
+          'Avoidant - Value independence over intimacy',
+          'Disorganized - Mixed feelings about relationships',
+          'Not sure'
+        ],
+        required: true
+      },
+      {
+        id: 'ideal_date',
+        label: 'Describe your ideal first date:',
+        type: 'multiselect',
+        options: [
+          'Coffee or tea chat',
+          'Dinner at a nice restaurant',
+          'Outdoor activity',
+          'Cultural event (museum, show, etc)',
+          'Casual drinks',
+          'Home cooked meal',
+          'Adventure or new experience',
+          'Virtual date',
+          'Group hangout'
+        ],
+        required: true
+      },
+      {
+        id: 'dealbreakers',
+        label: 'What are your absolute dealbreakers? (Optional)',
+        type: 'text',
+        placeholder: 'e.g., smoking, different political views, etc.',
+        required: false
       }
     ]
   }
 ]
 
 /**
- * Get all questions flattened from sections
+ * Get all questions from all sections
  */
 export function getAllQuestions(): SurveyQuestion[] {
   return surveySections.flatMap(section => section.questions)
 }
 
 /**
- * Get question by ID
- */
-export function getQuestionById(questionId: string): SurveyQuestion | undefined {
-  return getAllQuestions().find(q => q.id === questionId)
-}
-
-/**
- * Get next question based on current answers and skip logic
- */
-export function getNextQuestion(
-  currentQuestionId: string,
-  answers: Record<string, any>
-): SurveyQuestion | null {
-  const allQuestions = getAllQuestions()
-  const currentIndex = allQuestions.findIndex(q => q.id === currentQuestionId)
-
-  if (currentIndex === -1 || currentIndex === allQuestions.length - 1) {
-    return null
-  }
-
-  // Find next question that isn't skipped
-  for (let i = currentIndex + 1; i < allQuestions.length; i++) {
-    const question = allQuestions[i]
-
-    // Check if this question should be skipped
-    if (question.skipCondition && question.skipCondition(answers)) {
-      continue
-    }
-
-    return question
-  }
-
-  return null
-}
-
-/**
- * Get previous question based on current answers and skip logic
- */
-export function getPreviousQuestion(
-  currentQuestionId: string,
-  answers: Record<string, any>
-): SurveyQuestion | null {
-  const allQuestions = getAllQuestions()
-  const currentIndex = allQuestions.findIndex(q => q.id === currentQuestionId)
-
-  if (currentIndex <= 0) {
-    return null
-  }
-
-  // Find previous question that isn't skipped
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    const question = allQuestions[i]
-
-    // Check if this question should be skipped
-    if (question.skipCondition && question.skipCondition(answers)) {
-      continue
-    }
-
-    return question
-  }
-
-  return null
-}
-
-/**
- * Get active questions (not skipped) based on current answers
+ * Get active questions based on skip logic and answers
  */
 export function getActiveQuestions(answers: Record<string, any>): SurveyQuestion[] {
-  return getAllQuestions().filter(question => {
-    if (question.skipCondition && question.skipCondition(answers)) {
-      return false
-    }
-    return true
+  const activeQuestions: SurveyQuestion[] = []
+
+  surveySections.forEach(section => {
+    section.questions.forEach(question => {
+      // Check if question should be skipped
+      if (question.skipCondition && question.skipCondition(answers)) {
+        return
+      }
+      activeQuestions.push(question)
+    })
   })
+
+  return activeQuestions
+}
+
+/**
+ * Calculate completion percentage
+ */
+export function calculateSurveyCompletion(answers: Record<string, any>): number {
+  const activeQuestions = getActiveQuestions(answers)
+  const requiredQuestions = activeQuestions.filter(q => q.required)
+
+  if (requiredQuestions.length === 0) return 100
+
+  const answeredRequired = requiredQuestions.filter(q => {
+    const answer = answers[q.id]
+    if (Array.isArray(answer)) return answer.length > 0
+    return answer !== undefined && answer !== null && answer !== ''
+  })
+
+  return Math.round((answeredRequired.length / requiredQuestions.length) * 100)
 }

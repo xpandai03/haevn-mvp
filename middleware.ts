@@ -10,10 +10,11 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = ['/', '/auth/signup', '/auth/login', '/auth/callback']
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith('/auth/') || pathname.startsWith('/api/'))
 
-  // Onboarding routes are protected but don't require survey completion
-  // These routes are exempt from survey completion checks
-  const onboardingRoutes = ['/onboarding/survey', '/onboarding/membership', '/waitlist']
-  const isOnboardingRoute = onboardingRoutes.some(route => pathname.startsWith(route))
+  // Onboarding routes - protected but allow progression through flow
+  const isOnboardingRoute = pathname.startsWith('/onboarding/')
+
+  // Waitlist is special - requires auth but not onboarding
+  const isWaitlistRoute = pathname === '/waitlist'
 
   // Skip auth check for public routes
   if (isPublicRoute) {
@@ -49,25 +50,55 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Skip survey check for onboarding routes
-  if (isOnboardingRoute) {
+  // Allow onboarding routes and waitlist
+  if (isOnboardingRoute || isWaitlistRoute) {
     return response
   }
 
-  // Protected routes that require survey completion
-  const surveyRequiredRoutes = ['/dashboard', '/discovery', '/chat', '/connections', '/profile']
-  const requiresSurvey = surveyRequiredRoutes.some(route => pathname.startsWith(route))
+  // Protected routes that require complete onboarding
+  const protectedRoutes = ['/dashboard', '/discovery', '/chat', '/connections', '/profile']
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
-  if (requiresSurvey) {
-    // Check profile for survey completion
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('survey_complete')
+  if (isProtectedRoute) {
+    // Get user's partnership to check onboarding state
+    const { data: membership } = await supabase
+      .from('partnership_members')
+      .select('partnership_id')
       .eq('user_id', session.user.id)
       .single()
 
-    if (!profile || !profile.survey_complete) {
-      return NextResponse.redirect(new URL('/onboarding/survey', request.url))
+    if (!membership?.partnership_id) {
+      // No partnership yet, start onboarding
+      return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
+    }
+
+    // Check onboarding state
+    const { data: onboardingState } = await supabase
+      .from('onboarding_state')
+      .select('current_step, membership_selected')
+      .eq('partnership_id', membership.partnership_id)
+      .single()
+
+    // If no state exists or onboarding incomplete, redirect to appropriate step
+    if (!onboardingState) {
+      return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
+    }
+
+    if (!onboardingState.membership_selected) {
+      // Map step number to route
+      const stepRoutes: Record<number, string> = {
+        2: '/onboarding/expectations',
+        3: '/onboarding/welcome',
+        4: '/onboarding/identity',
+        5: '/onboarding/survey-intro', // Skip verification
+        6: '/onboarding/survey-intro',
+        7: '/onboarding/survey',
+        8: '/onboarding/celebration',
+        9: '/onboarding/membership',
+      }
+
+      const nextRoute = stepRoutes[onboardingState.current_step] || '/onboarding/expectations'
+      return NextResponse.redirect(new URL(nextRoute, request.url))
     }
   }
 

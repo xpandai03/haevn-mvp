@@ -36,7 +36,19 @@ export async function getCurrentPartnershipId(): Promise<{ id: string | null, er
       return { id: membership.partnership_id, error: null }
     }
 
-    // Get user profile for city info
+    // Ensure user has profile and partnership using database function
+    const { data: setup, error: setupError } = await supabase
+      .rpc('ensure_user_setup', { p_user_id: user.id })
+      .single()
+
+    if (!setupError && setup?.partnership_id) {
+      console.log('[getCurrentPartnershipId] Setup successful:', setup.partnership_id)
+      return { id: setup.partnership_id, error: null }
+    }
+
+    console.error('[getCurrentPartnershipId] Setup error or no partnership:', setupError)
+
+    // Fallback: manually create if function fails
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('city, full_name')

@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+// This script provides instructions for running the onboarding flow migration
+
+console.log('===========================================')
+console.log('IMPORTANT: Database Migration Required')
+console.log('===========================================')
+console.log('')
+console.log('The new onboarding flow requires database updates.')
+console.log('Please run the following migration in your Supabase SQL Editor:')
+console.log('')
+console.log('File: supabase/migrations/006_onboarding_flow_fixes.sql')
+console.log('')
+console.log('Steps:')
+console.log('1. Go to your Supabase Dashboard')
+console.log('2. Navigate to SQL Editor')
+console.log('3. Copy the contents of 006_onboarding_flow_fixes.sql')
+console.log('4. Paste and run the SQL')
+console.log('')
+console.log('This migration adds:')
+console.log('- profile_type enum (solo/couple/pod)')
+console.log('- verification_status enum')
+console.log('- relationship_orientation field')
+console.log('- onboarding_state table for tracking progress')
+console.log('- onboarding_step field for resume capability')
+console.log('')
+console.log('After running the migration, the new onboarding flow will be ready!')
+console.log('===========================================')

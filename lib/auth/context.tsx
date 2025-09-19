@@ -9,8 +9,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: any }>
-  signIn: (email: string, password: string) => Promise<{ error?: any }>
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ data?: any, error?: any }>
+  signIn: (email: string, password: string) => Promise<{ data?: any, error?: any }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
 }
@@ -72,10 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      return { error: null }
+      return { data, error: null }
     } catch (error) {
       console.error('Signup error:', error)
-      return { error }
+      return { data: null, error }
     }
   }
 
@@ -88,10 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      return { error: null }
+      return { data, error: null }
     } catch (error) {
       console.error('Sign in error:', error)
-      return { error }
+      return { data: null, error }
     }
   }
 
