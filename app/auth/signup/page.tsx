@@ -127,7 +127,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="name">What should we call you?</Label>
-              <p className="text-xs text-muted-foreground mb-2">First name or nickname is fine.</p>
+              <p className="text-xs text-muted-foreground mb-2">First name or nickname is fine. This will be your username in the app.</p>
               <Input
                 id="name"
                 type="text"
