@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Users, Calendar, BookOpen, Lock, CheckCircle, LogOut } from 'lucide-react'
+import { CheckCircle, Sparkles, Heart, Users, Calendar, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { createClient } from '@/lib/supabase/client'
 
@@ -25,47 +25,24 @@ export default function DashboardPage() {
 
       try {
         // Load user profile from database
-        const { data: profileData, error } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', authUser.id)
           .single()
 
-        if (error) {
-          console.error('Error loading profile:', error)
-          // Profile might not exist yet, create one
-          const { data: newProfile } = await supabase
-            .from('profiles')
-            .insert({
-              user_id: authUser.id,
-              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-              city: authUser.user_metadata?.city || 'New York',
-              msa_status: authUser.user_metadata?.msa_status || 'waitlist',
-              survey_complete: false
-            })
-            .select()
-            .single()
-
-          setProfile(newProfile)
-        } else {
+        if (profileData) {
           setProfile(profileData)
-        }
-
-        // Check for partnership
-        const { data: partnerships } = await supabase
-          .from('partnership_members')
-          .select('partnership_id, partnerships(*)')
-          .eq('user_id', authUser.id)
-
-        if (partnerships && partnerships.length > 0) {
-          setProfile((prev: any) => ({
-            ...prev,
-            partnership: partnerships[0].partnerships,
-            membershipTier: partnerships[0].partnerships?.membership_tier || 'free'
-          }))
+        } else {
+          // Use metadata if profile doesn't exist
+          setProfile({
+            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+            city: authUser.user_metadata?.city || 'Your City',
+            survey_complete: true
+          })
         }
       } catch (error) {
-        console.error('Error in loadProfile:', error)
+        console.error('Error loading profile:', error)
       } finally {
         setLoading(false)
       }
@@ -79,168 +56,152 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
+        <div className="animate-pulse">Loading your HAEVN experience...</div>
       </div>
     )
   }
 
-  const canAccessDiscovery = profile.survey_complete && profile.membershipTier !== 'free'
-
-  const pillars = [
-    {
-      id: 'connections',
-      title: 'Connections',
-      description: 'Discover compatible matches',
-      icon: Users,
-      locked: !profile.survey_complete,
-      action: () => {
-        if (!profile.survey_complete) {
-          alert('Please complete your survey first!')
-          router.push('/onboarding/survey')
-        } else if (profile.membershipTier === 'free') {
-          alert('Upgrade to HAEVN+ to access discovery')
-          router.push('/onboarding/membership')
-        } else {
-          router.push('/connections')
-        }
-      },
-      stats: profile.survey_complete ? 'Ready to explore' : 'Complete survey to unlock'
-    },
-    {
-      id: 'events',
-      title: 'Events',
-      description: 'Join community gatherings',
-      icon: Calendar,
-      locked: true,
-      action: () => alert('Events coming soon!'),
-      stats: 'Coming in Phase 2'
-    },
-    {
-      id: 'resources',
-      title: 'Resources',
-      description: 'Guides and safety tips',
-      icon: BookOpen,
-      locked: true,
-      action: () => alert('Resources coming soon!'),
-      stats: 'Coming in Phase 2'
-    }
-  ]
-
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 pt-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold">Welcome back, {profile.full_name || 'Friend'}!</h1>
-              <p className="text-muted-foreground mt-1">{profile.city || 'Location pending'}</p>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Welcome to HAEVN!
+              </h1>
+              <p className="text-xl text-muted-foreground mt-2">
+                {profile?.full_name || 'Beautiful Soul'} • {profile?.city || 'Your City'}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Badge variant={profile.membershipTier === 'free' ? 'secondary' : 'default'}>
-                {profile.membershipTier === 'free' ? 'Free' : profile.membershipTier === 'plus' ? 'HAEVN+' : 'HAEVN Select'}
-              </Badge>
-              {profile.msa_status === 'waitlist' && (
-                <Badge variant="outline">Waitlist</Badge>
-              )}
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Status alerts */}
-          {!profile.survey_complete && (
-            <Card className="mt-4 border-orange-200 bg-orange-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-orange-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-orange-900">Complete your survey to unlock features</p>
-                    <p className="text-sm text-orange-700 mt-1">
-                      You must complete 100% of the survey questions before accessing discovery.
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => router.push('/onboarding/survey')}
-                    >
-                      Continue Survey
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {profile.survey_complete && profile.membershipTier === 'free' && (
-            <Card className="mt-4 border-blue-200 bg-blue-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-blue-900">Survey complete! Upgrade to start connecting</p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      With HAEVN+, you can browse profiles, send likes, and chat with matches.
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => router.push('/onboarding/membership')}
-                    >
-                      Upgrade to HAEVN+
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Three Pillars */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {pillars.map((pillar) => {
-            const Icon = pillar.icon
-            return (
-              <Card
-                key={pillar.id}
-                className={`cursor-pointer transition-all hover:shadow-lg ${
-                  pillar.locked ? 'opacity-75' : ''
-                }`}
-                onClick={pillar.action}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <Icon className="h-8 w-8 text-primary" />
-                    {pillar.locked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                  <CardTitle className="mt-4">{pillar.title}</CardTitle>
-                  <CardDescription>{pillar.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{pillar.stats}</p>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 flex gap-4">
-          <Button variant="outline" onClick={() => router.push('/profile')}>
-            Edit Profile
-          </Button>
-          <Button variant="outline" onClick={() => router.push('/settings')}>
-            Settings
-          </Button>
-          {profile.membershipTier === 'free' && (
-            <Button onClick={() => router.push('/onboarding/membership')}>
-              Upgrade Membership
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
-          )}
+          </div>
+        </div>
+
+        {/* Congratulations Card */}
+        <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-green-900">
+                  Congratulations! You're All Set! 🎉
+                </CardTitle>
+                <CardDescription className="text-green-700 mt-1">
+                  You've successfully completed your onboarding and joined the HAEVN community
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="text-center p-3 bg-white/60 rounded-lg">
+                <Sparkles className="h-6 w-6 text-purple-600 mx-auto mb-1" />
+                <p className="text-sm font-medium">Profile Complete</p>
+              </div>
+              <div className="text-center p-3 bg-white/60 rounded-lg">
+                <Heart className="h-6 w-6 text-pink-600 mx-auto mb-1" />
+                <p className="text-sm font-medium">Survey Submitted</p>
+              </div>
+              <div className="text-center p-3 bg-white/60 rounded-lg">
+                <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                <p className="text-sm font-medium">Member Active</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Coming Soon Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl">Your HAEVN Journey Begins Soon!</CardTitle>
+            <CardDescription>
+              We're putting the finishing touches on your personalized experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <h3 className="font-semibold mb-2">What's Coming Next:</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                  <span>Personalized match recommendations based on your survey</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                  <span>Access to exclusive HAEVN events in your area</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                  <span>Connection with like-minded individuals in your community</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                  <span>Educational resources and community forums</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="h-5 w-5 text-purple-600" />
+                <h3 className="font-semibold text-purple-900">Launch Timeline</h3>
+              </div>
+              <p className="text-sm text-purple-700">
+                Full platform features will be available soon. We'll notify you via email when your matches are ready!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Placeholder Features Grid */}
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <Card className="opacity-60 cursor-not-allowed">
+            <CardHeader>
+              <CardTitle className="text-lg">Discover</CardTitle>
+              <CardDescription>Find your perfect matches</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline">Coming Soon</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="opacity-60 cursor-not-allowed">
+            <CardHeader>
+              <CardTitle className="text-lg">Messages</CardTitle>
+              <CardDescription>Connect and chat</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline">Coming Soon</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="opacity-60 cursor-not-allowed">
+            <CardHeader>
+              <CardTitle className="text-lg">Events</CardTitle>
+              <CardDescription>Join community gatherings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline">Coming Soon</Badge>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Footer Message */}
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Thank you for being an early member of HAEVN.
+            Your journey to meaningful connections starts here.
+          </p>
         </div>
       </div>
     </div>
