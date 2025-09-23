@@ -10,8 +10,7 @@ import { ProgressBar } from '@/components/survey/ProgressBar'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
 import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
-import { getCurrentPartnershipId } from '@/lib/actions/partnership-simple'
-import { getSurveyData, saveSurveyData } from '@/lib/actions/survey'
+import { getUserSurveyData, saveUserSurveyData } from '@/lib/actions/survey-user'
 import { getOnboardingFlowController } from '@/lib/onboarding/flow'
 import {
   surveySections,
@@ -27,7 +26,6 @@ export default function SurveyPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
-  const [partnershipId, setPartnershipId] = useState<string | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [completionPct, setCompletionPct] = useState(0)
@@ -64,20 +62,10 @@ export default function SurveyPage() {
       }
 
       try {
-        console.log('[Survey] Loading survey data...')
+        console.log('[Survey] Loading survey data for user...')
 
-        // Get or create partnership
-        const { id: partnershipId, error: partnershipError } = await getCurrentPartnershipId()
-
-        if (partnershipError || !partnershipId) {
-          console.error('Partnership error:', partnershipError)
-          // Don't throw - continue with null partnership ID
-        }
-
-        setPartnershipId(partnershipId)
-
-        // Load existing survey responses (will handle null partnershipId)
-        const { data: surveyData, error: surveyError } = await getSurveyData(partnershipId)
+        // Load existing survey responses for the current user
+        const { data: surveyData, error: surveyError } = await getUserSurveyData()
 
         if (surveyError) {
           console.error('Survey load error:', surveyError)
@@ -134,8 +122,6 @@ export default function SurveyPage() {
     newAnswers: Record<string, any>,
     newQuestionIndex: number
   ) => {
-    if (!partnershipId) return
-
     // Clear existing timeout
     if (saveTimeout) {
       clearTimeout(saveTimeout)
@@ -147,7 +133,7 @@ export default function SurveyPage() {
       setSaveError(null)
 
       try {
-        const { success, error } = await saveSurveyData(partnershipId, newAnswers, newQuestionIndex)
+        const { success, error } = await saveUserSurveyData(newAnswers, newQuestionIndex)
 
         if (error || !success) {
           throw new Error(error || 'Failed to save')
@@ -168,9 +154,7 @@ export default function SurveyPage() {
 
         // Check if complete
         if (newCompletion === 100) {
-          // Mark survey step as complete
-          const flowController = getOnboardingFlowController()
-          await flowController.markStepComplete(partnershipId, 7)
+          // Survey is complete, will be handled by saveUserSurveyData
 
           toast({
             title: 'Survey Complete!',
@@ -194,7 +178,7 @@ export default function SurveyPage() {
     }, 500)
 
     setSaveTimeout(timeout)
-  }, [partnershipId, saveTimeout, router, toast])
+  }, [saveTimeout, router, toast])
 
   // Handle answer change
   const handleAnswerChange = (value: any) => {
@@ -228,9 +212,7 @@ export default function SurveyPage() {
   const handleSaveAndExit = async () => {
     setSaveStatus('saving')
     try {
-      if (partnershipId) {
-        await saveSurveyData(partnershipId, answers, currentQuestionIndex)
-      }
+      await saveUserSurveyData(answers, currentQuestionIndex)
       router.push('/dashboard')
     } catch (err) {
       console.error('Error saving survey:', err)
