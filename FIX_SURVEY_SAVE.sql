@@ -1,13 +1,7 @@
 -- This migration fixes survey saving by creating a user-based table
 -- Run this entire file in Supabase SQL Editor
 
--- Drop existing policies if they exist (to avoid conflicts)
-DROP POLICY IF EXISTS "Users can view own survey responses" ON user_survey_responses;
-DROP POLICY IF EXISTS "Users can insert own survey responses" ON user_survey_responses;
-DROP POLICY IF EXISTS "Users can update own survey responses" ON user_survey_responses;
-DROP POLICY IF EXISTS "Users can delete own survey responses" ON user_survey_responses;
-
--- Create the new table
+-- Create the new table (if it doesn't exist)
 CREATE TABLE IF NOT EXISTS user_survey_responses (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     answers_json JSONB DEFAULT '{}',
@@ -23,6 +17,12 @@ CREATE INDEX IF NOT EXISTS idx_user_survey_responses_completion ON user_survey_r
 
 -- Enable Row Level Security
 ALTER TABLE user_survey_responses ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (now that table exists)
+DROP POLICY IF EXISTS "Users can view own survey responses" ON user_survey_responses;
+DROP POLICY IF EXISTS "Users can insert own survey responses" ON user_survey_responses;
+DROP POLICY IF EXISTS "Users can update own survey responses" ON user_survey_responses;
+DROP POLICY IF EXISTS "Users can delete own survey responses" ON user_survey_responses;
 
 -- Create RLS policies
 CREATE POLICY "Users can view own survey responses" ON user_survey_responses
