@@ -141,8 +141,8 @@ export async function saveSurveyData(
       .upsert({
         partnership_id: partnershipId,
         answers_json: mergedAnswers,
-        completion_pct: completionPct
-        // current_step: nextStep // This field doesn't exist yet in the database
+        completion_pct: completionPct,
+        current_step: nextStep
       }, {
         onConflict: 'partnership_id'
       })

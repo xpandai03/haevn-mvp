@@ -45,6 +45,16 @@ export default function SurveyPage() {
     section.questions.some(q => q.id === currentQuestion?.id)
   )
 
+  // Calculate real-time completion percentage
+  const calculateCurrentCompletion = () => {
+    const answeredCount = activeQuestions.filter(q => {
+      const answer = answers[q.id]
+      if (Array.isArray(answer)) return answer.length > 0
+      return answer !== undefined && answer !== null && answer !== ''
+    }).length
+    return Math.round((answeredCount / activeQuestions.length) * 100)
+  }
+
   // Load survey data on mount
   useEffect(() => {
     async function loadSurveyData() {
@@ -76,15 +86,31 @@ export default function SurveyPage() {
 
         if (surveyData) {
           setAnswers(surveyData.answers_json)
-          setCompletionPct(surveyData.completion_pct)
 
           // Find first unanswered question for resume
           const activeQs = getActiveQuestions(surveyData.answers_json)
-          const firstUnanswered = activeQs.findIndex(q => !surveyData.answers_json[q.id])
-          setCurrentQuestionIndex(firstUnanswered >= 0 ? firstUnanswered : 0)
+
+          // Try to use saved current_step first, then fall back to first unanswered
+          if (surveyData.current_step && surveyData.current_step > 0) {
+            // Use the saved position but ensure it's valid
+            const savedIndex = Math.min(surveyData.current_step, activeQs.length - 1)
+            setCurrentQuestionIndex(savedIndex)
+          } else {
+            const firstUnanswered = activeQs.findIndex(q => !surveyData.answers_json[q.id])
+            setCurrentQuestionIndex(firstUnanswered >= 0 ? firstUnanswered : 0)
+          }
+
+          // Recalculate completion percentage based on actual answers
+          const answeredCount = activeQs.filter(q => {
+            const answer = surveyData.answers_json[q.id]
+            if (Array.isArray(answer)) return answer.length > 0
+            return answer !== undefined && answer !== null && answer !== ''
+          }).length
+          const actualCompletion = Math.round((answeredCount / activeQs.length) * 100)
+          setCompletionPct(actualCompletion)
 
           // If survey is complete, redirect
-          if (surveyData.completion_pct === 100) {
+          if (actualCompletion === 100) {
             router.push('/onboarding/membership')
           }
         }
@@ -121,7 +147,7 @@ export default function SurveyPage() {
       setSaveError(null)
 
       try {
-        const { success, error } = await saveSurveyData(partnershipId, newAnswers, 0) // Use 0 for now as current_step
+        const { success, error } = await saveSurveyData(partnershipId, newAnswers, newQuestionIndex)
 
         if (error || !success) {
           throw new Error(error || 'Failed to save')
@@ -178,8 +204,8 @@ export default function SurveyPage() {
     }
     setAnswers(newAnswers)
 
-    // Trigger auto-save
-    saveAnswers({ [currentQuestion.id]: value }, 0)
+    // Trigger auto-save with current question index
+    saveAnswers({ [currentQuestion.id]: value }, currentQuestionIndex)
   }
 
   // Navigation
@@ -187,7 +213,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, 0) // Save current step
+      saveAnswers({}, newIndex) // Save new index
     }
   }
 
@@ -195,7 +221,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, 0) // Save current step
+      saveAnswers({}, newIndex) // Save new index
     }
   }
 
@@ -203,7 +229,7 @@ export default function SurveyPage() {
     setSaveStatus('saving')
     try {
       if (partnershipId) {
-        await saveSurveyData(partnershipId, answers, 0)
+        await saveSurveyData(partnershipId, answers, currentQuestionIndex)
       }
       router.push('/dashboard')
     } catch (err) {
@@ -268,7 +294,7 @@ export default function SurveyPage() {
           <ProgressBar
             currentStep={currentQuestionIndex + 1}
             totalSteps={activeQuestions.length}
-            completionPercentage={completionPct}
+            completionPercentage={calculateCurrentCompletion()}
             sectionName={currentSection?.title || ''}
           />
 
