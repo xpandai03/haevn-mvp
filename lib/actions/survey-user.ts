@@ -147,18 +147,6 @@ export async function saveUserSurveyData(
       return { success: false, error: updateError.message }
     }
 
-    // Always ensure onboarding state exists and is updated
-    await supabase
-      .from('user_onboarding_state')
-      .upsert({
-        user_id: user.id,
-        survey_completed: completionPct === 100,
-        current_step: completionPct === 100 ? 'membership' : 'survey',
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id'
-      })
-
     // If 100% complete, update profile
     if (completionPct === 100) {
       await supabase
