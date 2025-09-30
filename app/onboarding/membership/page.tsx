@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { markStepCompleted } from '@/lib/actions/onboarding-state'
+import { getOnboardingFlowController } from '@/lib/onboarding/flow'
 import { useToast } from '@/hooks/use-toast'
 
 const tiers = [
@@ -65,6 +65,7 @@ export default function MembershipPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
+  const flowController = getOnboardingFlowController()
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -75,14 +76,13 @@ export default function MembershipPage() {
   }, [user, router])
 
   const handleSelectTier = async (tierId: string) => {
+    if (!user) return
+
     setSelectedTier(tierId)
     setLoading(true)
 
     try {
-      const { success: stateSuccess, error: stateError } = await markStepCompleted('membership')
-      if (!stateSuccess) {
-        console.error('Failed to mark membership as completed:', stateError)
-      }
+      await flowController.markStepComplete(user.id, 9)
 
       if (tierId !== 'free') {
         router.push(`/onboarding/payment?tier=${tierId}`)
