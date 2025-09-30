@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { getCurrentPartnershipId, updatePartnership } from '@/lib/actions/partnership'
+import { markStepCompleted } from '@/lib/actions/onboarding-state'
 import { useToast } from '@/hooks/use-toast'
 
 const tiers = [
@@ -14,6 +13,7 @@ const tiers = [
     id: 'free',
     name: 'HAEVN Free',
     price: '$0',
+    period: 'Forever',
     description: 'Get started with basic features',
     features: [
       'View compatibility scores',
@@ -28,8 +28,9 @@ const tiers = [
   },
   {
     id: 'plus',
-    name: 'HAEVN+',
-    price: '$19.99/month',
+    name: 'HAEVN Plus',
+    price: '$19.99',
+    period: 'per month',
     description: 'Full access to connections',
     features: [
       'Unlimited matches',
@@ -39,15 +40,17 @@ const tiers = [
       'Advanced filters',
       'Priority support'
     ],
-    limitations: []
+    limitations: [],
+    popular: true
   },
   {
     id: 'select',
     name: 'HAEVN Select',
-    price: '$49.99/month',
+    price: '$49.99',
+    period: 'per month',
     description: 'Premium concierge experience',
     features: [
-      'Everything in HAEVN+',
+      'Everything in HAEVN Plus',
       'Verified badge',
       'Concierge matchmaking',
       'First access to new features',
@@ -64,69 +67,26 @@ export default function MembershipPage() {
   const { toast } = useToast()
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [partnershipId, setPartnershipId] = useState<string | null>(null)
 
-  // Get partnership ID on mount
   useEffect(() => {
-    async function loadPartnership() {
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-
-      try {
-        const { id, error } = await getCurrentPartnershipId()
-        if (error || !id) {
-          throw new Error(error || 'Failed to get partnership')
-        }
-        setPartnershipId(id)
-      } catch (error) {
-        console.error('Error loading partnership:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load your profile. Please try again.',
-          variant: 'destructive'
-        })
-      }
+    if (!user) {
+      router.push('/auth/login')
     }
-
-    loadPartnership()
-  }, [user, router, toast])
+  }, [user, router])
 
   const handleSelectTier = async (tierId: string) => {
-    // Temporary workaround: if no partnershipId, still allow selection
-    // The dashboard will handle partnership creation if needed
-    if (!partnershipId) {
-      console.warn('No partnership ID found, proceeding anyway')
-    }
-
     setSelectedTier(tierId)
     setLoading(true)
 
     try {
-      // Update partnership with selected tier if we have one
-      if (partnershipId) {
-        const { success, error } = await updatePartnership(partnershipId, {
-          membership_tier: tierId as 'free' | 'plus' | 'select'
-        })
-
-        if (error || !success) {
-          console.error('Failed to update membership tier:', error)
-          // Continue anyway, dashboard will handle it
-        }
+      const { success: stateSuccess, error: stateError } = await markStepCompleted('membership')
+      if (!stateSuccess) {
+        console.error('Failed to mark membership as completed:', stateError)
       }
 
-      // Mark membership step as complete
-      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-      const flowController = getOnboardingFlowController()
-      await flowController.markStepComplete(user.id, 9)
-
-      // Redirect based on tier
       if (tierId !== 'free') {
-        // Paid tiers go to payment
         router.push(`/onboarding/payment?tier=${tierId}`)
       } else {
-        // Free tier goes straight to dashboard
         toast({
           title: 'Welcome to HAEVN Free!',
           description: 'You can upgrade anytime from your dashboard.',
@@ -147,65 +107,181 @@ export default function MembershipPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
       <div className="w-full max-w-6xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">Choose Your Membership</h1>
-          <p className="text-muted-foreground mt-2">
-            Select the plan that works best for you
+        {/* Header */}
+        <div className="mb-10">
+          <h1
+            className="text-haevn-navy mb-3"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700,
+              fontSize: '36px',
+              lineHeight: '100%',
+              letterSpacing: '-0.015em',
+              textAlign: 'left'
+            }}
+          >
+            Choose your membership
+          </h1>
+          <p
+            className="text-haevn-charcoal"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              fontSize: '18px',
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            Select the plan that works best for you. You can upgrade or cancel anytime.
           </p>
         </div>
 
+        {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-6">
           {tiers.map((tier) => (
-            <Card
+            <div
               key={tier.id}
-              className={`relative ${selectedTier === tier.id ? 'border-primary' : ''}`}
+              className={`relative bg-white rounded-3xl p-8 shadow-sm transition-all ${
+                selectedTier === tier.id ? 'ring-2 ring-haevn-teal' : ''
+              }`}
             >
-              {tier.id === 'plus' && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full">
-                    Most Popular
+              {tier.popular && (
+                <div className="absolute -top-3 left-8">
+                  <span
+                    className="bg-haevn-gold text-white px-4 py-1 rounded-full"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '12px'
+                    }}
+                  >
+                    Most popular
                   </span>
                 </div>
               )}
-              <CardHeader>
-                <CardTitle>{tier.name}</CardTitle>
-                <CardDescription>{tier.description}</CardDescription>
-                <div className="text-3xl font-bold mt-4">{tier.price}</div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 mb-4">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
+
+              {/* Tier Name */}
+              <h3
+                className="text-haevn-navy mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '24px',
+                  lineHeight: '100%',
+                  letterSpacing: '-0.015em',
+                  textAlign: 'left'
+                }}
+              >
+                {tier.name}
+              </h3>
+
+              {/* Description */}
+              <p
+                className="text-haevn-charcoal mb-6"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '14px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                {tier.description}
+              </p>
+
+              {/* Price */}
+              <div className="mb-6">
+                <div className="flex items-baseline gap-1">
+                  <span
+                    className="text-haevn-navy"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '36px',
+                      lineHeight: '100%'
+                    }}
+                  >
+                    {tier.price}
+                  </span>
+                  <span
+                    className="text-haevn-charcoal"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 300,
+                      fontSize: '14px'
+                    }}
+                  >
+                    {tier.period}
+                  </span>
+                </div>
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-6">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2">
+                    <Check className="h-5 w-5 text-haevn-teal flex-shrink-0 mt-0.5" />
+                    <span
+                      className="text-haevn-charcoal"
+                      style={{
+                        fontFamily: 'Roboto, Helvetica, sans-serif',
+                        fontWeight: 300,
+                        fontSize: '14px',
+                        lineHeight: '120%',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Limitations */}
+              {tier.limitations.length > 0 && (
+                <ul className="space-y-2 mb-6 opacity-60">
+                  {tier.limitations.map((limitation) => (
+                    <li key={limitation} className="flex items-start gap-2">
+                      <span
+                        className="text-haevn-charcoal line-through"
+                        style={{
+                          fontFamily: 'Roboto, Helvetica, sans-serif',
+                          fontWeight: 300,
+                          fontSize: '13px',
+                          lineHeight: '120%',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {limitation}
+                      </span>
                     </li>
                   ))}
                 </ul>
+              )}
 
-                {tier.limitations.length > 0 && (
-                  <ul className="space-y-2 mb-4 opacity-60">
-                    {tier.limitations.map((limitation) => (
-                      <li key={limitation} className="flex items-start gap-2">
-                        <span className="text-sm line-through">{limitation}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <Button
-                  className="w-full"
-                  variant={tier.id === 'plus' ? 'default' : 'outline'}
-                  onClick={() => handleSelectTier(tier.id)}
-                  disabled={loading}
-                >
-                  {loading && selectedTier === tier.id
-                    ? 'Processing...'
-                    : `Choose ${tier.name}`}
-                </Button>
-              </CardContent>
-            </Card>
+              {/* CTA Button */}
+              <Button
+                onClick={() => handleSelectTier(tier.id)}
+                disabled={loading}
+                className={`w-full rounded-full ${
+                  tier.popular
+                    ? 'bg-haevn-teal hover:opacity-90 text-white'
+                    : 'bg-white hover:bg-haevn-lightgray text-haevn-navy border-2 border-haevn-navy'
+                }`}
+                size="lg"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '16px'
+                }}
+              >
+                {loading && selectedTier === tier.id
+                  ? 'Processing...'
+                  : `Choose ${tier.name}`}
+              </Button>
+            </div>
           ))}
         </div>
       </div>

@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
@@ -33,6 +31,7 @@ export function QuestionRenderer({
 }: QuestionRendererProps) {
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customValue, setCustomValue] = useState('')
+  const [showInfoPopover, setShowInfoPopover] = useState(false)
 
   // Check if value is a custom option (for "Other" selections)
   useEffect(() => {
@@ -45,9 +44,7 @@ export function QuestionRenderer({
   // Handle Enter key press to advance to next question
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only advance on Enter if we can advance and have a handler
       if (e.key === 'Enter' && canAdvance && onEnterPress) {
-        // Prevent form submission if we're in a form
         e.preventDefault()
         onEnterPress()
       }
@@ -63,12 +60,31 @@ export function QuestionRenderer({
 
     return (
       <TooltipProvider>
-        <Tooltip>
+        <Tooltip open={showInfoPopover} onOpenChange={setShowInfoPopover}>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-muted-foreground cursor-help ml-1" />
+            <button
+              className="flex-shrink-0 p-1.5 text-haevn-teal hover:opacity-80 rounded-full transition-opacity"
+              aria-label="More information"
+            >
+              <Info className="w-5 h-5" />
+            </button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="max-w-xs">{tooltipText}</p>
+          <TooltipContent
+            side="bottom"
+            align="start"
+            className="max-w-xs p-4 bg-white border-haevn-teal"
+          >
+            <p
+              className="text-sm text-haevn-charcoal leading-relaxed"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300,
+                lineHeight: '120%',
+                textAlign: 'left'
+              }}
+            >
+              {tooltipText}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -76,39 +92,67 @@ export function QuestionRenderer({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Label className="text-lg font-medium">{question.label}</Label>
+    <div className="space-y-6">
+      {/* Question Label with Info Icon */}
+      <div className="flex items-start gap-3">
+        <h3
+          className="text-3xl lg:text-4xl text-haevn-navy leading-tight"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 700,
+            lineHeight: '100%',
+            letterSpacing: '-0.015em',
+            textAlign: 'left'
+          }}
+        >
+          {question.label}
+        </h3>
         {renderTooltip()}
       </div>
 
+      {/* SELECT - Single choice with cards */}
       {question.type === 'select' && question.options && (
         <div className="space-y-3">
-          <RadioGroup
-            value={showCustomInput ? 'Other (please specify)' : (value || '')}
-            onValueChange={(newValue) => {
-              if (newValue.includes('Other')) {
-                setShowCustomInput(true)
-                setCustomValue('')
-              } else {
-                setShowCustomInput(false)
-                onChange(newValue)
-              }
-            }}
-            className="space-y-3"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {question.options.map((option) => (
-              <div key={option} className="flex items-center space-x-3">
-                <RadioGroupItem value={option} id={`${question.id}-${option}`} />
-                <Label
-                  htmlFor={`${question.id}-${option}`}
-                  className="font-normal cursor-pointer flex-1"
+              <button
+                key={option}
+                onClick={() => {
+                  if (option.includes('Other')) {
+                    setShowCustomInput(true)
+                    setCustomValue('')
+                  } else {
+                    setShowCustomInput(false)
+                    onChange(option)
+                  }
+                }}
+                className={`
+                  relative p-4 rounded-2xl border-2 text-left transition-all duration-200
+                  ${(showCustomInput && option.includes('Other')) || value === option
+                    ? 'border-haevn-teal bg-white shadow-sm'
+                    : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
+                  }
+                `}
+              >
+                <span
+                  className="text-base text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 500
+                  }}
                 >
                   {option}
-                </Label>
-              </div>
+                </span>
+                {((showCustomInput && option.includes('Other')) || value === option) && (
+                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </button>
             ))}
-          </RadioGroup>
+          </div>
 
           {showCustomInput && (
             <Input
@@ -125,40 +169,77 @@ export function QuestionRenderer({
                   onEnterPress()
                 }
               }}
-              className="mt-2 max-w-md"
+              className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
               autoFocus
             />
           )}
         </div>
       )}
 
+      {/* MULTISELECT - Multiple choice with cards */}
       {question.type === 'multiselect' && question.options && (
         <div className="space-y-3">
-          {question.options.map((option) => (
-            <div key={option} className="flex items-center space-x-3">
-              <Checkbox
-                id={`${question.id}-${option}`}
-                checked={value?.includes(option) || false}
-                onCheckedChange={(checked) => {
-                  const currentValue = value || []
-                  if (checked) {
-                    onChange([...currentValue, option])
-                  } else {
-                    onChange(currentValue.filter((v: string) => v !== option))
-                  }
-                }}
-              />
-              <Label
-                htmlFor={`${question.id}-${option}`}
-                className="font-normal cursor-pointer flex-1"
-              >
-                {option}
-              </Label>
-            </div>
-          ))}
+          <p
+            className="text-sm text-haevn-charcoal mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            Select all that apply
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {question.options.map((option) => {
+              const isSelected = value?.includes(option) || false
+              return (
+                <button
+                  key={option}
+                  onClick={() => {
+                    const currentValue = value || []
+                    if (isSelected) {
+                      onChange(currentValue.filter((v: string) => v !== option))
+                    } else {
+                      onChange([...currentValue, option])
+                    }
+                  }}
+                  className={`
+                    relative p-4 rounded-2xl border-2 text-left transition-all duration-200
+                    ${isSelected
+                      ? 'border-haevn-teal bg-white shadow-sm'
+                      : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
+                    }
+                  `}
+                >
+                  <span
+                    className="text-base text-haevn-charcoal"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 500
+                    }}
+                  >
+                    {option}
+                  </span>
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
+      {/* TEXT INPUT */}
       {question.type === 'text' && (
         <Input
           type="text"
@@ -166,16 +247,20 @@ export function QuestionRenderer({
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            // For text inputs, only advance on Enter if field is not empty
             if (e.key === 'Enter' && value && onEnterPress && canAdvance) {
               e.preventDefault()
               onEnterPress()
             }
           }}
-          className="max-w-md"
+          className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 300
+          }}
         />
       )}
 
+      {/* NUMBER INPUT */}
       {question.type === 'number' && (
         <Input
           type="number"
@@ -190,22 +275,33 @@ export function QuestionRenderer({
           }}
           min={question.min}
           max={question.max}
-          className="max-w-[200px]"
+          className="w-full max-w-[200px] px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 500
+          }}
         />
       )}
 
+      {/* TEXTAREA */}
       {question.type === 'textarea' && (
         <Textarea
           placeholder={question.placeholder}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="max-w-2xl min-h-[100px]"
+          className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[120px]"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 300,
+            lineHeight: '120%'
+          }}
           rows={4}
         />
       )}
 
+      {/* SCALE / SLIDER */}
       {(question.type === 'scale' || question.type === 'slider') && (
-        <div className="space-y-4 max-w-md">
+        <div className="space-y-4">
           <Slider
             value={[value || (question.min !== undefined ? question.min : 5)]}
             onValueChange={(values) => onChange(values[0])}
@@ -214,13 +310,95 @@ export function QuestionRenderer({
             step={question.step || 1}
             className="w-full"
           />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{question.min !== undefined ? question.min : 1}</span>
-            <span className="font-medium text-foreground">
+          <div className="flex justify-between items-center">
+            <span
+              className="text-sm text-haevn-charcoal"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
+            >
+              {question.min !== undefined ? question.min : 1}
+            </span>
+            <span
+              className="text-2xl text-haevn-navy"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 700
+              }}
+            >
               {value !== undefined && value !== null ? value : (question.min !== undefined ? question.min : 5)}
             </span>
-            <span>{question.max || 10}</span>
+            <span
+              className="text-sm text-haevn-charcoal"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
+            >
+              {question.max || 10}
+            </span>
           </div>
+        </div>
+      )}
+
+      {/* BOOLEAN */}
+      {question.type === 'boolean' && (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => onChange(true)}
+            className={`
+              relative p-4 rounded-2xl border-2 text-center transition-all duration-200
+              ${value === true
+                ? 'border-haevn-teal bg-white shadow-sm'
+                : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
+              }
+            `}
+          >
+            <span
+              className="text-base text-haevn-charcoal"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500
+              }}
+            >
+              Yes
+            </span>
+            {value === true && (
+              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </button>
+          <button
+            onClick={() => onChange(false)}
+            className={`
+              relative p-4 rounded-2xl border-2 text-center transition-all duration-200
+              ${value === false
+                ? 'border-haevn-teal bg-white shadow-sm'
+                : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
+              }
+            `}
+          >
+            <span
+              className="text-base text-haevn-charcoal"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500
+              }}
+            >
+              No
+            </span>
+            {value === false && (
+              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </button>
         </div>
       )}
     </div>

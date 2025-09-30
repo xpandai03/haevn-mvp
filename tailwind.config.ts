@@ -63,6 +63,12 @@ const config: Config = {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        // HAEVN Brand Colors (Official - from brand guidelines only)
+        'haevn-lightgray': '#E8E6E3',  // Backgrounds, surfaces
+        'haevn-gold': '#E29E0C',        // Accents, highlights
+        'haevn-teal': '#008080',        // Primary buttons, CTAs
+        'haevn-navy': '#1E2A4A',        // Headers, text, UI base
+        'haevn-charcoal': '#252627',    // Body text, contrast
       },
       borderRadius: {
         lg: 'var(--radius)',

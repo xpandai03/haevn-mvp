@@ -113,44 +113,123 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-2">Step 1 of 9</p>
-            <Progress value={11} className="h-2" />
-          </div>
-          <CardTitle>Welcome to HAEVN</CardTitle>
-          <CardDescription>Create your account to get started</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="mb-8">
+          <h1
+            className="text-haevn-navy mb-3"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700,
+              fontSize: '32px',
+              lineHeight: '100%',
+              letterSpacing: '-0.015em',
+              textAlign: 'left'
+            }}
+          >
+            Create your account
+          </h1>
+          <p
+            className="text-haevn-charcoal"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              fontSize: '16px',
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            Let's get started with the basics.
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-white rounded-3xl p-8 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <Label htmlFor="name">What should we call you?</Label>
-              <p className="text-xs text-muted-foreground mb-2">First name or nickname is fine. This will be your username in the app.</p>
+              <Label
+                htmlFor="name"
+                className="text-haevn-navy mb-2 block"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  textAlign: 'left'
+                }}
+              >
+                What should we call you?
+              </Label>
+              <p
+                className="text-haevn-charcoal opacity-70 mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '13px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                First name or nickname is fine. This will be your username in the app.
+              </p>
               <Input
                 id="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                className="border-haevn-navy rounded-xl"
               />
             </div>
 
             <div>
-              <Label htmlFor="email">Email</Label>
-              <p className="text-xs text-muted-foreground mb-2">We'll never share this. Used only for login and verification.</p>
+              <Label
+                htmlFor="email"
+                className="text-haevn-navy mb-2 block"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  textAlign: 'left'
+                }}
+              >
+                Email
+              </Label>
+              <p
+                className="text-haevn-charcoal opacity-70 mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '13px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                We'll never share this. Used only for login and verification.
+              </p>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                className="border-haevn-navy rounded-xl"
               />
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label
+                htmlFor="password"
+                className="text-haevn-navy mb-2 block"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  textAlign: 'left'
+                }}
+              >
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -158,12 +237,35 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 minLength={6}
+                className="border-haevn-navy rounded-xl"
               />
             </div>
 
             <div>
-              <Label htmlFor="zipCode">ZIP Code</Label>
-              <p className="text-xs text-muted-foreground mb-2">This helps us connect you locally. We never show your exact location.</p>
+              <Label
+                htmlFor="zipCode"
+                className="text-haevn-navy mb-2 block"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  textAlign: 'left'
+                }}
+              >
+                ZIP code
+              </Label>
+              <p
+                className="text-haevn-charcoal opacity-70 mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '13px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                This helps us connect you locally. We never show your exact location.
+              </p>
               <Input
                 id="zipCode"
                 type="text"
@@ -172,36 +274,54 @@ export default function SignupPage() {
                 required
                 pattern="[0-9]{5}"
                 placeholder="00000"
+                className="border-haevn-navy rounded-xl"
               />
             </div>
 
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-xl">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full mt-6"
+              size="lg"
+              disabled={loading}
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px'
+              }}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
                 </>
               ) : (
-                'Sign Up'
+                'Continue'
               )}
             </Button>
 
-            <div className="text-center text-sm text-muted-foreground">
+            <div
+              className="text-center text-haevn-charcoal pt-4"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300,
+                fontSize: '14px'
+              }}
+            >
               Already have an account?{' '}
-              <Link href="/auth/login" className="text-primary hover:underline">
-                Sign In
+              <Link href="/auth/login" className="text-haevn-teal hover:underline font-medium">
+                Sign in
               </Link>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

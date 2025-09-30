@@ -3,53 +3,9 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
 import { getOnboardingFlowController } from '@/lib/onboarding/flow'
-import { Users, Heart, Compass, MapPin, Stars, Brain } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { Badge } from '@/components/ui/badge'
-
-const SURVEY_SECTIONS = [
-  {
-    icon: Users,
-    title: 'Identity & Orientation',
-    description: 'Demographics, Orientation',
-    color: 'text-purple-500'
-  },
-  {
-    icon: Heart,
-    title: 'Relationship Style',
-    description: 'Relationship Orientation, Relational Style',
-    color: 'text-pink-500'
-  },
-  {
-    icon: Compass,
-    title: 'Lifestyle & Community',
-    description: 'Lifestyle, Privacy & Community',
-    color: 'text-blue-500'
-  },
-  {
-    icon: MapPin,
-    title: 'Erotic Map',
-    description: 'Erotic Orientation, Boundaries & Safer Sex, Open Expression',
-    color: 'text-red-500'
-  },
-  {
-    icon: Stars,
-    title: 'Optional Exploration',
-    description: 'Kink Library',
-    color: 'text-amber-500',
-    optional: true
-  },
-  {
-    icon: Brain,
-    title: 'Personality Insights',
-    description: 'Erotic Personality',
-    color: 'text-green-500'
-  }
-]
 
 export default function SurveyIntroPage() {
   const router = useRouter()
@@ -67,10 +23,7 @@ export default function SurveyIntroPage() {
     if (!user) return
 
     try {
-      // Mark this step as complete
       await flowController.markStepComplete(user.id, 6)
-
-      // Navigate to survey
       router.push('/onboarding/survey')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
@@ -83,91 +36,182 @@ export default function SurveyIntroPage() {
   }
 
   return (
-    <OnboardingLayout currentStep={6}>
-      <div className="max-w-3xl mx-auto">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Your Relationship Survey</CardTitle>
-            <CardDescription className="text-base space-y-2">
-              <span className="block font-semibold text-foreground">
-                This is the foundation of HAEVN.
-              </span>
-              <span className="block">
-                Your answers guide the connections we introduce you to.
-              </span>
-              <span className="block font-semibold text-foreground">
-                It's required. Without it, we can't make introductions.
-              </span>
-              <span className="block">
-                Take your time. Your progress saves automatically.
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Survey Sections Preview */}
-            <div className="mb-8">
-              <h3 className="font-semibold mb-4">Survey Sections</h3>
-              <div className="grid gap-3">
-                {SURVEY_SECTIONS.map((section, index) => {
-                  const Icon = section.icon
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-background border"
-                    >
-                      <Icon className={`h-5 w-5 mt-0.5 ${section.color}`} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{section.title}</span>
-                          {section.optional && (
-                            <Badge variant="secondary" className="text-xs">
-                              Optional
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {section.description}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="w-full max-w-2xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1
+            className="text-haevn-navy mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700,
+              fontSize: '36px',
+              lineHeight: '100%',
+              letterSpacing: '-0.015em',
+              textAlign: 'left'
+            }}
+          >
+            Your relationship survey
+          </h1>
+          <p
+            className="text-haevn-charcoal mb-3"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 500,
+              fontSize: '18px',
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            This is the foundation of HAEVN.
+          </p>
+          <p
+            className="text-haevn-charcoal"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              fontSize: '16px',
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            Your answers guide the connections we introduce you to. Take your time — your progress saves automatically.
+          </p>
+        </div>
 
-            {/* Key Points */}
-            <div className="space-y-3 p-4 rounded-lg bg-muted/50 mb-6">
-              <p className="text-sm font-medium">Important to know:</p>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span>
-                  <span>Your answers are private. We only use them to improve your matches.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span>
-                  <span>Progress saves automatically at each step.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span>
-                  <span>You can take breaks and return anytime.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span>
-                  <span>Most questions are required, but some sections are optional.</span>
-                </li>
-              </ul>
-            </div>
+        {/* Content Card */}
+        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6">
+          {/* Key Points */}
+          <div>
+            <h3
+              className="text-haevn-navy mb-4"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px',
+                lineHeight: '120%',
+                textAlign: 'left'
+              }}
+            >
+              Important to know:
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  Your answers are private. We only use them to improve your matches.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  Progress saves automatically at each step.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  You can take breaks and return anytime.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  It's required. Without it, we can't make introductions.
+                </span>
+              </li>
+            </ul>
+          </div>
 
+          {/* Start Button */}
+          <div className="pt-4">
             <Button
               onClick={handleStart}
-              className="w-full"
+              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
               size="lg"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px'
+              }}
             >
-              Start the Survey
+              Start the survey
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </OnboardingLayout>
+    </div>
   )
 }

@@ -3,14 +3,10 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
 import { getOnboardingFlowController } from '@/lib/onboarding/flow'
-import { CheckCircle2, Sparkles, Users, Calendar, BookOpen } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { Badge } from '@/components/ui/badge'
-import confetti from 'canvas-confetti'
 
 export default function CelebrationPage() {
   const router = useRouter()
@@ -21,50 +17,14 @@ export default function CelebrationPage() {
   useEffect(() => {
     if (!user) {
       router.push('/auth/login')
-      return
     }
-
-    // Trigger confetti animation
-    const duration = 3000
-    const animationEnd = Date.now() + duration
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
-
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min
-    }
-
-    const interval: any = setInterval(function() {
-      const timeLeft = animationEnd - Date.now()
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval)
-      }
-
-      const particleCount = 50 * (timeLeft / duration)
-      // Since particles fall down, start a bit higher than random
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
-      })
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
-      })
-    }, 250)
-
-    return () => clearInterval(interval)
   }, [user, router])
 
   const handleContinue = async () => {
     if (!user) return
 
     try {
-      // Mark this step as complete
       await flowController.markStepComplete(user.id, 8)
-
-      // Navigate to membership selection
       router.push('/onboarding/membership')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
@@ -77,73 +37,152 @@ export default function CelebrationPage() {
   }
 
   return (
-    <OnboardingLayout currentStep={8} showProgressBar={false}>
-      <div className="max-w-2xl mx-auto">
-        <Card className="border-primary/20 shadow-lg">
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <div className="relative">
-                <CheckCircle2 className="h-16 w-16 text-primary" />
-                <Sparkles className="h-6 w-6 text-yellow-500 absolute -top-2 -right-2" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl">You're In!</CardTitle>
-            <CardDescription className="text-base mt-2">
-              <span className="text-lg font-semibold text-foreground block mb-2">
-                Welcome to HAEVN
-              </span>
-              You've completed onboarding. Your profile, verification, and survey are all set.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* What's Unlocked */}
-            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <h3 className="font-semibold mb-3">What happens next:</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                We'll introduce you to matches based on your survey and orientation. You can
-                explore your Dashboard to see connections, update your profile, and discover your
-                community.
-              </p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="w-full max-w-2xl">
+        {/* Icon */}
+        <div className="flex justify-center mb-8">
+          <div className="w-24 h-24 rounded-full bg-haevn-teal/10 flex items-center justify-center">
+            <CheckCircle2 className="h-12 w-12 text-haevn-teal" />
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Access to compatible matches</span>
-                  <Badge variant="secondary" className="text-xs">After membership</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Community events</span>
-                  <Badge variant="outline" className="text-xs">Phase 2</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Resources & guides</span>
-                  <Badge variant="outline" className="text-xs">Phase 2</Badge>
-                </div>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1
+            className="text-haevn-navy mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700,
+              fontSize: '42px',
+              lineHeight: '100%',
+              letterSpacing: '-0.015em',
+              textAlign: 'left'
+            }}
+          >
+            You're all set!
+          </h1>
+          <p
+            className="text-haevn-charcoal mb-6"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              fontSize: '18px',
+              lineHeight: '120%',
+              textAlign: 'left'
+            }}
+          >
+            Your survey is complete. We'll use your responses to help you find compatible connections.
+          </p>
+        </div>
 
-            {/* Success Message */}
-            <div className="text-center space-y-2 py-4">
-              <p className="text-sm text-muted-foreground">
-                You've taken the first step toward meaningful connections.
-              </p>
-              <p className="text-sm font-medium">
-                Let's choose your membership plan to unlock everything HAEVN has to offer.
-              </p>
-            </div>
+        {/* Content Card */}
+        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6 mb-6">
+          <div>
+            <h2
+              className="text-haevn-navy mb-4"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '20px',
+                lineHeight: '120%',
+                textAlign: 'left'
+              }}
+            >
+              What happens next:
+            </h2>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  We'll review your responses to find people who share your values and relationship style.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  You'll be able to explore your dashboard, update your profile, and see potential matches.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  className="text-haevn-gold mt-1"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  •
+                </span>
+                <span
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '16px',
+                    lineHeight: '120%',
+                    textAlign: 'left'
+                  }}
+                >
+                  Choose a membership plan to unlock messaging and connect with others.
+                </span>
+              </li>
+            </ul>
+          </div>
 
+          {/* CTA */}
+          <div className="pt-4">
             <Button
               onClick={handleContinue}
-              className="w-full"
+              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
               size="lg"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px'
+              }}
             >
-              Continue → Choose Your Plan
+              Choose your membership
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </OnboardingLayout>
+    </div>
   )
 }

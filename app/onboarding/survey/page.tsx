@@ -3,21 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
-import { ProgressBar } from '@/components/survey/ProgressBar'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
-import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
 import { getUserSurveyData, saveUserSurveyData } from '@/lib/actions/survey-user'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
 import {
   surveySections,
-  getAllQuestions,
   getActiveQuestions
 } from '@/lib/survey/questions'
-import { Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -154,8 +149,6 @@ export default function SurveyPage() {
 
         // Check if complete
         if (newCompletion === 100) {
-          // Survey is complete, will be handled by saveUserSurveyData
-
           toast({
             title: 'Survey Complete!',
             description: 'Great job! Let\'s celebrate...',
@@ -189,7 +182,7 @@ export default function SurveyPage() {
     setAnswers(newAnswers)
 
     // Trigger auto-save with current question index
-    saveAnswers({ [currentQuestion.id]: value }, currentQuestionIndex)
+    saveAnswers(newAnswers, currentQuestionIndex)
   }
 
   // Navigation
@@ -197,7 +190,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, newIndex) // Save new index
+      saveAnswers(answers, newIndex) // Save new index
     }
   }
 
@@ -205,7 +198,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers({}, newIndex) // Save new index
+      saveAnswers(answers, newIndex) // Save new index
     }
   }
 
@@ -213,7 +206,11 @@ export default function SurveyPage() {
     setSaveStatus('saving')
     try {
       await saveUserSurveyData(answers, currentQuestionIndex)
-      router.push('/dashboard')
+      toast({
+        title: 'Progress saved',
+        description: 'You can continue where you left off anytime.',
+      })
+      router.push('/onboarding/expectations')
     } catch (err) {
       console.error('Error saving survey:', err)
       toast({
@@ -237,10 +234,12 @@ export default function SurveyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading survey...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+          <p className="text-haevn-charcoal" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
+            Loading survey...
+          </p>
         </div>
       </div>
     )
@@ -248,7 +247,7 @@ export default function SurveyPage() {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-haevn-lightgray">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -260,34 +259,71 @@ export default function SurveyPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-3xl">
-        <CardHeader>
-          <div className="flex justify-between items-center mb-4">
-            <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
-            <div className="flex items-center gap-4">
-              <AutoSaveIndicator status={saveStatus} error={saveError} />
-              <Button variant="ghost" size="sm" onClick={handleSaveAndExit}>
-                Save & Exit
-              </Button>
-            </div>
+    <div className="min-h-screen flex flex-col bg-haevn-lightgray">
+      {/* Progress bar */}
+      <div className="w-full px-4 pt-6 pb-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="w-full h-1 bg-white rounded-full overflow-hidden">
+            <div
+              className="h-full bg-haevn-gold rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${calculateCurrentCompletion()}%` }}
+              role="progressbar"
+              aria-valuenow={calculateCurrentCompletion()}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
           </div>
+          <div className="flex justify-between items-center mt-2">
+            <p className="text-xs text-haevn-charcoal" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
+              {calculateCurrentCompletion()}% complete
+            </p>
+            <AutoSaveIndicator status={saveStatus} error={saveError} />
+          </div>
+        </div>
+      </div>
 
-          <ProgressBar
-            currentStep={currentQuestionIndex + 1}
-            totalSteps={activeQuestions.length}
-            completionPercentage={calculateCurrentCompletion()}
-            sectionName={currentSection?.title || ''}
-          />
+      {/* Back button and Save & Exit */}
+      <div className="w-full px-4 mb-8">
+        <div className="max-w-2xl mx-auto flex justify-between items-center">
+          <button
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+            className="flex items-center gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+              Back
+            </span>
+          </button>
 
-          {currentSection?.description && (
-            <CardDescription className="mt-2">
-              {currentSection.description}
-            </CardDescription>
+          <button
+            onClick={handleSaveAndExit}
+            className="text-sm text-haevn-navy hover:text-haevn-teal transition-colors"
+            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+          >
+            Save & Exit
+          </button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-8 lg:p-12">
+          {/* Section title */}
+          {currentSection && (
+            <div className="mb-6">
+              <h2 className="text-sm text-haevn-gold mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {currentSection.title}
+              </h2>
+              {currentSection.description && (
+                <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
+                  {currentSection.description}
+                </p>
+              )}
+            </div>
           )}
-        </CardHeader>
 
-        <CardContent className="space-y-6">
+          {/* Question */}
           <QuestionRenderer
             question={currentQuestion}
             value={answers[currentQuestion.id]}
@@ -296,44 +332,40 @@ export default function SurveyPage() {
             canAdvance={isCurrentQuestionAnswered() && currentQuestionIndex < activeQuestions.length - 1}
           />
 
-          <div className="flex justify-between items-center pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-              className="flex items-center gap-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-
-            <div className="text-sm text-muted-foreground">
-              Question {currentQuestionIndex + 1} of {activeQuestions.length}
-            </div>
-
+          {/* Continue button */}
+          <div className="mt-8">
             <Button
               onClick={handleNext}
               disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
-              className="flex items-center gap-2"
+              className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
             >
-              Next
-              <ChevronRight className="h-4 w-4" />
+              {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
             </Button>
           </div>
+        </div>
 
-          {currentQuestionIndex === activeQuestions.length - 1 && isCurrentQuestionAnswered() && (
-            <div className="flex justify-center pt-4">
-              <Button
-                size="lg"
-                onClick={() => router.push('/onboarding/celebration')}
-                className="min-w-[200px]"
-              >
-                Complete Survey
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Question counter */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
+            Question {currentQuestionIndex + 1} of {activeQuestions.length}
+          </p>
+        </div>
+      </main>
+
+      {/* Step indicators */}
+      <div className="flex items-center justify-center gap-2 pb-6">
+        {Array.from({ length: Math.min(activeQuestions.length, 10) }).map((_, idx) => (
+          <div
+            key={idx}
+            className={`w-2 h-2 rounded-full ${
+              idx <= Math.floor((currentQuestionIndex / activeQuestions.length) * 10)
+                ? 'bg-haevn-gold'
+                : 'bg-white'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
