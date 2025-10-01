@@ -4,79 +4,104 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Sparkles, Heart, Users, Calendar, LogOut } from 'lucide-react'
+import { Sparkles, Heart, LogOut, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { createClient } from '@/lib/supabase/client'
+import { getMatches, MatchResult } from '@/lib/actions/matching'
+import { MatchCardSimple } from '@/components/MatchCardSimple'
+import { MatchModal } from '@/components/MatchModal'
 
 export default function DashboardPage() {
   const router = useRouter()
   const { user: authUser, signOut } = useAuth()
-  const [profile, setProfile] = useState<any>(null)
+  const [matches, setMatches] = useState<MatchResult[]>([])
+  const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadMatches() {
       if (!authUser) {
         router.push('/auth/login')
         return
       }
 
       try {
-        // Load user profile from database
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', authUser.id)
-          .single()
-
-        if (profileData) {
-          setProfile(profileData)
-        } else {
-          // Use metadata if profile doesn't exist
-          setProfile({
-            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-            city: authUser.user_metadata?.city || 'Your City',
-            survey_complete: true
-          })
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error)
+        setLoading(true)
+        const matchData = await getMatches('Bronze')
+        setMatches(matchData)
+      } catch (err: any) {
+        console.error('Error loading matches:', err)
+        setError(err.message || 'Failed to load matches')
       } finally {
         setLoading(false)
       }
     }
 
-    loadProfile()
-  }, [authUser, router, supabase])
+    loadMatches()
+  }, [authUser, router])
 
   const handleSignOut = async () => {
     await signOut()
     router.push('/')
   }
 
+  const handleMatchClick = (match: MatchResult) => {
+    setSelectedMatch(match)
+    setModalOpen(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading your HAEVN experience...</div>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+          <p className="text-muted-foreground">Finding your matches...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-red-600">Error Loading Matches</CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-haevn-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 pt-8">
           <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Welcome to HAEVN!
-              </h1>
-              <p className="text-xl text-muted-foreground mt-2">
-                {profile?.full_name || 'Beautiful Soul'} • {profile?.city || 'Your City'}
-              </p>
+            <div className="flex items-center gap-6">
+              {/* HAEVN Logo with proper clearspace */}
+              <img
+                src="/images/haevn-logo-transparent.png"
+                alt="HAEVN"
+                className="h-20 w-auto"
+                style={{ padding: '10px' }} // Clearspace: half height (40px) = 20px, but using 10px for tighter layout
+              />
+              <div>
+                <h1 className="text-h1 text-haevn-gray-900">
+                  Your Matches
+                </h1>
+                <p className="text-body text-haevn-gray-700 mt-2">
+                  {matches.length} {matches.length === 1 ? 'match' : 'matches'} found
+                </p>
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
@@ -85,124 +110,77 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Congratulations Card */}
-        <Card className="mb-8 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+        {/* Tier Summary */}
+        {matches.length > 0 && (
+          <Card className="mb-8 bg-white border-2 border-haevn-gray-300 rounded-2xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-haevn-teal-50 rounded-full">
+                  <Sparkles className="h-6 w-6 text-haevn-teal-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-h3 text-haevn-gray-900">Compatibility Matches</CardTitle>
+                  <CardDescription className="text-body-sm text-haevn-gray-600">
+                    Ranked by compatibility score based on your preferences
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-2xl text-green-900">
-                  Congratulations! You're All Set! 🎉
-                </CardTitle>
-                <CardDescription className="text-green-700 mt-1">
-                  You've successfully completed your onboarding and joined the HAEVN community
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div className="text-center p-3 bg-white/60 rounded-lg">
-                <Sparkles className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-                <p className="text-sm font-medium">Profile Complete</p>
-              </div>
-              <div className="text-center p-3 bg-white/60 rounded-lg">
-                <Heart className="h-6 w-6 text-pink-600 mx-auto mb-1" />
-                <p className="text-sm font-medium">Survey Submitted</p>
-              </div>
-              <div className="text-center p-3 bg-white/60 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-                <p className="text-sm font-medium">Member Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {['Platinum', 'Gold', 'Silver', 'Bronze'].map(tier => {
+                  const count = matches.filter(m => m.tier === tier).length
+                  const colors = {
+                    Platinum: 'bg-haevn-teal-50 text-haevn-teal-800 border-haevn-teal-200',
+                    Gold: 'bg-haevn-orange-50 text-haevn-orange-800 border-haevn-orange-200',
+                    Silver: 'bg-haevn-gray-200 text-haevn-gray-700 border-haevn-gray-400',
+                    Bronze: 'bg-haevn-orange-100 text-haevn-orange-900 border-haevn-orange-300',
+                  }[tier]
 
-        {/* Coming Soon Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-xl">Your HAEVN Journey Begins Soon!</CardTitle>
-            <CardDescription>
-              We're putting the finishing touches on your personalized experience
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-muted rounded-lg">
-              <h3 className="font-semibold mb-2">What's Coming Next:</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Personalized match recommendations based on your survey</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Access to exclusive HAEVN events in your area</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Connection with like-minded individuals in your community</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Educational resources and community forums</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-purple-900">Launch Timeline</h3>
+                  return (
+                    <div key={tier} className={`text-center p-4 rounded-2xl border-2 ${colors}`}>
+                      <p className="text-display-sm">{count}</p>
+                      <p className="text-caption font-medium">{tier}</p>
+                    </div>
+                  )
+                })}
               </div>
-              <p className="text-sm text-purple-700">
-                Full platform features will be available soon. We'll notify you via email when your matches are ready!
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {matches.length === 0 && (
+          <Card className="text-center py-12 border-2 border-haevn-gray-300 rounded-2xl">
+            <CardContent>
+              <Heart className="h-16 w-16 mx-auto text-haevn-gray-400 mb-4" />
+              <h2 className="text-h2 text-haevn-gray-900 mb-2">No Matches Yet</h2>
+              <p className="text-body text-haevn-gray-600 max-w-md mx-auto">
+                We're working on finding compatible matches for you. Check back soon, or complete your profile to improve your matches.
               </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Placeholder Features Grid */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Card className="opacity-60 cursor-not-allowed">
-            <CardHeader>
-              <CardTitle className="text-lg">Discover</CardTitle>
-              <CardDescription>Find your perfect matches</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="outline">Coming Soon</Badge>
             </CardContent>
           </Card>
+        )}
 
-          <Card className="opacity-60 cursor-not-allowed">
-            <CardHeader>
-              <CardTitle className="text-lg">Messages</CardTitle>
-              <CardDescription>Connect and chat</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="outline">Coming Soon</Badge>
-            </CardContent>
-          </Card>
+        {/* Matches Grid */}
+        {matches.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {matches.map((match) => (
+              <MatchCardSimple
+                key={match.partnership.id}
+                match={match}
+                onClick={() => handleMatchClick(match)}
+              />
+            ))}
+          </div>
+        )}
 
-          <Card className="opacity-60 cursor-not-allowed">
-            <CardHeader>
-              <CardTitle className="text-lg">Events</CardTitle>
-              <CardDescription>Join community gatherings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="outline">Coming Soon</Badge>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Footer Message */}
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            Thank you for being an early member of HAEVN.
-            Your journey to meaningful connections starts here.
-          </p>
-        </div>
+        {/* Match Modal */}
+        <MatchModal
+          match={selectedMatch}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+        />
       </div>
     </div>
   )
