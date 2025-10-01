@@ -1,0 +1,17 @@
+VERCEL ENVIRONMENT VARIABLE - ADD THIS TO PRODUCTION
+=====================================================
+
+Variable Name:
+SUPABASE_SERVICE_ROLE_KEY
+
+Variable Value:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkZXBhc3liZmtteGNzd2F4bnN6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODI5OTAyMCwiZXhwIjoyMDczODc1MDIwfQ.tryXOXSdrZ_iCQfBHr3kO69_z6l91D6-PAslXwoa1NY
+
+Instructions:
+1. Go to https://vercel.com/rauneks-projects/haevn-mvp/settings/environment-variables
+2. Click "Add New"
+3. Name: SUPABASE_SERVICE_ROLE_KEY
+4. Value: (copy the long string above)
+5. Select: Production
+6. Click "Save"
+7. Redeploy your application
