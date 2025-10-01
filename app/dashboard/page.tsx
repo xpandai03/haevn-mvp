@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Heart, LogOut, Loader2 } from 'lucide-react'
+import { Sparkles, Heart, LogOut, Loader2, Settings } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
 import { MatchCardSimple } from '@/components/MatchCardSimple'
@@ -103,10 +103,21 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/settings')}
+                className="text-haevn-gray-700 hover:text-haevn-teal-600"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -1,0 +1,24 @@
+CORRECT VERCEL ENVIRONMENT VARIABLES
+=====================================
+
+You have the WRONG Supabase project URL in Vercel!
+Vercel is pointing to: tbrtynuhulhnoctlxcmx (WRONG)
+Should be pointing to: sdepasybfkmxcswaxnsz (CORRECT)
+
+Update these in Vercel Production environment:
+https://vercel.com/rauneks-projects/haevn-mvp/settings/environment-variables
+
+1. NEXT_PUBLIC_SUPABASE_URL
+   VALUE: https://sdepasybfkmxcswaxnsz.supabase.co
+
+2. NEXT_PUBLIC_SUPABASE_ANON_KEY
+   VALUE: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkZXBhc3liZmtteGNzd2F4bnN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyOTkwMjAsImV4cCI6MjA3Mzg3NTAyMH0.s5wbPYvslPK0WgdYn8YOGRVWBGTTH47eBpk84UZOgbI
+
+3. SUPABASE_SERVICE_ROLE_KEY
+   VALUE: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkZXBhc3liZmtteGNzd2F4bnN6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODI5OTAyMCwiZXhwIjoyMDczODc1MDIwfQ.tryXOXSdrZ_iCQfBHr3kO69_z6l91D6-PAslXwoa1NY
+
+IMPORTANT:
+- Delete the old wrong values first
+- Add these new values
+- Select "Production" environment for each
+- Redeploy after updating
