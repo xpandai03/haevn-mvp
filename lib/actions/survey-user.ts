@@ -103,23 +103,35 @@ export async function saveUserSurveyData(
   partialAnswers: Record<string, any>,
   currentQuestionIndex: number
 ): Promise<{ success: boolean, error: string | null }> {
+  console.log('[saveUserSurveyData] Starting save...', { currentQuestionIndex, answerKeys: Object.keys(partialAnswers) })
+
   const supabase = await createClient()
 
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (userError || !user) {
-    console.error('[saveUserSurveyData] No authenticated user')
+    console.error('[saveUserSurveyData] No authenticated user:', userError)
     return { success: false, error: 'Not authenticated' }
   }
 
+  console.log('[saveUserSurveyData] User authenticated:', user.id)
+
   try {
     // Get existing answers
-    const { data: existing } = await supabase
+    console.log('[saveUserSurveyData] Fetching existing answers...')
+    const { data: existing, error: selectError } = await supabase
       .from('user_survey_responses')
       .select('answers_json')
       .eq('user_id', user.id)
       .maybeSingle()
+
+    if (selectError) {
+      console.error('[saveUserSurveyData] Select error:', selectError)
+      return { success: false, error: `Failed to fetch existing data: ${selectError.message}` }
+    }
+
+    console.log('[saveUserSurveyData] Existing data:', existing ? 'found' : 'none')
 
     // Merge answers
     const mergedAnswers = {
@@ -127,11 +139,15 @@ export async function saveUserSurveyData(
       ...partialAnswers
     }
 
+    console.log('[saveUserSurveyData] Merged answers count:', Object.keys(mergedAnswers).length)
+
     // Calculate completion
     const completionPct = calculateSurveyCompletion(mergedAnswers)
+    console.log('[saveUserSurveyData] Completion:', completionPct + '%')
 
     // Update survey response
-    const { error: updateError } = await supabase
+    console.log('[saveUserSurveyData] Upserting data...')
+    const { error: updateError, data: upsertData } = await supabase
       .from('user_survey_responses')
       .upsert({
         user_id: user.id,
@@ -141,11 +157,15 @@ export async function saveUserSurveyData(
       }, {
         onConflict: 'user_id'
       })
+      .select()
 
     if (updateError) {
       console.error('[saveUserSurveyData] Update error:', updateError)
+      console.error('[saveUserSurveyData] Error details:', JSON.stringify(updateError, null, 2))
       return { success: false, error: updateError.message }
     }
+
+    console.log('[saveUserSurveyData] Upsert successful:', upsertData)
 
     // If 100% complete, update profile
     if (completionPct === 100) {
