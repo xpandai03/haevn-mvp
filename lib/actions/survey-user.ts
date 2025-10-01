@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateSurveyCompletion } from '@/lib/survey/questions'
 
 export interface UserSurveyData {
@@ -27,8 +28,11 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
   }
 
   try {
+    // Use admin client to bypass RLS
+    const adminClient = createAdminClient()
+
     // Try to get existing survey data
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
       .from('user_survey_responses')
       .select('answers_json, completion_pct, current_step')
       .eq('user_id', user.id)
@@ -44,8 +48,8 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
 
     // Return survey data or empty survey
     if (!data) {
-      // Create initial empty survey response
-      const { data: newData, error: insertError } = await supabase
+      // Create initial empty survey response using admin client
+      const { data: newData, error: insertError } = await adminClient
         .from('user_survey_responses')
         .insert({
           user_id: user.id,
@@ -118,9 +122,12 @@ export async function saveUserSurveyData(
   console.log('[saveUserSurveyData] User authenticated:', user.id)
 
   try {
+    // Use admin client to bypass RLS issues (same pattern as matching.ts)
+    const adminClient = createAdminClient()
+
     // Get existing answers
     console.log('[saveUserSurveyData] Fetching existing answers...')
-    const { data: existing, error: selectError } = await supabase
+    const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
       .select('answers_json')
       .eq('user_id', user.id)
@@ -145,9 +152,9 @@ export async function saveUserSurveyData(
     const completionPct = calculateSurveyCompletion(mergedAnswers)
     console.log('[saveUserSurveyData] Completion:', completionPct + '%')
 
-    // Update survey response
+    // Update survey response using admin client
     console.log('[saveUserSurveyData] Upserting data...')
-    const { error: updateError, data: upsertData } = await supabase
+    const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
       .upsert({
         user_id: user.id,
@@ -167,9 +174,9 @@ export async function saveUserSurveyData(
 
     console.log('[saveUserSurveyData] Upsert successful:', upsertData)
 
-    // If 100% complete, update profile
+    // If 100% complete, update profile using admin client
     if (completionPct === 100) {
-      await supabase
+      await adminClient
         .from('profiles')
         .update({ survey_complete: true })
         .eq('user_id', user.id)
