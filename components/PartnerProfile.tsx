@@ -4,9 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { HaevnLogo } from '@/components/HaevnLogo'
 import { usePartnerStats } from '@/hooks/usePartnerStats'
-import { Loader2 } from 'lucide-react'
+import { InvitePartnerModal } from '@/components/InvitePartnerModal'
+import { AcceptInviteModal } from '@/components/AcceptInviteModal'
+import { Loader2, UserPlus } from 'lucide-react'
 import {
   Heart,
   MessageCircle,
@@ -25,6 +28,8 @@ export function PartnerProfile() {
   // Use live data from hook instead of mock data
   const { partnerData, hasPartnership, loading, error } = usePartnerStats()
   const [activeSection, setActiveSection] = useState('bio')
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [acceptModalOpen, setAcceptModalOpen] = useState(false)
   const sectionsRef = useRef<{ [key: string]: HTMLElement | null }>({})
 
   const contentSections = [
@@ -246,13 +251,31 @@ export function PartnerProfile() {
                   <div className="flex-shrink-0">
                     <Heart className="h-5 w-5 text-[#E29E0C]" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="text-body font-medium text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
                       You haven't connected with a partner yet
                     </p>
-                    <p className="text-body-sm text-[#252627]/80" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
-                      Complete the partnership onboarding to unlock matches, nudges, and connections.
+                    <p className="text-body-sm text-[#252627]/80 mb-3" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                      Invite your partner or accept an invitation to unlock matches, nudges, and connections.
                     </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setInviteModalOpen(true)}
+                        className="bg-[#008080] hover:bg-[#006666] text-white"
+                        size="sm"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Invite Partner
+                      </Button>
+                      <Button
+                        onClick={() => setAcceptModalOpen(true)}
+                        variant="outline"
+                        className="border-[#008080] text-[#008080] hover:bg-[#008080]/10"
+                        size="sm"
+                      >
+                        Accept Invite
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -488,6 +511,24 @@ export function PartnerProfile() {
         </div>
 
       </div>
+
+      {/* Modals */}
+      <InvitePartnerModal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        onInviteSent={() => {
+          // Refresh partnership status
+          window.location.reload()
+        }}
+      />
+      <AcceptInviteModal
+        open={acceptModalOpen}
+        onClose={() => setAcceptModalOpen(false)}
+        onInviteAccepted={() => {
+          // Refresh to show partnership
+          window.location.reload()
+        }}
+      />
     </div>
   )
 }
