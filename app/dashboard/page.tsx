@@ -112,6 +112,57 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Stats Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Matches Card */}
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to matches */}}>
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-haevn-teal-50 rounded-full">
+                  <Sparkles className="h-6 w-6 text-haevn-teal-600" />
+                </div>
+                <CardTitle className="text-h3 text-haevn-gray-900">Matches</CardTitle>
+              </div>
+              <div className="text-display-lg text-haevn-teal-600">{matches.length}</div>
+              <p className="text-body-sm text-haevn-gray-600 mt-2">
+                Compatibility-based connections
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Connections Card */}
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to connections */}}>
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-haevn-orange-50 rounded-full">
+                  <Heart className="h-6 w-6 text-haevn-orange-600" />
+                </div>
+                <CardTitle className="text-h3 text-haevn-gray-900">Connections</CardTitle>
+              </div>
+              <div className="text-display-lg text-haevn-orange-600">0</div>
+              <p className="text-body-sm text-haevn-gray-600 mt-2">
+                Active conversations
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Nudges Card */}
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to nudges */}}>
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-haevn-gray-200 rounded-full">
+                  <Sparkles className="h-6 w-6 text-haevn-gray-700" />
+                </div>
+                <CardTitle className="text-h3 text-haevn-gray-900">Nudges</CardTitle>
+              </div>
+              <div className="text-display-lg text-haevn-gray-700">0</div>
+              <p className="text-body-sm text-haevn-gray-600 mt-2">
+                Pending introductions
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Tier Summary */}
         {matches.length > 0 && (
           <Card className="mb-8 bg-white border-2 border-haevn-gray-300 rounded-2xl">
@@ -121,9 +172,9 @@ export default function DashboardPage() {
                   <Sparkles className="h-6 w-6 text-haevn-teal-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-h3 text-haevn-gray-900">Compatibility Matches</CardTitle>
+                  <CardTitle className="text-h3 text-haevn-gray-900">Compatibility Breakdown</CardTitle>
                   <CardDescription className="text-body-sm text-haevn-gray-600">
-                    Ranked by compatibility score based on your preferences
+                    Your matches by tier
                   </CardDescription>
                 </div>
               </div>
