@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react'
 
 export function PartnerProfile() {
+  const router = useRouter()
   // Use live data from hook instead of mock data
   const { partnerData, hasPartnership, loading, error } = usePartnerStats()
   const [activeSection, setActiveSection] = useState('bio')
@@ -40,15 +42,15 @@ export function PartnerProfile() {
   ]
 
   const personalItems = [
-    { icon: Mail, label: 'Messages', href: '/messages' },
-    { icon: User, label: 'Account details', href: '/account' },
-    { icon: Settings, label: 'Survey', href: '/survey' }
+    { icon: Mail, label: 'Messages', href: '/messages', available: false },
+    { icon: User, label: 'Account details', href: '/account', available: false },
+    { icon: Settings, label: 'Survey', href: '/survey-results', available: true }
   ]
 
   const resourcesItems = [
-    { icon: Calendar, label: 'Events', href: '/events' },
-    { icon: BookOpen, label: 'Glossary', href: '/glossary' },
-    { icon: GraduationCap, label: 'Learn', href: '/learn' }
+    { icon: Calendar, label: 'Events', href: '/events', available: false },
+    { icon: BookOpen, label: 'Glossary', href: '/glossary', available: false },
+    { icon: GraduationCap, label: 'Learn', href: '/learn', available: false }
   ]
 
   // Intersection Observer for active section detection
@@ -473,7 +475,13 @@ export function PartnerProfile() {
               return (
                 <button
                   key={index}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-[#252627]/10 rounded-lg hover:bg-white/80 transition-colors"
+                  onClick={() => item.available && router.push(item.href)}
+                  disabled={!item.available}
+                  className={`w-full flex items-center gap-3 px-4 py-3 bg-white border border-[#252627]/10 rounded-lg transition-colors ${
+                    item.available
+                      ? 'hover:bg-white/80 cursor-pointer'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
                   <Icon className="h-5 w-5 text-[#252627]/40" />
                   <span className="flex-1 text-left text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
@@ -497,7 +505,13 @@ export function PartnerProfile() {
               return (
                 <button
                   key={index}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-[#252627]/10 rounded-lg hover:bg-white/80 transition-colors"
+                  onClick={() => item.available && router.push(item.href)}
+                  disabled={!item.available}
+                  className={`w-full flex items-center gap-3 px-4 py-3 bg-white border border-[#252627]/10 rounded-lg transition-colors ${
+                    item.available
+                      ? 'hover:bg-white/80 cursor-pointer'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
                   <Icon className="h-5 w-5 text-[#252627]/40" />
                   <span className="flex-1 text-left text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
