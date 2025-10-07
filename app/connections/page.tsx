@@ -1,305 +1,243 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/lib/auth/context'
+import { getConnections } from '@/lib/actions/handshakes'
 import { Button } from '@/components/ui/button'
+import { Loader2, ArrowLeft, MessageCircle, Users } from 'lucide-react'
+import { HaevnLogo } from '@/components/HaevnLogo'
+import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { MatchCard } from '@/components/MatchCard'
-import { useSurveyGate, useCityGate, useMembershipGate } from '@/hooks/useGates'
-import {
-  getCurrentUserPartnership,
-  getCandidatePartnerships,
-  getDemoPartnerships,
-  getPartnershipDisplayName,
-  type Partnership
-} from '@/lib/data/partnerships'
-import {
-  computeCompatibilityScore,
-  getCompatibilityBucket,
-  type SurveyAnswers
-} from '@/lib/matching/stub'
-import { AlertCircle, Lock, Loader2 } from 'lucide-react'
+import { MapPin, Heart } from 'lucide-react'
 
-interface MatchedPartnership extends Partnership {
-  score: number
-  bucket: 'High' | 'Medium' | 'Low'
-  displayName: string
+interface ConnectionData {
+  id: string
+  partnership: {
+    id: string
+    display_name: string | null
+    short_bio: string | null
+    city: string
+    age: number
+    identity: string
+  }
+  message?: string
+  score?: number
+  matched_at?: string
 }
 
 export default function ConnectionsPage() {
   const router = useRouter()
-  const surveyGate = useSurveyGate()
-  const cityGate = useCityGate()
-  const membershipGate = useMembershipGate('plus')
-
+  const { user, loading: authLoading } = useAuth()
+  const [connections, setConnections] = useState<ConnectionData[]>([])
   const [loading, setLoading] = useState(true)
-  const [userPartnership, setUserPartnership] = useState<Partnership | null>(null)
-  const [matches, setMatches] = useState<MatchedPartnership[]>([])
-  const [currentTab, setCurrentTab] = useState<'High' | 'Medium' | 'Low'>('High')
-  const [userTier, setUserTier] = useState<'free' | 'plus' | 'select'>('free')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadData() {
+    if (!authLoading && !user) {
+      router.push('/auth/login')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    async function loadConnections() {
+      if (!user) return
+
       try {
-        // Get user's partnership
-        const userP = await getCurrentUserPartnership()
-
-        if (!userP) {
-          // Use demo data if no real partnership
-          const demoPartnerships = await getDemoPartnerships()
-          if (demoPartnerships.length > 0) {
-            setUserPartnership(demoPartnerships[0])
-          }
-          setLoading(false)
-          return
-        }
-
-        setUserPartnership(userP)
-
-        // Get user's tier from localStorage
-        const userData = localStorage.getItem('haevn_user')
-        if (userData) {
-          const user = JSON.parse(userData)
-          setUserTier(user.membershipTier || 'free')
-        }
-
-        // Get candidate partnerships
-        let candidates = await getCandidatePartnerships([userP.id])
-
-        // If no real candidates, use demo data
-        if (candidates.length === 0) {
-          candidates = await getDemoPartnerships()
-          // Filter out user's partnership from demo data
-          candidates = candidates.filter(c => c.id !== userP.id)
-        }
-
-        // Calculate compatibility scores
-        const userAnswers = userP.survey_responses?.[0]?.answers_json || {}
-
-        const scoredMatches = candidates.map(candidate => {
-          const candidateAnswers = candidate.survey_responses?.[0]?.answers_json || {}
-          const score = computeCompatibilityScore(userAnswers, candidateAnswers)
-          const bucket = getCompatibilityBucket(score)
-          const displayName = getPartnershipDisplayName(candidate)
-
-          return {
-            ...candidate,
-            score,
-            bucket,
-            displayName
-          } as MatchedPartnership
-        })
-
-        // Sort by score descending
-        scoredMatches.sort((a, b) => b.score - a.score)
-
-        setMatches(scoredMatches)
-      } catch (error) {
-        console.error('Error loading connections:', error)
+        setLoading(true)
+        const connectionsData = await getConnections()
+        setConnections(connectionsData)
+      } catch (err: any) {
+        console.error('Error loading connections:', err)
+        setError(err.message || 'Failed to load connections')
       } finally {
         setLoading(false)
       }
     }
 
-    // Only load if gates pass
-    if (surveyGate.isValid) {
-      loadData()
-    }
-  }, [surveyGate.isValid])
+    loadConnections()
+  }, [user])
 
-  const handleLikeComplete = (partnershipId: string, matched: boolean, handshakeId?: string) => {
-    // Remove from current view after like
-    setMatches(prev => prev.filter(m => m.id !== partnershipId))
-
-    // If matched, navigate to chat after a short delay
-    if (matched && handshakeId) {
-      setTimeout(() => {
-        router.push(`/chat/${handshakeId}`)
-      }, 2000)
-    }
+  const getInitials = (name: string | null) => {
+    if (!name) return '??'
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
-  const handlePass = (partnershipId: string) => {
-    // Just remove from current view (in production, track this)
-    setMatches(prev => prev.filter(m => m.id !== partnershipId))
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Recently'
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return `${Math.floor(diffDays / 30)} months ago`
   }
 
-  // Show loading state
-  if (surveyGate.isLoading || cityGate.isLoading || loading) {
+  const handleStartChat = (connectionId: string) => {
+    router.push(`/chat/${connectionId}`)
+  }
+
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  // Check gates
-  if (!surveyGate.isValid) {
-    return (
-      <div className="min-h-screen p-8">
-        <Alert className="max-w-2xl mx-auto">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Survey Required</AlertTitle>
-          <AlertDescription>
-            You must complete your survey before accessing discovery.
-            <Button
-              className="mt-4"
-              onClick={() => router.push('/onboarding/survey')}
-            >
-              Complete Survey
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  if (!cityGate.isValid) {
-    return (
-      <div className="min-h-screen p-8">
-        <Alert className="max-w-2xl mx-auto">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>City Not Available</AlertTitle>
-          <AlertDescription>
-            {cityGate.error}
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  // Filter matches by bucket
-  const highMatches = matches.filter(m => m.bucket === 'High')
-  const mediumMatches = matches.filter(m => m.bucket === 'Medium')
-  const lowMatches = matches.filter(m => m.bucket === 'Low')
-
-  const tabCounts = {
-    High: highMatches.length,
-    Medium: mediumMatches.length,
-    Low: lowMatches.length
-  }
-
-  const currentMatches = currentTab === 'High' ? highMatches :
-                         currentTab === 'Medium' ? mediumMatches : lowMatches
-
-  return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Connections</h1>
-          <p className="text-muted-foreground mt-2">
-            Discover compatible partnerships based on your survey responses
+      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
+          <p className="text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            Loading your connections...
           </p>
         </div>
+      </div>
+    )
+  }
 
-        {/* Membership Notice */}
-        {userTier === 'free' && (
-          <Alert className="mb-6">
-            <Lock className="h-4 w-4" />
-            <AlertTitle>Free Account</AlertTitle>
-            <AlertDescription>
-              You can browse profiles, but need HAEVN+ to send likes and start conversations.
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl p-6 border-2 border-[#252627]/10">
+          <h2 className="text-h2 text-red-600 mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+            Error Loading Connections
+          </h2>
+          <p className="text-body text-[#252627]/70 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            {error}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full bg-gradient-to-r from-[#E29E0C] to-[#D88A0A]"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#E8E6E3]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="text-[#252627] hover:text-[#008080]"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back
+            </Button>
+            <HaevnLogo size="sm" />
+          </div>
+
+          <div>
+            <h1 className="text-h1 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              Your Connections
+            </h1>
+            <p className="text-body text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+              {connections.length} {connections.length === 1 ? 'partnership' : 'partnerships'} you've connected with
+            </p>
+          </div>
+        </div>
+
+        {/* Connections Grid */}
+        {connections.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-[#252627]/20">
+              <Users className="h-16 w-16 mx-auto text-[#252627]/20 mb-4" />
+              <h3 className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                No connections yet
+              </h3>
+              <p className="text-body text-[#252627]/60 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                Start by browsing matches and sending handshake requests!
+              </p>
               <Button
-                variant="link"
-                className="ml-2"
-                onClick={() => router.push('/onboarding/membership')}
+                onClick={() => router.push('/matches')}
+                className="bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
+                style={{ fontFamily: 'Roboto', fontWeight: 500 }}
               >
-                Upgrade Now
+                Browse Matches
               </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {connections.map((connection) => (
+              <Card
+                key={connection.id}
+                className="hover:shadow-lg transition-all duration-200 border-[#252627]/10"
+              >
+                <CardContent className="p-6">
+                  <div className="flex flex-col gap-4">
+                    {/* Header with Avatar */}
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-16 w-16 border-2 border-[#008080]">
+                        <AvatarImage src={''} />
+                        <AvatarFallback className="bg-[#E8E6E3] text-[#252627] text-xl font-bold">
+                          {getInitials(connection.partnership.display_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                          {connection.partnership.display_name || 'Anonymous'}
+                        </h3>
+                        <div className="flex items-center gap-1 text-sm text-[#252627]/60">
+                          <MapPin className="h-3 w-3" />
+                          <span>{connection.partnership.city}</span>
+                          <span className="mx-1">•</span>
+                          <span>{connection.partnership.age}</span>
+                        </div>
+                      </div>
+                    </div>
 
-        {/* Compatibility Buckets Tabs */}
-        <Tabs value={currentTab} onValueChange={(v) => setCurrentTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="High" className="relative">
-              High
-              {tabCounts.High > 0 && (
-                <Badge className="ml-2 h-5 px-1" variant="default">
-                  {tabCounts.High}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="Medium" className="relative">
-              Medium
-              {tabCounts.Medium > 0 && (
-                <Badge className="ml-2 h-5 px-1" variant="secondary">
-                  {tabCounts.Medium}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="Low" className="relative">
-              Low
-              {tabCounts.Low > 0 && (
-                <Badge className="ml-2 h-5 px-1" variant="outline">
-                  {tabCounts.Low}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+                    {/* Bio */}
+                    {connection.partnership.short_bio && (
+                      <p className="text-sm text-[#252627]/70 line-clamp-3" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                        {connection.partnership.short_bio}
+                      </p>
+                    )}
 
-          <TabsContent value={currentTab} className="mt-6">
-            {currentMatches.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-muted-foreground">
-                    No {currentTab.toLowerCase()} compatibility matches at the moment.
-                    Check back later or explore other buckets!
-                  </p>
+                    {/* Identity and Match Score */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="bg-[#008080]/10 text-[#008080] border-[#008080]/30">
+                        {connection.partnership.identity}
+                      </Badge>
+                      {connection.score && (
+                        <div className="flex items-center gap-1 text-xs text-[#252627]/50">
+                          <Heart className="h-3 w-3" />
+                          <span>{connection.score}% match</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Connection Date */}
+                    <p className="text-xs text-[#252627]/50" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                      Connected {formatDate(connection.matched_at)}
+                    </p>
+
+                    {/* Action Button */}
+                    <Button
+                      onClick={() => handleStartChat(connection.id)}
+                      className="w-full bg-gradient-to-r from-[#008080] to-[#006666] hover:from-[#006666] hover:to-[#005555] text-white"
+                      style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Start Conversation
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="space-y-6">
-                {currentMatches.map((match) => (
-                  <MatchCard
-                    key={match.id}
-                    partnershipId={match.id}
-                    currentPartnershipId={userPartnership?.id || ''}
-                    displayName={match.displayName}
-                    bio={`Partnership in ${match.city}`}
-                    score={match.score}
-                    bucket={match.bucket}
-                    badges={match.membership_tier === 'select' ? ['Select', 'Verified'] :
-                           match.membership_tier === 'plus' ? ['Verified'] : []}
-                    onLikeComplete={(matched, handshakeId) => handleLikeComplete(match.id, matched, handshakeId)}
-                    onPass={() => handlePass(match.id)}
-                    membershipTier={userTier}
-                    onUpgrade={() => router.push('/onboarding/membership')}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        {/* Stats Summary */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Discovery Stats</CardTitle>
-            <CardDescription>Your current matching overview</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-green-600">{tabCounts.High}</div>
-                <p className="text-xs text-muted-foreground">High Matches</p>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">{tabCounts.Medium}</div>
-                <p className="text-xs text-muted-foreground">Medium Matches</p>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-600">{tabCounts.Low}</div>
-                <p className="text-xs text-muted-foreground">Low Matches</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

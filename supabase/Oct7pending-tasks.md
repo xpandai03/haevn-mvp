@@ -1,116 +1,369 @@
-Perfect --- sounds like you made major progress tonight 🔥
+# HAEVN Development Progress & Pending Tasks
+*Last Updated: Oct 7, 2025 - 1:50 AM*
 
-Let's lock in a clean **morning roadmap** so you can wake up and move fast without re-context switching.
+---
 
-* * * * *
+## ✅ COMPLETED TONIGHT (Oct 6-7)
 
-**☀️ HAEVN Morning Sprint Plan**
---------------------------------
+### 1. Profile & Settings Consolidation
+- ✅ Redirected `/settings` → `/partner-profile`
+- ✅ Removed Settings page, consolidated into Partner Profile
+- ✅ Fixed partnership data sync issues
+- ✅ Added Account Details page (`/account-details`)
 
-### **🧩 1️⃣ Finalize Profile Data Layer**
+### 2. Photo Management System
+- ✅ Built PhotoGallery component with upload/delete/set-primary
+- ✅ Created Add Photos page (`/add-photos`) with 6-slot grid UI
+- ✅ Fixed avatar upload by clicking profile picture
+- ✅ Set up Supabase Storage buckets (`public-photos`, `private-photos`)
+- ✅ Fixed RLS policies for `partnership_photos` and `partnership_members`
+- ✅ Resolved infinite recursion in RLS policies
+- ✅ Photo uploads now working for all partnership members
 
-**Goal:** Ensure the /partner-profile screen is 100% live and stable.
+### 3. Survey & Navigation
+- ✅ Created Survey Results page (`/survey-results`)
+- ✅ Enabled Account Details button in partner profile
+- ✅ Fixed navigation between pages
 
--   Verify Supabase profiles + partnerships tables both sync.
+---
 
--   Confirm avatarUrl, username, and tier fields persist and update.
+## 🎯 PENDING TASKS - PHASED APPROACH
 
--   Remove redundant /settings references.
+### **PHASE 1: Handshake/Matching System (PRIORITY 1)**
+*Estimated: 3-4 hours*
 
--   Add redirect /settings → /partner-profile.
+#### Goal
+Enable users to find matches, send/receive handshake invitations, and establish connections
 
-🪄 *Prompt to use:*
+#### Database Status
+✅ Already have:
+- `handshakes` table (a_partnership, b_partnership, a_consent, b_consent)
+- `partnership_invites` table (for email invitations)
+- RLS policies for handshakes
 
-> "Claude, help me refactor the /settings route to redirect to /partner-profile and confirm all live profile fields persist correctly after refresh."
+#### Implementation Steps
 
-* * * * *
+**1A. Match Discovery & Filtering (1 hour)**
+- Build `/matches` page to display compatible partnerships
+- Use existing `getMatches()` function from `lib/actions/matching.ts`
+- Filter by city, preferences, survey compatibility
+- Display match cards with:
+  - Partner names (anonymized until handshake)
+  - Compatibility score
+  - City/location
+  - "Send Handshake" button
 
-### **💬 2️⃣ Implement "Handshake" Flow**
+**1B. Handshake Request Flow (1.5 hours)**
+- Create `SendHandshakeModal` component
+  - Shows preview of partnership being contacted
+  - Optional personal message
+  - Confirm/Cancel actions
+- Update handshakes table: `INSERT` with `a_consent = true`, `b_consent = false`
+- Show "Pending" state in UI
+- Add notification/badge for receiver
 
-**Goal:** Enable partner matching / invite / acceptance.
+**1C. Handshake Response Flow (1 hour)**
+- Create `HandshakeNotifications` component
+  - Show incoming handshake requests
+  - Display requester info (name, bio preview, city)
+- Build `AcceptHandshakeModal` component
+  - Review requester details
+  - Accept/Decline actions
+- On Accept: Update `b_consent = true`
+- Trigger unlock: Share full profiles, photos, contact info
 
--   Build lightweight "Invite Partner" modal.
+**1D. Connected State (30 min)**
+- Update `/connections` page to show accepted handshakes
+- Display connected partnerships with full details
+- Add "Message" button (placeholder for Phase 3)
+- Show connection date
 
--   Trigger partnership creation (partner_email or code).
+#### Questions/Decisions
+- **Q1:** Should we limit handshake requests per day? (e.g., 5 per day to prevent spam)
+- **Q2:** What happens to private photos after handshake? Auto-grant access or require additional consent?
+- **Q3:** Notification system: In-app only, or also email?
+- **Q4:** Should declined handshakes be tracked? (for analytics, prevent re-requesting)
 
--   Handle "pending handshake" and "confirmed partnership" states.
+#### Success Criteria
+- [ ] Users can browse matches from dashboard
+- [ ] Users can send handshake requests
+- [ ] Users receive notifications of incoming requests
+- [ ] Users can accept/decline requests
+- [ ] Connected partnerships show full profiles + photos
+- [ ] Dashboard reflects connection count
 
--   Confirm UI reflects connection dynamically.
+---
 
-🪄 *Prompt to use:*
+### **PHASE 2: Onboarding Survey Enhancements (PRIORITY 2)**
+*Estimated: 2-3 hours*
 
-> "Claude, create a simple 'Invite Partner' modal that triggers a Supabase insert into partnership_requests and updates the partnerships table when accepted. Use the same design language as the profile page."
+#### Goal
+Add micro-celebrations after each section completion to improve UX and completion rates
 
-* * * * *
+#### Current State
+- Survey works but no feedback between sections
+- Users might feel lost or uncertain about progress
 
-### **🖥️ 3️⃣ Build Core Dashboard**
+#### Implementation Steps
 
-**Goal:** Bring the app past the payment success screen into the main experience.
+**2A. Section Completion Celebrations (1.5 hours)**
+- Create `SectionCompleteModal` component
+  - Animated checkmark or confetti effect
+  - Encouraging message per section:
+    - Section 1: "Great start! 🎉"
+    - Section 2: "You're halfway there! 💪"
+    - Section 3: "Almost done! ⭐"
+  - Progress indicator (e.g., "3 of 6 complete")
+  - "Continue" button
+- Trigger modal after each section submission
+- Use libraries: `react-confetti` or `lottie-react` for animations
 
--   Dashboard cards for Matches / Connections / Nudges (from the UI PDF).
+**2B. Progress Persistence (30 min)**
+- Visual progress bar at top of survey
+- Save completion_pct to database after each section
+- Show section checkmarks for completed sections
 
--   Make these cards link to detailed list pages.
+**2C. Survey Polish (1 hour)**
+- Add section summaries before final submission
+- "Edit" buttons to go back to previous sections
+- Final celebration on 100% completion
+- Smooth transition to payment/dashboard
 
--   Pull live stats from Supabase partnerships, signals, handshakes tables.
+#### Questions/Decisions
+- **Q5:** Should we allow users to skip sections and come back later?
+- **Q6:** Auto-save answers on blur, or require explicit "Save" button?
+- **Q7:** Show completion percentage on partner profile?
 
--   Add a CTA "Go to Partner Profile."
+#### Success Criteria
+- [ ] Celebration modal after each section
+- [ ] Visual progress indicator
+- [ ] Users can navigate back to edit answers
+- [ ] Final celebration on completion
+- [ ] Smoother onboarding flow
 
-🪄 *Prompt to use:*
+---
 
-> "Claude, help me scaffold the main HAEVN dashboard (Matches, Connections, Nudges) using the same design tokens as Partner Profile. Use real data from Supabase stats hooks."
+### **PHASE 3: ID Verification + Stripe Integration (PRIORITY 3)**
+*Estimated: 4-5 hours*
 
-* * * * *
+#### Goal
+Add identity verification before payment to ensure safety and authenticity
 
-### **🧠 4️⃣ "Polish Pass" (Design Fidelity)**
+#### Implementation Approach
 
-**Goal:** Bring the new pages visually in line with the PDF and branding doc.
+**3A. Stripe Identity Integration (2 hours)**
+- Use [Stripe Identity](https://stripe.com/docs/identity) for ID verification
+- Create `/verify-identity` page (before payment)
+- Flow: Survey Complete → ID Verification → Payment
+- Set up Stripe Identity webhook to receive verification results
+- Store verification status in `profiles` table:
+  ```sql
+  ALTER TABLE profiles ADD COLUMN identity_verified BOOLEAN DEFAULT false;
+  ALTER TABLE profiles ADD COLUMN verification_session_id TEXT;
+  ALTER TABLE profiles ADD COLUMN verified_at TIMESTAMPTZ;
+  ```
 
--   Check typography weights (Roboto Black / Medium / Light).
+**3B. Verification UI (1.5 hours)**
+- Build `IdentityVerificationPage`:
+  - Explain why verification is needed (safety, authenticity)
+  - Stripe Identity embedded component
+  - "Continue" button (disabled until verified)
+- Add verification badge to profile
+- Gate certain features behind verification (e.g., handshakes)
 
--   Verify all brand colors (#E8E6E3, #1E2A4A, #E29E0C, #008080, #252627).
+**3C. Payment Flow Update (1 hour)**
+- Update onboarding flow:
+  1. Complete Survey
+  2. **Verify Identity** ← NEW STEP
+  3. Select Membership Tier
+  4. Payment
+  5. Dashboard Access
+- Block payment page if not verified
+- Add verification status check in middleware
 
--   Center and scale the HAEVN logo consistently.
+**3D. Admin Dashboard (Optional - 30 min)**
+- Simple page to view verification stats
+- Manual override for edge cases
 
--   Align margins and white space using Tailwind spacing tokens.
+#### Questions/Decisions
+- **Q8:** Require verification before survey or after survey?
+  - **Recommendation:** After survey (better conversion, users already invested)
+- **Q9:** What features require verification?
+  - **Recommendation:** Handshakes, messaging, photo sharing
+- **Q10:** Free tier users need verification?
+  - **Recommendation:** Yes, for safety across all tiers
+- **Q11:** Verification expiration? Re-verify annually?
+  - **Recommendation:** One-time verification, re-verify only if suspicious activity
 
-🪄 *Prompt to use:*
+#### Technical Setup Required
+- [ ] Stripe Identity API keys (test + production)
+- [ ] Webhook endpoint: `/api/webhooks/stripe-identity`
+- [ ] Database schema updates
+- [ ] RLS policies to restrict unverified users
 
-> "Claude, do a design polish pass across /partner-profile and /dashboard to ensure every color, font, and spacing matches the HAEVN Branding Guidelines PDF."
+#### Success Criteria
+- [ ] Users redirected to verification after survey
+- [ ] Stripe Identity flow embedded and working
+- [ ] Verification status stored in database
+- [ ] Verified badge shown on profile
+- [ ] Payment page gated by verification
+- [ ] Webhooks process verification results
 
-* * * * *
+---
 
-### **🚀 5️⃣ Deployment & Testing Prep**
+### **PHASE 4: Dashboard & Stats (PRIORITY 4)**
+*Estimated: 2-3 hours*
 
-**Goal:** Get ready for live testing by tomorrow night.
+#### Status
+- ✅ Dashboard page exists with live stats
+- ✅ Matches, Connections, Nudges cards
+- ⚠️ Needs: Click-through to detail pages
 
--   Run full Supabase auth test for new users → onboarding → dashboard → profile.
+#### Remaining Work
 
--   Verify mobile responsiveness.
+**4A. Detail Pages (1.5 hours)**
+- `/matches` page - list of all potential matches
+- `/connections` page - list of accepted handshakes
+- `/nudges` page - notifications/activity feed
 
--   Add Vercel build pipeline.
+**4B. Stats Refinement (1 hour)**
+- Real-time updates when handshakes accepted
+- Refresh stats after actions
+- Add loading states
 
--   Push staging deployment link.
+#### Success Criteria
+- [ ] Dashboard cards link to detail pages
+- [ ] Stats update in real-time
+- [ ] Clean loading states
 
-🪄 *Prompt to use:*
+---
 
-> "Claude, help me create a production-ready Vercel deploy plan for the HAEVN app, including environment variables for Supabase URL and anon key."
+### **PHASE 5: Design Polish & Mobile (PRIORITY 5)**
+*Estimated: 2-3 hours*
 
-* * * * *
+#### Current State
+- ✅ Brand colors implemented
+- ✅ Roboto fonts loaded
+- ⚠️ Mobile responsiveness needs testing
 
-### **✅ Priority Order for Tomorrow**
+#### Tasks
+- [ ] Test all pages on mobile (320px - 768px)
+- [ ] Fix any overflow/layout issues
+- [ ] Ensure touch targets ≥ 44px
+- [ ] Test on iOS Safari and Android Chrome
+- [ ] Add loading skeletons
+- [ ] Smooth transitions between pages
 
-1.  **Finish data + redirect (1 hr)**
+---
 
-2.  **Implement handshake flow (1.5 hrs)**
+### **PHASE 6: Deployment (PRIORITY 6)**
+*Estimated: 1 hour*
 
-3.  **Scaffold dashboard base (1 hr)**
+#### Already Done
+- ✅ Vercel build pipeline working
+- ✅ Environment variables configured
 
-4.  **Quick design polish (30 min)**
+#### Remaining
+- [ ] Set up staging environment
+- [ ] Production deployment checklist
+- [ ] Monitoring/error tracking (Sentry?)
+- [ ] Performance testing
 
-5.  **Deploy to staging (15 min)**
+---
 
-* * * * *
+## 📋 RECOMMENDED EXECUTION ORDER
 
-Would you like me to turn this into a **timestamped 3-hour "morning build checklist"** (like 8--11 AM with prompts + targets per 30 min)?
+### **Next Session (Morning Sprint)**
+**Total: ~5 hours**
 
-That version keeps you locked in flow when you start coding again.
+1. **Handshake System (3-4 hours)** - HIGHEST IMPACT
+   - Get matches showing
+   - Implement send/accept handshake
+   - Test full flow
+
+2. **Survey Celebrations (1 hour)** - QUICK WIN
+   - Add section completion modals
+   - Improve user experience
+
+3. **Push to GitHub (5 min)**
+
+### **Following Session**
+**Total: ~6 hours**
+
+1. **ID Verification Setup (4-5 hours)**
+   - Stripe Identity integration
+   - Database schema updates
+   - Verification flow
+
+2. **Dashboard Detail Pages (1.5 hours)**
+   - Matches page
+   - Connections page
+
+3. **Mobile Testing & Polish (1 hour)**
+
+### **Final Polish Session**
+**Total: ~3 hours**
+
+1. Final design review
+2. Mobile responsive fixes
+3. Staging deployment
+4. User testing with real accounts
+
+---
+
+## 🤔 OPEN QUESTIONS FOR DISCUSSION
+
+1. **Handshake Limits:** Daily limit on requests to prevent spam?
+2. **Private Photo Access:** Automatic after handshake, or separate consent?
+3. **Notifications:** In-app only, or email too?
+4. **Verification Timing:** Before or after survey completion?
+5. **Free Tier Verification:** Required for all users?
+6. **Match Algorithm:** Current compatibility scoring sufficient?
+7. **Survey Skipping:** Allow partial completion?
+8. **Mobile Priority:** Which pages are most critical for mobile?
+
+---
+
+## 📊 OVERALL PROGRESS ESTIMATE
+
+- ✅ **Foundation & Auth:** 100%
+- ✅ **Onboarding Survey:** 90% (needs celebrations)
+- ✅ **Partner Profile:** 95% (working well)
+- ✅ **Photo Management:** 100% (just completed!)
+- 🟡 **Handshake System:** 30% (database ready, UI needed)
+- 🟡 **Dashboard:** 60% (base exists, needs detail pages)
+- 🔴 **ID Verification:** 0% (not started)
+- 🟡 **Mobile Responsive:** 70% (needs testing)
+- ✅ **Deployment Pipeline:** 100%
+
+**Estimated time to MVP:** 15-20 hours of focused development
+
+---
+
+## 💭 STRATEGIC NOTES
+
+### Why This Order?
+
+1. **Handshakes First:** Core value proposition - connecting partners
+2. **Survey Polish Next:** Improves conversion before adding verification
+3. **ID Verification After:** Adds safety layer once core flow proven
+4. **Polish Last:** Visual refinement after functionality complete
+
+### Risk Mitigation
+
+- **Handshake complexity:** Start with basic accept/decline, add messaging later
+- **Stripe Identity:** Use test mode extensively before production
+- **RLS policies:** Already fixed recursion, but test thoroughly with handshakes
+- **Mobile issues:** Test early and often
+
+### Success Metrics to Track
+
+- Survey completion rate (target: >70%)
+- Handshake acceptance rate (target: >40%)
+- Time to first connection (target: <24 hours)
+- Photo upload rate (target: >50% of users)
+- Verification completion rate (target: >80%)
+
+---
+
+*This document will be updated as we complete phases and discover new requirements.*

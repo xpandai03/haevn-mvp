@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Sparkles, Heart, LogOut, Loader2, Settings } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
+import { getIncomingHandshakeCount, getConnections } from '@/lib/actions/handshakes'
 import { MatchCardSimple } from '@/components/MatchCardSimple'
 import { MatchModal } from '@/components/MatchModal'
+import { HandshakeNotifications } from '@/components/HandshakeNotifications'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -18,6 +20,7 @@ export default function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [connectionsCount, setConnectionsCount] = useState(0)
 
   useEffect(() => {
     async function loadMatches() {
@@ -28,8 +31,12 @@ export default function DashboardPage() {
 
       try {
         setLoading(true)
-        const matchData = await getMatches('Bronze')
+        const [matchData, connections] = await Promise.all([
+          getMatches('Bronze'),
+          getConnections()
+        ])
         setMatches(matchData)
+        setConnectionsCount(connections.length)
       } catch (err: any) {
         console.error('Error loading matches:', err)
         setError(err.message || 'Failed to load matches')
@@ -95,6 +102,7 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex items-center gap-2">
+              <HandshakeNotifications />
               <Button
                 variant="ghost"
                 size="sm"
@@ -115,7 +123,7 @@ export default function DashboardPage() {
         {/* Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Matches Card */}
-          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to matches */}}>
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => router.push('/matches')}>
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-haevn-teal-50 rounded-full">
@@ -131,7 +139,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Connections Card */}
-          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to connections */}}>
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => router.push('/connections')}>
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-haevn-orange-50 rounded-full">
@@ -139,7 +147,7 @@ export default function DashboardPage() {
                 </div>
                 <CardTitle className="text-h3 text-haevn-gray-900">Connections</CardTitle>
               </div>
-              <div className="text-display-lg text-haevn-orange-600">0</div>
+              <div className="text-display-lg text-haevn-orange-600">{connectionsCount}</div>
               <p className="text-body-sm text-haevn-gray-600 mt-2">
                 Active conversations
               </p>
