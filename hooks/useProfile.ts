@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 
 interface Profile {
   user_id: string
+  email: string
   full_name: string | null
   city: string | null
   msa_status: 'live' | 'waitlist'
@@ -24,13 +25,18 @@ export function useProfile() {
 
   useEffect(() => {
     async function loadProfile() {
+      console.log('🔍 [useProfile] Starting profile load...')
+      console.log('🔍 [useProfile] User:', user ? `ID: ${user.id}, Email: ${user.email}` : 'No user')
+
       if (!user) {
+        console.log('⚠️ [useProfile] No user found, clearing profile')
         setProfile(null)
         setLoading(false)
         return
       }
 
       try {
+        console.log('📡 [useProfile] Fetching profile from Supabase...')
         // Get user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -39,27 +45,50 @@ export function useProfile() {
           .single()
 
         if (profileError) {
-          // Profile doesn't exist, create it
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              user_id: user.id,
-              full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-              city: user.user_metadata?.city || null,
-              msa_status: user.user_metadata?.msa_status || 'waitlist',
-              survey_complete: false
-            })
-            .select()
-            .single()
+          console.log('⚠️ [useProfile] Profile query error')
+          console.log('⚠️ [useProfile] Error code:', profileError.code)
+          console.log('⚠️ [useProfile] Error message:', profileError.message)
+          console.log('⚠️ [useProfile] Error details:', profileError.details)
+          console.log('⚠️ [useProfile] Full error:', JSON.stringify(profileError, null, 2))
 
-          if (createError) throw createError
-          setProfile(newProfile)
+          // Check if it's a "not found" error (PGRST116) - this is normal, we'll create the profile
+          if (profileError.code === 'PGRST116' || profileError.message?.includes('No rows')) {
+            console.log('ℹ️ [useProfile] Profile not found, creating new profile...')
+
+            // Profile doesn't exist, create it
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                user_id: user.id,
+                email: user.email, // Add email field to satisfy NOT NULL constraint
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                city: user.user_metadata?.city || null,
+                msa_status: user.user_metadata?.msa_status || 'waitlist',
+                survey_complete: false
+              })
+              .select()
+              .single()
+
+            if (createError) {
+              console.error('❌ [useProfile] Failed to create profile')
+              console.error('❌ [useProfile] Create error:', JSON.stringify(createError, null, 2))
+              throw new Error(`Failed to create profile: ${createError.message || 'Unknown error'}`)
+            }
+            console.log('✅ [useProfile] Profile created successfully:', newProfile)
+            setProfile(newProfile)
+          } else {
+            // This is a real error (permission, RLS, etc.)
+            console.error('❌ [useProfile] Unexpected error loading profile')
+            throw new Error(`Profile load failed: ${profileError.message || 'Permission denied or database error'}`)
+          }
         } else {
+          console.log('✅ [useProfile] Profile loaded successfully:', profileData)
           setProfile(profileData)
         }
 
         // Get partnership info
-        const { data: partnerships } = await supabase
+        console.log('📡 [useProfile] Fetching partnership data...')
+        const { data: partnerships, error: partnershipError } = await supabase
           .from('partnership_members')
           .select(`
             partnership_id,
@@ -74,17 +103,27 @@ export function useProfile() {
           `)
           .eq('user_id', user.id)
 
+        if (partnershipError) {
+          console.log('⚠️ [useProfile] Partnership query error:', partnershipError.message)
+        }
+
+        console.log('📊 [useProfile] Partnership data:', partnerships)
+
         if (partnerships && partnerships.length > 0) {
+          console.log('✅ [useProfile] Partnership found, merging with profile')
           setProfile(prev => prev ? {
             ...prev,
             partnership: partnerships[0].partnerships,
             membership_tier: partnerships[0].partnerships?.membership_tier || 'free'
           } : null)
+        } else {
+          console.log('ℹ️ [useProfile] No partnership found for this user')
         }
       } catch (err) {
-        console.error('Error loading profile:', err)
+        console.error('❌ [useProfile] Error loading profile:', err)
         setError(err as Error)
       } finally {
+        console.log('🏁 [useProfile] Profile load complete')
         setLoading(false)
       }
     }

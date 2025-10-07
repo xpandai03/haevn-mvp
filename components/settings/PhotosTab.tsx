@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Upload, X, Star } from 'lucide-react'
+import { Loader2, Upload, X, Star, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
+import { setPrimaryPhoto } from '@/lib/services/photos'
 
 interface Photo {
   id: string
@@ -47,12 +48,13 @@ export function PhotosTab() {
 
     setPartnershipId(partnershipMembers.partnership_id)
 
-    // Get photos
+    // Get photos - order by is_primary first, then order_index
     const { data: photoData } = await supabase
       .from('partnership_photos')
       .select('*')
       .eq('partnership_id', partnershipMembers.partnership_id)
       .order('is_primary', { ascending: false })
+      .order('order_index', { ascending: true })
 
     setPhotos(photoData || [])
     setLoading(false)
@@ -61,6 +63,16 @@ export function PhotosTab() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !partnershipId) return
+
+    // Check photo limit (max 5 photos)
+    if (photos.length >= 5) {
+      toast({
+        title: 'Photo Limit Reached',
+        description: 'You can upload a maximum of 5 photos. Delete one to upload more.',
+        variant: 'destructive'
+      })
+      return
+    }
 
     // Validate file
     if (!file.type.startsWith('image/')) {
@@ -87,15 +99,16 @@ export function PhotosTab() {
     try {
       // Upload to Supabase Storage
       const fileName = `${partnershipId}/${Date.now()}_${file.name}`
+      const bucketName = 'public-photos' // Use public bucket for now
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('partnership-photos')
+        .from(bucketName)
         .upload(fileName, file)
 
       if (uploadError) throw uploadError
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('partnership-photos')
+        .from(bucketName)
         .getPublicUrl(uploadData.path)
 
       // Save to database
@@ -133,32 +146,25 @@ export function PhotosTab() {
   const handleSetPrimary = async (photoId: string) => {
     if (!partnershipId) return
 
-    const supabase = createClient()
-
     try {
-      // Unset all primary photos
-      await supabase
-        .from('partnership_photos')
-        .update({ is_primary: false })
-        .eq('partnership_id', partnershipId)
+      const result = await setPrimaryPhoto(partnershipId, photoId)
 
-      // Set new primary
-      await supabase
-        .from('partnership_photos')
-        .update({ is_primary: true })
-        .eq('id', photoId)
+      if (result.error) {
+        throw new Error(result.error)
+      }
 
+      // Update local state
       setPhotos(photos.map(p => ({ ...p, is_primary: p.id === photoId })))
 
       toast({
-        title: 'Primary Photo Updated',
+        title: 'Avatar Updated',
         description: 'Your profile picture has been updated.',
       })
     } catch (error) {
       console.error('Error setting primary:', error)
       toast({
         title: 'Error',
-        description: 'Failed to update primary photo.',
+        description: 'Failed to update avatar.',
         variant: 'destructive'
       })
     }
@@ -169,10 +175,11 @@ export function PhotosTab() {
 
     try {
       // Extract file path from URL
-      const urlParts = photoUrl.split('/partnership-photos/')
+      const bucketName = 'public-photos'
+      const urlParts = photoUrl.split(`/${bucketName}/`)
       if (urlParts.length > 1) {
         const filePath = urlParts[1]
-        await supabase.storage.from('partnership-photos').remove([filePath])
+        await supabase.storage.from(bucketName).remove([filePath])
       }
 
       // Delete from database
@@ -205,12 +212,35 @@ export function PhotosTab() {
     )
   }
 
+  // Show helpful message if no partnership exists
+  if (!partnershipId) {
+    return (
+      <div className="text-center py-12 space-y-4">
+        <Upload className="h-16 w-16 text-haevn-gray-400 mx-auto" />
+        <div>
+          <h3 className="text-h3 text-haevn-gray-900 mb-2">No Partnership Yet</h3>
+          <p className="text-body text-haevn-gray-600 max-w-md mx-auto">
+            You need to create or join a partnership before you can upload photos.
+          </p>
+        </div>
+        <div className="flex gap-3 justify-center pt-4">
+          <Button
+            onClick={() => window.location.href = '/onboarding'}
+            className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white"
+          >
+            Start Onboarding
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-h3 text-haevn-gray-900 mb-4">Photos</h3>
         <p className="text-body-sm text-haevn-gray-600 mb-6">
-          Upload photos to show on your match profile. Mark one as your primary profile picture.
+          Upload up to 5 photos for your profile. One photo will be your avatar (profile picture).
         </p>
       </div>
 
@@ -221,14 +251,14 @@ export function PhotosTab() {
           id="photo-upload"
           accept="image/*"
           onChange={handleFileUpload}
-          disabled={uploading}
+          disabled={uploading || photos.length >= 5}
           className="hidden"
         />
         <label htmlFor="photo-upload">
           <Button
             type="button"
-            disabled={uploading}
-            className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white cursor-pointer"
+            disabled={uploading || photos.length >= 5}
+            className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => document.getElementById('photo-upload')?.click()}
           >
             {uploading ? (
@@ -239,7 +269,11 @@ export function PhotosTab() {
           </Button>
         </label>
         <p className="text-caption text-haevn-gray-600 mt-2">
-          Maximum file size: 5MB. Supported formats: JPG, PNG, GIF
+          {photos.length >= 5 ? (
+            <span className="text-haevn-orange-500 font-medium">Maximum 5 photos reached. Delete one to upload more.</span>
+          ) : (
+            `Maximum file size: 5MB. Supported formats: JPG, PNG, GIF (${photos.length}/5)`
+          )}
         </p>
       </div>
 
@@ -256,9 +290,9 @@ export function PhotosTab() {
                   className="object-cover"
                 />
                 {photo.is_primary && (
-                  <div className="absolute top-2 left-2 bg-haevn-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-current" />
-                    Primary
+                  <div className="absolute top-2 left-2 bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Avatar
                   </div>
                 )}
               </div>
@@ -269,9 +303,10 @@ export function PhotosTab() {
                   <Button
                     size="sm"
                     onClick={() => handleSetPrimary(photo.id)}
-                    className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white"
+                    className="bg-[#E29E0C] hover:bg-[#c68a0a] text-white"
                   >
-                    Set as Primary
+                    <User className="h-4 w-4 mr-1" />
+                    Set as Avatar
                   </Button>
                 )}
                 <Button

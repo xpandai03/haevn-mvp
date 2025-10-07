@@ -14,6 +14,7 @@ export interface PhotoMetadata {
   partnership_id: string
   photo_url: string
   photo_type: 'public' | 'private'
+  is_primary: boolean
   width?: number
   height?: number
   nsfw_flag?: boolean
@@ -206,5 +207,84 @@ export async function reorderPhotos(
       success: false,
       error: error instanceof Error ? error.message : 'Reorder failed'
     }
+  }
+}
+
+/**
+ * Set a photo as the primary/avatar photo for a partnership
+ * Automatically unsets any existing primary photo
+ */
+export async function setPrimaryPhoto(
+  partnershipId: string,
+  photoId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+
+  try {
+    console.log('📸 [setPrimaryPhoto] Setting photo as primary:', photoId)
+
+    // First, unset all primary photos for this partnership
+    const { error: unsetError } = await supabase
+      .from('partnership_photos')
+      .update({ is_primary: false })
+      .eq('partnership_id', partnershipId)
+      .eq('is_primary', true)
+
+    if (unsetError) {
+      console.error('❌ [setPrimaryPhoto] Error unsetting previous primary:', unsetError)
+      throw unsetError
+    }
+
+    // Then set the new primary photo
+    const { error: setPrimaryError } = await supabase
+      .from('partnership_photos')
+      .update({ is_primary: true })
+      .eq('id', photoId)
+      .eq('partnership_id', partnershipId)
+
+    if (setPrimaryError) {
+      console.error('❌ [setPrimaryPhoto] Error setting new primary:', setPrimaryError)
+      throw setPrimaryError
+    }
+
+    console.log('✅ [setPrimaryPhoto] Primary photo updated successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('❌ [setPrimaryPhoto] Error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set primary photo'
+    }
+  }
+}
+
+/**
+ * Get the primary/avatar photo for a partnership
+ */
+export async function getPrimaryPhoto(
+  partnershipId: string
+): Promise<PhotoMetadata | null> {
+  const supabase = createClient()
+
+  try {
+    const { data: photo, error } = await supabase
+      .from('partnership_photos')
+      .select('*')
+      .eq('partnership_id', partnershipId)
+      .eq('is_primary', true)
+      .single()
+
+    if (error) {
+      // If no primary photo found, return null (not an error)
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+
+    return photo
+  } catch (error) {
+    console.error('Error fetching primary photo:', error)
+    return null
   }
 }
