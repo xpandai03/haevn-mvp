@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { uploadPhoto, setPrimaryPhoto, deletePhoto, PhotoMetadata } from '@/lib/services/photos'
-import { Upload, Loader2, Trash2, Star, Camera } from 'lucide-react'
+import { Upload, Loader2, Trash2, Star, Camera, Plus } from 'lucide-react'
 import Image from 'next/image'
 
 interface PhotoGalleryProps {
@@ -15,6 +16,7 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGalleryProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -164,22 +166,12 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
             </h2>
           </div>
           <Button
-            onClick={handleUploadClick}
-            disabled={uploading}
+            onClick={() => router.push('/add-photos')}
             className="bg-[#008080] hover:bg-[#006666] text-white"
             size="sm"
           >
-            {uploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Photos
-              </>
-            )}
+            <Plus className="h-4 w-4 mr-2" />
+            Add Photos
           </Button>
           <input
             ref={fileInputRef}
@@ -201,13 +193,13 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
               Upload photos to your gallery
             </p>
             <Button
-              onClick={handleUploadClick}
+              onClick={() => router.push('/add-photos')}
               variant="outline"
               size="sm"
               className="border-[#008080] text-[#008080] hover:bg-[#008080]/10"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Your First Photo
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Photos
             </Button>
           </div>
         ) : (
