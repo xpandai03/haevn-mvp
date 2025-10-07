@@ -11,7 +11,8 @@ import { HaevnLogo } from '@/components/HaevnLogo'
 import { usePartnerStats } from '@/hooks/usePartnerStats'
 import { InvitePartnerModal } from '@/components/InvitePartnerModal'
 import { AcceptInviteModal } from '@/components/AcceptInviteModal'
-import { uploadPhoto, setPrimaryPhoto } from '@/lib/services/photos'
+import { PhotoGallery } from '@/components/PhotoGallery'
+import { uploadPhoto, setPrimaryPhoto, getPartnershipPhotos, PhotoMetadata } from '@/lib/services/photos'
 import { Loader2, UserPlus, Camera } from 'lucide-react'
 import {
   Heart,
@@ -35,6 +36,8 @@ export function PartnerProfile() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [acceptModalOpen, setAcceptModalOpen] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [photos, setPhotos] = useState<PhotoMetadata[]>([])
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const sectionsRef = useRef<{ [key: string]: HTMLElement | null }>({})
 
@@ -56,6 +59,20 @@ export function PartnerProfile() {
     { icon: BookOpen, label: 'Glossary', href: '/glossary', available: false },
     { icon: GraduationCap, label: 'Learn', href: '/learn', available: false }
   ]
+
+  // Load photos when partnership is available
+  useEffect(() => {
+    async function loadPhotos() {
+      if (partnerData?.partnershipId && hasPartnership) {
+        setLoadingPhotos(true)
+        const fetchedPhotos = await getPartnershipPhotos(partnerData.partnershipId)
+        setPhotos(fetchedPhotos)
+        setLoadingPhotos(false)
+      }
+    }
+
+    loadPhotos()
+  }, [partnerData?.partnershipId, hasPartnership])
 
   // Intersection Observer for active section detection
   useEffect(() => {
@@ -97,6 +114,17 @@ export function PartnerProfile() {
       .map((n) => n[0])
       .join('')
       .toUpperCase()
+  }
+
+  const handlePhotosChange = async () => {
+    if (partnerData?.partnershipId) {
+      const fetchedPhotos = await getPartnershipPhotos(partnerData.partnershipId)
+      setPhotos(fetchedPhotos)
+      // Also refresh stats to update avatar if primary photo changed
+      if (refreshStats) {
+        await refreshStats()
+      }
+    }
   }
 
   const handleAvatarClick = () => {
@@ -572,6 +600,17 @@ export function PartnerProfile() {
               </CardContent>
             </Card>
           </section>
+
+          {/* Photos Section */}
+          {hasPartnership && partnerData?.partnershipId && (
+            <section className="scroll-mt-32">
+              <PhotoGallery
+                partnershipId={partnerData.partnershipId}
+                photos={photos}
+                onPhotosChange={handlePhotosChange}
+              />
+            </section>
+          )}
 
         </div>
 
