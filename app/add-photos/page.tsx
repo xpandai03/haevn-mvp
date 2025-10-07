@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, Plus, X, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { usePartnerStats } from '@/hooks/usePartnerStats'
 import { uploadPhoto } from '@/lib/services/photos'
+import { getCurrentPartnershipId } from '@/lib/actions/partnership'
 import Image from 'next/image'
 
 interface PhotoSlot {
@@ -19,12 +19,13 @@ interface PhotoSlot {
 export default function AddPhotosPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const { partnerData, hasPartnership, loading: statsLoading } = usePartnerStats()
   const { toast } = useToast()
   const [photoSlots, setPhotoSlots] = useState<PhotoSlot[]>(
     Array.from({ length: 6 }, (_, i) => ({ id: `slot-${i}`, file: null, preview: null }))
   )
   const [uploading, setUploading] = useState(false)
+  const [partnershipId, setPartnershipId] = useState<string | null>(null)
+  const [loadingPartnership, setLoadingPartnership] = useState(true)
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
 
   useEffect(() => {
@@ -32,6 +33,17 @@ export default function AddPhotosPage() {
       router.push('/auth/login')
     }
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    async function fetchPartnership() {
+      if (user) {
+        const result = await getCurrentPartnershipId()
+        setPartnershipId(result.id)
+        setLoadingPartnership(false)
+      }
+    }
+    fetchPartnership()
+  }, [user])
 
   const handleAddPhoto = (slotId: string) => {
     fileInputRefs.current[slotId]?.click()
@@ -96,7 +108,7 @@ export default function AddPhotosPage() {
       return
     }
 
-    if (!partnerData?.partnershipId) {
+    if (!partnershipId) {
       toast({
         title: 'No Partnership',
         description: 'You need to be in a partnership to upload photos',
@@ -110,7 +122,7 @@ export default function AddPhotosPage() {
     try {
       // Upload all photos
       const uploadPromises = photosToUpload.map(slot =>
-        uploadPhoto(partnerData.partnershipId, slot.file!, 'public')
+        uploadPhoto(partnershipId, slot.file!, 'public')
       )
 
       const results = await Promise.all(uploadPromises)
@@ -146,7 +158,7 @@ export default function AddPhotosPage() {
 
   const uploadedCount = photoSlots.filter(slot => slot.file !== null).length
 
-  if (authLoading || statsLoading) {
+  if (authLoading || loadingPartnership) {
     return (
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
@@ -154,7 +166,7 @@ export default function AddPhotosPage() {
     )
   }
 
-  if (!user || !hasPartnership) {
+  if (!user || !partnershipId) {
     return null
   }
 
