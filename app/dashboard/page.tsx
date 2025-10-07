@@ -87,21 +87,12 @@ export default function DashboardPage() {
         <div className="mb-8 pt-8">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-6">
-              {/* HAEVN Logo with proper clearspace */}
+              {/* HAEVN Logo */}
               <img
                 src="/images/haevn-logo-transparent.png"
                 alt="HAEVN"
                 className="h-20 w-auto"
-                style={{ padding: '10px' }} // Clearspace: half height (40px) = 20px, but using 10px for tighter layout
               />
-              <div>
-                <h1 className="text-h1 text-haevn-gray-900">
-                  Your Matches
-                </h1>
-                <p className="text-body text-haevn-gray-700 mt-2">
-                  {matches.length} {matches.length === 1 ? 'match' : 'matches'} found
-                </p>
-              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button

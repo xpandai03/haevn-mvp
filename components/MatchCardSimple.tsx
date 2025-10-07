@@ -63,7 +63,7 @@ export function MatchCardSimple({ match, onClick }: MatchCardSimpleProps) {
               {partnership.display_name || 'Anonymous'}
             </h3>
             <p className="text-body-sm text-haevn-gray-600 capitalize">
-              {partnership.identity} • {partnership.age}
+              {partnership.identity} • {partnership.identity.toLowerCase() === 'couple' ? `${partnership.age} & ${partnership.age + 3}` : partnership.age}
             </p>
           </div>
         </div>
