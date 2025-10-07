@@ -6,11 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 import { HaevnLogo } from '@/components/HaevnLogo'
 import { usePartnerStats } from '@/hooks/usePartnerStats'
 import { InvitePartnerModal } from '@/components/InvitePartnerModal'
 import { AcceptInviteModal } from '@/components/AcceptInviteModal'
-import { Loader2, UserPlus } from 'lucide-react'
+import { uploadPhoto, setPrimaryPhoto } from '@/lib/services/photos'
+import { Loader2, UserPlus, Camera } from 'lucide-react'
 import {
   Heart,
   MessageCircle,
@@ -28,10 +30,12 @@ import {
 export function PartnerProfile() {
   const router = useRouter()
   // Use live data from hook instead of mock data
-  const { partnerData, hasPartnership, loading, error } = usePartnerStats()
+  const { partnerData, hasPartnership, loading, error, refreshStats } = usePartnerStats()
   const [activeSection, setActiveSection] = useState('bio')
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [acceptModalOpen, setAcceptModalOpen] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const sectionsRef = useRef<{ [key: string]: HTMLElement | null }>({})
 
   const contentSections = [
@@ -43,7 +47,7 @@ export function PartnerProfile() {
 
   const personalItems = [
     { icon: Mail, label: 'Messages', href: '/messages', available: false },
-    { icon: User, label: 'Account details', href: '/account', available: false },
+    { icon: User, label: 'Account details', href: '/account-details', available: true },
     { icon: Settings, label: 'Survey', href: '/survey-results', available: true }
   ]
 
@@ -85,12 +89,89 @@ export function PartnerProfile() {
     }
   }
 
+  const { toast } = useToast()
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
+  }
+
+  const handleAvatarClick = () => {
+    if (hasPartnership && !uploadingAvatar) {
+      fileInputRef.current?.click()
+    }
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !partnerData?.partnershipId) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid File',
+        description: 'Please select an image file (JPG, PNG, or WebP)',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please select an image smaller than 5MB',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setUploadingAvatar(true)
+
+    try {
+      // Upload photo
+      const result = await uploadPhoto(partnerData.partnershipId, file, 'public')
+
+      if (result.error || !result.photoId) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      // Set as primary photo
+      const setPrimaryResult = await setPrimaryPhoto(partnerData.partnershipId, result.photoId)
+
+      if (!setPrimaryResult.success) {
+        throw new Error(setPrimaryResult.error || 'Failed to set as avatar')
+      }
+
+      toast({
+        title: 'Avatar Updated!',
+        description: 'Your profile picture has been updated successfully.'
+      })
+
+      // Refresh the profile to show new avatar
+      if (refreshStats) {
+        await refreshStats()
+      } else {
+        // Fallback: reload the page
+        window.location.reload()
+      }
+    } catch (error: any) {
+      console.error('Avatar upload error:', error)
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'Failed to upload avatar. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setUploadingAvatar(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   console.log('🖼️ [PartnerProfile] Rendering with:', { loading, hasError: !!error, hasData: !!partnerData, hasPartnership })
@@ -194,12 +275,42 @@ export function PartnerProfile() {
             <CardContent className="p-0">
               {/* Avatar Section */}
               <div className="flex flex-col items-center pt-6 pb-4">
-                <Avatar className="h-24 w-24 border-4 border-[#E29E0C] shadow-md mb-3">
-                  <AvatarImage src={partnerData.avatar} alt={partnerData.name} />
-                  <AvatarFallback className="bg-white text-[#1E2A4A] text-2xl" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
-                    {getInitials(partnerData.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar
+                    className={`h-24 w-24 border-4 border-[#E29E0C] shadow-md mb-3 ${
+                      hasPartnership ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={handleAvatarClick}
+                  >
+                    <AvatarImage src={partnerData.avatar} alt={partnerData.name} />
+                    <AvatarFallback className="bg-white text-[#1E2A4A] text-2xl" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                      {getInitials(partnerData.name)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {/* Upload overlay */}
+                  {hasPartnership && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      onClick={handleAvatarClick}
+                    >
+                      {uploadingAvatar ? (
+                        <Loader2 className="h-8 w-8 text-white animate-spin" />
+                      ) : (
+                        <Camera className="h-8 w-8 text-white" />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
 
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl text-white" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
