@@ -8,6 +8,7 @@ import { Sparkles, Heart, LogOut, Loader2, Settings } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
 import { getIncomingHandshakeCount, getConnections } from '@/lib/actions/handshakes'
+import { getUnreadNudgesCount } from '@/lib/actions/nudges'
 import { MatchCardSimple } from '@/components/MatchCardSimple'
 import { MatchModal } from '@/components/MatchModal'
 import { HandshakeNotifications } from '@/components/HandshakeNotifications'
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connectionsCount, setConnectionsCount] = useState(0)
+  const [nudgesCount, setNudgesCount] = useState(0)
 
   useEffect(() => {
     async function loadMatches() {
@@ -31,12 +33,14 @@ export default function DashboardPage() {
 
       try {
         setLoading(true)
-        const [matchData, connections] = await Promise.all([
+        const [matchData, connections, nudgesData] = await Promise.all([
           getMatches('Bronze'),
-          getConnections()
+          getConnections(),
+          getUnreadNudgesCount()
         ])
         setMatches(matchData)
         setConnectionsCount(connections.length)
+        setNudgesCount(nudgesData.count)
       } catch (err: any) {
         console.error('Error loading matches:', err)
         setError(err.message || 'Failed to load matches')
@@ -91,29 +95,30 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-haevn-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 pt-8">
-          <div className="flex justify-between items-start">
+        <div className="mb-8 pt-4 sm:pt-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-6">
               {/* HAEVN Logo */}
               <img
                 src="/images/haevn-logo-transparent.png"
                 alt="HAEVN"
-                className="h-20 w-auto"
+                className="h-14 sm:h-20 w-auto"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <HandshakeNotifications />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/partner-profile')}
-                className="text-haevn-gray-700 hover:text-haevn-teal-600"
+                className="text-haevn-gray-700 hover:text-haevn-teal-600 text-xs sm:text-sm"
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Profile & Settings
+                <Settings className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Profile & Settings</span>
+                <span className="sm:hidden">Profile</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">
+                <LogOut className="h-4 w-4 mr-1 sm:mr-2" />
                 Sign Out
               </Button>
             </div>
@@ -155,7 +160,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Nudges Card */}
-          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => {/* Navigate to nudges */}}>
+          <Card className="bg-white border-2 border-haevn-gray-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={() => router.push('/nudges')}>
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-haevn-gray-200 rounded-full">
@@ -163,9 +168,9 @@ export default function DashboardPage() {
                 </div>
                 <CardTitle className="text-h3 text-haevn-gray-900">Nudges</CardTitle>
               </div>
-              <div className="text-display-lg text-haevn-gray-700">0</div>
+              <div className="text-display-lg text-haevn-gray-700">{nudgesCount}</div>
               <p className="text-body-sm text-haevn-gray-600 mt-2">
-                Pending introductions
+                New notifications
               </p>
             </CardContent>
           </Card>
@@ -188,7 +193,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 {['Platinum', 'Gold', 'Silver', 'Bronze'].map(tier => {
                   const count = matches.filter(m => m.tier === tier).length
                   const colors = {
@@ -199,7 +204,7 @@ export default function DashboardPage() {
                   }[tier]
 
                   return (
-                    <div key={tier} className={`text-center p-4 rounded-2xl border-2 ${colors}`}>
+                    <div key={tier} className={`text-center p-3 sm:p-4 rounded-2xl border-2 ${colors}`}>
                       <p className="text-display-sm">{count}</p>
                       <p className="text-caption font-medium">{tier}</p>
                     </div>

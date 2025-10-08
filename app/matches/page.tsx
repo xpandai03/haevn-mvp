@@ -149,7 +149,7 @@ export default function MatchesPage() {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-[#252627]/60" />
               <Select value={minTier} onValueChange={(value: any) => setMinTier(value)}>
-                <SelectTrigger className="w-[180px] border-[#252627]/20">
+                <SelectTrigger className="w-full sm:w-[180px] border-[#252627]/20">
                   <SelectValue placeholder="Minimum tier" />
                 </SelectTrigger>
                 <SelectContent>

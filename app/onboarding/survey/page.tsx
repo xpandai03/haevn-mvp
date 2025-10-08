@@ -328,22 +328,22 @@ export default function SurveyPage() {
       </div>
 
       {/* Back button and Save & Exit */}
-      <div className="w-full px-4 mb-8">
-        <div className="max-w-2xl mx-auto flex justify-between items-center">
+      <div className="w-full px-4 mb-6 sm:mb-8">
+        <div className="max-w-2xl mx-auto flex justify-between items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 sm:gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px]"
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+            <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
               Back
             </span>
           </button>
 
           <button
             onClick={handleSaveAndExit}
-            className="text-sm text-haevn-navy hover:text-haevn-teal transition-colors"
+            className="text-xs sm:text-sm text-haevn-navy hover:text-haevn-teal transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center px-2"
             style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
           >
             Save & Exit
@@ -353,7 +353,7 @@ export default function SurveyPage() {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
-        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-8 lg:p-12">
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 lg:p-12">
           {/* Section title with progress */}
           {currentSection && (
             <div className="mb-6">

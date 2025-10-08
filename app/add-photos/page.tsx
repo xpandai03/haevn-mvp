@@ -193,7 +193,7 @@ export default function AddPhotosPage() {
 
         {/* Photo Grid */}
         <div className="px-6">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {photoSlots.map((slot) => (
               <div key={slot.id} className="relative aspect-square">
                 {slot.preview ? (

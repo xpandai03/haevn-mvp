@@ -93,17 +93,17 @@ export function SectionCelebrationModal({
 
               {/* Section Title */}
               <div className="text-center">
-                <DialogTitle className="text-2xl text-haevn-charcoal mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                <DialogTitle className="text-xl sm:text-2xl text-haevn-charcoal mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
                   Section Complete!
                 </DialogTitle>
-                <DialogDescription className="text-lg text-haevn-charcoal/70 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                <DialogDescription className="text-base sm:text-lg text-haevn-charcoal/70 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
                   {sectionTitle}
                 </DialogDescription>
               </div>
 
               {/* Celebration Message */}
               <div className="text-center px-4">
-                <p className="text-xl text-haevn-charcoal" style={{ fontFamily: 'Roboto', fontWeight: 700 }}>
+                <p className="text-lg sm:text-xl text-haevn-charcoal" style={{ fontFamily: 'Roboto', fontWeight: 700 }}>
                   {celebrationMessage}
                 </p>
               </div>

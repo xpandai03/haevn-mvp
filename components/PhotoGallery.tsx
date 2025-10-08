@@ -203,7 +203,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {photos.map((photo) => (
               <div key={photo.id} className="relative group aspect-square">
                 <Image
