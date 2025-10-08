@@ -994,3 +994,78 @@ export function calculateSurveyCompletion(answers: Record<string, any>): number 
 
   return Math.round((answeredRequired.length / requiredQuestions.length) * 100)
 }
+
+/**
+ * Get the section for a given question
+ */
+export function getSectionForQuestion(questionId: string): SurveySection | undefined {
+  return surveySections.find(section =>
+    section.questions.some(q => q.id === questionId)
+  )
+}
+
+/**
+ * Get active questions within a specific section (respecting skip logic)
+ */
+export function getActiveQuestionsInSection(
+  sectionId: string,
+  answers: Record<string, any>
+): SurveyQuestion[] {
+  const section = surveySections.find(s => s.id === sectionId)
+  if (!section) return []
+
+  return section.questions.filter(question => {
+    // Check if question should be skipped
+    if (question.skipCondition && question.skipCondition(answers)) {
+      return false
+    }
+    return true
+  })
+}
+
+/**
+ * Get the index of a question within its section (0-based)
+ */
+export function getQuestionIndexInSection(
+  questionId: string,
+  answers: Record<string, any>
+): number {
+  const section = getSectionForQuestion(questionId)
+  if (!section) return 0
+
+  const activeQuestions = getActiveQuestionsInSection(section.id, answers)
+  return activeQuestions.findIndex(q => q.id === questionId)
+}
+
+/**
+ * Check if a section is complete (all questions answered)
+ */
+export function isSectionComplete(
+  sectionId: string,
+  answers: Record<string, any>
+): boolean {
+  const activeQuestions = getActiveQuestionsInSection(sectionId, answers)
+
+  return activeQuestions.every(question => {
+    const answer = answers[question.id]
+    if (Array.isArray(answer)) return answer.length > 0
+    return answer !== undefined && answer !== null && answer !== ''
+  })
+}
+
+/**
+ * Get celebration message for a section
+ */
+export function getSectionCelebrationMessage(sectionIndex: number): string {
+  const messages = [
+    "Great start! 🎉",
+    "You're doing amazing! 💫",
+    "Keep going, you're a third of the way there! 💪",
+    "Halfway there! You're crushing it! ⭐",
+    "Almost done! Just 3 more sections! 🚀",
+    "You're on a roll! 2 sections left! 🔥",
+    "One more to go! You've got this! 🎯",
+    "Survey Complete! Amazing work! 🎊"
+  ]
+  return messages[sectionIndex] || "Great job!"
+}

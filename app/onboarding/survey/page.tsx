@@ -6,11 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
+import { SectionCelebrationModal } from '@/components/survey/SectionCelebrationModal'
 import { useAuth } from '@/lib/auth/context'
 import { getUserSurveyData, saveUserSurveyData } from '@/lib/actions/survey-user'
 import {
   surveySections,
-  getActiveQuestions
+  getActiveQuestions,
+  getSectionForQuestion,
+  getActiveQuestionsInSection,
+  getQuestionIndexInSection,
+  isSectionComplete,
+  getSectionCelebrationMessage
 } from '@/lib/survey/questions'
 import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -28,15 +34,28 @@ export default function SurveyPage() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [completedSections, setCompletedSections] = useState<string[]>([])
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationSection, setCelebrationSection] = useState<{
+    title: string
+    number: number
+    message: string
+  } | null>(null)
 
   // Get active questions based on skip logic
   const activeQuestions = getActiveQuestions(answers)
   const currentQuestion = activeQuestions[currentQuestionIndex]
 
   // Find current section
-  const currentSection = surveySections.find(section =>
-    section.questions.some(q => q.id === currentQuestion?.id)
-  )
+  const currentSection = currentQuestion ? getSectionForQuestion(currentQuestion.id) : undefined
+
+  // Get section-specific progress
+  const questionsInSection = currentSection
+    ? getActiveQuestionsInSection(currentSection.id, answers)
+    : []
+  const questionIndexInSection = currentQuestion
+    ? getQuestionIndexInSection(currentQuestion.id, answers)
+    : 0
 
   // Calculate real-time completion percentage
   const calculateCurrentCompletion = () => {
@@ -69,6 +88,7 @@ export default function SurveyPage() {
 
         if (surveyData) {
           setAnswers(surveyData.answers_json)
+          setCompletedSections(surveyData.completed_sections || [])
 
           // Find first unanswered question for resume
           const activeQs = getActiveQuestions(surveyData.answers_json)
@@ -115,7 +135,8 @@ export default function SurveyPage() {
   // Auto-save with debouncing
   const saveAnswers = useCallback(async (
     newAnswers: Record<string, any>,
-    newQuestionIndex: number
+    newQuestionIndex: number,
+    sections: string[] = []
   ) => {
     // Clear existing timeout
     if (saveTimeout) {
@@ -128,7 +149,7 @@ export default function SurveyPage() {
       setSaveError(null)
 
       try {
-        const { success, error } = await saveUserSurveyData(newAnswers, newQuestionIndex)
+        const { success, error } = await saveUserSurveyData(newAnswers, newQuestionIndex, sections)
 
         if (error || !success) {
           throw new Error(error || 'Failed to save')
@@ -181,8 +202,32 @@ export default function SurveyPage() {
     }
     setAnswers(newAnswers)
 
+    // Check if this completes a section
+    if (currentSection && !completedSections.includes(currentSection.id)) {
+      const sectionIsComplete = isSectionComplete(currentSection.id, newAnswers)
+
+      if (sectionIsComplete) {
+        // Mark section as complete
+        const newCompletedSections = [...completedSections, currentSection.id]
+        setCompletedSections(newCompletedSections)
+
+        // Show celebration modal
+        const sectionIndex = surveySections.findIndex(s => s.id === currentSection.id)
+        setCelebrationSection({
+          title: currentSection.title,
+          number: sectionIndex + 1,
+          message: getSectionCelebrationMessage(sectionIndex)
+        })
+        setShowCelebration(true)
+
+        // Save with completed sections
+        saveAnswers(newAnswers, currentQuestionIndex, newCompletedSections)
+        return
+      }
+    }
+
     // Trigger auto-save with current question index
-    saveAnswers(newAnswers, currentQuestionIndex)
+    saveAnswers(newAnswers, currentQuestionIndex, completedSections)
   }
 
   // Navigation
@@ -190,7 +235,7 @@ export default function SurveyPage() {
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers(answers, newIndex) // Save new index
+      saveAnswers(answers, newIndex, completedSections) // Save new index
     }
   }
 
@@ -198,14 +243,14 @@ export default function SurveyPage() {
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1
       setCurrentQuestionIndex(newIndex)
-      saveAnswers(answers, newIndex) // Save new index
+      saveAnswers(answers, newIndex, completedSections) // Save new index
     }
   }
 
   const handleSaveAndExit = async () => {
     setSaveStatus('saving')
     try {
-      await saveUserSurveyData(answers, currentQuestionIndex)
+      await saveUserSurveyData(answers, currentQuestionIndex, completedSections)
       toast({
         title: 'Progress saved',
         description: 'You can continue where you left off anytime.',
@@ -309,17 +354,20 @@ export default function SurveyPage() {
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-8 lg:p-12">
-          {/* Section title */}
+          {/* Section title with progress */}
           {currentSection && (
             <div className="mb-6">
               <h2 className="text-sm text-haevn-gold mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {currentSection.title}
               </h2>
               {currentSection.description && (
-                <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
+                <p className="text-sm text-haevn-charcoal/70 mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
                   {currentSection.description}
                 </p>
               )}
+              <p className="text-xs text-haevn-charcoal/50" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}>
+                Question {questionIndexInSection + 1} of {questionsInSection.length}
+              </p>
             </div>
           )}
 
@@ -366,6 +414,18 @@ export default function SurveyPage() {
           />
         ))}
       </div>
+
+      {/* Section Celebration Modal */}
+      {celebrationSection && (
+        <SectionCelebrationModal
+          isOpen={showCelebration}
+          onClose={() => setShowCelebration(false)}
+          sectionTitle={celebrationSection.title}
+          sectionNumber={celebrationSection.number}
+          totalSections={surveySections.length}
+          celebrationMessage={celebrationSection.message}
+        />
+      )}
     </div>
   )
 }

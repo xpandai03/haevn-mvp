@@ -8,6 +8,7 @@ export interface UserSurveyData {
   answers_json: Record<string, any>
   completion_pct: number
   current_step: number
+  completed_sections?: string[]
 }
 
 /**
@@ -34,7 +35,7 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     // Try to get existing survey data
     const { data, error } = await adminClient
       .from('user_survey_responses')
-      .select('answers_json, completion_pct, current_step')
+      .select('answers_json, completion_pct, current_step, completed_sections')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -87,7 +88,8 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
       data: {
         answers_json: (data.answers_json as Record<string, any>) || {},
         completion_pct: data.completion_pct || 0,
-        current_step: data.current_step || 0
+        current_step: data.current_step || 0,
+        completed_sections: (data.completed_sections as string[]) || []
       },
       error: null
     }
@@ -105,7 +107,8 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
  */
 export async function saveUserSurveyData(
   partialAnswers: Record<string, any>,
-  currentQuestionIndex: number
+  currentQuestionIndex: number,
+  completedSections: string[] = []
 ): Promise<{ success: boolean, error: string | null }> {
   console.log('[saveUserSurveyData] Starting save...', { currentQuestionIndex, answerKeys: Object.keys(partialAnswers) })
 
@@ -160,7 +163,8 @@ export async function saveUserSurveyData(
         user_id: user.id,
         answers_json: mergedAnswers,
         completion_pct: completionPct,
-        current_step: currentQuestionIndex
+        current_step: currentQuestionIndex,
+        completed_sections: completedSections
       }, {
         onConflict: 'user_id'
       })
