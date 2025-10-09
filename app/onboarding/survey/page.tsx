@@ -393,10 +393,10 @@ export default function SurveyPage() {
           </div>
         </div>
 
-        {/* Question counter */}
+        {/* Question counter - section specific */}
         <div className="mt-6 text-center">
           <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
-            Question {currentQuestionIndex + 1} of {activeQuestions.length}
+            Question {questionIndexInSection + 1} of {questionsInSection.length}
           </p>
         </div>
       </main>

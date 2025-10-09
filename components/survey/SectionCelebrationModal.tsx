@@ -49,12 +49,15 @@ export function SectionCelebrationModal({
   // Show confetti when modal opens
   useEffect(() => {
     if (isOpen) {
-      setShowConfetti(true)
-      // Stop confetti after 3 seconds
+      // Ensure confetti shows by setting with slight delay
+      setTimeout(() => setShowConfetti(true), 100)
+      // Stop confetti after 5 seconds (increased duration)
       const timer = setTimeout(() => {
         setShowConfetti(false)
-      }, 3000)
+      }, 5000)
       return () => clearTimeout(timer)
+    } else {
+      setShowConfetti(false)
     }
   }, [isOpen])
 
@@ -70,13 +73,14 @@ export function SectionCelebrationModal({
 
   return (
     <>
-      {showConfetti && (
+      {showConfetti && windowSize.width > 0 && windowSize.height > 0 && (
         <Confetti
           width={windowSize.width}
           height={windowSize.height}
           recycle={false}
-          numberOfPieces={200}
-          gravity={0.3}
+          numberOfPieces={300}
+          gravity={0.25}
+          colors={['#E29E0C', '#008080', '#E8E6E3', '#252627']}
         />
       )}
 
@@ -84,10 +88,23 @@ export function SectionCelebrationModal({
         <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4">
-              {/* Checkmark Icon */}
-              <div className="w-16 h-16 rounded-full bg-haevn-teal/10 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-haevn-teal flex items-center justify-center animate-bounce">
-                  <Check className="h-8 w-8 text-white" strokeWidth={3} />
+              {/* Large Section Number with Flame - Duolingo Style */}
+              <div className="relative mb-6">
+                <div className="w-32 h-32 mx-auto relative">
+                  {/* Flame/Fire Effect */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#E29E0C] via-[#D88A0A] to-[#C77A09] animate-pulse"></div>
+                  </div>
+                  {/* Section Number */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-6xl font-black text-white drop-shadow-lg" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                      {sectionNumber}
+                    </span>
+                  </div>
+                  {/* Checkmark badge */}
+                  <div className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-haevn-teal flex items-center justify-center border-4 border-white shadow-lg">
+                    <Check className="h-6 w-6 text-white" strokeWidth={3} />
+                  </div>
                 </div>
               </div>
 
@@ -108,22 +125,34 @@ export function SectionCelebrationModal({
                 </p>
               </div>
 
-              {/* Progress Indicator */}
-              <div className="flex items-center gap-2 bg-haevn-lightgray px-4 py-2 rounded-full">
-                <div className="flex items-center gap-1">
+              {/* Progress Bar - Duolingo Style */}
+              <div className="w-full px-4">
+                <div className="flex items-center justify-center gap-1 mb-3">
                   {Array.from({ length: totalSections }).map((_, idx) => (
                     <div
                       key={idx}
-                      className={`w-2 h-2 rounded-full ${
+                      className="flex-1 relative"
+                    >
+                      {/* Bar segment */}
+                      <div className={`h-3 rounded-full transition-all duration-300 ${
                         idx < sectionNumber
-                          ? 'bg-haevn-teal'
-                          : 'bg-haevn-charcoal/20'
-                      }`}
-                    />
+                          ? 'bg-gradient-to-r from-[#E29E0C] to-[#D88A0A]'
+                          : idx === sectionNumber - 1
+                          ? 'bg-haevn-teal ring-2 ring-haevn-teal ring-offset-2'
+                          : 'bg-haevn-charcoal/10'
+                      }`}></div>
+
+                      {/* Checkmark for completed */}
+                      {idx < sectionNumber && (
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+                          <Check className="h-4 w-4 text-[#E29E0C]" strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-                <p className="text-sm text-haevn-charcoal/70 ml-2" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
-                  {sectionNumber} of {totalSections} complete
+                <p className="text-sm text-haevn-charcoal/70 text-center" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                  {sectionNumber} of {totalSections} sections complete
                 </p>
               </div>
 
