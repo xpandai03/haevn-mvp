@@ -24,6 +24,7 @@ export default function VerificationPage() {
   const { toast } = useToast()
   const flowController = getOnboardingFlowController()
   const [showDetails, setShowDetails] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -31,12 +32,44 @@ export default function VerificationPage() {
     }
   }, [user, router])
 
-  const handleVerify = async () => {
-    // Phase 2: This will open verification flow
-    toast({
-      title: 'Coming Soon',
-      description: 'Verification will be available in Phase 2. You can skip for now.',
-    })
+  const handleStartVerification = async () => {
+    if (!user) return
+
+    setIsStarting(true)
+
+    try {
+      console.log('[Verification] Starting Veriff session...')
+
+      // Call API to create Veriff session
+      const response = await fetch('/api/verify/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start verification')
+      }
+
+      const data = await response.json()
+
+      console.log('[Verification] Session created:', data.sessionId)
+
+      // Store session ID in localStorage for return page
+      localStorage.setItem('veriff_session_id', data.sessionId)
+
+      // Redirect to Veriff hosted verification
+      window.location.href = data.url
+    } catch (error) {
+      console.error('[Verification] Error starting verification:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to start verification. Please try again.',
+        variant: 'destructive'
+      })
+      setIsStarting(false)
+    }
   }
 
   const handleSkip = async () => {
@@ -90,38 +123,45 @@ export default function VerificationPage() {
               description="Verification is handled by a trusted third-party provider. Your ID is encrypted and never shown to other members."
             />
 
-            <Alert className="border-amber-200 bg-amber-50">
-              <AlertDescription className="text-amber-900">
-                <strong>Phase 1 Note:</strong> Full verification (ID + selfie video) will be implemented in Phase 3.
-                For now, you can continue without verification, but it will be required before matching with others.
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-900">
+                <strong>Live Verification:</strong> Powered by Veriff, the same technology trusted by global companies. Your ID is securely verified and never stored by HAEVN.
               </AlertDescription>
             </Alert>
 
             <div className="pt-6 space-y-3">
               <Button
-                onClick={handleVerify}
-                className="w-full"
+                onClick={handleStartVerification}
+                className="w-full bg-haevn-teal hover:opacity-90"
                 size="lg"
-                variant="outline"
-                disabled
+                disabled={isStarting}
               >
-                Verify My Identity (Coming Soon)
+                {isStarting ? 'Opening Verification...' : 'Start Verification'}
               </Button>
 
               <Button
                 onClick={handleSkip}
                 className="w-full"
                 size="lg"
+                variant="outline"
               >
-                Continue Without Verification
+                Skip for Now
               </Button>
 
-              <button
-                onClick={() => setShowDetails(true)}
-                className="w-full text-sm text-primary hover:underline"
-              >
-                How verification works
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={() => setShowDetails(true)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  How verification works
+                </button>
+                <a
+                  href="/onboarding/verification/return"
+                  className="text-sm text-muted-foreground hover:underline"
+                >
+                  I've completed verification
+                </a>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -28,11 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check active session
     const initAuth = async () => {
       try {
+        console.log('[Auth] Initializing auth, checking for existing session...')
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('[Auth] Session check result:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          expiresAt: session?.expires_at
+        })
         setSession(session)
         setUser(session?.user ?? null)
       } catch (error) {
-        console.error('Error loading session:', error)
+        console.error('[Auth] Error loading session:', error)
       } finally {
         setLoading(false)
       }
@@ -43,13 +50,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[Auth] State change:', {
+          event,
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          expiresAt: session?.expires_at
+        })
+
         setSession(session)
         setUser(session?.user ?? null)
 
         if (event === 'SIGNED_IN') {
+          console.log('[Auth] User signed in, refreshing router')
           router.refresh()
         } else if (event === 'SIGNED_OUT') {
+          console.log('[Auth] User signed out, redirecting to home')
           router.push('/')
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('[Auth] Token refreshed successfully')
+        } else if (event === 'USER_UPDATED') {
+          console.log('[Auth] User updated')
         }
       }
     )

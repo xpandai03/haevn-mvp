@@ -16,9 +16,14 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Ensure cookies work across domains (for Veriff redirect)
+              cookieStore.set(name, value, {
+                ...options,
+                sameSite: 'none',
+                secure: true
+              })
+            })
           } catch {
             // Server Component context - cookies can't be set here
           }
