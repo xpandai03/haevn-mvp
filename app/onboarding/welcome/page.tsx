@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
 import { getOnboardingFlowController } from '@/lib/onboarding/flow'
-import { Clock, Save, Shield } from 'lucide-react'
+import { Heart, Users, Shield } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-export default function ExpectationsPage() {
+export default function WelcomePage() {
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -24,8 +24,8 @@ export default function ExpectationsPage() {
     if (!user) return
 
     try {
-      await flowController.markStepComplete(user.id, 2)
-      router.push('/onboarding/welcome')
+      await flowController.markStepComplete(user.id, 3)
+      router.push('/onboarding/identity')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({
@@ -40,7 +40,7 @@ export default function ExpectationsPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1
             className="text-haevn-navy mb-4"
             style={{
@@ -48,11 +48,10 @@ export default function ExpectationsPage() {
               fontWeight: 700,
               fontSize: '36px',
               lineHeight: '100%',
-              letterSpacing: '-0.015em',
-              textAlign: 'left'
+              letterSpacing: '-0.015em'
             }}
           >
-            Before we continue
+            Welcome to HAEVN
           </h1>
           <p
             className="text-haevn-charcoal"
@@ -60,20 +59,19 @@ export default function ExpectationsPage() {
               fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '18px',
-              lineHeight: '120%',
-              textAlign: 'left'
+              lineHeight: '120%'
             }}
           >
-            Let's set some expectations about what comes next.
+            A safe space for intentional relationships and authentic connection.
           </p>
         </div>
 
         {/* Content Card */}
         <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6">
-          {/* Info Item 1 */}
+          {/* What Makes HAEVN Different */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-haevn-teal" />
+              <Heart className="h-5 w-5 text-haevn-teal" />
             </div>
             <div>
               <h3
@@ -86,7 +84,7 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                It takes about 10-15 minutes
+                Built for real relationships
               </h3>
               <p
                 className="text-haevn-charcoal"
@@ -98,15 +96,15 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                That's how long the full setup usually takes.
+                Whether you're solo, partnered, or exploring with others, HAEVN helps you find connections that honor your needs and boundaries.
               </p>
             </div>
           </div>
 
-          {/* Info Item 2 */}
+          {/* Community First */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
-              <Save className="h-5 w-5 text-haevn-teal" />
+              <Users className="h-5 w-5 text-haevn-teal" />
             </div>
             <div>
               <h3
@@ -119,7 +117,7 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                You can come back anytime
+                Community, not just dating
               </h3>
               <p
                 className="text-haevn-charcoal"
@@ -131,12 +129,12 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                Your progress saves automatically. Finish at your own pace.
+                Connect with individuals, couples, and pods. Find dates, friends, play partners, or join workshops and events in your community.
               </p>
             </div>
           </div>
 
-          {/* Info Item 3 */}
+          {/* Safety & Authenticity */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
               <Shield className="h-5 w-5 text-haevn-teal" />
@@ -152,7 +150,7 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                Every step matters
+                Verified, safe, and private
               </h3>
               <p
                 className="text-haevn-charcoal"
@@ -164,9 +162,39 @@ export default function ExpectationsPage() {
                   textAlign: 'left'
                 }}
               >
-                Completing the process is required for introductions. This is how we keep HAEVN safe and intentional.
+                Every member is verified. Your privacy is protected. This is a space built on consent, respect, and authenticity.
               </p>
             </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 my-6"></div>
+
+          {/* Next Step Teaser */}
+          <div className="space-y-4">
+            <h2
+              className="text-haevn-navy"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '20px',
+                lineHeight: '120%',
+                textAlign: 'center'
+              }}
+            >
+              Next: Tell us who you are on HAEVN
+            </h2>
+            <p
+              className="text-haevn-charcoal text-center"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300,
+                fontSize: '16px',
+                lineHeight: '120%'
+              }}
+            >
+              HAEVN welcomes individuals, couples, and groups (pods). We'll ask about your relationship structure and orientation to help you find compatible connections.
+            </p>
           </div>
 
           {/* Continue Button */}
@@ -181,7 +209,7 @@ export default function ExpectationsPage() {
                 fontSize: '18px'
               }}
             >
-              I'm ready — Continue
+              Let's Start
             </Button>
           </div>
         </div>

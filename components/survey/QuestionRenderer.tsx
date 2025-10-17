@@ -303,7 +303,7 @@ export function QuestionRenderer({
       {(question.type === 'scale' || question.type === 'slider') && (
         <div className="space-y-4">
           <Slider
-            value={[value || (question.min !== undefined ? question.min : 5)]}
+            value={[value !== undefined && value !== null ? value : (question.min !== undefined ? question.min : 5)]}
             onValueChange={(values) => onChange(values[0])}
             max={question.max || 10}
             min={question.min !== undefined ? question.min : 1}

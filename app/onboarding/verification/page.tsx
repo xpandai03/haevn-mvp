@@ -66,9 +66,9 @@ export default function VerificationPage() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Verification keeps HAEVN real</CardTitle>
+            <CardTitle className="text-2xl">Before we begin your survey...</CardTitle>
             <CardDescription className="text-base">
-              Help us maintain a safe, authentic community
+              We need to verify your identity to keep HAEVN safe and authentic for everyone.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -92,8 +92,8 @@ export default function VerificationPage() {
 
             <Alert className="border-amber-200 bg-amber-50">
               <AlertDescription className="text-amber-900">
-                <strong>Phase 2 Feature:</strong> Verification will be fully implemented soon.
-                For now, you can skip this step and continue with your survey.
+                <strong>Phase 1 Note:</strong> Full verification (ID + selfie video) will be implemented in Phase 3.
+                For now, you can continue without verification, but it will be required before matching with others.
               </AlertDescription>
             </Alert>
 
@@ -105,7 +105,7 @@ export default function VerificationPage() {
                 variant="outline"
                 disabled
               >
-                Verify Me (Coming Soon)
+                Verify My Identity (Coming Soon)
               </Button>
 
               <Button
@@ -113,7 +113,7 @@ export default function VerificationPage() {
                 className="w-full"
                 size="lg"
               >
-                Skip for now — but you'll need this before connecting
+                Continue Without Verification
               </Button>
 
               <button

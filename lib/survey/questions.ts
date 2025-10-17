@@ -101,13 +101,19 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q3b_kinsey_scale',
-        label: 'Where do you land on the Kinsey Scale (0–6)?',
-        type: 'slider',
+        label: 'Where do you land on the Kinsey Scale?',
+        type: 'select',
         required: false,
-        helperText: '0 = exclusively straight, 6 = exclusively gay/queer. It\'s a spectrum, not a box.',
-        min: 0,
-        max: 6,
-        step: 1
+        helperText: 'The Kinsey Scale measures sexual orientation as a spectrum. Choose the option that best describes you.',
+        options: [
+          '0 - Exclusively heterosexual',
+          '1 - Predominantly heterosexual, only incidentally homosexual',
+          '2 - Predominantly heterosexual, but more than incidentally homosexual',
+          '3 - Equally heterosexual and homosexual (bisexual)',
+          '4 - Predominantly homosexual, but more than incidentally heterosexual',
+          '5 - Predominantly homosexual, only incidentally heterosexual',
+          '6 - Exclusively homosexual'
+        ]
       },
       {
         id: 'q3c_partner_kinsey_preference',
@@ -116,7 +122,9 @@ export const surveySections: SurveySection[] = [
         placeholder: 'e.g., 2-4, or no preference',
         required: false,
         helperText: 'Only answer if you have a preference; many people don\'t.',
-        skipCondition: (answers) => !answers.q3b_kinsey_scale && answers.q3b_kinsey_scale !== 0
+        skipCondition: (answers) =>
+          answers.q3b_kinsey_scale === undefined ||
+          answers.q3b_kinsey_scale === null
       },
       {
         id: 'q4_relationship_status',

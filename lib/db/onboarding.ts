@@ -124,11 +124,8 @@ export async function markStepComplete(
       completedSteps.push(stepName)
     }
 
-    // Calculate next step (skip verification for now)
+    // Calculate next step
     let nextStep = STEP_NAMES[stepName] + 1
-    if (stepName === 'identity') {
-      nextStep = 6 // Skip verification (step 5) and go to survey-intro
-    }
 
     // Update state with specific flags
     const updates: any = {
@@ -146,7 +143,6 @@ export async function markStepComplete(
         break
       case 'identity':
         updates.identity_completed = true
-        updates.verification_skipped = true // Auto-skip for Phase 1
         break
       case 'survey-intro':
         updates.survey_intro_viewed = true
@@ -193,11 +189,6 @@ export function nextStepFrom(state: OnboardingState | null): string {
   // Check if onboarding is complete
   if (state.membership_selected || state.current_step >= 10) {
     return '/dashboard'
-  }
-
-  // Skip verification for Phase 1
-  if (state.current_step === 5) {
-    return '/onboarding/survey-intro'
   }
 
   // Return the route for the current step
