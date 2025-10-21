@@ -26,51 +26,43 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
+    console.log('[Login] Starting login for:', email)
+
     try {
+      console.log('[Login] Calling signIn...')
       const { data: signInData, error: signInError } = await signIn(email, password)
 
       if (signInError) {
+        console.error('[Login] SignIn error:', signInError)
         throw signInError
       }
+
+      console.log('[Login] ✅ SignIn successful!')
+      console.log('[Login] User ID:', signInData?.session?.user?.id)
+      console.log('[Login] User email:', signInData?.session?.user?.email)
 
       toast({
         title: 'Welcome back!',
         description: 'Successfully signed in to your account.',
       })
 
-      // Check user's survey progress to determine redirect
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
+      // Use flow controller to determine correct redirect
+      console.log('[Login] ===== GETTING RESUME PATH =====')
+      console.log('[Login] User ID for flow controller:', signInData.session.user.id)
+      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getOnboardingFlowController()
 
-      // Check survey completion
-      const { data: surveyData } = await supabase
-        .from('user_survey_responses')
-        .select('completion_pct')
-        .eq('user_id', signInData.session.user.id)
-        .maybeSingle()
+      const resumePath = await flowController.getResumeStep(signInData.session.user.id)
+      console.log('[Login] ===== RESUME PATH DETERMINED =====')
+      console.log('[Login] Resume path returned:', resumePath)
+      console.log('[Login] Redirecting to:', resumePath)
+      console.log('[Login] =====================================')
 
-      // If survey incomplete or not started, redirect to survey
-      if (!surveyData || surveyData.completion_pct < 100) {
-        router.push('/onboarding/survey')
-        return
-      }
-
-      // Check if membership selected
-      const { data: onboardingState } = await supabase
-        .from('user_onboarding_state')
-        .select('membership_selected')
-        .eq('user_id', signInData.session.user.id)
-        .maybeSingle()
-
-      if (onboardingState && !onboardingState.membership_selected) {
-        router.push('/onboarding/membership')
-        return
-      }
-
-      // Everything complete, go to dashboard
-      router.push('/dashboard')
+      // Use window.location for reliable redirect
+      window.location.href = resumePath
     } catch (err: any) {
-      console.error('Login error:', err)
+      console.error('[Login] ❌ Login error:', err)
+      console.error('[Login] Error details:', err)
       setError(err.message || 'Invalid email or password')
       setLoading(false)
     }

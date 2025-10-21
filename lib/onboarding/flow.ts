@@ -228,18 +228,68 @@ export class OnboardingFlowController {
   }
 
   async getResumeStep(userId: string): Promise<string> {
-    const state = await this.getOnboardingState(userId)
-    if (!state) return '/auth/signup'
+    try {
+      console.log('[FlowController] Getting resume step for user:', userId)
 
-    // Find the first incomplete required step
-    for (const step of ONBOARDING_STEPS) {
-      if (step.required && !state.completedSteps.includes(step.id)) {
-        return step.path
+      // Check database for survey completion (for existing users who completed before localStorage tracking)
+      const { data: surveyData } = await this.supabase
+        .from('user_survey_responses')
+        .select('completion_pct')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      console.log('[FlowController] Survey data:', surveyData)
+
+      // If survey is 100% complete, check membership and go to dashboard
+      if (surveyData && surveyData.completion_pct === 100) {
+        console.log('[FlowController] Survey complete (100%), sending to dashboard')
+        return '/dashboard'
       }
-    }
 
-    // All required steps complete, go to dashboard
-    return '/dashboard'
+      // Check localStorage for onboarding progress
+      const state = await this.getOnboardingState(userId)
+      console.log('[FlowController] Onboarding state:', state)
+
+      if (!state) {
+        // No localStorage state found
+        console.log('[FlowController] No localStorage state found')
+
+        // Check if user has ANY survey data
+        if (surveyData && surveyData.completion_pct > 0) {
+          // User has started survey, resume from there
+          console.log('[FlowController] Survey in progress, resuming at survey')
+          return '/onboarding/survey'
+        }
+
+        // No survey data - existing user who hasn't started onboarding yet
+        // IMPORTANT: Never send authenticated users to /auth/signup!
+        // Send them to first onboarding step instead
+        console.log('[FlowController] No survey data, sending to first onboarding step')
+        return '/onboarding/expectations'
+      }
+
+      // Find the first incomplete required step
+      for (const step of ONBOARDING_STEPS) {
+        // CRITICAL: Skip signup step (step 1) for authenticated users
+        // If they're calling this function, they're already authenticated!
+        if (step.id === 1) {
+          console.log('[FlowController] Skipping signup step - user is authenticated')
+          continue
+        }
+
+        if (step.required && !state.completedSteps.includes(step.id)) {
+          console.log('[FlowController] Resuming at step:', step.path)
+          return step.path
+        }
+      }
+
+      // All required steps complete, go to dashboard
+      console.log('[FlowController] All steps complete, going to dashboard')
+      return '/dashboard'
+    } catch (error) {
+      console.error('[FlowController] Error in getResumeStep:', error)
+      return '/dashboard' // Safe fallback for existing users
+    }
   }
 
   private isSurveyComplete(completedSteps: number[]): boolean {

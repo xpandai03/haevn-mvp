@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -8,7 +8,6 @@ import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
 import { SectionCelebrationModal } from '@/components/survey/SectionCelebrationModal'
 import { useAuth } from '@/lib/auth/context'
-import { getUserSurveyData, saveUserSurveyData } from '@/lib/actions/survey-user'
 import {
   surveySections,
   getActiveQuestions,
@@ -25,7 +24,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function SurveyPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()  // Get loading state from auth
   const { toast } = useToast()
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, any>>({})
@@ -42,9 +41,38 @@ export default function SurveyPage() {
     message: string
   } | null>(null)
 
-  // Get active questions based on skip logic
-  const activeQuestions = getActiveQuestions(answers)
+  // Get active questions based on skip logic (memoized to prevent unnecessary recalculations)
+  const activeQuestions = useMemo(() => {
+    const questions = getActiveQuestions(answers)
+    console.log('[Survey] Active questions recalculated:', questions.length, 'questions')
+    console.log('[Survey] Question IDs:', questions.map(q => q.id))
+    return questions
+  }, [answers])
+
   const currentQuestion = activeQuestions[currentQuestionIndex]
+
+  // Validate and adjust current question index when active questions change
+  useEffect(() => {
+    console.log('[Survey] Validating question index:', currentQuestionIndex, '/', activeQuestions.length)
+
+    // If current index is out of bounds, adjust it
+    if (currentQuestionIndex >= activeQuestions.length) {
+      console.warn('[Survey] Index out of bounds, adjusting from', currentQuestionIndex, 'to', activeQuestions.length - 1)
+      const newIndex = Math.max(0, activeQuestions.length - 1)
+      setCurrentQuestionIndex(newIndex)
+      return
+    }
+
+    // Check if current question exists
+    const expectedQuestion = activeQuestions[currentQuestionIndex]
+    if (!expectedQuestion) {
+      console.error('[Survey] No question at index', currentQuestionIndex, '- resetting to 0')
+      setCurrentQuestionIndex(0)
+      return
+    }
+
+    console.log('[Survey] Current question validated:', expectedQuestion.id, 'at index', currentQuestionIndex)
+  }, [activeQuestions, currentQuestionIndex])
 
   // Find current section
   const currentSection = currentQuestion ? getSectionForQuestion(currentQuestion.id) : undefined
@@ -67,22 +95,69 @@ export default function SurveyPage() {
     return Math.round((answeredCount / activeQuestions.length) * 100)
   }
 
+  // Clear survey data when user changes (prevents data leakage between users)
+  useEffect(() => {
+    console.log('[Survey] ===== USER CHANGE DETECTION =====')
+    console.log('[Survey] Current user:', user?.id, user?.email)
+    console.log('[Survey] Current answers count:', Object.keys(answers).length)
+
+    if (!user) {
+      console.log('[Survey] ❌ No user - clearing survey state')
+      setAnswers({})
+      setCurrentQuestionIndex(0)
+      setCompletionPct(0)
+      setCompletedSections([])
+      console.log('[Survey] ✅ Survey state cleared')
+      return
+    }
+
+    console.log('[Survey] ✅ User detected:', user.id)
+    console.log('[Survey] Email:', user.email)
+    console.log('[Survey] =====================================')
+    // Data will be reloaded by the loadSurveyData effect below
+  }, [user?.id]) // Only re-run when user.id actually changes
+
   // Load survey data on mount
   useEffect(() => {
     async function loadSurveyData() {
+      // Wait for auth to finish loading before checking user
+      if (authLoading) {
+        console.log('[Survey] Auth still loading, waiting...')
+        return
+      }
+
+      // Only redirect if auth finished loading AND there's no user
       if (!user) {
+        console.log('[Survey] No user after auth loaded, redirecting to login')
         router.push('/auth/login')
         return
       }
 
       try {
-        console.log('[Survey] Loading survey data for user...')
+        console.log('[Survey] Loading survey data for user:', user.id)
 
-        // Load existing survey responses for the current user
-        const { data: surveyData, error: surveyError } = await getUserSurveyData()
+        // Load existing survey responses for the current user using API route
+        const response = await fetch('/api/survey/load', {
+          method: 'GET',
+          credentials: 'include', // Include cookies
+        })
 
-        if (surveyError) {
+        const { data: surveyData, error: surveyError, code } = await response.json()
+
+        if (surveyError || !response.ok) {
           console.error('Survey load error:', surveyError)
+          if (code === 'NO_SESSION') {
+            console.error('[Survey] No session during load - redirecting to login')
+            toast({
+              title: 'Session expired',
+              description: 'Please sign in again.',
+              variant: 'destructive'
+            })
+            setTimeout(() => {
+              window.location.href = '/auth/login'
+            }, 1500)
+            return
+          }
           // Don't throw - use empty data
         }
 
@@ -112,9 +187,14 @@ export default function SurveyPage() {
           const actualCompletion = Math.round((answeredCount / activeQs.length) * 100)
           setCompletionPct(actualCompletion)
 
-          // If survey is complete, redirect
+          // If survey is complete, mark step and redirect to celebration
           if (actualCompletion === 100) {
-            router.push('/onboarding/membership')
+            const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+            const flowController = getOnboardingFlowController()
+            if (user?.id) {
+              await flowController.markStepComplete(user.id, 7)
+            }
+            router.push('/onboarding/celebration')
           }
         }
       } catch (err) {
@@ -130,7 +210,7 @@ export default function SurveyPage() {
     }
 
     loadSurveyData()
-  }, [user, router, toast])
+  }, [user, authLoading, router, toast])  // Re-run when auth loading state changes
 
   // Auto-save with debouncing
   const saveAnswers = useCallback(async (
@@ -149,9 +229,32 @@ export default function SurveyPage() {
       setSaveError(null)
 
       try {
-        const { success, error } = await saveUserSurveyData(newAnswers, newQuestionIndex, sections)
+        // Call API route instead of server action
+        const response = await fetch('/api/survey/save', {
+          method: 'POST',
+          credentials: 'include', // Include cookies
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            partialAnswers: newAnswers,
+            currentQuestionIndex: newQuestionIndex,
+            completedSections: sections
+          })
+        })
 
-        if (error || !success) {
+        const { success, error, code } = await response.json()
+
+        if (!success || error || !response.ok) {
+          // Handle specific error codes
+          if (code === 'NO_SESSION') {
+            console.error('[Survey] No session - redirecting to login')
+            setSaveError('Session expired. Please sign in again.')
+            setTimeout(() => {
+              window.location.href = '/auth/login'
+            }, 2000)
+            return
+          }
           throw new Error(error || 'Failed to save')
         }
 
@@ -174,6 +277,14 @@ export default function SurveyPage() {
             title: 'Survey Complete!',
             description: 'Great job! Let\'s celebrate...',
           })
+
+          // Mark survey step as complete
+          const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+          const flowController = getOnboardingFlowController()
+          if (user?.id) {
+            await flowController.markStepComplete(user.id, 7)
+          }
+
           setTimeout(() => {
             router.push('/onboarding/celebration')
           }, 1500)
@@ -196,11 +307,25 @@ export default function SurveyPage() {
 
   // Handle answer change
   const handleAnswerChange = (value: any) => {
+    console.log('[Survey] Answer changed:', currentQuestion.id, '=', value)
+
     const newAnswers = {
       ...answers,
       [currentQuestion.id]: value
     }
     setAnswers(newAnswers)
+
+    // Recalculate active questions to check if current question should still be visible
+    const newActiveQuestions = getActiveQuestions(newAnswers)
+    console.log('[Survey] Active questions after change:', newActiveQuestions.map(q => q.id))
+
+    // Check if the current question is still in the active list
+    const currentQuestionStillActive = newActiveQuestions.some(q => q.id === currentQuestion.id)
+    if (!currentQuestionStillActive) {
+      console.warn('[Survey] Current question no longer active after answer change:', currentQuestion.id)
+      // This can happen if answering a question invalidates itself or future questions
+      // We'll let the useEffect handle repositioning
+    }
 
     // Check if this completes a section
     if (currentSection && !completedSections.includes(currentSection.id)) {
@@ -232,25 +357,58 @@ export default function SurveyPage() {
 
   // Navigation
   const handleNext = () => {
+    console.log('[Survey] handleNext called')
+    console.log('[Survey] Current index:', currentQuestionIndex, '/', activeQuestions.length - 1)
+    console.log('[Survey] Current question:', currentQuestion?.id)
+
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1
+      const nextQuestion = activeQuestions[newIndex]
+      console.log('[Survey] Moving to index:', newIndex, '-', nextQuestion?.id)
       setCurrentQuestionIndex(newIndex)
       saveAnswers(answers, newIndex, completedSections) // Save new index
+    } else {
+      console.log('[Survey] Already at last question')
     }
   }
 
   const handlePrevious = () => {
+    console.log('[Survey] handlePrevious called')
+    console.log('[Survey] Current index:', currentQuestionIndex)
+
     if (currentQuestionIndex > 0) {
       const newIndex = currentQuestionIndex - 1
+      const prevQuestion = activeQuestions[newIndex]
+      console.log('[Survey] Moving to index:', newIndex, '-', prevQuestion?.id)
       setCurrentQuestionIndex(newIndex)
       saveAnswers(answers, newIndex, completedSections) // Save new index
+    } else {
+      console.log('[Survey] Already at first question')
     }
   }
 
   const handleSaveAndExit = async () => {
     setSaveStatus('saving')
     try {
-      await saveUserSurveyData(answers, currentQuestionIndex, completedSections)
+      const response = await fetch('/api/survey/save', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          partialAnswers: answers,
+          currentQuestionIndex: currentQuestionIndex,
+          completedSections: completedSections
+        })
+      })
+
+      const { success, error } = await response.json()
+
+      if (!success || error || !response.ok) {
+        throw new Error(error || 'Failed to save')
+      }
+
       toast({
         title: 'Progress saved',
         description: 'You can continue where you left off anytime.',

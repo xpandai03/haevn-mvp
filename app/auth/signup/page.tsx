@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ import { Progress } from '@/components/ui/progress'
 
 export default function SignupPage() {
   const router = useRouter()
-  const { signUp, signIn } = useAuth()
+  const { signUp, signIn, user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: '',
@@ -28,6 +28,30 @@ export default function SignupPage() {
   const [cityInfo, setCityInfo] = useState<{ name: string; status: 'live' | 'waitlist' } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // CRITICAL: Redirect existing users away from signup
+  useEffect(() => {
+    const redirectExistingUser = async () => {
+      if (authLoading) return // Wait for auth to load
+      if (!user) return // No user, allow signup
+
+      console.log('[Signup] ===== EXISTING USER DETECTED =====')
+      console.log('[Signup] User ID:', user.id)
+      console.log('[Signup] Email:', user.email)
+      console.log('[Signup] Redirecting existing user...')
+
+      // User is already logged in, redirect them to their appropriate destination
+      const flowController = getOnboardingFlowController()
+      const resumePath = await flowController.getResumeStep(user.id)
+
+      console.log('[Signup] Resume path for existing user:', resumePath)
+      console.log('[Signup] ======================================')
+
+      router.push(resumePath)
+    }
+
+    redirectExistingUser()
+  }, [user, authLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +70,13 @@ export default function SignupPage() {
     setCityInfo(city)
 
     try {
+      console.log('[Signup Page] ===== STARTING SIGNUP =====')
+      console.log('[Signup Page] Email:', formData.email)
+      console.log('[Signup Page] Name:', formData.name)
+      console.log('[Signup Page] City:', city.name)
+
       // Create Supabase auth user with metadata
+      console.log('[Signup Page] Calling signUp...')
       const { data: signUpData, error: signUpError } = await signUp(
         formData.email,
         formData.password,
@@ -59,27 +89,43 @@ export default function SignupPage() {
       )
 
       if (signUpError) {
+        console.error('[Signup Page] ❌ SignUp error:', signUpError)
+        console.error('[Signup Page] Error code:', signUpError.code)
+        console.error('[Signup Page] Error message:', signUpError.message)
         throw signUpError
       }
 
+      console.log('[Signup Page] ✅ SignUp successful!')
+      console.log('[Signup Page] New user ID:', signUpData?.user?.id)
+      console.log('[Signup Page] New user email:', signUpData?.user?.email)
+      console.log('[Signup Page] Session created:', !!signUpData?.session)
+
       // Store minimal data for onboarding flow
+      console.log('[Signup Page] Storing onboarding data in localStorage...')
       localStorage.setItem('haevn_onboarding', JSON.stringify({
         city: city.name,
         cityStatus: city.status
       }))
 
       // Auto-login after signup
+      console.log('[Signup Page] Calling signIn for auto-login...')
       const { data: signInData, error: signInError } = await signIn(formData.email, formData.password)
 
       if (signInError) {
         // If auto-login fails, still redirect to survey since account was created
-        console.warn('Auto-login failed after signup:', signInError)
+        console.error('[Signup Page] ❌ Auto-login failed:', signInError)
+        console.error('[Signup Page] Error code:', signInError.code)
+        console.error('[Signup Page] Error message:', signInError.message)
         toast({
           title: 'Account created!',
           description: 'Please sign in to continue.',
         })
         router.push('/auth/login')
       } else {
+        console.log('[Signup Page] ✅ Auto-login successful!')
+        console.log('[Signup Page] Signed in user ID:', signInData?.session?.user?.id)
+        console.log('[Signup Page] Signed in user email:', signInData?.session?.user?.email)
+        console.log('[Signup Page] Session active:', !!signInData?.session)
         // After successful login, ensure profile has city data
         // This is a workaround for the trigger not having access to metadata
         const { updateProfile } = await import('@/lib/actions/profile')

@@ -1,11 +1,17 @@
+import { DisplayCondition, parseDisplayLogic } from './logic-parser'
+import { evaluateDisplayLogic } from './logic-evaluator'
+
 export interface SurveyQuestion {
   id: string
+  csvId?: string // CSV Question ID (e.g., Q1, Q2, Q3a)
   label: string
   type: 'select' | 'multiselect' | 'text' | 'textarea' | 'scale' | 'boolean' | 'number' | 'slider'
   options?: string[]
   placeholder?: string
   required: boolean
   skipCondition?: (answers: Record<string, any>) => boolean
+  displayLogic?: string // Raw Display Logic from CSV
+  displayCondition?: DisplayCondition | null // Parsed Display Logic condition
   tooltip?: string
   helperText?: string
   min?: number
@@ -74,6 +80,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q3_sexual_orientation',
+        csvId: 'Q3',
         label: 'How do you describe your sexual orientation?',
         type: 'multiselect',
         options: [
@@ -93,11 +100,13 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q3a_fidelity',
+        csvId: 'Q3a',
         label: 'How do you define fidelity or commitment?',
         type: 'textarea',
         placeholder: 'Share your thoughts on commitment...',
         required: false,
-        helperText: 'People define commitment differently (monogamy, openness, etc.). Tell us what it means to you.'
+        helperText: 'People define commitment differently (monogamy, openness, etc.). Tell us what it means to you.',
+        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other} AND Q4 in {Single,Solo Poly,Dating}"
       },
       {
         id: 'q3b_kinsey_scale',
@@ -113,7 +122,8 @@ export const surveySections: SurveySection[] = [
           '4 - Predominantly homosexual, but more than incidentally heterosexual',
           '5 - Predominantly homosexual, only incidentally heterosexual',
           '6 - Exclusively homosexual'
-        ]
+        ],
+        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other}"
       },
       {
         id: 'q3c_partner_kinsey_preference',
@@ -128,6 +138,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q4_relationship_status',
+        csvId: 'Q4',
         label: 'What\'s your current relationship status?',
         type: 'select',
         options: [
@@ -135,28 +146,14 @@ export const surveySections: SurveySection[] = [
           'Partnered',
           'Married',
           'In a polycule',
+          'Solo Poly',
           'It\'s complicated',
           'Other'
         ],
         required: true,
         helperText: 'Examples: single, partnered, married, polycule, etc.'
-      },
-      {
-        id: 'q5_zip_code',
-        label: 'What\'s your ZIP code?',
-        type: 'text',
-        placeholder: 'Enter ZIP code',
-        required: true,
-        helperText: 'This helps us show you people nearby.'
-      },
-      {
-        id: 'q5a_precise_location',
-        label: 'Share precise location?',
-        type: 'select',
-        options: ['Yes', 'No', 'Ask me later'],
-        required: false,
-        helperText: 'Optional. Improves distance matching but not required.'
       }
+      // Removed q5_zip_code and q5a_precise_location - already collected during signup
     ]
   },
   {
@@ -166,6 +163,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q6_relationship_styles',
+        csvId: 'Q6',
         label: 'What relationship style(s) interest you?',
         type: 'multiselect',
         options: [
@@ -182,15 +180,14 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q6a_connection_type',
+        csvId: 'Q6a',
         label: 'How would you like to meet people here?',
         type: 'multiselect',
         options: [
-          'Dating',
-          'Friendship',
-          'Play partners',
-          'Community events',
-          'Learning/workshops',
-          'Support groups'
+          'As an individual',
+          'As a couple',
+          'As part of a polycule/pod',
+          'Open to any'
         ],
         required: true,
         helperText: 'Dating, friendship, play partners, community events, etc.'
@@ -211,47 +208,52 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q6c_couple_connection',
-        label: 'If you\'re a couple, how do you want to connect?',
-        type: 'multiselect',
+        csvId: 'Q6c',
+        label: 'If connecting as a couple, how?',
+        type: 'select',
         options: [
-          'Meet singles together',
-          'Meet other couples',
-          'Separate connections okay',
           'Together only',
-          'Flexible'
+          'Either partner solo',
+          'Mix together + solo',
+          'Custom / differs by partner'
         ],
         required: false,
         helperText: 'E.g., meet singles together, meet other couples, etc.',
-        skipCondition: (answers) => !['Partnered', 'Married', 'In a polycule'].includes(answers.q4_relationship_status)
+        displayLogic: "Show if Q6a includes 'couple'"
       },
       {
         id: 'q6d_couple_permissions',
-        label: 'What boundaries or permissions apply to you as a couple?',
+        csvId: 'Q6d',
+        label: 'Couple permissions',
         type: 'textarea',
         placeholder: 'Describe your agreements...',
         required: false,
         helperText: 'Briefly describe any agreements partners should know.',
-        skipCondition: (answers) => !['Partnered', 'Married', 'In a polycule'].includes(answers.q4_relationship_status)
+        displayLogic: "Show if Q6c='Custom / differs by partner'"
       },
       {
         id: 'q7_emotional_exclusivity',
+        csvId: 'Q7',
         label: 'How important is emotional exclusivity to you?',
         type: 'slider',
         required: true,
         helperText: 'Emotional exclusivity means sharing deep romantic feelings with only one person.',
         min: 1,
         max: 10,
-        step: 1
+        step: 1,
+        displayLogic: "Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don\\'t know yet'"
       },
       {
         id: 'q8_sexual_exclusivity',
+        csvId: 'Q8',
         label: 'How important is sexual exclusivity to you?',
         type: 'slider',
         required: true,
         helperText: 'Sexual exclusivity means sexual activity with only one person.',
         min: 1,
         max: 10,
-        step: 1
+        step: 1,
+        displayLogic: "Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don\\'t know yet'"
       },
       {
         id: 'q9_intentions',
@@ -293,6 +295,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q10_attachment_style',
+        csvId: 'Q10',
         label: 'Which attachment style best describes you?',
         type: 'select',
         options: [
@@ -303,7 +306,8 @@ export const surveySections: SurveySection[] = [
           'Not sure - I\'d like to learn more'
         ],
         required: true,
-        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.'
+        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.',
+        displayLogic: "(Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')) OR ((Q4='Partnered' OR Q4='Married') AND Q6 includes 'Polyamory')"
       },
       {
         id: 'q10a_emotional_availability',
@@ -331,6 +335,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q12_conflict_resolution',
+        csvId: 'Q12',
         label: 'How do you typically handle conflict?',
         type: 'select',
         options: [
@@ -341,7 +346,8 @@ export const surveySections: SurveySection[] = [
           'It depends on the situation'
         ],
         required: true,
-        helperText: 'Helps others understand your style when things get tense.'
+        helperText: 'Helps others understand your style when things get tense.',
+        displayLogic: "Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')"
       },
       {
         id: 'q12a_messaging_pace',
@@ -447,37 +453,41 @@ export const surveySections: SurveySection[] = [
         required: true,
         helperText: 'Coffee, video call, group event, etc.'
       },
-      {
-        id: 'q17_children',
-        label: 'Do you have or want children?',
-        type: 'select',
-        options: [
-          'Have children',
-          'Want children',
-          'Have and want more',
-          'Don\'t have, don\'t want',
-          'Not sure',
-          'Prefer not to say'
-        ],
-        required: false,
-        helperText: 'Optional - Include any important notes (e.g., "don\'t want more").'
-      },
-      {
-        id: 'q17a_dietary',
-        label: 'Any dietary preferences or allergies?',
-        type: 'text',
-        placeholder: 'e.g., Vegan, gluten-free, nut allergy',
-        required: false,
-        helperText: 'Optional - Helpful for planning dates or events.'
-      },
-      {
-        id: 'q17b_pets',
-        label: 'Pets at home or pet preferences?',
-        type: 'text',
-        placeholder: 'e.g., Have cats, allergic to dogs',
-        required: false,
-        helperText: 'Optional - Include allergies or must-love-dogs type info.'
-      },
+      // Q17, Q17a, Q17b - Hidden for MVP (NOT MVP per Conditional Branching CSV)
+      // {
+      //   id: 'q17_children',
+      //   csvId: 'Q17',
+      //   label: 'Do you have or want children?',
+      //   type: 'select',
+      //   options: [
+      //     'Have children',
+      //     'Want children',
+      //     'Have and want more',
+      //     'Don\'t have, don\'t want',
+      //     'Not sure',
+      //     'Prefer not to say'
+      //   ],
+      //   required: false,
+      //   helperText: 'Optional - Include any important notes (e.g., "don\'t want more").'
+      // },
+      // {
+      //   id: 'q17a_dietary',
+      //   csvId: 'Q17a',
+      //   label: 'Any dietary preferences or allergies?',
+      //   type: 'text',
+      //   placeholder: 'e.g., Vegan, gluten-free, nut allergy',
+      //   required: false,
+      //   helperText: 'Optional - Helpful for planning dates or events.'
+      // },
+      // {
+      //   id: 'q17b_pets',
+      //   csvId: 'Q17b',
+      //   label: 'Pets at home or pet preferences?',
+      //   type: 'text',
+      //   placeholder: 'e.g., Have cats, allergic to dogs',
+      //   required: false,
+      //   helperText: 'Optional - Include allergies or must-love-dogs type info.'
+      // },
       {
         id: 'q18_substances',
         label: 'How do you relate to alcohol or other substances?',
@@ -814,6 +824,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q33_kinks',
+        csvId: 'Q33',
         label: 'Which kinks or fetishes interest you?',
         type: 'multiselect',
         options: [
@@ -835,6 +846,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q33a_experience_level',
+        csvId: 'Q33a',
         label: 'What\'s your experience level with those kinks?',
         type: 'select',
         options: [
@@ -846,7 +858,7 @@ export const surveySections: SurveySection[] = [
         ],
         required: false,
         helperText: 'Beginner, curious, experienced, etc.',
-        skipCondition: (answers) => !answers.q33_kinks || answers.q33_kinks.includes('None')
+        displayLogic: 'Show if Q33 answered'
       }
     ]
   },
@@ -972,17 +984,51 @@ export function getAllQuestions(): SurveyQuestion[] {
 export function getActiveQuestions(answers: Record<string, any>): SurveyQuestion[] {
   const activeQuestions: SurveyQuestion[] = []
 
+  // Build a CSV-ID-keyed answer map for logic evaluation
+  const csvAnswers = buildCsvAnswerMap(answers)
+
   surveySections.forEach(section => {
     section.questions.forEach(question => {
-      // Check if question should be skipped
+      // Check legacy skipCondition first (backward compatibility)
       if (question.skipCondition && question.skipCondition(answers)) {
         return
       }
+
+      // Check new displayLogic system
+      if (question.displayLogic) {
+        // Parse display logic if not already parsed
+        if (!question.displayCondition) {
+          question.displayCondition = parseDisplayLogic(question.displayLogic)
+        }
+
+        // Evaluate the condition
+        if (!evaluateDisplayLogic(question.displayCondition, csvAnswers)) {
+          return
+        }
+      }
+
       activeQuestions.push(question)
     })
   })
 
   return activeQuestions
+}
+
+/**
+ * Build a map of answers keyed by CSV question IDs for logic evaluation
+ */
+function buildCsvAnswerMap(answers: Record<string, any>): Record<string, any> {
+  const csvAnswers: Record<string, any> = {}
+
+  surveySections.forEach(section => {
+    section.questions.forEach(question => {
+      if (question.csvId && answers[question.id] !== undefined) {
+        csvAnswers[question.csvId] = answers[question.id]
+      }
+    })
+  })
+
+  return csvAnswers
 }
 
 /**
