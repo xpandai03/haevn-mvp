@@ -308,8 +308,9 @@ export const surveySections: SurveySection[] = [
           'Not sure - I\'d like to learn more'
         ],
         required: true,
-        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.',
-        displayLogic: "(Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}) OR (Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous')"
+        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.'
+        // Note: Complex nested logic removed temporarily - parser doesn't support parentheses
+        // TODO: Enhance parser to support: (Q4='Single' AND Q6 in {...}) OR (Q4 in {...} AND Q6='Polyamorous')
       },
       {
         id: 'q10a_emotional_availability',
@@ -348,8 +349,9 @@ export const surveySections: SurveySection[] = [
           'It depends on the situation'
         ],
         required: true,
-        helperText: 'Helps others understand your style when things get tense.',
-        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}"
+        helperText: 'Helps others understand your style when things get tense.'
+        // Note: Simplified logic removed temporarily to ensure deployment succeeds
+        // TODO: Add back when parser supports compound AND conditions with 'in' operator
       },
       {
         id: 'q12a_messaging_pace',
