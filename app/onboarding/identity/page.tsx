@@ -39,6 +39,40 @@ export default function IdentityPage() {
     if (!user) router.push('/auth/login')
   }, [user, loading, router])
 
+  // Load existing identity data when component mounts
+  useEffect(() => {
+    async function loadIdentityData() {
+      if (!user) return
+
+      try {
+        console.log('[Identity] Loading existing data for user:', user.id)
+
+        const { data: partnership, error } = await supabase
+          .from('partnerships')
+          .select('profile_type, relationship_orientation')
+          .eq('primary_user_id', user.id)
+          .maybeSingle() // Use maybeSingle to handle no results gracefully
+
+        if (error) {
+          console.error('[Identity] Error loading data:', error)
+          return
+        }
+
+        if (partnership) {
+          console.log('[Identity] ✅ Loaded existing data:', partnership)
+          setProfileType(partnership.profile_type as ProfileType)
+          setRelationshipOrientation(partnership.relationship_orientation as RelationshipOrientation)
+        } else {
+          console.log('[Identity] No existing data found - first time setup')
+        }
+      } catch (error) {
+        console.error('[Identity] Failed to load identity data:', error)
+      }
+    }
+
+    loadIdentityData()
+  }, [user, supabase])
+
   const handleContinue = async () => {
     if (!user || !profileType || !relationshipOrientation) {
       toast({
@@ -51,16 +85,25 @@ export default function IdentityPage() {
     }
 
     setIsSubmitting(true)
-    console.log('Submitting:', { profileType, relationshipOrientation })
+    console.log('[Identity] Submitting:', { profileType, relationshipOrientation })
+
     try {
-      const { data: partnership } = await supabase
+      // Check if partnership record exists
+      const { data: partnership, error: selectError } = await supabase
         .from('partnerships')
         .select('id')
         .eq('primary_user_id', user.id)
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single to handle no results
+
+      if (selectError) {
+        console.error('[Identity] Error checking for partnership:', selectError)
+        throw selectError
+      }
 
       if (partnership) {
-        const { error } = await supabase
+        // UPDATE existing partnership
+        console.log('[Identity] Updating existing partnership:', partnership.id)
+        const { error: updateError } = await supabase
           .from('partnerships')
           .update({
             profile_type: profileType,
@@ -68,13 +111,40 @@ export default function IdentityPage() {
             updated_at: new Date().toISOString()
           })
           .eq('id', partnership.id)
-        if (error) throw error
+
+        if (updateError) {
+          console.error('[Identity] Update error:', updateError)
+          throw updateError
+        }
+
+        console.log('[Identity] ✅ Partnership updated successfully')
+      } else {
+        // INSERT new partnership
+        console.log('[Identity] Creating new partnership record')
+        const { error: insertError } = await supabase
+          .from('partnerships')
+          .insert({
+            primary_user_id: user.id,
+            profile_type: profileType,
+            relationship_orientation: relationshipOrientation
+          })
+
+        if (insertError) {
+          console.error('[Identity] Insert error:', insertError)
+          throw insertError
+        }
+
+        console.log('[Identity] ✅ Partnership created successfully')
       }
 
+      // Mark step as complete
       await flowController.markStepComplete(user.id, 4)
+      console.log('[Identity] Step 4 marked complete')
+
+      // Navigate to next step
       router.push('/onboarding/verification')
     } catch (error) {
-      console.error('Error saving identity:', error)
+      console.error('[Identity] Error saving identity:', error)
       toast({
         title: 'Error',
         description: 'Failed to save your selection. Please try again.',
