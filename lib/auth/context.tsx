@@ -92,6 +92,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, router])
 
+  // Proactive session refresh to prevent token expiration
+  useEffect(() => {
+    if (!session) return
+
+    console.log('[Auth] Setting up proactive session refresh')
+    console.log('[Auth] Token expires at:', session.expires_at)
+
+    // Refresh session every 50 minutes (before default 1 hour expiry)
+    const refreshInterval = setInterval(async () => {
+      console.log('[Auth] ⏰ Proactive token refresh triggered')
+      const { data: { session: newSession }, error } = await supabase.auth.refreshSession()
+
+      if (error) {
+        console.error('[Auth] ❌ Proactive refresh failed:', error)
+      } else {
+        console.log('[Auth] ✅ Proactive refresh successful')
+        console.log('[Auth] New token expires at:', newSession?.expires_at)
+        setSession(newSession)
+        setUser(newSession?.user ?? null)
+      }
+    }, 50 * 60 * 1000) // 50 minutes in milliseconds
+
+    console.log('[Auth] Refresh interval set (every 50 minutes)')
+
+    return () => {
+      console.log('[Auth] Clearing refresh interval')
+      clearInterval(refreshInterval)
+    }
+  }, [session, supabase])
+
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
       console.log('[Auth] 🆕 Starting signup for:', email)

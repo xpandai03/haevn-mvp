@@ -12,6 +12,7 @@ import { getUnreadNudgesCount } from '@/lib/actions/nudges'
 import { MatchCardSimple } from '@/components/MatchCardSimple'
 import { MatchModal } from '@/components/MatchModal'
 import { HandshakeNotifications } from '@/components/HandshakeNotifications'
+import { createClient } from '@/lib/supabase/client'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -23,6 +24,26 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [connectionsCount, setConnectionsCount] = useState(0)
   const [nudgesCount, setNudgesCount] = useState(0)
+  const supabase = createClient()
+
+  // Validate session on mount to prevent stale sessions
+  useEffect(() => {
+    const validateSession = async () => {
+      console.log('[Dashboard] Validating session...')
+      const { data: { session }, error } = await supabase.auth.getSession()
+
+      if (!session || error) {
+        console.error('[Dashboard] Invalid or expired session:', error)
+        console.log('[Dashboard] Redirecting to login...')
+        router.push('/auth/login')
+        return
+      }
+
+      console.log('[Dashboard] Session valid until:', session.expires_at)
+    }
+
+    validateSession()
+  }, [supabase, router])
 
   useEffect(() => {
     async function loadMatches() {
