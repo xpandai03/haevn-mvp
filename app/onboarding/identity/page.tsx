@@ -53,10 +53,12 @@ export default function IdentityPage() {
           .from('profiles')
           .select('city')
           .eq('id', user.id)
-          .single()
+          .maybeSingle() // Use maybeSingle to avoid errors if no profile
 
         if (profile?.city) {
           setUserCity(profile.city)
+        } else {
+          console.log('[Identity] No profile city found, using default')
         }
 
         // Load existing partnership data
@@ -74,7 +76,11 @@ export default function IdentityPage() {
         if (partnership) {
           console.log('[Identity] ✅ Loaded existing data:', partnership)
           setProfileType(partnership.profile_type as ProfileType)
-          setRelationshipOrientation(partnership.relationship_orientation as RelationshipOrientation)
+          // relationship_orientation is an array in DB, extract first element
+          const orientation = Array.isArray(partnership.relationship_orientation)
+            ? partnership.relationship_orientation[0]
+            : partnership.relationship_orientation
+          setRelationshipOrientation(orientation as RelationshipOrientation)
         } else {
           console.log('[Identity] No existing data found - first time setup')
         }
@@ -120,7 +126,7 @@ export default function IdentityPage() {
           .from('partnerships')
           .update({
             profile_type: profileType,
-            relationship_orientation: relationshipOrientation,
+            relationship_orientation: [relationshipOrientation], // Array type in database
             updated_at: new Date().toISOString()
           })
           .eq('id', partnership.id)
@@ -140,7 +146,7 @@ export default function IdentityPage() {
             owner_id: user.id, // Fixed: use owner_id not primary_user_id
             city: userCity, // Get from user's profile
             profile_type: profileType,
-            relationship_orientation: relationshipOrientation
+            relationship_orientation: [relationshipOrientation] // Array type in database
           })
 
         if (insertError) {
