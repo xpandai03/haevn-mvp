@@ -35,9 +35,9 @@ export function useNotifications() {
         .from('partnership_members')
         .select('partnership_id')
         .eq('user_id', user!.id)
-        .single()
+        .maybeSingle()  // Use maybeSingle() - allows 0 or 1 rows (new users have 0)
 
-      if (!membership) return
+      if (!membership) return  // Skip notifications if user has no partnership yet
 
       // Subscribe to new messages in user's handshakes
       const { data: handshakes } = await supabase

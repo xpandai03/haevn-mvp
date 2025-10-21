@@ -63,17 +63,18 @@ const tiers = [
 
 export default function MembershipPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const flowController = getOnboardingFlowController()
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (authLoading) return // Wait for auth to finish loading
     if (!user) {
       router.push('/auth/login')
     }
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const handleSelectTier = async (tierId: string) => {
     if (!user) return

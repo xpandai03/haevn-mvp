@@ -19,7 +19,7 @@ type RelationshipOrientation =
 
 export default function IdentityPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { toast } = useToast()
   const flowController = getOnboardingFlowController()
   const supabase = createClient()
@@ -35,8 +35,9 @@ export default function IdentityPage() {
   }, [profileType, relationshipOrientation])
 
   useEffect(() => {
+    if (loading) return // Wait for auth to finish loading
     if (!user) router.push('/auth/login')
-  }, [user, router])
+  }, [user, loading, router])
 
   const handleContinue = async () => {
     if (!user || !profileType || !relationshipOrientation) {

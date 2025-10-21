@@ -17,11 +17,13 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // Ensure cookies work across domains (for Veriff redirect)
+              // In production, use secure cookies for cross-domain (Veriff)
+              // In development, use lax for localhost
+              const isProduction = process.env.NODE_ENV === 'production'
               cookieStore.set(name, value, {
                 ...options,
-                sameSite: 'none',
-                secure: true
+                sameSite: isProduction ? 'none' : 'lax',
+                secure: isProduction
               })
             })
           } catch {

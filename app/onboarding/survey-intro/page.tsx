@@ -9,15 +9,16 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function SurveyIntroPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { toast } = useToast()
   const flowController = getOnboardingFlowController()
 
   useEffect(() => {
+    if (loading) return // Wait for auth to finish loading
     if (!user) {
       router.push('/auth/login')
     }
-  }, [user, router])
+  }, [user, loading, router])
 
   const handleStart = async () => {
     if (!user) return

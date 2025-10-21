@@ -14,25 +14,51 @@ export interface UserSurveyData {
 /**
  * Get survey data for the current user
  */
-export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null, error: string | null }> {
+export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null, error: string | null, code?: string }> {
+  console.log('[getUserSurveyData] ===== LOAD REQUEST =====')
+
+  // DEBUG: Check what cookies are available
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  const allCookies = cookieStore.getAll()
+  console.log('[getUserSurveyData] Available cookies:', allCookies.map(c => c.name).join(', '))
+  const sbCookies = allCookies.filter(c => c.name.startsWith('sb-'))
+  console.log('[getUserSurveyData] Supabase cookies found:', sbCookies.length)
+
   const supabase = await createClient()
 
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  // CRITICAL: Check server-side session first
+  console.log('[getUserSurveyData] Calling getSession()...')
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-  if (userError || !user) {
-    console.error('[getUserSurveyData] No authenticated user')
+  console.log('[getUserSurveyData] Session result:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    userId: session?.user?.id,
+    expiresAt: session?.expires_at,
+    error: sessionError?.message
+  })
+
+  // Verify session is valid
+  if (!session || !session.user) {
+    console.error('[getUserSurveyData] ❌ NO SESSION FOUND')
     return {
       data: null,
-      error: 'Not authenticated'
+      error: 'Not authenticated',
+      code: 'NO_SESSION'
     }
   }
+
+  const user = session.user
+  console.log('[getUserSurveyData] ✅ User authenticated:', user.id)
+  console.log('[getUserSurveyData] Loading survey for user:', user.id)
 
   try {
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
     // Try to get existing survey data
+    console.log('[getUserSurveyData] Querying user_survey_responses for user_id:', user.id)
     const { data, error } = await adminClient
       .from('user_survey_responses')
       .select('answers_json, completion_pct, current_step, completed_sections')
@@ -49,6 +75,8 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
 
     // Return survey data or empty survey
     if (!data) {
+      console.log('[getUserSurveyData] No existing data found - creating empty survey for user:', user.id)
+
       // Create initial empty survey response using admin client
       const { data: newData, error: insertError } = await adminClient
         .from('user_survey_responses')
@@ -74,6 +102,7 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
         }
       }
 
+      console.log('[getUserSurveyData] Created empty survey response')
       return {
         data: {
           answers_json: {},
@@ -83,6 +112,11 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
         error: null
       }
     }
+
+    console.log('[getUserSurveyData] Found existing data for user:', user.id)
+    console.log('[getUserSurveyData] Answers count:', Object.keys(data.answers_json || {}).length)
+    console.log('[getUserSurveyData] Completion:', data.completion_pct + '%')
+    console.log('[getUserSurveyData] Current step:', data.current_step)
 
     return {
       data: {
@@ -109,20 +143,47 @@ export async function saveUserSurveyData(
   partialAnswers: Record<string, any>,
   currentQuestionIndex: number,
   completedSections: string[] = []
-): Promise<{ success: boolean, error: string | null }> {
-  console.log('[saveUserSurveyData] Starting save...', { currentQuestionIndex, answerKeys: Object.keys(partialAnswers) })
+): Promise<{ success: boolean, error: string | null, code?: string }> {
+  console.log('[saveUserSurveyData] ===== SAVE REQUEST =====')
+  console.log('[saveUserSurveyData] Question index:', currentQuestionIndex)
+  console.log('[saveUserSurveyData] Answers:', Object.keys(partialAnswers))
+
+  // DEBUG: Check what cookies are available
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  const allCookies = cookieStore.getAll()
+  console.log('[saveUserSurveyData] Available cookies:', allCookies.map(c => c.name).join(', '))
+  const sbCookies = allCookies.filter(c => c.name.startsWith('sb-'))
+  console.log('[saveUserSurveyData] Supabase cookies found:', sbCookies.length)
+  sbCookies.forEach(c => console.log(`  - ${c.name}: ${c.value.substring(0, 50)}...`))
 
   const supabase = await createClient()
 
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  // Check session first (more reliable for server actions)
+  console.log('[saveUserSurveyData] Calling getSession()...')
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-  if (userError || !user) {
-    console.error('[saveUserSurveyData] No authenticated user:', userError)
-    return { success: false, error: 'Not authenticated' }
+  console.log('[saveUserSurveyData] Session result:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    userId: session?.user?.id,
+    expiresAt: session?.expires_at,
+    error: sessionError?.message
+  })
+
+  if (sessionError) {
+    console.error('[saveUserSurveyData] ❌ SESSION ERROR:', sessionError)
+    return { success: false, error: 'Session error: ' + sessionError.message, code: 'SESSION_ERROR' }
   }
 
-  console.log('[saveUserSurveyData] User authenticated:', user.id)
+  if (!session || !session.user) {
+    console.error('[saveUserSurveyData] ❌ NO SESSION FOUND')
+    return { success: false, error: 'Not authenticated - no session', code: 'NO_SESSION' }
+  }
+
+  const user = session.user
+  console.log('[saveUserSurveyData] ✅ User authenticated:', user.id)
+  console.log('[saveUserSurveyData] Session expires:', new Date(session.expires_at! * 1000).toISOString())
 
   try {
     // Use admin client to bypass RLS issues (same pattern as matching.ts)
@@ -143,6 +204,12 @@ export async function saveUserSurveyData(
 
     console.log('[saveUserSurveyData] Existing data:', existing ? 'found' : 'none')
 
+    if (existing) {
+      console.log('[saveUserSurveyData] ⚠️ FOUND EXISTING DATA FOR USER:', user.id)
+      console.log('[saveUserSurveyData] Existing answers keys:', Object.keys(existing.answers_json || {}))
+      console.log('[saveUserSurveyData] Existing answers count:', Object.keys(existing.answers_json || {}).length)
+    }
+
     // Merge answers
     const mergedAnswers = {
       ...(existing?.answers_json as Record<string, any> || {}),
@@ -150,6 +217,7 @@ export async function saveUserSurveyData(
     }
 
     console.log('[saveUserSurveyData] Merged answers count:', Object.keys(mergedAnswers).length)
+    console.log('[saveUserSurveyData] New partial answers:', Object.keys(partialAnswers))
 
     // Calculate completion
     const completionPct = calculateSurveyCompletion(mergedAnswers)

@@ -20,17 +20,18 @@ import {
 
 export default function VerificationPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { toast } = useToast()
   const flowController = getOnboardingFlowController()
   const [showDetails, setShowDetails] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
 
   useEffect(() => {
+    if (loading) return // Wait for auth to finish loading
     if (!user) {
       router.push('/auth/login')
     }
-  }, [user, router])
+  }, [user, loading, router])
 
   const handleStartVerification = async () => {
     if (!user) return

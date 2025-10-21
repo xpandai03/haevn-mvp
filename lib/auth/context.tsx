@@ -50,27 +50,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[Auth] State change:', {
-          event,
+        console.log('[Auth] ===== AUTH STATE CHANGE =====')
+        console.log('[Auth] Event:', event)
+        console.log('[Auth] Session:', {
           hasSession: !!session,
-          hasUser: !!session?.user,
           userId: session?.user?.id,
+          email: session?.user?.email,
           expiresAt: session?.expires_at
         })
+        console.log('[Auth] Previous user:', user?.id, user?.email)
+        console.log('[Auth] ===============================')
 
+        // CRITICAL: Always update state even if user ID is the same
+        // This ensures React re-renders and effects re-run
         setSession(session)
         setUser(session?.user ?? null)
 
         if (event === 'SIGNED_IN') {
-          console.log('[Auth] User signed in, refreshing router')
+          console.log('[Auth] ✅ User signed in:', session?.user?.id)
+          console.log('[Auth] Email:', session?.user?.email)
           router.refresh()
         } else if (event === 'SIGNED_OUT') {
-          console.log('[Auth] User signed out, redirecting to home')
+          console.log('[Auth] ❌ User signed out, clearing state')
+          console.log('[Auth] Previous user was:', user?.id)
+          // Explicitly set to null to force state update
+          setSession(null)
+          setUser(null)
           router.push('/')
         } else if (event === 'TOKEN_REFRESHED') {
-          console.log('[Auth] Token refreshed successfully')
+          console.log('[Auth] 🔄 Token refreshed for user:', session?.user?.id)
         } else if (event === 'USER_UPDATED') {
-          console.log('[Auth] User updated')
+          console.log('[Auth] 📝 User updated:', session?.user?.id)
+        } else if (event === 'INITIAL_SESSION') {
+          console.log('[Auth] 🎬 Initial session loaded:', session?.user?.id)
         }
       }
     )
@@ -82,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
+      console.log('[Auth] 🆕 Starting signup for:', email)
+      console.log('[Auth] Current user before signup:', user?.id, user?.email)
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -91,37 +106,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('[Auth] ❌ Signup error:', error)
+        throw error
+      }
+
+      console.log('[Auth] ✅ Signup successful!')
+      console.log('[Auth] New user ID:', data.user?.id)
+      console.log('[Auth] New user email:', data.user?.email)
+      console.log('[Auth] Session created:', !!data.session)
 
       return { data, error: null }
     } catch (error) {
-      console.error('Signup error:', error)
+      console.error('[Auth] Signup error:', error)
       return { data: null, error }
     }
   }
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('[Auth] 🔐 Starting sign in for:', email)
+      console.log('[Auth] Current user before sign in:', user?.id, user?.email)
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('[Auth] ❌ Sign in error:', error)
+        throw error
+      }
+
+      console.log('[Auth] ✅ Sign in successful!')
+      console.log('[Auth] User ID:', data.user?.id)
+      console.log('[Auth] User email:', data.user?.email)
+      console.log('[Auth] Session created:', !!data.session)
 
       return { data, error: null }
     } catch (error) {
-      console.error('Sign in error:', error)
+      console.error('[Auth] Sign in error:', error)
       return { data: null, error }
     }
   }
 
   const signOut = async () => {
     try {
+      console.log('[Auth] Signing out user:', user?.id)
+
+      // Clear localStorage
+      localStorage.removeItem('haevn-auth')
+      localStorage.removeItem('haevn_onboarding')
+
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut()
-      if (error) throw error
+
+      if (error) {
+        console.error('[Auth] SignOut error:', error)
+      }
+
+      // Clear React state
+      setSession(null)
+      setUser(null)
+
+      console.log('[Auth] Sign out complete')
     } catch (error) {
-      console.error('Sign out error:', error)
+      console.error('[Auth] Sign out error:', error)
+      // Force clear even on error
+      setSession(null)
+      setUser(null)
+      localStorage.removeItem('haevn-auth')
+      localStorage.removeItem('haevn_onboarding')
     }
   }
 
