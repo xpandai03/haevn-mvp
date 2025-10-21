@@ -17,7 +17,7 @@ import { Progress } from '@/components/ui/progress'
 
 export default function SignupPage() {
   const router = useRouter()
-  const { signUp, signIn, user, loading: authLoading } = useAuth()
+  const { signUp, signIn, signOut, user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: '',
@@ -28,30 +28,56 @@ export default function SignupPage() {
   const [cityInfo, setCityInfo] = useState<{ name: string; status: 'live' | 'waitlist' } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showExistingUserPrompt, setShowExistingUserPrompt] = useState(false)
 
-  // CRITICAL: Redirect existing users away from signup
+  // Check for existing user session
   useEffect(() => {
-    const redirectExistingUser = async () => {
+    const checkExistingUser = async () => {
       if (authLoading) return // Wait for auth to load
-      if (!user) return // No user, allow signup
+      if (!user) {
+        setShowExistingUserPrompt(false)
+        return
+      }
 
       console.log('[Signup] ===== EXISTING USER DETECTED =====')
       console.log('[Signup] User ID:', user.id)
       console.log('[Signup] Email:', user.email)
-      console.log('[Signup] Redirecting existing user...')
 
-      // User is already logged in, redirect them to their appropriate destination
-      const flowController = getOnboardingFlowController()
-      const resumePath = await flowController.getResumeStep(user.id)
-
-      console.log('[Signup] Resume path for existing user:', resumePath)
-      console.log('[Signup] ======================================')
-
-      router.push(resumePath)
+      // Show logout prompt instead of auto-redirecting
+      setShowExistingUserPrompt(true)
     }
 
-    redirectExistingUser()
-  }, [user, authLoading, router])
+    checkExistingUser()
+  }, [user, authLoading])
+
+  const handleLogout = async () => {
+    setLoading(true)
+    try {
+      await signOut()
+      setShowExistingUserPrompt(false)
+      toast({
+        title: 'Logged out',
+        description: 'You can now create a new account.',
+      })
+    } catch (error) {
+      console.error('[Signup] Error logging out:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleContinueToOnboarding = async () => {
+    if (!user) return
+
+    const flowController = getOnboardingFlowController()
+    const resumePath = await flowController.getResumeStep(user.id)
+    router.push(resumePath)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -156,6 +182,75 @@ export default function SignupPage() {
       setError(err.message || 'Failed to create account')
       setLoading(false)
     }
+  }
+
+  // Show existing user prompt if user is logged in
+  if (showExistingUserPrompt && user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <h1
+              className="text-haevn-navy mb-3"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 700,
+                fontSize: '32px',
+                lineHeight: '100%',
+                letterSpacing: '-0.015em',
+                textAlign: 'left'
+              }}
+            >
+              Already logged in
+            </h1>
+            <p
+              className="text-haevn-charcoal"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300,
+                fontSize: '16px',
+                lineHeight: '120%',
+                textAlign: 'left'
+              }}
+            >
+              You're currently signed in as <strong>{user.email}</strong>
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-8 shadow-sm space-y-4">
+            <p className="text-haevn-charcoal mb-6">
+              Would you like to continue with your onboarding, or log out to create a new account?
+            </p>
+
+            <Button
+              onClick={handleContinueToOnboarding}
+              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+              size="lg"
+              disabled={loading}
+            >
+              Continue to Onboarding
+            </Button>
+
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="w-full rounded-full border-haevn-navy text-haevn-navy"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging out...
+                </>
+              ) : (
+                'Log Out'
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
