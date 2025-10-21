@@ -128,14 +128,22 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q3c_partner_kinsey_preference',
-        label: 'Do you prefer partners with a particular Kinsey-scale range?',
-        type: 'text',
-        placeholder: 'e.g., 2-4, or no preference',
+        csvId: 'Q3c',
+        label: 'Do you prefer partners with a particular Kinsey scale position?',
+        type: 'multiselect',
         required: false,
-        helperText: 'Only answer if you have a preference; many people don\'t.',
-        skipCondition: (answers) =>
-          answers.q3b_kinsey_scale === undefined ||
-          answers.q3b_kinsey_scale === null
+        helperText: 'Select all that apply. Leave blank if you have no preference.',
+        options: [
+          '0 - Exclusively heterosexual',
+          '1 - Predominantly heterosexual, only incidentally homosexual',
+          '2 - Predominantly heterosexual, but more than incidentally homosexual',
+          '3 - Equally heterosexual and homosexual (bisexual)',
+          '4 - Predominantly homosexual, but more than incidentally heterosexual',
+          '5 - Predominantly homosexual, only incidentally heterosexual',
+          '6 - Exclusively homosexual',
+          'No preference'
+        ],
+        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other}"
       },
       {
         id: 'q4_relationship_status',
