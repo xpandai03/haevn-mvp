@@ -28,6 +28,7 @@ export default function IdentityPage() {
   const [relationshipOrientation, setRelationshipOrientation] =
     useState<RelationshipOrientation | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [userCity, setUserCity] = useState<string>('Austin') // Default city
 
   // Debug: log state changes
   useEffect(() => {
@@ -47,10 +48,22 @@ export default function IdentityPage() {
       try {
         console.log('[Identity] Loading existing data for user:', user.id)
 
+        // Load user's city from profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('city')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.city) {
+          setUserCity(profile.city)
+        }
+
+        // Load existing partnership data
         const { data: partnership, error } = await supabase
           .from('partnerships')
           .select('profile_type, relationship_orientation')
-          .eq('primary_user_id', user.id)
+          .eq('owner_id', user.id) // Fixed: use owner_id not primary_user_id
           .maybeSingle() // Use maybeSingle to handle no results gracefully
 
         if (error) {
@@ -92,7 +105,7 @@ export default function IdentityPage() {
       const { data: partnership, error: selectError } = await supabase
         .from('partnerships')
         .select('id')
-        .eq('primary_user_id', user.id)
+        .eq('owner_id', user.id) // Fixed: use owner_id not primary_user_id
         .maybeSingle() // Use maybeSingle instead of single to handle no results
 
       if (selectError) {
@@ -124,7 +137,8 @@ export default function IdentityPage() {
         const { error: insertError } = await supabase
           .from('partnerships')
           .insert({
-            primary_user_id: user.id,
+            owner_id: user.id, // Fixed: use owner_id not primary_user_id
+            city: userCity, // Get from user's profile
             profile_type: profileType,
             relationship_orientation: relationshipOrientation
           })
