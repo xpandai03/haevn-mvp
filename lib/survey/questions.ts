@@ -349,9 +349,8 @@ export const surveySections: SurveySection[] = [
           'It depends on the situation'
         ],
         required: true,
-        helperText: 'Helps others understand your style when things get tense.'
-        // Note: Simplified logic removed temporarily to ensure deployment succeeds
-        // TODO: Add back when parser supports compound AND conditions with 'in' operator
+        helperText: 'Helps others understand your style when things get tense.',
+        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}"
       },
       {
         id: 'q12a_messaging_pace',
