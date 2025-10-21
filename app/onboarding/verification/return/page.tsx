@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type VerificationStatus = 'checking' | 'approved' | 'declined' | 'pending' | 'error'
 
-export default function VerificationReturnPage() {
+function VerificationReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -247,5 +247,20 @@ export default function VerificationReturnPage() {
         </Card>
       </div>
     </OnboardingLayout>
+  )
+}
+
+// Wrap with Suspense to fix Next.js 15 useSearchParams requirement
+export default function VerificationReturnPage() {
+  return (
+    <Suspense fallback={
+      <OnboardingLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+        </div>
+      </OnboardingLayout>
+    }>
+      <VerificationReturnContent />
+    </Suspense>
   )
 }
