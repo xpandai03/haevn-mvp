@@ -82,7 +82,7 @@ export async function createVeriffSession(userId: string): Promise<{
 
   const payload = {
     verification: {
-      callback: "https://36169a977600.ngrok-free.app/onboarding/survey-intro",  // hardcoded test redirect
+      callback: VERIFF_RETURN_URL, // Use environment variable for production URL
       vendorData: userId,
       timestamp: new Date().toISOString()
     }
