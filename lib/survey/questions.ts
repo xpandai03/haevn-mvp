@@ -81,22 +81,23 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q3_sexual_orientation',
         csvId: 'Q3',
-        label: 'How do you describe your sexual orientation?',
-        type: 'multiselect',
+        label: 'Sexual orientation',
+        type: 'select',
         options: [
-          'Straight/Heterosexual',
-          'Gay',
-          'Lesbian',
+          'Straight',
+          'Gay/Lesbian',
           'Bisexual',
           'Pansexual',
+          'Queer',
+          'Fluid',
           'Asexual',
           'Demisexual',
-          'Queer',
-          'Questioning',
+          'Questioning/Unsure',
+          'Prefer not to say',
           'Other'
         ],
         required: true,
-        helperText: 'Pick the label(s) that best fit you, use "other" or write your own if needed.'
+        helperText: 'Choose the orientation that best describes you.'
       },
       {
         id: 'q3a_fidelity',
@@ -143,15 +144,17 @@ export const surveySections: SurveySection[] = [
         type: 'select',
         options: [
           'Single',
-          'Partnered',
+          'Dating',
           'Married',
+          'Partnered',
+          'Couple',
           'In a polycule',
           'Solo Poly',
-          'It\'s complicated',
-          'Other'
+          'Exploring',
+          'Prefer not to say'
         ],
         required: true,
-        helperText: 'Examples: single, partnered, married, polycule, etc.'
+        helperText: 'Choose the status that best describes your current situation.'
       }
       // Removed q5_zip_code and q5a_precise_location - already collected during signup
     ]
@@ -165,18 +168,17 @@ export const surveySections: SurveySection[] = [
         id: 'q6_relationship_styles',
         csvId: 'Q6',
         label: 'What relationship style(s) interest you?',
-        type: 'multiselect',
+        type: 'select',
         options: [
-          'Monogamy',
-          'Open relationship',
-          'Polyamory',
-          'Relationship anarchy',
-          'Swinging',
-          'Don\'t know yet',
-          'Other'
+          'Monogamous',
+          'Monogamish',
+          'ENM',
+          'Polyamorous',
+          'Open',
+          'Exploring'
         ],
         required: true,
-        helperText: 'Monogamy, open, polyamory, etc. Select all that apply.'
+        helperText: 'Choose the relationship orientation that best describes you.'
       },
       {
         id: 'q6a_connection_type',
@@ -219,7 +221,7 @@ export const surveySections: SurveySection[] = [
         ],
         required: false,
         helperText: 'E.g., meet singles together, meet other couples, etc.',
-        displayLogic: "Show if Q6a includes 'couple'"
+        displayLogic: "Q4 in {Dating,Married,Partnered,Couple}"
       },
       {
         id: 'q6d_couple_permissions',
@@ -241,7 +243,7 @@ export const surveySections: SurveySection[] = [
         min: 1,
         max: 10,
         step: 1,
-        displayLogic: "Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don\\'t know yet'"
+        displayLogic: "Q6 in {Monogamish,Open,Polyamorous,Exploring}"
       },
       {
         id: 'q8_sexual_exclusivity',
@@ -253,7 +255,7 @@ export const surveySections: SurveySection[] = [
         min: 1,
         max: 10,
         step: 1,
-        displayLogic: "Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don\\'t know yet'"
+        displayLogic: "Q6 in {Monogamish,Open,Polyamorous,Exploring}"
       },
       {
         id: 'q9_intentions',
@@ -307,7 +309,7 @@ export const surveySections: SurveySection[] = [
         ],
         required: true,
         helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.',
-        displayLogic: "(Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')) OR ((Q4='Partnered' OR Q4='Married') AND Q6 includes 'Polyamory')"
+        displayLogic: "(Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}) OR (Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous')"
       },
       {
         id: 'q10a_emotional_availability',
@@ -347,7 +349,7 @@ export const surveySections: SurveySection[] = [
         ],
         required: true,
         helperText: 'Helps others understand your style when things get tense.',
-        displayLogic: "Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')"
+        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}"
       },
       {
         id: 'q12a_messaging_pace',
