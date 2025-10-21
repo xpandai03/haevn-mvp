@@ -356,7 +356,7 @@ export default function SurveyPage() {
   }
 
   // Navigation
-  const handleNext = () => {
+  const handleNext = async () => {
     console.log('[Survey] handleNext called')
     console.log('[Survey] Current index:', currentQuestionIndex, '/', activeQuestions.length - 1)
     console.log('[Survey] Current question:', currentQuestion?.id)
@@ -368,7 +368,28 @@ export default function SurveyPage() {
       setCurrentQuestionIndex(newIndex)
       saveAnswers(answers, newIndex, completedSections) // Save new index
     } else {
-      console.log('[Survey] Already at last question')
+      // On last question - complete survey and redirect
+      console.log('[Survey] ===== COMPLETING SURVEY =====')
+      console.log('[Survey] Saving final answers and marking step complete...')
+
+      // Save final state
+      await saveAnswers(answers, currentQuestionIndex, completedSections)
+
+      // Mark survey step as complete
+      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getOnboardingFlowController()
+      if (user?.id) {
+        await flowController.markStepComplete(user.id, 7)
+        console.log('[Survey] ✅ Step 7 marked complete')
+      }
+
+      toast({
+        title: 'Survey Complete!',
+        description: 'Great job! Let\'s celebrate your progress...',
+      })
+
+      console.log('[Survey] Redirecting to celebration page...')
+      router.push('/onboarding/celebration')
     }
   }
 
