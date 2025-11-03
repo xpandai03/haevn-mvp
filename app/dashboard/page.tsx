@@ -45,10 +45,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadMatches() {
+      // Don't redirect here - let the auth validation useEffect handle redirects
+      // Just skip loading if no user (they'll be redirected by the other useEffect)
       if (!authUser) {
-        router.push('/auth/login')
+        console.log('[Dashboard] No user yet, waiting for auth to complete...')
         return
       }
+
+      console.log('[Dashboard] Loading matches for user:', authUser.id)
 
       try {
         setLoading(true)
@@ -60,8 +64,9 @@ export default function DashboardPage() {
         setMatches(matchData)
         setConnectionsCount(connections.length)
         setNudgesCount(nudgesData.count)
+        console.log('[Dashboard] ✅ Matches loaded:', matchData.length)
       } catch (err: any) {
-        console.error('Error loading matches:', err)
+        console.error('[Dashboard] Error loading matches:', err)
         setError(err.message || 'Failed to load matches')
       } finally {
         setLoading(false)
@@ -69,7 +74,7 @@ export default function DashboardPage() {
     }
 
     loadMatches()
-  }, [authUser, router])
+  }, [authUser])
 
   const handleSignOut = async () => {
     await signOut()
