@@ -16,7 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user: authUser, signOut } = useAuth()
+  const { user: authUser, session, loading: authLoading, signOut } = useAuth()
   const [matches, setMatches] = useState<MatchResult[]>([])
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -26,24 +26,22 @@ export default function DashboardPage() {
   const [nudgesCount, setNudgesCount] = useState(0)
   const supabase = createClient()
 
-  // Validate session on mount to prevent stale sessions
+  // Validate auth context is ready and user is authenticated
   useEffect(() => {
-    const validateSession = async () => {
-      console.log('[Dashboard] Validating session...')
-      const { data: { session }, error } = await supabase.auth.getSession()
-
-      if (!session || error) {
-        console.error('[Dashboard] Invalid or expired session:', error)
-        console.log('[Dashboard] Redirecting to login...')
-        router.push('/auth/login')
-        return
-      }
-
-      console.log('[Dashboard] Session valid until:', session.expires_at)
+    if (authLoading) {
+      console.log('[Dashboard] Waiting for auth to initialize...')
+      return
     }
 
-    validateSession()
-  }, [supabase, router])
+    if (!authUser || !session) {
+      console.log('[Dashboard] No authenticated user, redirecting to login...')
+      router.push('/auth/login')
+      return
+    }
+
+    console.log('[Dashboard] ✅ User authenticated:', authUser.id)
+    console.log('[Dashboard] Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
+  }, [authUser, session, authLoading, router])
 
   useEffect(() => {
     async function loadMatches() {
