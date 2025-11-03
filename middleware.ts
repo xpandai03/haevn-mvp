@@ -43,12 +43,40 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Check if we have a session for protected routes
-  const { data: { session } } = await supabase.auth.getSession()
+  // Check if we have auth cookies before even trying to get session
+  // This prevents race conditions where session hasn't loaded yet
+  const authCookies = request.cookies.getAll().filter(c =>
+    c.name.startsWith('sb-') && c.name.includes('auth-token')
+  )
 
-  // Redirect to login if no session and accessing protected route
-  if (!session) {
+  console.log('[Middleware] Auth cookies found:', authCookies.length)
+
+  // If we have auth cookies, assume user is authenticated and let page handle validation
+  // The AuthContext on the page will properly validate and refresh the session
+  if (authCookies.length > 0) {
+    console.log('[Middleware] Auth cookies present, allowing access to', pathname)
+    // Continue to protected route checks below
+  } else {
+    // No auth cookies at all - definitely not authenticated
+    console.log('[Middleware] No auth cookies, redirecting to login')
     return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
+  // Double-check with session (but don't block if this fails)
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  console.log('[Middleware] Session check for', pathname, {
+    hasSession: !!session,
+    userId: session?.user?.id,
+    expiresAt: session?.expires_at,
+    error: error?.message
+  })
+
+  // If session check fails but we have cookies, let the page handle it
+  // The page's AuthContext will properly validate and refresh
+  if (!session && authCookies.length > 0) {
+    console.log('[Middleware] Session failed but cookies present, allowing page to handle auth')
+    return response
   }
 
   // Protected routes that require complete onboarding
