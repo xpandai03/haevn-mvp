@@ -49,8 +49,8 @@ export default function LoginPage() {
       // Use flow controller to determine correct redirect
       console.log('[Login] ===== GETTING RESUME PATH =====')
       console.log('[Login] User ID for flow controller:', signInData.session.user.id)
-      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-      const flowController = getOnboardingFlowController()
+      const { getClientOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getClientOnboardingFlowController()
 
       const resumePath = await flowController.getResumeStep(signInData.session.user.id)
       console.log('[Login] ===== RESUME PATH DETERMINED =====')

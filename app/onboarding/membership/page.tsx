@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { useToast } from '@/hooks/use-toast'
 
 const tiers = [
@@ -65,7 +65,7 @@ export default function MembershipPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 

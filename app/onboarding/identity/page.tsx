@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { User, Users as UsersIcon, UserPlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
@@ -21,7 +21,7 @@ export default function IdentityPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
   const supabase = createClient()
 
   const [profileType, setProfileType] = useState<ProfileType | null>(null)

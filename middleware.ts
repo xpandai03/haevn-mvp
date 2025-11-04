@@ -230,8 +230,8 @@ export async function middleware(request: NextRequest) {
 
       // Use flow controller to determine correct redirect
       // Import dynamically to avoid circular dependencies
-      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-      const flowController = getOnboardingFlowController()
+      const { getServerOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = await getServerOnboardingFlowController()
       const resumePath = await flowController.getResumeStep(session.user.id)
 
       console.log('[TRACE-MW] getResumeStep returned:', resumePath)

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ function VerificationReturnContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
   const supabase = createClient()
 
   const [status, setStatus] = useState<VerificationStatus>('checking')

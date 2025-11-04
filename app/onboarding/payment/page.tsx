@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { CreditCard, Lock, Shield, CheckCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -17,7 +17,7 @@ function PaymentPageContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
   const [processing, setProcessing] = useState(false)
 
   // Get the selected tier from query params

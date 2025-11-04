@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { checkCityStatus } from '@/lib/data/cities'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -87,7 +87,7 @@ export default function SignupForm() {
   const handleContinueToOnboarding = async () => {
     if (!user) return
 
-    const flowController = getOnboardingFlowController()
+    const flowController = getClientOnboardingFlowController()
     const resumePath = await flowController.getResumeStep(user.id)
     router.push(resumePath)
   }
@@ -178,7 +178,7 @@ export default function SignupForm() {
         // Use the user from signInData since we're logged in now
         const userId = signInData?.session?.user?.id || signUpData?.user?.id
         if (userId) {
-          const flowController = getOnboardingFlowController()
+          const flowController = getClientOnboardingFlowController()
           await flowController.markStepComplete(userId, 1)
         }
 

@@ -218,8 +218,8 @@ export default function SurveyPage() {
 
           // If survey is complete, mark step and redirect to celebration
           if (actualCompletion === 100) {
-            const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-            const flowController = getOnboardingFlowController()
+            const { getClientOnboardingFlowController } = await import('@/lib/onboarding/flow')
+            const flowController = getClientOnboardingFlowController()
             if (user?.id) {
               await flowController.markStepComplete(user.id, 7)
             }

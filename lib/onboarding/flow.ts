@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type OnboardingStep = {
   id: number
@@ -96,7 +96,11 @@ export interface OnboardingState {
 }
 
 export class OnboardingFlowController {
-  private supabase = createClient()
+  private supabase: SupabaseClient
+
+  constructor(supabaseClient: SupabaseClient) {
+    this.supabase = supabaseClient
+  }
 
   async getOnboardingState(userId: string): Promise<OnboardingState | null> {
     try {
@@ -388,12 +392,23 @@ export class OnboardingFlowController {
   }
 }
 
-// Singleton instance
-let flowController: OnboardingFlowController | null = null
+/**
+ * Factory function for server-side use
+ * Creates flow controller with server-compatible Supabase client
+ */
+export async function getServerOnboardingFlowController(): Promise<OnboardingFlowController> {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  return new OnboardingFlowController(supabase)
+}
 
-export function getOnboardingFlowController(): OnboardingFlowController {
-  if (!flowController) {
-    flowController = new OnboardingFlowController()
-  }
-  return flowController
+/**
+ * Factory function for client-side use
+ * Creates flow controller with browser-compatible Supabase client
+ */
+export function getClientOnboardingFlowController(): OnboardingFlowController {
+  // Use require to avoid tree-shaking issues
+  const { createClient } = require('@/lib/supabase/client')
+  const supabase = createClient()
+  return new OnboardingFlowController(supabase)
 }

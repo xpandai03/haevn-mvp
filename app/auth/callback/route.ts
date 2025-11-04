@@ -23,8 +23,8 @@ export async function GET(request: Request) {
         // Use getOnboardingFlowController to determine redirect
         // This ensures consistency with login page and middleware
         console.log('[TRACE-CB] About to call getResumeStep()')
-        const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-        const flowController = getOnboardingFlowController()
+        const { getServerOnboardingFlowController } = await import('@/lib/onboarding/flow')
+        const flowController = await getServerOnboardingFlowController()
         const resumePath = await flowController.getResumeStep(session.user.id)
 
         console.log('[TRACE-CB] getResumeStep resolved to', resumePath)

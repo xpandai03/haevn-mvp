@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -12,7 +12,7 @@ export default function CelebrationPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
 
   useEffect(() => {
     if (loading) return // Wait for auth to finish loading

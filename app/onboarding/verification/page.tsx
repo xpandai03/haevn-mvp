@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { OnboardingLayout, EducationCard } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { ShieldCheck, Camera, CreditCard } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -22,7 +22,7 @@ export default function VerificationPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const { toast } = useToast()
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
   const [showDetails, setShowDetails] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
 
