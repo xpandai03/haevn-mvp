@@ -83,7 +83,24 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     }
 
     const partnershipId = membership.partnership_id
-    console.log('[getUserSurveyData] Partnership ID:', partnershipId)
+
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.warn('[getUserSurveyData] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.warn('[getUserSurveyData] partnershipId guard executed --- skipping Supabase query')
+      console.log('[getUserSurveyData] Returning empty survey to prevent 400 error')
+      return {
+        data: {
+          answers_json: {},
+          completion_pct: 0,
+          current_step: 0,
+          completed_sections: []
+        },
+        error: null
+      }
+    }
+
+    console.log('[getUserSurveyData] ✅ Valid partnershipId:', partnershipId)
 
     // Try to get existing survey data for partnership
     console.log('[getUserSurveyData] Querying user_survey_responses for partnership_id:', partnershipId)
@@ -206,7 +223,15 @@ export async function saveUserSurveyData(
     }
 
     const partnershipId = membership.partnership_id
-    console.log('[saveUserSurveyData] Partnership ID:', partnershipId)
+
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.error('[saveUserSurveyData] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.error('[saveUserSurveyData] partnershipId guard executed --- cannot save survey')
+      return { success: false, error: 'Invalid partnership. Please complete onboarding first.' }
+    }
+
+    console.log('[saveUserSurveyData] ✅ Valid partnershipId:', partnershipId)
     console.log('[saveUserSurveyData] User role:', membership.role)
 
     // Get existing answers for this partnership (NOT user)

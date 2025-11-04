@@ -51,6 +51,12 @@ export async function getUserNudges(): Promise<{ data: NudgeItem[], error: strin
 
     const partnershipId = memberData.partnership_id
 
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.warn('[getUserNudges] ⚠️ Invalid partnershipId, returning empty nudges:', partnershipId)
+      return { data: [], error: null }
+    }
+
     // 1. Get incoming handshake requests (not yet accepted)
     const { data: incomingHandshakes } = await adminClient
       .from('handshakes')

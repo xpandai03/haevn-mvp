@@ -59,11 +59,18 @@ export async function fetchInviteDetails(inviteCode: string): Promise<{
       .single()
 
     // Get survey completion status
-    const { data: surveyData } = await adminClient
-      .from('user_survey_responses')
-      .select('completion_pct')
-      .eq('partnership_id', invite.partnership_id)
-      .single()
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    let surveyData = null
+    if (invite.partnership_id && typeof invite.partnership_id === 'string' && invite.partnership_id.length >= 10) {
+      const result = await adminClient
+        .from('user_survey_responses')
+        .select('completion_pct')
+        .eq('partnership_id', invite.partnership_id)
+        .single()
+      surveyData = result.data
+    } else {
+      console.warn('[fetchInviteDetails] ⚠️ Invalid partnershipId, skipping survey query')
+    }
 
     console.log('[fetchInviteDetails] Invite details found:', {
       partnershipId: invite.partnership_id,
@@ -103,9 +110,24 @@ export async function getPartnershipSurvey(partnershipId: string): Promise<{
   error?: string
 }> {
   try {
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.warn('[getPartnershipSurvey] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.warn('[getPartnershipSurvey] partnershipId guard executed --- returning empty survey')
+      return {
+        success: true,
+        data: {
+          answers: {},
+          completionPct: 0,
+          currentStep: 0,
+          completedSections: []
+        }
+      }
+    }
+
     const adminClient = createAdminClient()
 
-    console.log('[getPartnershipSurvey] Fetching survey for partnership:', partnershipId)
+    console.log('[getPartnershipSurvey] ✅ Valid partnershipId, fetching survey:', partnershipId)
 
     const { data: surveyData, error: surveyError } = await adminClient
       .from('user_survey_responses')

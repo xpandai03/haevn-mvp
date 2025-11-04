@@ -169,11 +169,18 @@ export async function getPartnershipInfo(): Promise<{
       .order('created_at', { ascending: false })
 
     // Fetch survey completion
-    const { data: survey } = await adminClient
-      .from('user_survey_responses')
-      .select('completion_pct')
-      .eq('partnership_id', partnershipId)
-      .single()
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    let survey = null
+    if (partnershipId && typeof partnershipId === 'string' && partnershipId.length >= 10) {
+      const result = await adminClient
+        .from('user_survey_responses')
+        .select('completion_pct')
+        .eq('partnership_id', partnershipId)
+        .single()
+      survey = result.data
+    } else {
+      console.warn('[getPartnershipInfo] ⚠️ Invalid partnershipId, skipping survey query')
+    }
 
     // Check if all partners have reviewed
     const allReviewed = membersResult.members?.every(m => m.survey_reviewed) || false
