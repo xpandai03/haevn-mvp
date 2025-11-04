@@ -231,22 +231,57 @@ export class OnboardingFlowController {
     try {
       console.log('[FlowController] Getting resume step for user:', userId)
 
-      // Check database for survey completion (for existing users who completed before localStorage tracking)
-      const { data: surveyData } = await this.supabase
-        .from('user_survey_responses')
-        .select('completion_pct')
+      // Check if user has a partnership
+      const { data: membership } = await this.supabase
+        .from('partnership_members')
+        .select('partnership_id, survey_reviewed, role')
         .eq('user_id', userId)
         .maybeSingle()
 
-      console.log('[FlowController] Survey data:', surveyData)
+      console.log('[FlowController] Partnership membership:', {
+        hasPartnership: !!membership,
+        role: membership?.role,
+        surveyReviewed: membership?.survey_reviewed
+      })
 
-      // If survey is 100% complete, check membership and go to dashboard
-      if (surveyData && surveyData.completion_pct === 100) {
-        console.log('[FlowController] Survey complete (100%), sending to dashboard')
+      if (!membership) {
+        // No partnership - new user, start regular onboarding
+        console.log('[FlowController] No partnership found, starting regular onboarding')
+        return '/onboarding/expectations'
+      }
+
+      // Check partnership survey completion (NOT user survey)
+      const { data: surveyData } = await this.supabase
+        .from('user_survey_responses')
+        .select('completion_pct')
+        .eq('partnership_id', membership.partnership_id)
+        .maybeSingle()
+
+      console.log('[FlowController] Partnership survey data:', surveyData)
+
+      // If partner (not owner) and hasn't reviewed survey yet
+      if (membership.role === 'member' && !membership.survey_reviewed) {
+        console.log('[FlowController] Partner has not reviewed survey yet')
+
+        if (surveyData && surveyData.completion_pct > 0) {
+          // Owner has started/completed survey, send to review
+          console.log('[FlowController] Survey exists, sending to review-survey')
+          return '/onboarding/review-survey'
+        } else {
+          // Owner hasn't started survey yet, wait
+          console.log('[FlowController] No survey data yet, waiting for owner')
+          // Could redirect to a "waiting" page or let them view empty review page
+          return '/onboarding/review-survey'
+        }
+      }
+
+      // If survey complete and user has reviewed, go to dashboard
+      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
+        console.log('[FlowController] Survey complete and reviewed, sending to dashboard')
         return '/dashboard'
       }
 
-      // Check localStorage for onboarding progress
+      // If owner or survey not complete, continue normal flow
       const state = await this.getOnboardingState(userId)
       console.log('[FlowController] Onboarding state:', state)
 
@@ -256,14 +291,12 @@ export class OnboardingFlowController {
 
         // Check if user has ANY survey data
         if (surveyData && surveyData.completion_pct > 0) {
-          // User has started survey, resume from there
+          // Survey started, resume from there
           console.log('[FlowController] Survey in progress, resuming at survey')
           return '/onboarding/survey'
         }
 
-        // No survey data - existing user who hasn't started onboarding yet
-        // IMPORTANT: Never send authenticated users to /auth/signup!
-        // Send them to first onboarding step instead
+        // No survey data - start onboarding
         console.log('[FlowController] No survey data, sending to first onboarding step')
         return '/onboarding/expectations'
       }
@@ -271,7 +304,6 @@ export class OnboardingFlowController {
       // Find the first incomplete required step
       for (const step of ONBOARDING_STEPS) {
         // CRITICAL: Skip signup step (step 1) for authenticated users
-        // If they're calling this function, they're already authenticated!
         if (step.id === 1) {
           console.log('[FlowController] Skipping signup step - user is authenticated')
           continue

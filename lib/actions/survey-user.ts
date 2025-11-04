@@ -57,12 +57,40 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
-    // Try to get existing survey data
-    console.log('[getUserSurveyData] Querying user_survey_responses for user_id:', user.id)
+    // Get user's partnership
+    console.log('[getUserSurveyData] Fetching user partnership...')
+    const { data: membership, error: membershipError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (membershipError && membershipError.code !== 'PGRST116') {
+      console.error('[getUserSurveyData] Partnership lookup error:', membershipError)
+    }
+
+    if (!membership || !membership.partnership_id) {
+      console.log('[getUserSurveyData] No partnership found - returning empty survey')
+      return {
+        data: {
+          answers_json: {},
+          completion_pct: 0,
+          current_step: 0,
+          completed_sections: []
+        },
+        error: null
+      }
+    }
+
+    const partnershipId = membership.partnership_id
+    console.log('[getUserSurveyData] Partnership ID:', partnershipId)
+
+    // Try to get existing survey data for partnership
+    console.log('[getUserSurveyData] Querying user_survey_responses for partnership_id:', partnershipId)
     const { data, error } = await adminClient
       .from('user_survey_responses')
       .select('answers_json, completion_pct, current_step, completed_sections')
-      .eq('user_id', user.id)
+      .eq('partnership_id', partnershipId)
       .maybeSingle()
 
     if (error && error.code !== 'PGRST116') {
@@ -75,45 +103,20 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
 
     // Return survey data or empty survey
     if (!data) {
-      console.log('[getUserSurveyData] No existing data found - creating empty survey for user:', user.id)
-
-      // Create initial empty survey response using admin client
-      const { data: newData, error: insertError } = await adminClient
-        .from('user_survey_responses')
-        .insert({
-          user_id: user.id,
-          answers_json: {},
-          completion_pct: 0,
-          current_step: 0
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        console.error('[getUserSurveyData] Insert error:', insertError)
-        // Return empty data even if insert fails
-        return {
-          data: {
-            answers_json: {},
-            completion_pct: 0,
-            current_step: 0
-          },
-          error: null
-        }
-      }
-
-      console.log('[getUserSurveyData] Created empty survey response')
+      console.log('[getUserSurveyData] No existing data found - returning empty survey for partnership:', partnershipId)
+      // Don't create empty record here - let saveUserSurveyData do it
       return {
         data: {
           answers_json: {},
           completion_pct: 0,
-          current_step: 0
+          current_step: 0,
+          completed_sections: []
         },
         error: null
       }
     }
 
-    console.log('[getUserSurveyData] Found existing data for user:', user.id)
+    console.log('[getUserSurveyData] Found existing data for partnership:', partnershipId)
     console.log('[getUserSurveyData] Answers count:', Object.keys(data.answers_json || {}).length)
     console.log('[getUserSurveyData] Completion:', data.completion_pct + '%')
     console.log('[getUserSurveyData] Current step:', data.current_step)
@@ -189,12 +192,29 @@ export async function saveUserSurveyData(
     // Use admin client to bypass RLS issues (same pattern as matching.ts)
     const adminClient = createAdminClient()
 
-    // Get existing answers
-    console.log('[saveUserSurveyData] Fetching existing answers...')
+    // Get user's partnership
+    console.log('[saveUserSurveyData] Fetching user partnership...')
+    const { data: membership, error: membershipError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id, role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (membershipError || !membership) {
+      console.error('[saveUserSurveyData] No partnership found:', membershipError)
+      return { success: false, error: 'No partnership found. Please complete onboarding first.' }
+    }
+
+    const partnershipId = membership.partnership_id
+    console.log('[saveUserSurveyData] Partnership ID:', partnershipId)
+    console.log('[saveUserSurveyData] User role:', membership.role)
+
+    // Get existing answers for this partnership (NOT user)
+    console.log('[saveUserSurveyData] Fetching existing partnership survey...')
     const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
       .select('answers_json')
-      .eq('user_id', user.id)
+      .eq('partnership_id', partnershipId)
       .maybeSingle()
 
     if (selectError) {
@@ -205,7 +225,7 @@ export async function saveUserSurveyData(
     console.log('[saveUserSurveyData] Existing data:', existing ? 'found' : 'none')
 
     if (existing) {
-      console.log('[saveUserSurveyData] ⚠️ FOUND EXISTING DATA FOR USER:', user.id)
+      console.log('[saveUserSurveyData] ⚠️ FOUND EXISTING DATA FOR PARTNERSHIP:', partnershipId)
       console.log('[saveUserSurveyData] Existing answers keys:', Object.keys(existing.answers_json || {}))
       console.log('[saveUserSurveyData] Existing answers count:', Object.keys(existing.answers_json || {}).length)
     }
@@ -223,18 +243,19 @@ export async function saveUserSurveyData(
     const completionPct = calculateSurveyCompletion(mergedAnswers)
     console.log('[saveUserSurveyData] Completion:', completionPct + '%')
 
-    // Update survey response using admin client
-    console.log('[saveUserSurveyData] Upserting data...')
+    // Update survey response using admin client with PARTNERSHIP_ID
+    console.log('[saveUserSurveyData] Upserting data for partnership...')
     const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
       .upsert({
-        user_id: user.id,
+        partnership_id: partnershipId,  // CHANGED: Use partnership_id instead of user_id
+        user_id: null,  // CHANGED: Explicitly null for partnership surveys
         answers_json: mergedAnswers,
         completion_pct: completionPct,
         current_step: currentQuestionIndex,
         completed_sections: completedSections
       }, {
-        onConflict: 'user_id'
+        onConflict: 'partnership_id'  // CHANGED: Conflict resolution on partnership_id
       })
       .select()
 
@@ -246,6 +267,19 @@ export async function saveUserSurveyData(
 
     console.log('[saveUserSurveyData] Upsert successful:', upsertData)
 
+    // Auto-mark owner as having reviewed the survey (they created it)
+    if (membership.role === 'owner') {
+      console.log('[saveUserSurveyData] Auto-marking owner as reviewed')
+      await adminClient
+        .from('partnership_members')
+        .update({
+          survey_reviewed: true,
+          survey_reviewed_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('partnership_id', partnershipId)
+    }
+
     // If 100% complete, update profile using admin client
     if (completionPct === 100) {
       await adminClient
@@ -255,6 +289,7 @@ export async function saveUserSurveyData(
     }
 
     console.log('[saveUserSurveyData] Saved successfully:', {
+      partnershipId,
       userId: user.id,
       completionPct,
       currentStep: currentQuestionIndex

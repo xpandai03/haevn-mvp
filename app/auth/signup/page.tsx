@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,8 +17,14 @@ import { Progress } from '@/components/ui/progress'
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signUp, signIn, signOut, user, loading: authLoading } = useAuth()
   const { toast } = useToast()
+
+  // Detect invite code from URL params
+  const inviteCode = searchParams.get('invite')
+  const [hasInvite, setHasInvite] = useState(!!inviteCode)
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,6 +35,15 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showExistingUserPrompt, setShowExistingUserPrompt] = useState(false)
+
+  // Store invite code in localStorage when detected
+  useEffect(() => {
+    if (inviteCode) {
+      console.log('[Signup] Invite code detected:', inviteCode)
+      localStorage.setItem('haevn_invite_code', inviteCode)
+      setHasInvite(true)
+    }
+  }, [inviteCode])
 
   // Check for existing user session
   useEffect(() => {
@@ -171,11 +186,17 @@ export default function SignupPage() {
 
         toast({
           title: 'Welcome to HAEVN!',
-          description: 'Let\'s get to know you better.',
+          description: hasInvite ? 'Join your partner\'s account.' : 'Let\'s get to know you better.',
         })
 
-        // Redirect to expectations page (Step 1.5)
-        router.push('/onboarding/expectations')
+        // Redirect based on invite presence
+        if (hasInvite) {
+          console.log('[Signup Page] Redirecting to accept-invite (invite code present)')
+          router.push('/onboarding/accept-invite')
+        } else {
+          console.log('[Signup Page] Redirecting to expectations (no invite)')
+          router.push('/onboarding/expectations')
+        }
       }
     } catch (err: any) {
       console.error('Signup error:', err)

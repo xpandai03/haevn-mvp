@@ -88,47 +88,55 @@ export async function middleware(request: NextRequest) {
     console.log('[Middleware] Route:', pathname)
     console.log('[Middleware] User ID:', session.user.id)
 
-    // Check if user has completed all required onboarding steps
-    // For now, we'll check if survey is complete and membership is selected
-    // as these are the final gates before accessing protected routes
-
-    const { data: surveyData, error: surveyError } = await supabase
-      .from('user_survey_responses')
-      .select('completion_pct')
+    // Check if user has a partnership
+    const { data: membership, error: membershipError } = await supabase
+      .from('partnership_members')
+      .select('partnership_id, survey_reviewed, role')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    console.log('[Middleware] Survey check result:', {
+    console.log('[Middleware] Partnership membership:', {
+      hasPartnership: !!membership,
+      partnershipId: membership?.partnership_id,
+      role: membership?.role,
+      surveyReviewed: membership?.survey_reviewed,
+      error: membershipError?.message
+    })
+
+    if (!membership) {
+      // No partnership - redirect to onboarding
+      console.log('[Middleware] ❌ No partnership found, redirecting to expectations')
+      console.log('[Middleware] =========================================')
+      return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
+    }
+
+    // Check partnership survey completion (NOT user survey)
+    const { data: surveyData, error: surveyError } = await supabase
+      .from('user_survey_responses')
+      .select('completion_pct')
+      .eq('partnership_id', membership.partnership_id)
+      .maybeSingle()
+
+    console.log('[Middleware] Partnership survey check:', {
       hasSurveyData: !!surveyData,
       completionPct: surveyData?.completion_pct,
       error: surveyError?.message
     })
 
-    // If survey not complete, redirect to first incomplete onboarding step
-    if (!surveyData || surveyData.completion_pct < 100) {
-      console.log('[Middleware] ❌ Survey incomplete, redirecting to expectations')
+    // Require survey completion AND user review before accessing protected routes
+    if (!surveyData || surveyData.completion_pct < 100 || !membership.survey_reviewed) {
+      console.log('[Middleware] ❌ Survey incomplete or not reviewed, redirecting')
+      console.log('[Middleware] Survey complete:', surveyData?.completion_pct === 100)
+      console.log('[Middleware] Survey reviewed:', membership.survey_reviewed)
       console.log('[Middleware] =========================================')
-      // Start at expectations - the flow controller in each page will handle navigation
-      return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
-    }
 
-    // Check onboarding state (may not exist if user signed up before this feature)
-    const { data: onboardingState } = await supabase
-      .from('user_onboarding_state')
-      .select('membership_selected')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
+      // Use flow controller to determine correct redirect
+      // Import dynamically to avoid circular dependencies
+      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getOnboardingFlowController()
+      const resumePath = await flowController.getResumeStep(session.user.id)
 
-    console.log('[Middleware] Onboarding state:', {
-      hasState: !!onboardingState,
-      membershipSelected: onboardingState?.membership_selected
-    })
-
-    // If state exists and membership not selected, redirect
-    if (onboardingState && !onboardingState.membership_selected) {
-      console.log('[Middleware] ❌ Membership not selected, redirecting')
-      console.log('[Middleware] =========================================')
-      return NextResponse.redirect(new URL('/onboarding/membership', request.url))
+      return NextResponse.redirect(new URL(resumePath, request.url))
     }
 
     console.log('[Middleware] ✅ All checks passed, allowing access')
