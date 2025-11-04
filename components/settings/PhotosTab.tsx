@@ -33,26 +33,35 @@ export function PhotosTab() {
 
     const supabase = createClient()
 
-    // Get partnership ID
-    const { data: partnershipMembers } = await supabase
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single()
+    // Get partnership ID via API route (server-side)
+    const response = await fetch('/api/partnerships/my-partnership', {
+      credentials: 'include'
+    })
 
-    if (!partnershipMembers) {
+    if (!response.ok) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load partnership data',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    const { partnership } = await response.json()
+
+    if (!partnership) {
       setLoading(false)
       return
     }
 
-    setPartnershipId(partnershipMembers.partnership_id)
+    console.log('[CLIENT] Partnership info loaded:', partnership.partnershipId)
+    setPartnershipId(partnership.partnershipId)
 
     // Get photos - order by is_primary first, then order_index
     const { data: photoData } = await supabase
       .from('partnership_photos')
       .select('*')
-      .eq('partnership_id', partnershipMembers.partnership_id)
+      .eq('partnership_id', partnership.partnershipId)
       .order('is_primary', { ascending: false })
       .order('order_index', { ascending: true })
 

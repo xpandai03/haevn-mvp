@@ -33,26 +33,35 @@ export function ProfileTab() {
         .eq('user_id', user.id)
         .single()
 
-      // Get partnership data
-      const { data: partnershipMembers } = await supabase
-        .from('partnership_members')
-        .select('partnership_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
+      // Get partnership data via API route (server-side)
+      const partnershipResponse = await fetch('/api/partnerships/my-partnership', {
+        credentials: 'include'
+      })
 
-      if (partnershipMembers) {
-        const { data: partnership } = await supabase
-          .from('partnerships')
-          .select('display_name')
-          .eq('id', partnershipMembers.partnership_id)
-          .single()
+      if (partnershipResponse.ok) {
+        const { partnership: myPartnership } = await partnershipResponse.json()
 
-        setFormData({
-          full_name: profile?.full_name || '',
-          email: user.email || '',
-          display_name: partnership?.display_name || ''
-        })
+        if (myPartnership) {
+          const { data: partnership } = await supabase
+            .from('partnerships')
+            .select('display_name')
+            .eq('id', myPartnership.partnershipId)
+            .single()
+
+          console.log('[CLIENT] Partnership loaded:', partnership?.display_name)
+
+          setFormData({
+            full_name: profile?.full_name || '',
+            email: user.email || '',
+            display_name: partnership?.display_name || ''
+          })
+        } else {
+          setFormData({
+            full_name: profile?.full_name || '',
+            email: user.email || '',
+            display_name: ''
+          })
+        }
       }
 
       setLoading(false)
@@ -74,19 +83,29 @@ export function ProfileTab() {
         .update({ full_name: formData.full_name })
         .eq('user_id', user.id)
 
-      // Update partnership display name
-      const { data: partnershipMembers } = await supabase
-        .from('partnership_members')
-        .select('partnership_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
+      // Update partnership display name via API route
+      const partnershipResponse = await fetch('/api/partnerships/my-partnership', {
+        credentials: 'include'
+      })
 
-      if (partnershipMembers && formData.display_name) {
+      if (!partnershipResponse.ok) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load partnership data',
+          variant: 'destructive'
+        })
+        setSaving(false)
+        return
+      }
+
+      const { partnership: myPartnership } = await partnershipResponse.json()
+
+      if (myPartnership && formData.display_name) {
+        console.log('[CLIENT] Updating partnership display name:', formData.display_name)
         await supabase
           .from('partnerships')
           .update({ display_name: formData.display_name })
-          .eq('id', partnershipMembers.partnership_id)
+          .eq('id', myPartnership.partnershipId)
       }
 
       toast({

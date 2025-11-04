@@ -26,18 +26,38 @@ export default function DebugAuthPage() {
       })
 
       if (user) {
-        // Try to get partnership_members
-        const { data: members, error: membersError } = await supabase
-          .from('partnership_members')
-          .select('*')
-          .eq('user_id', user.id)
+        // Get partnership_members via API route (server-side)
+        try {
+          const response = await fetch('/api/partnerships/debug-info', {
+            credentials: 'include'
+          })
 
-        setPartnershipMembers({
-          data: members,
-          count: members?.length,
-          error: membersError?.message,
-          errorDetails: membersError
-        })
+          if (response.ok) {
+            const debugData = await response.json()
+            setPartnershipMembers({
+              data: debugData.members,
+              count: debugData.count,
+              error: null,
+              errorDetails: null
+            })
+            console.log('[CLIENT] Partnership debug info loaded:', debugData.count, 'memberships')
+          } else {
+            const errorData = await response.json()
+            setPartnershipMembers({
+              data: null,
+              count: 0,
+              error: errorData.error,
+              errorDetails: errorData
+            })
+          }
+        } catch (fetchError) {
+          setPartnershipMembers({
+            data: null,
+            count: 0,
+            error: 'Failed to fetch partnership data',
+            errorDetails: fetchError
+          })
+        }
 
         // Try to get partnerships owned by user
         const { data: owned, error: ownedError } = await supabase
