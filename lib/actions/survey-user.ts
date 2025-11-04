@@ -101,6 +101,7 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     }
 
     console.log('[getUserSurveyData] ✅ Valid partnershipId:', partnershipId)
+    console.log('[getUserSurveyData] ✅ Guard active before user_survey_responses query:', partnershipId)
 
     // Try to get existing survey data for partnership
     console.log('[getUserSurveyData] Querying user_survey_responses for partnership_id:', partnershipId)
@@ -232,6 +233,7 @@ export async function saveUserSurveyData(
     }
 
     console.log('[saveUserSurveyData] ✅ Valid partnershipId:', partnershipId)
+    console.log('[saveUserSurveyData] ✅ Guard active before user_survey_responses query:', partnershipId)
     console.log('[saveUserSurveyData] User role:', membership.role)
 
     // Get existing answers for this partnership (NOT user)

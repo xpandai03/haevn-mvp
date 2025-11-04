@@ -58,12 +58,43 @@ export async function POST(request: NextRequest) {
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
-    // Get existing answers
-    console.log('[API /survey/save] Fetching existing answers...')
+    // Get user's partnership
+    console.log('[API /survey/save] Fetching user partnership...')
+    const { data: membership, error: membershipError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id, role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (membershipError || !membership) {
+      console.error('[API /survey/save] No partnership found:', membershipError)
+      return NextResponse.json(
+        { success: false, error: 'No partnership found. Please complete onboarding first.' },
+        { status: 400 }
+      )
+    }
+
+    const partnershipId = membership.partnership_id
+
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.error('[API /survey/save] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.error('[API /survey/save] Guard active before user_survey_responses query')
+      return NextResponse.json(
+        { success: false, error: 'Invalid partnership. Please complete onboarding first.' },
+        { status: 400 }
+      )
+    }
+
+    console.log('[API /survey/save] ✅ Guard active before user_survey_responses query:', partnershipId)
+    console.log('[API /survey/save] User role:', membership.role)
+
+    // Get existing answers for this partnership (NOT user)
+    console.log('[API /survey/save] Fetching existing partnership survey...')
     const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
       .select('answers_json')
-      .eq('user_id', user.id)
+      .eq('partnership_id', partnershipId)
       .maybeSingle()
 
     if (selectError) {
@@ -93,18 +124,19 @@ export async function POST(request: NextRequest) {
     const completionPct = calculateSurveyCompletion(mergedAnswers)
     console.log('[API /survey/save] Completion:', completionPct + '%')
 
-    // Update survey response using admin client
-    console.log('[API /survey/save] Upserting data...')
+    // Update survey response using admin client with PARTNERSHIP_ID
+    console.log('[API /survey/save] Upserting data for partnership...')
     const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
       .upsert({
-        user_id: user.id,
+        partnership_id: partnershipId,  // CHANGED: Use partnership_id instead of user_id
+        user_id: null,  // CHANGED: Explicitly null for partnership surveys
         answers_json: mergedAnswers,
         completion_pct: completionPct,
         current_step: currentQuestionIndex,
         completed_sections: completedSections
       }, {
-        onConflict: 'user_id'
+        onConflict: 'partnership_id'  // CHANGED: Conflict resolution on partnership_id
       })
       .select()
 
@@ -119,6 +151,19 @@ export async function POST(request: NextRequest) {
 
     console.log('[API /survey/save] Upsert successful:', upsertData)
 
+    // Auto-mark owner as having reviewed the survey (they created it)
+    if (membership.role === 'owner') {
+      console.log('[API /survey/save] Auto-marking owner as reviewed')
+      await adminClient
+        .from('partnership_members')
+        .update({
+          survey_reviewed: true,
+          survey_reviewed_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('partnership_id', partnershipId)
+    }
+
     // If 100% complete, update profile using admin client
     if (completionPct === 100) {
       await adminClient
@@ -128,6 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API /survey/save] Saved successfully:', {
+      partnershipId,
       userId: user.id,
       completionPct,
       currentStep: currentQuestionIndex

@@ -43,12 +43,57 @@ export async function GET(request: NextRequest) {
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
-    // Try to get existing survey data
-    console.log('[API /survey/load] Querying user_survey_responses for user_id:', user.id)
+    // Get user's partnership
+    console.log('[API /survey/load] Fetching user partnership...')
+    const { data: membership, error: membershipError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (membershipError && membershipError.code !== 'PGRST116') {
+      console.error('[API /survey/load] Partnership lookup error:', membershipError)
+    }
+
+    if (!membership || !membership.partnership_id) {
+      console.log('[API /survey/load] No partnership found - returning empty survey')
+      return NextResponse.json({
+        data: {
+          answers_json: {},
+          completion_pct: 0,
+          current_step: 0,
+          completed_sections: []
+        },
+        error: null
+      })
+    }
+
+    const partnershipId = membership.partnership_id
+
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.warn('[API /survey/load] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.warn('[API /survey/load] Guard active before user_survey_responses query')
+      console.log('[API /survey/load] Returning empty survey to prevent 400 error')
+      return NextResponse.json({
+        data: {
+          answers_json: {},
+          completion_pct: 0,
+          current_step: 0,
+          completed_sections: []
+        },
+        error: null
+      })
+    }
+
+    console.log('[API /survey/load] ✅ Guard active before user_survey_responses query:', partnershipId)
+
+    // Try to get existing survey data for partnership
+    console.log('[API /survey/load] Querying user_survey_responses for partnership_id:', partnershipId)
     const { data, error } = await adminClient
       .from('user_survey_responses')
       .select('answers_json, completion_pct, current_step, completed_sections')
-      .eq('user_id', user.id)
+      .eq('partnership_id', partnershipId)
       .maybeSingle()
 
     if (error && error.code !== 'PGRST116') {
@@ -61,39 +106,14 @@ export async function GET(request: NextRequest) {
 
     // Return survey data or empty survey
     if (!data) {
-      console.log('[API /survey/load] No existing data found - creating empty survey for user:', user.id)
-
-      // Create initial empty survey response
-      const { data: newData, error: insertError } = await adminClient
-        .from('user_survey_responses')
-        .insert({
-          user_id: user.id,
-          answers_json: {},
-          completion_pct: 0,
-          current_step: 0
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        console.error('[API /survey/load] Insert error:', insertError)
-        // Return empty data even if insert fails
-        return NextResponse.json({
-          data: {
-            answers_json: {},
-            completion_pct: 0,
-            current_step: 0
-          },
-          error: null
-        })
-      }
-
-      console.log('[API /survey/load] Created empty survey response')
+      console.log('[API /survey/load] No existing data found for partnership:', partnershipId)
+      // Don't create empty record here - let saveUserSurveyData do it
       return NextResponse.json({
         data: {
           answers_json: {},
           completion_pct: 0,
-          current_step: 0
+          current_step: 0,
+          completed_sections: []
         },
         error: null
       })
