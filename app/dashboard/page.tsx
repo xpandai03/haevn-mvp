@@ -13,6 +13,9 @@ import { MatchCardSimple } from '@/components/MatchCardSimple'
 import { MatchModal } from '@/components/MatchModal'
 import { HandshakeNotifications } from '@/components/HandshakeNotifications'
 import { createClient } from '@/lib/supabase/client'
+import PartnershipOverview from '@/components/dashboard/PartnershipOverview'
+import DualSurveyProgress from '@/components/dashboard/DualSurveyProgress'
+import InvitePartnerCard from '@/components/dashboard/InvitePartnerCard'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -147,6 +150,16 @@ export default function DashboardPage() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Partnership Management Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <PartnershipOverview />
+          <DualSurveyProgress />
+        </div>
+
+        <div className="mb-8">
+          <InvitePartnerCard />
         </div>
 
         {/* Stats Summary */}

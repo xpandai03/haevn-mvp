@@ -5,7 +5,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface NudgeItem {
   id: string
-  type: 'handshake_received' | 'handshake_accepted' | 'section_completed'
+  type:
+    | 'handshake_received'
+    | 'handshake_accepted'
+    | 'section_completed'
+    | 'partner_joined'
+    | 'partner_survey_progress'
+    | 'partner_reviewed_survey'
+    | 'invite_sent'
   title: string
   description: string
   created_at: string
@@ -107,26 +114,122 @@ export async function getUserNudges(): Promise<{ data: NudgeItem[], error: strin
       })
     }
 
-    // 3. Get recent survey section completions (last 7 days)
+    // 3. Get recent partnership survey completions (partnership-based, last 7 days)
     const { data: surveyData } = await adminClient
       .from('user_survey_responses')
-      .select('completed_sections, updated_at')
-      .eq('user_id', user.id)
+      .select('completed_sections, updated_at, completion_pct')
+      .eq('partnership_id', partnershipId)
       .gte('updated_at', sevenDaysAgo.toISOString())
       .maybeSingle()
 
     if (surveyData && surveyData.completed_sections) {
       const sections = surveyData.completed_sections as string[]
-      sections.forEach((sectionId: string, index: number) => {
+      if (sections.length > 0) {
         nudges.push({
-          id: `section-${sectionId}`,
+          id: `survey-progress-${partnershipId}`,
           type: 'section_completed',
           title: 'Survey Progress!',
-          description: `You completed the ${sectionId.replace(/-/g, ' ')} section`,
+          description: `Your partnership completed ${sections.length} survey section${sections.length > 1 ? 's' : ''} (${surveyData.completion_pct}%)`,
           created_at: surveyData.updated_at,
           read: false,
           link: '/onboarding/survey',
-          metadata: { section_id: sectionId }
+          metadata: { completion_pct: surveyData.completion_pct }
+        })
+      }
+    }
+
+    // 4. Get recent partner joins (last 30 days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { data: partnerJoins } = await adminClient
+      .from('partnership_members')
+      .select(`
+        user_id,
+        joined_at,
+        role,
+        profiles (
+          full_name,
+          email
+        )
+      `)
+      .eq('partnership_id', partnershipId)
+      .neq('user_id', user.id)
+      .gte('joined_at', thirtyDaysAgo.toISOString())
+      .order('joined_at', { ascending: false })
+
+    if (partnerJoins && partnerJoins.length > 0) {
+      partnerJoins.forEach((member: any) => {
+        const partnerName = member.profiles?.full_name || member.profiles?.email || 'Your partner'
+        nudges.push({
+          id: `partner-joined-${member.user_id}`,
+          type: 'partner_joined',
+          title: 'New Partner Joined!',
+          description: `${partnerName} joined your partnership`,
+          created_at: member.joined_at,
+          read: false,
+          link: '/dashboard',
+          metadata: { user_id: member.user_id }
+        })
+      })
+    }
+
+    // 5. Get recent partner survey reviews (last 30 days)
+    const { data: partnerReviews } = await adminClient
+      .from('partnership_members')
+      .select(`
+        user_id,
+        survey_reviewed,
+        survey_reviewed_at,
+        profiles (
+          full_name,
+          email
+        )
+      `)
+      .eq('partnership_id', partnershipId)
+      .neq('user_id', user.id)
+      .eq('survey_reviewed', true)
+      .not('survey_reviewed_at', 'is', null)
+      .gte('survey_reviewed_at', thirtyDaysAgo.toISOString())
+      .order('survey_reviewed_at', { ascending: false })
+
+    if (partnerReviews && partnerReviews.length > 0) {
+      partnerReviews.forEach((member: any) => {
+        const partnerName = member.profiles?.full_name || member.profiles?.email || 'Your partner'
+        nudges.push({
+          id: `partner-reviewed-${member.user_id}`,
+          type: 'partner_reviewed_survey',
+          title: 'Partner Reviewed Survey',
+          description: `${partnerName} reviewed and approved your partnership survey`,
+          created_at: member.survey_reviewed_at,
+          read: false,
+          link: '/dashboard',
+          metadata: { user_id: member.user_id }
+        })
+      })
+    }
+
+    // 6. Get pending invites sent (last 30 days)
+    const { data: sentInvites } = await adminClient
+      .from('partnership_requests')
+      .select('id, invite_code, to_email, created_at, status')
+      .eq('partnership_id', partnershipId)
+      .eq('from_user_id', user.id)
+      .eq('status', 'pending')
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .order('created_at', { ascending: false })
+
+    if (sentInvites && sentInvites.length > 0) {
+      sentInvites.forEach((invite: any) => {
+        nudges.push({
+          id: `invite-sent-${invite.id}`,
+          type: 'invite_sent',
+          title: 'Invite Pending',
+          description: `Waiting for ${invite.to_email} to accept your partnership invite (Code: ${invite.invite_code})`,
+          created_at: invite.created_at,
+          read: false,
+          link: '/dashboard',
+          metadata: { invite_id: invite.id, invite_code: invite.invite_code }
         })
       })
     }
