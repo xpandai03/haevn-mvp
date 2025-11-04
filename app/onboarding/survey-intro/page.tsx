@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
-import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { useToast } from '@/hooks/use-toast'
 
 export default function SurveyIntroPage() {

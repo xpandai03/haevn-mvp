@@ -49,6 +49,15 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session) {
+      // PHASE 2: Test user short-circuit
+      const testUserEmail = process.env.TEST_USER_EMAIL
+      if (testUserEmail && session.user.email === testUserEmail) {
+        console.log('[TRACE-MW] 🔴 TEST USER SHORT-CIRCUIT ACTIVE')
+        console.log('[TRACE-MW] Bypassing normal onboarding flow for:', session.user.email)
+        console.log('[TRACE-MW] Redirecting to /dashboard')
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
       console.log('[TRACE-MW] ===== ONBOARDING ROUTE CHECK =====')
       console.log('[TRACE-MW] User accessing onboarding:', session.user.email)
       console.log('[TRACE-MW] Route:', pathname)

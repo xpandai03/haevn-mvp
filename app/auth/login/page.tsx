@@ -46,20 +46,41 @@ export default function LoginPage() {
         description: 'Successfully signed in to your account.',
       })
 
-      // Use flow controller to determine correct redirect
-      console.log('[Login] ===== GETTING RESUME PATH =====')
-      console.log('[Login] User ID for flow controller:', signInData.session.user.id)
-      const { getClientOnboardingFlowController } = await import('@/lib/onboarding/flow')
-      const flowController = getClientOnboardingFlowController()
+      // PHASE 3: Use API route instead of client-side getResumeStep()
+      // This prevents 400 errors from direct Supabase queries in browser
+      console.log('[Login] ===== GETTING RESUME PATH FROM API =====')
+      console.log('[Login] User ID:', signInData.session.user.id)
 
-      const resumePath = await flowController.getResumeStep(signInData.session.user.id)
-      console.log('[Login] ===== RESUME PATH DETERMINED =====')
-      console.log('[Login] Resume path returned:', resumePath)
-      console.log('[Login] Redirecting to:', resumePath)
-      console.log('[Login] =====================================')
+      try {
+        // Fetch resume path from server-side API route
+        const response = await fetch('/api/onboarding/resume-step', {
+          method: 'GET',
+          credentials: 'include', // Include cookies for auth
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
 
-      // Use window.location for reliable redirect
-      window.location.href = resumePath
+        if (!response.ok) {
+          console.error('[Login] API route returned error:', response.status)
+          // Fallback to dashboard if API fails
+          window.location.href = '/dashboard'
+          return
+        }
+
+        const data = await response.json()
+        console.log('[Login] ===== RESUME PATH DETERMINED =====')
+        console.log('[Login] Resume path returned:', data.resumePath)
+        console.log('[Login] Redirecting to:', data.resumePath)
+        console.log('[Login] =====================================')
+
+        // Use window.location for reliable redirect
+        window.location.href = data.resumePath
+      } catch (fetchError) {
+        console.error('[Login] Failed to fetch resume path:', fetchError)
+        // Fallback to dashboard
+        window.location.href = '/dashboard'
+      }
     } catch (err: any) {
       console.error('[Login] ❌ Login error:', err)
       console.error('[Login] Error details:', err)

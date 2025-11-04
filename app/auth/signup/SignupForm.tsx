@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { checkCityStatus } from '@/lib/data/cities'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
-import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
 import { Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -87,9 +86,31 @@ export default function SignupForm() {
   const handleContinueToOnboarding = async () => {
     if (!user) return
 
-    const flowController = getClientOnboardingFlowController()
-    const resumePath = await flowController.getResumeStep(user.id)
-    router.push(resumePath)
+    // PHASE 3: Use API route instead of client-side getResumeStep()
+    console.log('[Signup] Fetching resume path from API')
+
+    try {
+      const response = await fetch('/api/onboarding/resume-step', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        console.error('[Signup] API route returned error:', response.status)
+        router.push('/dashboard')
+        return
+      }
+
+      const data = await response.json()
+      console.log('[Signup] Resume path from API:', data.resumePath)
+      router.push(data.resumePath)
+    } catch (error) {
+      console.error('[Signup] Failed to fetch resume path:', error)
+      router.push('/dashboard')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

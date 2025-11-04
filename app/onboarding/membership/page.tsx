@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { getClientOnboardingFlowController } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { useToast } from '@/hooks/use-toast'
 
 const tiers = [
