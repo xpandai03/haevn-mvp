@@ -61,32 +61,44 @@ export async function middleware(request: NextRequest) {
         .maybeSingle()
 
       if (membership?.partnership_id) {
-        const { data: surveyData } = await supabase
-          .from('user_survey_responses')
-          .select('completion_pct')
-          .eq('partnership_id', membership.partnership_id)
-          .maybeSingle()
+        // DEFENSIVE GUARD: Validate partnership_id before querying
+        const partnershipId = membership.partnership_id
+        if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+          console.warn('[TRACE-MW] ⚠️ Invalid partnershipId in onboarding check:', partnershipId)
+          console.log('[TRACE-MW] Allowing access to onboarding to fix data')
+        } else {
+          const { data: surveyData, error: surveyError } = await supabase
+            .from('user_survey_responses')
+            .select('completion_pct')
+            .eq('partnership_id', partnershipId)
+            .maybeSingle()
 
-        const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
+          if (surveyError) {
+            console.error('[TRACE-MW] ❌ Error fetching survey in onboarding check:', surveyError.message)
+          }
 
-        console.log('[TRACE-MW] Onboarding completion check:', {
-          hasPartnership: !!membership,
-          completionPct: surveyData?.completion_pct,
-          reviewed: membership.survey_reviewed,
-          isComplete
-        })
-        console.log('[TRACE-MW] completionPct=%s reviewed=%s isComplete=%s',
-          surveyData?.completion_pct,
-          membership.survey_reviewed,
-          isComplete
-        )
+          const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
 
-        if (isComplete) {
-          // User has completed onboarding, redirect to dashboard
-          console.log('[TRACE-MW] ✅ User completed onboarding, redirecting to dashboard')
-          console.log('[TRACE-MW] Redirect target: /dashboard')
-          console.log('[TRACE-MW] =========================================')
-          return NextResponse.redirect(new URL('/dashboard', request.url))
+          console.log('[TRACE-MW] Onboarding completion check:', {
+            hasPartnership: !!membership,
+            completionPct: surveyData?.completion_pct,
+            reviewed: membership.survey_reviewed,
+            isComplete,
+            error: surveyError?.message
+          })
+          console.log('[TRACE-MW] completionPct=%s reviewed=%s isComplete=%s',
+            surveyData?.completion_pct,
+            membership.survey_reviewed,
+            isComplete
+          )
+
+          if (isComplete) {
+            // User has completed onboarding, redirect to dashboard
+            console.log('[TRACE-MW] ✅ User completed onboarding, redirecting to dashboard')
+            console.log('[TRACE-MW] Redirect target: /dashboard')
+            console.log('[TRACE-MW] =========================================')
+            return NextResponse.redirect(new URL('/dashboard', request.url))
+          }
         }
       }
 
@@ -161,19 +173,37 @@ export async function middleware(request: NextRequest) {
 
     if (!membership) {
       // No partnership - redirect to onboarding
-      console.log('[Middleware] ❌ No partnership found, redirecting to expectations')
-      console.log('[Middleware] =========================================')
+      console.log('[TRACE-MW] ❌ No partnership found, redirecting to expectations')
+      console.log('[TRACE-MW] =========================================')
       return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
     }
+
+    // DEFENSIVE GUARD: Validate partnership_id before querying
+    const partnershipId = membership.partnership_id
+    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+      console.warn('[TRACE-MW] ⚠️ Missing or invalid partnershipId:', partnershipId)
+      console.warn('[TRACE-MW] User has membership but no valid partnership_id')
+      console.log('[TRACE-MW] Redirecting to onboarding to fix data')
+      console.log('[TRACE-MW] =========================================')
+      return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
+    }
+
+    console.log('[TRACE-MW] Valid partnershipId:', partnershipId)
 
     // Check partnership survey completion (NOT user survey)
     const { data: surveyData, error: surveyError } = await supabase
       .from('user_survey_responses')
       .select('completion_pct')
-      .eq('partnership_id', membership.partnership_id)
+      .eq('partnership_id', partnershipId)
       .maybeSingle()
 
-    console.log('[MW] Partnership survey check:', {
+    if (surveyError) {
+      console.error('[TRACE-MW] ❌ Error fetching survey:', surveyError.message)
+      console.error('[TRACE-MW] Code:', surveyError.code)
+      console.log('[TRACE-MW] Treating as incomplete, redirecting to onboarding')
+    }
+
+    console.log('[TRACE-MW] Partnership survey check:', {
       hasSurveyData: !!surveyData,
       completionPct: surveyData?.completion_pct,
       error: surveyError?.message

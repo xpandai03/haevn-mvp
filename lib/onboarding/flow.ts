@@ -248,20 +248,39 @@ export class OnboardingFlowController {
 
       if (!membership) {
         // No partnership - new user, start regular onboarding
-        console.log('[FlowController] No partnership found, starting regular onboarding')
+        console.log('[FLOW] No partnership found, starting regular onboarding')
+        console.log('[FLOW] =========================================')
         return '/onboarding/expectations'
       }
 
+      // DEFENSIVE GUARD: Validate partnership_id before querying
+      const partnershipId = membership.partnership_id
+      if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
+        console.warn('[FLOW] ⚠️ Missing or invalid partnershipId:', partnershipId)
+        console.warn('[FLOW] Treating survey as incomplete, sending to onboarding')
+        console.log('[FLOW] =========================================')
+        return '/onboarding/expectations'
+      }
+
+      console.log('[FLOW] Valid partnershipId:', partnershipId)
+
       // Check partnership survey completion (NOT user survey)
-      const { data: surveyData } = await this.supabase
+      const { data: surveyData, error: surveyError } = await this.supabase
         .from('user_survey_responses')
         .select('completion_pct')
-        .eq('partnership_id', membership.partnership_id)
+        .eq('partnership_id', partnershipId)
         .maybeSingle()
+
+      if (surveyError) {
+        console.error('[FLOW] ❌ Error fetching survey:', surveyError.message)
+        console.error('[FLOW] Code:', surveyError.code)
+        console.log('[FLOW] Treating survey as incomplete')
+      }
 
       console.log('[FLOW] Partnership survey data:', {
         hasSurvey: !!surveyData,
-        completionPct: surveyData?.completion_pct
+        completionPct: surveyData?.completion_pct,
+        error: surveyError?.message
       })
 
       // PRIORITY 1: If survey complete and user has reviewed, go to dashboard
