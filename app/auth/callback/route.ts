@@ -15,43 +15,20 @@ export async function GET(request: Request) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session) {
-        // Check if user has a partnership and onboarding state
-        const { data: membership } = await supabase
-          .from('partnership_members')
-          .select('partnership_id')
-          .eq('user_id', session.user.id)
-          .single()
+        console.log('[Callback] ===== AUTH CALLBACK =====')
+        console.log('[Callback] User:', session.user.email)
+        console.log('[Callback] User ID:', session.user.id)
 
-        if (!membership?.partnership_id) {
-          // No partnership yet, start onboarding
-          return NextResponse.redirect(`${origin}/onboarding/expectations`)
-        }
+        // Use getOnboardingFlowController to determine redirect
+        // This ensures consistency with login page and middleware
+        const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
+        const flowController = getOnboardingFlowController()
+        const resumePath = await flowController.getResumeStep(session.user.id)
 
-        // Check onboarding state
-        const { data: onboardingState } = await supabase
-          .from('onboarding_state')
-          .select('current_step, membership_selected')
-          .eq('partnership_id', membership.partnership_id)
-          .single()
+        console.log('[Callback] getResumeStep returned:', resumePath)
+        console.log('[Callback] =========================================')
 
-        // If no state or incomplete, redirect to appropriate step
-        if (!onboardingState || !onboardingState.membership_selected) {
-          const stepRoutes: Record<number, string> = {
-            2: '/onboarding/expectations',
-            3: '/onboarding/welcome',
-            4: '/onboarding/identity',
-            5: '/onboarding/survey-intro', // Skip verification
-            6: '/onboarding/survey-intro',
-            7: '/onboarding/survey',
-            8: '/onboarding/celebration',
-            9: '/onboarding/membership',
-          }
-
-          const nextRoute = stepRoutes[onboardingState?.current_step || 2] || '/onboarding/expectations'
-          return NextResponse.redirect(`${origin}${nextRoute}`)
-        }
-
-        return NextResponse.redirect(`${origin}/dashboard`)
+        return NextResponse.redirect(`${origin}${resumePath}`)
       }
     }
   }

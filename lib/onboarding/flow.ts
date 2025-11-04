@@ -229,7 +229,8 @@ export class OnboardingFlowController {
 
   async getResumeStep(userId: string): Promise<string> {
     try {
-      console.log('[FlowController] Getting resume step for user:', userId)
+      console.log('[FLOW] ===== GET RESUME STEP =====')
+      console.log('[FLOW] Getting resume step for user:', userId)
 
       // Check if user has a partnership
       const { data: membership } = await this.supabase
@@ -238,8 +239,9 @@ export class OnboardingFlowController {
         .eq('user_id', userId)
         .maybeSingle()
 
-      console.log('[FlowController] Partnership membership:', {
+      console.log('[FLOW] Partnership membership:', {
         hasPartnership: !!membership,
+        partnershipId: membership?.partnership_id,
         role: membership?.role,
         surveyReviewed: membership?.survey_reviewed
       })
@@ -257,12 +259,24 @@ export class OnboardingFlowController {
         .eq('partnership_id', membership.partnership_id)
         .maybeSingle()
 
-      console.log('[FlowController] Partnership survey data:', surveyData)
+      console.log('[FLOW] Partnership survey data:', {
+        hasSurvey: !!surveyData,
+        completionPct: surveyData?.completion_pct
+      })
 
       // PRIORITY 1: If survey complete and user has reviewed, go to dashboard
       // This is the SOURCE OF TRUTH - database state overrides localStorage
-      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
-        console.log('[FlowController] ✅ Survey complete and reviewed, sending to dashboard')
+      const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
+      console.log('[FLOW] DECISION user=%s pct=%s reviewed=%s result=%s',
+        userId,
+        surveyData?.completion_pct,
+        membership.survey_reviewed,
+        isComplete ? '/dashboard' : 'continue checking'
+      )
+
+      if (isComplete) {
+        console.log('[FLOW] ✅ Survey complete and reviewed, sending to dashboard')
+        console.log('[FLOW] =========================================')
         return '/dashboard'
       }
 

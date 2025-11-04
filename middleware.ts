@@ -36,10 +36,58 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith('/api/')
   const isOnboardingRoute = pathname.startsWith('/onboarding/')
 
-  // Skip auth check for public routes, API routes, and onboarding routes
+  // Skip auth check for public routes and API routes
   // API routes will handle their own auth checks
-  // Onboarding routes handle their own auth checks
-  if (isPublicRoute || isApiRoute || isOnboardingRoute) {
+  if (isPublicRoute || isApiRoute) {
+    return response
+  }
+
+  // IMPORTANT: For onboarding routes, check if user has COMPLETED onboarding
+  // If they have, redirect them to dashboard (prevent access to onboarding when done)
+  if (isOnboardingRoute) {
+    // Get session to check completion status
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session) {
+      console.log('[MW] ===== ONBOARDING ROUTE CHECK =====')
+      console.log('[MW] User accessing onboarding:', session.user.email)
+      console.log('[MW] Route:', pathname)
+
+      // Check if user has completed onboarding (partnership + survey + reviewed)
+      const { data: membership } = await supabase
+        .from('partnership_members')
+        .select('partnership_id, survey_reviewed, role')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (membership?.partnership_id) {
+        const { data: surveyData } = await supabase
+          .from('user_survey_responses')
+          .select('completion_pct')
+          .eq('partnership_id', membership.partnership_id)
+          .maybeSingle()
+
+        const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
+
+        console.log('[MW] Onboarding completion check:', {
+          hasPartnership: !!membership,
+          completionPct: surveyData?.completion_pct,
+          reviewed: membership.survey_reviewed,
+          isComplete
+        })
+
+        if (isComplete) {
+          // User has completed onboarding, redirect to dashboard
+          console.log('[MW] ✅ User completed onboarding, redirecting to dashboard')
+          console.log('[MW] =========================================')
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+      }
+
+      console.log('[MW] User still in onboarding, allowing access')
+      console.log('[MW] =========================================')
+    }
+
     return response
   }
 
@@ -84,9 +132,10 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
   if (isProtectedRoute) {
-    console.log('[Middleware] ===== PROTECTED ROUTE CHECK =====')
-    console.log('[Middleware] Route:', pathname)
-    console.log('[Middleware] User ID:', session.user.id)
+    console.log('[MW] ===== PROTECTED ROUTE CHECK =====')
+    console.log('[MW] Route:', pathname)
+    console.log('[MW] User ID:', session.user.id)
+    console.log('[MW] User email:', session.user.email)
 
     // Check if user has a partnership
     const { data: membership, error: membershipError } = await supabase
@@ -95,7 +144,7 @@ export async function middleware(request: NextRequest) {
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    console.log('[Middleware] Partnership membership:', {
+    console.log('[MW] Partnership membership:', {
       hasPartnership: !!membership,
       partnershipId: membership?.partnership_id,
       role: membership?.role,
@@ -117,18 +166,28 @@ export async function middleware(request: NextRequest) {
       .eq('partnership_id', membership.partnership_id)
       .maybeSingle()
 
-    console.log('[Middleware] Partnership survey check:', {
+    console.log('[MW] Partnership survey check:', {
       hasSurveyData: !!surveyData,
       completionPct: surveyData?.completion_pct,
       error: surveyError?.message
     })
 
+    // DATABASE-FIRST PRIORITY: Survey completion AND review are source of truth
+    const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
+    console.log('[MW] user=%s pct=%s reviewed=%s path=%s decision=%s',
+      session.user.email,
+      surveyData?.completion_pct,
+      membership.survey_reviewed,
+      pathname,
+      isComplete ? 'ALLOW' : 'REDIRECT'
+    )
+
     // Require survey completion AND user review before accessing protected routes
-    if (!surveyData || surveyData.completion_pct < 100 || !membership.survey_reviewed) {
-      console.log('[Middleware] ❌ Survey incomplete or not reviewed, redirecting')
-      console.log('[Middleware] Survey complete:', surveyData?.completion_pct === 100)
-      console.log('[Middleware] Survey reviewed:', membership.survey_reviewed)
-      console.log('[Middleware] =========================================')
+    if (!isComplete) {
+      console.log('[MW] ❌ Survey incomplete or not reviewed, redirecting')
+      console.log('[MW] Survey complete:', surveyData?.completion_pct === 100)
+      console.log('[MW] Survey reviewed:', membership.survey_reviewed)
+      console.log('[MW] =========================================')
 
       // Use flow controller to determine correct redirect
       // Import dynamically to avoid circular dependencies
@@ -136,11 +195,12 @@ export async function middleware(request: NextRequest) {
       const flowController = getOnboardingFlowController()
       const resumePath = await flowController.getResumeStep(session.user.id)
 
+      console.log('[MW] getResumeStep returned:', resumePath)
       return NextResponse.redirect(new URL(resumePath, request.url))
     }
 
-    console.log('[Middleware] ✅ All checks passed, allowing access')
-    console.log('[Middleware] =========================================')
+    console.log('[MW] ✅ All checks passed, allowing access to', pathname)
+    console.log('[MW] =========================================')
     // Allow access to protected routes
   }
 
