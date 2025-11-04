@@ -38,21 +38,56 @@ export function AnimatedIllustration({
   }, [])
 
   // Load animation data from CDN
+  // Note: .lottie files are ZIP archives containing JSON, we need to extract
   useEffect(() => {
     const loadAnimation = async () => {
       try {
         setIsLoading(true)
         setError(false)
 
-        const response = await fetch(src)
-        if (!response.ok) {
-          throw new Error('Failed to load animation')
-        }
+        console.log('[AnimatedIllustration] Loading animation from:', src)
 
-        const data = await response.json()
-        setAnimationData(data)
-      } catch (err) {
-        console.error('Error loading Lottie animation:', err)
+        // Check if this is a .lottie file (dotLottie format - ZIP archive)
+        const isDotLottie = src.endsWith('.lottie')
+
+        if (isDotLottie) {
+          // For .lottie files, we need to fetch as blob and extract JSON
+          const response = await fetch(src)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to load animation`)
+          }
+
+          const blob = await response.blob()
+          console.log('[AnimatedIllustration] Fetched .lottie file, size:', blob.size, 'bytes')
+
+          // Use JSZip to extract the animation JSON from the .lottie (ZIP) file
+          const JSZip = (await import('jszip')).default
+          const zip = await JSZip.loadAsync(blob)
+
+          // dotLottie format has animations in animations/ folder
+          const animationFile = zip.file(/animations\/.*\.json$/)[0]
+          if (!animationFile) {
+            throw new Error('No animation JSON found in .lottie file')
+          }
+
+          const jsonString = await animationFile.async('string')
+          const data = JSON.parse(jsonString)
+          console.log('[AnimatedIllustration] ✅ Animation loaded successfully')
+          setAnimationData(data)
+        } else {
+          // Regular JSON file
+          const response = await fetch(src)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to load animation`)
+          }
+
+          const data = await response.json()
+          console.log('[AnimatedIllustration] ✅ JSON animation loaded successfully')
+          setAnimationData(data)
+        }
+      } catch (err: any) {
+        console.error('[AnimatedIllustration] ❌ Error loading animation:', err.message)
+        console.error('[AnimatedIllustration] Full error:', err)
         setError(true)
       } finally {
         setIsLoading(false)
