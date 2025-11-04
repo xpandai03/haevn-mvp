@@ -259,7 +259,14 @@ export class OnboardingFlowController {
 
       console.log('[FlowController] Partnership survey data:', surveyData)
 
-      // If partner (not owner) and hasn't reviewed survey yet
+      // PRIORITY 1: If survey complete and user has reviewed, go to dashboard
+      // This is the SOURCE OF TRUTH - database state overrides localStorage
+      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
+        console.log('[FlowController] ✅ Survey complete and reviewed, sending to dashboard')
+        return '/dashboard'
+      }
+
+      // PRIORITY 2: If partner (not owner) and hasn't reviewed survey yet
       if (membership.role === 'member' && !membership.survey_reviewed) {
         console.log('[FlowController] Partner has not reviewed survey yet')
 
@@ -275,13 +282,7 @@ export class OnboardingFlowController {
         }
       }
 
-      // If survey complete and user has reviewed, go to dashboard
-      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
-        console.log('[FlowController] Survey complete and reviewed, sending to dashboard')
-        return '/dashboard'
-      }
-
-      // If owner or survey not complete, continue normal flow
+      // PRIORITY 3: If owner or survey not complete, continue normal flow
       const state = await this.getOnboardingState(userId)
       console.log('[FlowController] Onboarding state:', state)
 
@@ -289,19 +290,39 @@ export class OnboardingFlowController {
         // No localStorage state found
         console.log('[FlowController] No localStorage state found')
 
-        // Check if user has ANY survey data
-        if (surveyData && surveyData.completion_pct > 0) {
-          // Survey started, resume from there
-          console.log('[FlowController] Survey in progress, resuming at survey')
+        // IMPORTANT: For existing users who completed everything before localStorage tracking
+        // If they have a partnership AND survey data (even if incomplete), they're returning users
+        if (membership && surveyData) {
+          console.log('[FlowController] Existing user without localStorage - checking survey progress')
+
+          if (surveyData.completion_pct > 0 && surveyData.completion_pct < 100) {
+            // Survey in progress, resume from there
+            console.log('[FlowController] Survey in progress, resuming at survey')
+            return '/onboarding/survey'
+          }
+
+          // Survey is 0% or something else is wrong, but they have partnership
+          // This shouldn't happen, but if it does, send to survey
+          console.log('[FlowController] Survey incomplete, sending to survey')
           return '/onboarding/survey'
         }
 
-        // No survey data - start onboarding
+        // No survey data - brand new user, start onboarding
         console.log('[FlowController] No survey data, sending to first onboarding step')
         return '/onboarding/expectations'
       }
 
-      // Find the first incomplete required step
+      // PRIORITY 4: Check localStorage for incomplete steps
+      // BUT: Database state (survey complete + reviewed) takes precedence
+      // If database says they're done, trust it over localStorage
+
+      // Double-check database state one more time before trusting localStorage
+      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
+        console.log('[FlowController] ✅ Database confirms completion, ignoring localStorage - going to dashboard')
+        return '/dashboard'
+      }
+
+      // Find the first incomplete required step from localStorage
       for (const step of ONBOARDING_STEPS) {
         // CRITICAL: Skip signup step (step 1) for authenticated users
         if (step.id === 1) {
@@ -310,13 +331,13 @@ export class OnboardingFlowController {
         }
 
         if (step.required && !state.completedSteps.includes(step.id)) {
-          console.log('[FlowController] Resuming at step:', step.path)
+          console.log('[FlowController] Resuming at incomplete step:', step.path)
           return step.path
         }
       }
 
-      // All required steps complete, go to dashboard
-      console.log('[FlowController] All steps complete, going to dashboard')
+      // All required steps complete in localStorage, go to dashboard
+      console.log('[FlowController] All steps complete in localStorage, going to dashboard')
       return '/dashboard'
     } catch (error) {
       console.error('[FlowController] Error in getResumeStep:', error)
