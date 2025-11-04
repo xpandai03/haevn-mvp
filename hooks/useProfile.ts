@@ -116,8 +116,15 @@ export function useProfile() {
             partnership: partnerships[0].partnerships,
             membership_tier: partnerships[0].partnerships?.membership_tier || 'free'
           } : null)
+          console.log('[CLIENT-PROFILE] Profile with partnership loaded:', {
+            surveyComplete: profileData.survey_complete,
+            hasPartnership: true
+          })
         } else {
           console.log('ℹ️ [useProfile] No partnership found for this user')
+          console.log('[CLIENT-PROFILE] Profile loaded (no partnership):', {
+            surveyComplete: profileData?.survey_complete
+          })
         }
       } catch (err) {
         console.error('❌ [useProfile] Error loading profile:', err)

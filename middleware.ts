@@ -140,11 +140,11 @@ export async function middleware(request: NextRequest) {
     error: error?.message
   })
 
-  // If session check fails but we have cookies, let the page handle it
-  // The page's AuthContext will properly validate and refresh
+  // If session check fails but we have cookies, redirect to login to refresh
+  // Don't allow page to load with stale/invalid cookies
   if (!session && authCookies.length > 0) {
-    console.log('[Middleware] Session failed but cookies present, allowing page to handle auth')
-    return response
+    console.log('[Middleware] Session failed but cookies present, redirecting to login to refresh')
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   // Protected routes that require complete onboarding

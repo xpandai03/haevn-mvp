@@ -54,13 +54,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadMatches() {
-      // Don't redirect here - let the auth validation useEffect handle redirects
-      // Just skip loading if no user (they'll be redirected by the other useEffect)
-      if (!authUser) {
-        console.log('[Dashboard] No user yet, waiting for auth to complete...')
+      // DEFENSIVE: Don't load data until auth fully initialized
+      if (authLoading) {
+        console.log('[CLIENT-DASH] Auth still loading, waiting...')
         return
       }
 
+      // Don't redirect here - let the auth validation useEffect handle redirects
+      // Just skip loading if no user (they'll be redirected by the other useEffect)
+      if (!authUser || !session) {
+        console.log('[CLIENT-DASH] No authenticated user, will be redirected')
+        return
+      }
+
+      console.log('[CLIENT-DASH] Starting data load for user:', authUser.id)
       console.log('[Dashboard] Loading matches for user:', authUser.id)
 
       try {
@@ -83,7 +90,7 @@ export default function DashboardPage() {
     }
 
     loadMatches()
-  }, [authUser])
+  }, [authUser, session, authLoading])
 
   const handleSignOut = async () => {
     await signOut()

@@ -22,16 +22,32 @@ export default function DualSurveyProgress() {
 
   useEffect(() => {
     async function loadSurveyProgress() {
+      console.log('[CLIENT-DUAL] Fetching partnership info')
       const result = await getPartnershipInfo()
-      if (result.success && result.partnership) {
+
+      if (!result.success) {
+        console.warn('[CLIENT-DUAL] Failed to get partnership info:', result.error)
+        setError(result.error || 'Failed to load survey progress')
+        setLoading(false)
+        return
+      }
+
+      if (result.partnership) {
+        console.log('[CLIENT-DUAL] Partnership info loaded:', {
+          completion: result.partnership.survey_completion,
+          reviewed: result.partnership.all_partners_reviewed,
+          memberCount: result.partnership.members.length
+        })
         setSurveyData({
           partnershipCompletion: result.partnership.survey_completion,
           allPartnersReviewed: result.partnership.all_partners_reviewed,
           members: result.partnership.members
         })
       } else {
-        setError(result.error || 'Failed to load survey progress')
+        console.warn('[CLIENT-DUAL] No partnership data in successful response')
+        setError('No partnership found')
       }
+
       setLoading(false)
     }
     loadSurveyProgress()

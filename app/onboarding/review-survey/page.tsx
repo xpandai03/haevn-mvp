@@ -65,13 +65,20 @@ export default function ReviewSurveyPage() {
       console.log('[ReviewSurvey] Partnership ID:', partnershipResult.partnershipId)
 
       // Load survey data
+      console.log('[CLIENT-REVIEW] Fetching partnership survey for:', partnershipResult.partnershipId)
       const surveyResult = await getPartnershipSurvey(partnershipResult.partnershipId)
 
       if (!surveyResult.success || !surveyResult.data) {
+        console.warn('[CLIENT-REVIEW] Failed to load survey:', surveyResult.error)
         setError(surveyResult.error || 'Failed to load survey data')
         setLoading(false)
         return
       }
+
+      console.log('[CLIENT-REVIEW] Survey loaded successfully:', {
+        answerCount: Object.keys(surveyResult.data.answers).length,
+        completionPct: surveyResult.data.completionPct
+      })
 
       console.log('[ReviewSurvey] Survey data loaded:', {
         answerCount: Object.keys(surveyResult.data.answers).length,
