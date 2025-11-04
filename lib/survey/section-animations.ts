@@ -29,7 +29,7 @@ export const sectionAnimations: Record<string, SectionAnimation> = {
   },
 
   // Section 3: Communication & Connection
-  'communication_connection': {
+  'communication_attachment': {
     intro: 'https://lottie.host/7b9ecc44-e20f-4c20-8b27-490debb36f31/Ur5H8pt1Jf.lottie',
     completion: 'https://lottie.host/be2ff992-0a5a-4eeb-aa8f-b38c424e8351/AaEby1kS5i.lottie',
     description: 'Speech bubbles → Communication celebration'
@@ -60,7 +60,7 @@ export const sectionAnimations: Record<string, SectionAnimation> = {
   'personal_expression': {
     intro: 'https://lottie.host/7b9ecc44-e20f-4c20-8b27-490debb36f31/Ur5H8pt1Jf.lottie',
     completion: 'https://lottie.host/c506028e-75b9-43ca-be65-cdb3dc3cb9ad/0JWjH74M3V.lottie',
-    description: 'Speech bubbles (reused) → Privacy celebration (reused)'
+    description: 'Speech bubbles (reused from communication_attachment) → Privacy celebration (reused)'
   },
 
   // Section 8: Personality Insights (reuses section 1 intro, section 2 completion)

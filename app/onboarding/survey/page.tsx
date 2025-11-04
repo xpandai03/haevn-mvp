@@ -86,14 +86,25 @@ export default function SurveyPage() {
   useEffect(() => {
     if (currentSection && currentSection.id !== previousSectionId) {
       console.log('[Survey] New section detected:', currentSection.title)
-      // Only show intro if this is not the first load (previousSectionId is set)
-      // and we're not resuming to a partially completed section
-      if (previousSectionId !== null && !completedSections.includes(currentSection.id)) {
+      console.log('[Survey] Previous section:', previousSectionId)
+      console.log('[Survey] Completed sections:', completedSections)
+
+      // Show intro animation if:
+      // 1. This section is not already completed
+      // 2. AND we're transitioning from a different section (previousSectionId !== null means we've seen at least one section)
+      //    OR this is the very first section (previousSectionId === null) on a fresh start
+      const isNewSection = !completedSections.includes(currentSection.id)
+      const isTransition = previousSectionId !== null && previousSectionId !== currentSection.id
+      const isFirstSection = previousSectionId === null && currentQuestionIndex === 0
+
+      if (isNewSection && (isTransition || isFirstSection)) {
+        console.log('[Survey] ✨ Showing section intro animation')
         setShowSectionIntro(true)
       }
+
       setPreviousSectionId(currentSection.id)
     }
-  }, [currentSection, previousSectionId, completedSections])
+  }, [currentSection, previousSectionId, completedSections, currentQuestionIndex])
 
   // Get section-specific progress
   const questionsInSection = currentSection
