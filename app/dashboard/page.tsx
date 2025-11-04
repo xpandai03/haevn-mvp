@@ -29,21 +29,27 @@ export default function DashboardPage() {
   const [nudgesCount, setNudgesCount] = useState(0)
   const supabase = createClient()
 
+  // Add trace log at component mount
+  useEffect(() => {
+    console.log('[TRACE-DASH] Dashboard component mounted')
+  }, [])
+
   // Validate auth context is ready and user is authenticated
   useEffect(() => {
     if (authLoading) {
-      console.log('[Dashboard] Waiting for auth to initialize...')
+      console.log('[TRACE-DASH] Waiting for auth to initialize...')
       return
     }
 
     if (!authUser || !session) {
-      console.log('[Dashboard] No authenticated user, redirecting to login...')
+      console.log('[TRACE-DASH] No authenticated user, redirecting to login...')
       router.push('/auth/login')
       return
     }
 
-    console.log('[Dashboard] ✅ User authenticated:', authUser.id)
-    console.log('[Dashboard] Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
+    console.log('[TRACE-DASH] Dashboard loaded for', authUser.email)
+    console.log('[TRACE-DASH] ✅ User authenticated:', authUser.id)
+    console.log('[TRACE-DASH] Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
   }, [authUser, session, authLoading, router])
 
   useEffect(() => {

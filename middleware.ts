@@ -49,9 +49,9 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session) {
-      console.log('[MW] ===== ONBOARDING ROUTE CHECK =====')
-      console.log('[MW] User accessing onboarding:', session.user.email)
-      console.log('[MW] Route:', pathname)
+      console.log('[TRACE-MW] ===== ONBOARDING ROUTE CHECK =====')
+      console.log('[TRACE-MW] User accessing onboarding:', session.user.email)
+      console.log('[TRACE-MW] Route:', pathname)
 
       // Check if user has completed onboarding (partnership + survey + reviewed)
       const { data: membership } = await supabase
@@ -69,23 +69,30 @@ export async function middleware(request: NextRequest) {
 
         const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
 
-        console.log('[MW] Onboarding completion check:', {
+        console.log('[TRACE-MW] Onboarding completion check:', {
           hasPartnership: !!membership,
           completionPct: surveyData?.completion_pct,
           reviewed: membership.survey_reviewed,
           isComplete
         })
+        console.log('[TRACE-MW] completionPct=%s reviewed=%s isComplete=%s',
+          surveyData?.completion_pct,
+          membership.survey_reviewed,
+          isComplete
+        )
 
         if (isComplete) {
           // User has completed onboarding, redirect to dashboard
-          console.log('[MW] ✅ User completed onboarding, redirecting to dashboard')
-          console.log('[MW] =========================================')
+          console.log('[TRACE-MW] ✅ User completed onboarding, redirecting to dashboard')
+          console.log('[TRACE-MW] Redirect target: /dashboard')
+          console.log('[TRACE-MW] =========================================')
           return NextResponse.redirect(new URL('/dashboard', request.url))
         }
       }
 
-      console.log('[MW] User still in onboarding, allowing access')
-      console.log('[MW] =========================================')
+      console.log('[TRACE-MW] User still in onboarding, allowing access')
+      console.log('[TRACE-MW] Decision: next() - allow onboarding access')
+      console.log('[TRACE-MW] =========================================')
     }
 
     return response
@@ -132,10 +139,10 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
   if (isProtectedRoute) {
-    console.log('[MW] ===== PROTECTED ROUTE CHECK =====')
-    console.log('[MW] Route:', pathname)
-    console.log('[MW] User ID:', session.user.id)
-    console.log('[MW] User email:', session.user.email)
+    console.log('[TRACE-MW] ===== PROTECTED ROUTE CHECK =====')
+    console.log('[TRACE-MW] Route:', pathname)
+    console.log('[TRACE-MW] User ID:', session.user.id)
+    console.log('[TRACE-MW] User email:', session.user.email)
 
     // Check if user has a partnership
     const { data: membership, error: membershipError } = await supabase
@@ -174,7 +181,7 @@ export async function middleware(request: NextRequest) {
 
     // DATABASE-FIRST PRIORITY: Survey completion AND review are source of truth
     const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
-    console.log('[MW] user=%s pct=%s reviewed=%s path=%s decision=%s',
+    console.log('[TRACE-MW] user=%s pct=%s reviewed=%s path=%s decision=%s',
       session.user.email,
       surveyData?.completion_pct,
       membership.survey_reviewed,
@@ -184,10 +191,10 @@ export async function middleware(request: NextRequest) {
 
     // Require survey completion AND user review before accessing protected routes
     if (!isComplete) {
-      console.log('[MW] ❌ Survey incomplete or not reviewed, redirecting')
-      console.log('[MW] Survey complete:', surveyData?.completion_pct === 100)
-      console.log('[MW] Survey reviewed:', membership.survey_reviewed)
-      console.log('[MW] =========================================')
+      console.log('[TRACE-MW] ❌ Survey incomplete or not reviewed, redirecting')
+      console.log('[TRACE-MW] Survey complete:', surveyData?.completion_pct === 100)
+      console.log('[TRACE-MW] Survey reviewed:', membership.survey_reviewed)
+      console.log('[TRACE-MW] About to call getResumeStep()')
 
       // Use flow controller to determine correct redirect
       // Import dynamically to avoid circular dependencies
@@ -195,12 +202,15 @@ export async function middleware(request: NextRequest) {
       const flowController = getOnboardingFlowController()
       const resumePath = await flowController.getResumeStep(session.user.id)
 
-      console.log('[MW] getResumeStep returned:', resumePath)
+      console.log('[TRACE-MW] getResumeStep returned:', resumePath)
+      console.log('[TRACE-MW] Redirecting to:', resumePath)
+      console.log('[TRACE-MW] =========================================')
       return NextResponse.redirect(new URL(resumePath, request.url))
     }
 
-    console.log('[MW] ✅ All checks passed, allowing access to', pathname)
-    console.log('[MW] =========================================')
+    console.log('[TRACE-MW] ✅ All checks passed, allowing access to', pathname)
+    console.log('[TRACE-MW] Decision: next() - allow protected route')
+    console.log('[TRACE-MW] =========================================')
     // Allow access to protected routes
   }
 

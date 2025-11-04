@@ -15,18 +15,22 @@ export async function GET(request: Request) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session) {
-        console.log('[Callback] ===== AUTH CALLBACK =====')
-        console.log('[Callback] User:', session.user.email)
-        console.log('[Callback] User ID:', session.user.id)
+        console.log('[TRACE-CB] ===== START CALLBACK =====')
+        console.log('[TRACE-CB] Start callback for', session.user.email)
+        console.log('[TRACE-CB] User ID:', session.user.id)
+        console.log('[TRACE-CB] Origin:', origin)
 
         // Use getOnboardingFlowController to determine redirect
         // This ensures consistency with login page and middleware
+        console.log('[TRACE-CB] About to call getResumeStep()')
         const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
         const flowController = getOnboardingFlowController()
         const resumePath = await flowController.getResumeStep(session.user.id)
 
-        console.log('[Callback] getResumeStep returned:', resumePath)
-        console.log('[Callback] =========================================')
+        console.log('[TRACE-CB] getResumeStep resolved to', resumePath)
+        console.log('[TRACE-CB] Building redirect URL:', `${origin}${resumePath}`)
+        console.log('[TRACE-CB] About to redirect...')
+        console.log('[TRACE-CB] ===== END CALLBACK =====')
 
         return NextResponse.redirect(`${origin}${resumePath}`)
       }
