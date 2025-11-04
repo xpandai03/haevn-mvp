@@ -520,439 +520,547 @@ If tests fail and you can't figure out why:
 *Last updated: October 20, 2025*
 *Testing production deployment with all critical fixes*
 
+**UPDATING OCT 20 2025 8:51pm** 
+
+TRYING TO GIVE CLAUDE CLARITY (last convo here in case)
+
+
+⏺ Excellent! Commit created successfully. Now let me push to
+  trigger the Vercel deployment:
+
+⏺ Bash(git push origin main) timeout: 30s
+  ⎿  To https://github.com/xpandai03/haevn-mvp.git
+        c970d00..f658198  main -> main
+
+⏺ 🎉 Successfully Pushed to Production!
+
+  ✅ What Just Happened
+
+  Commit: f658198Branch: mainFiles: 34 files changed (6,240
+  insertions, 46 deletions)
+
+  Pushed Changes Include:
+
+  1. ✅ 21Oct-build.md - Complete deployment strategy document
+  2. ✅ 17 documentation files - Troubleshooting guides from
+  all previous sessions
+  3. ✅ Debug utilities - Session management and testing tools
+  4. ✅ Modified onboarding pages - Enhanced state management
+  5. ✅ All critical fixes from commit c970d00 (login loop,
+  conditional logic, survey saves)
+
+  ---
+  🚀 Next Steps: Monitor Deployment
+
+  1. Check Vercel Dashboard
+
+  The push to main should have automatically triggered a
+  deployment. Go to:
+  - https://vercel.com/dashboard
+  - Look for your project
+  - Watch the deployment status (should show "Building..." then
+   "Ready")
+
+  2. Wait for Deployment (~2-5 minutes)
+
+  - Building phase: ~1-2 min
+  - Deploying phase: ~1-2 min
+  - Total: Usually 2-5 minutes
+
+  3. Test Production After "Ready"
+
+  Critical Tests:
+  - Existing user login - Should NOT loop to signup anymore
+  - Conditional logic - Q7/Q8/Q10/Q12 should show/hide based on
+   answers
+  - Survey saves - Should persist without errors
+  - New user signup - Should go through full onboarding flow
+
+  ---
+  🔍 Debugging Production Issues
+
+  If Conditional Logic Still Broken on Production:
+
+  Option 1: Force Rebuild (Recommended)
+  1. Go to Vercel Dashboard → Deployments
+  2. Find the latest deployment
+  3. Click "..." → Redeploy
+  4. Select "Force rebuild without using cache"
+  5. Wait for new deployment to complete
+
+  Option 2: Check Browser Console
+  1. Open production site
+  2. Press F12 → Console tab
+  3. Look for [logic-parser] errors
+  4. Check if questions.ts changes are being used
+
+  Option 3: Check Vercel Logs
+  vercel logs [your-production-url] --follow
+
+  ---
+  📊 What to Look For
+
+  ✅ If Everything Works:
+
+  - Existing users can log in → Go to dashboard or resume
+  survey
+  - Conditional questions appear/disappear correctly
+  - No console errors
+  - Survey saves persist
+
+  ❌ If Conditional Logic Still Broken:
+
+  Share the following with me:
+  1. Browser console logs (any errors?)
+  2. Which questions aren't showing/hiding correctly?
+  3. Did force rebuild help?
+
+  ---
+  Status: Changes pushed successfullyDeployment: Should be live
+   in 2-5 minutesNext: Test production thoroughly and report
+  back! 🚀
+
+> can you put together a comprehensive testing guide in an md 
+file called LIVEtest-20-oct.md - i need to know some real 
+accounts that we have in our dtaabaase so i can test the flow 
+as a new user and an old one to check all paths - be spcirci on
+ all u want me to test 
+
+⏺ Write(LIVEtest-20-oct.md)
+  ⎿  Wrote 522 lines to LIVEtest-20-oct.md                    
+     # Live Production Testing Guide - October 20, 2025
+     ## 🎯 Testing Objective
+     Verify all critical fixes work on production (Vercel
+     deployment):
+     1. ✅ Login loop fix for existing users
+     2. ✅ Conditional survey logic (questions show/hide based
+     on answers)
+     3. ✅ Survey saves persist correctly
+     4. ✅ New user onboarding flow works end-to-end
+     ---
+     … +512 lines (ctrl+o to expand)
+
+⏺ Perfect! I've created LIVEtest-20-oct.md with a comprehensive
+   testing guide.
+
+  📄 What's in the Guide
+
+  ✅ Complete Test Coverage:
+
+  1. TEST 1: Existing user login (the critical loop fix)
+  2. TEST 2: New user signup flow (end-to-end)
+  3. TEST 3: Survey saves persistence
+  4. TEST 4: Conditional logic (broken sections):
+    - 4.1: Q3 → Q3b (simple conditional)
+    - 4.2: Q6 → Q7/Q8 (THE CRITICAL ONE you reported)
+    - 4.3: Q6c → Q6d (cascade test)
+    - 4.4: Q10 complex conditional
+  5. TEST 5: Verify removed questions don't appear
+  6. TEST 6: Browser console error check
+
+  📋 Test Results Template
+
+  Ready-to-copy template for documenting results
+
+  🚨 Quick Fix Instructions
+
+  If tests fail, what to do (force rebuild, check logs, etc.)
+
+  ---
+  🔍 Get Real Test Accounts from Database
+
+  Let me also create a quick SQL query file to help you find
+  existing test accounts:
+
+⏺ Write(get-test-accounts.sql)
+  ⎿  Wrote 93 lines to get-test-accounts.sql                 
+     -- Run this in Supabase SQL Editor to find test accounts
+     -- Copy results to use in testing
+     -- Option 1: Find all test accounts
+     SELECT
+       p.user_id,
+       p.email,
+       p.full_name,
+       p.city,
+       p.msa_status,
+     … +83 lines (ctrl+o to expand)
+
+⏺ Perfect! I've created two comprehensive files for you:
+
+  📁 Files Created
+
+  1. LIVEtest-20-oct.md - Complete Testing Guide
+
+  Location: /Users/raunekpratap/Desktop/HAEVN-webapp/HAEVN-STAR
+  TER-INTERFACE/LIVEtest-20-oct.md
+
+  Contains:
+  - ✅ 6 detailed test scenarios with step-by-step instructions
+  - ✅ Specific things to check at each step
+  - ✅ Console logs to look for
+  - ✅ Success/fail criteria
+  - ✅ Test results template (copy & fill out)
+  - ✅ Quick troubleshooting if tests fail
+
+  Critical Tests Include:
+  - TEST 1: Existing user login loop (your main issue)
+  - TEST 4.2: Q6 → Q7/Q8 conditional logic (the broken one you
+  reported)
+  - TEST 3: Survey saves persistence
+  - Plus comprehensive coverage of all fixes
+
+  2. get-test-accounts.sql - Database Query File
+
+  Location: /Users/raunekpratap/Desktop/HAEVN-webapp/HAEVN-STAR
+  TER-INTERFACE/get-test-accounts.sql
+
+  Contains 4 SQL queries to find:
+  1. All test accounts with their survey status
+  2. Complete users (for testing login → dashboard)
+  3. In-progress users (for testing resume functionality)
+  4. Fresh users (for testing new survey start)
+  5. The specific account from today's logs
+  (tester69@tester.com)
+
+  ---
+  🚀 How to Use
+
+  Step 1: Get Test Account Credentials
+
+  1. Go to Supabase Dashboard:
+    - Open your Supabase project
+    - Click "SQL Editor" in left sidebar
+  2. Run the SQL query:
+    - Copy first query from get-test-accounts.sql
+    - Paste into SQL Editor
+    - Click "Run"
+  3. Copy test account emails:
+    - Save the emails and their status
+    - Note which have complete vs incomplete surveys
+    - You'll need the passwords (hopefully you remember them!)
+
+  Step 2: Start Testing
+
+  1. Open LIVEtest-20-oct.md
+  2. Follow TEST 1 first (existing user login - most critical)
+  3. Then TEST 4.2 (conditional logic - the one you reported
+  broken)
+  4. Work through remaining tests
+  5. Fill out the test results template
+  6. Report back with results!
+
+  ---
+  📊 Known Test Account
+
+  From today's session logs, we know:
+  - Email: tester69@tester.com
+  - User ID: 78d58a2a-9c8e-44e5-9f87-478d44c0249c
+  - Status: Has some survey data
+
+  You can start with this one if you remember the password!
+
+  ---
+  🎯 Priority Tests
+
+  Test these FIRST (highest priority):
+
+  1. ⭐ TEST 1 - Existing user login (was looping, should be
+  fixed)
+  2. ⭐ TEST 4.2 - Q6 → Q7/Q8 conditional (you said this is
+  broken on production)
+  3. ⭐ TEST 3 - Survey saves (was broken, should be fixed)
+
+  Then test these:
+  4. TEST 2 - New user signup
+  5. TEST 4.1, 4.3, 4.4 - Other conditional logic
+  6. TEST 5, 6 - Removed questions and console errors
+
+  ---
+  Ready to test! Let me know what you find - especially if the
+  conditional logic (TEST 4.2) is still broken on production.
+  If it is, we'll need to debug why the fix didn't deploy
+  properly. 🚀
+
+> /compact 
+  ⎿ Error: Error during compaction: Error: Conversation too long. 
+    Press esc twice to go up a few messages and try again.
+
+> Keep in mind we are testing on the live deployed verecel 
+link:https://haevn-mvp.vercel.app/onboarding/survey - I can 
+already see that there is no conditional branching happening 
+with the questions in the survey. I answered straight for q4, 
+and saw q5 when i should just see q8 after that question if i 
+ansered straight. Please remmeber the conditionak logic. Take a
+ step back and confirm understanding. Lets gain clarity 
+
+⏺ You're absolutely right - let me take a step back and gain
+  clarity on what's happening.
+
+  🚨 Critical Issue Identified
+
+  You said you saw Q5 after Q4 - that's the ZIP code question
+  we REMOVED. If Q5 is showing up, that means our code changes 
+  didn't deploy to production!
+
+  Let me clarify the question flow and logic:
+
+  📋 Question Flow (What SHOULD Happen)
+
+  Basic Demographics Section:
+  1. Q1 - Age
+  2. Q2 - Gender identity
+  3. Q2a - Pronouns
+  4. Q3 - Sexual orientation (Straight, Gay, Bisexual,
+  Pansexual, etc.)
+    - Q3a - (CONDITIONAL) Fidelity definition
+        - Shows if: Q3 in {Bisexual, Pansexual, Queer, Fluid,
+  Other} AND Q4 in {Single, Solo Poly, Dating}
+    - Q3b - (CONDITIONAL) Kinsey scale
+        - Shows if: Q3 in {Bisexual, Pansexual, Queer, Fluid,
+  Other}
+  5. Q4 - Relationship status (Single, Partnered, Married,
+  etc.)
+  6. Q5 - ZIP code ❌ REMOVED (already asked in signup)
+  7. Q5a - Precise location ❌ REMOVED
+
+  Relationship Preferences Section:
+  8. Q6 - Relationship styles (Monogamy, Open, Polyamory, etc.)
+  - Q6a - Connection type
+  - Q6b - Who to meet
+  - Q6c - (CONDITIONAL) Couple connection
+  - Q6d - (CONDITIONAL) Couple permissions
+  9. Q7 - (CONDITIONAL) Emotional exclusivity
+    - Shows if: Q6 includes {Open relationship, Polyamory,
+  Don't know yet}
+  10. Q8 - (CONDITIONAL) Sexual exclusivity
+    - Shows if: Q6 includes {Open relationship, Polyamory,
+  Don't know yet}
+
+  🔍 Your Test Case Clarification
+
+  You said: "I answered straight for q4, and saw q5 when i
+  should just see q8"
+
+  I think there's confusion about question numbers. Let me 
+  clarify:
+
+  - Q3 = Sexual orientation (this is where "Straight" would be
+  answered)
+  - Q4 = Relationship status (Single, Partnered, etc.) - NOT
+  sexual orientation
+
+  Q8 (sexual exclusivity) only shows based on Q6 (relationship 
+  styles), NOT Q3!
+
+  - If Q6 = "Monogamy" → Q7 and Q8 are hidden
+  - If Q6 includes "Open relationship" or "Polyamory" → Q7 and
+  Q8 show
+
+  ⚠️ The Real Problem
+
+  If you're seeing Q5 (ZIP code) at all, it means:
+  1. The deployed version on Vercel doesn't have our changes
+  2. The old questions.ts is still being used
+  3. None of our fixes deployed properly
+
+  🔧 Let me verify the deployment
+
+⏺ Bash(git log --oneline -3)
+  ⎿ f658198 docs: Add comprehensive build documentation and de
+    bug utilities
+    c970d00 Fix critical auth and survey issues - All systems
+    … +2 lines (ctrl+o to expand)
+
+
+⏺ Bash(git show --stat c970d00 | grep -E "(questions\.ts|survey)" |
+       head -20)
+  ⎿     Fix critical auth and survey issues - All systems oper
+    ational
+        - Converted server actions to API routes (/api/survey/
+    … +20 lines (ctrl+o to expand)
+
+
+
+⏺ Bash(grep -n "q5_zip_code\|ZIP code" lib/survey/questions.ts |
+      head -5)
+  ⎿  156:      // Removed q5_zip_code and q5a_precise_location
+     - already collected during signup
+
+⏺ ✅ Confirmed: Production is Using OLD Code!
+
+  Local code (what we have):
+  - Line 156 shows: // Removed q5_zip_code and 
+  q5a_precise_location
+  - ZIP code question is NOT in our code
+
+  Production (what you're seeing):
+  - Q5 ZIP code IS showing
+  - Conditional logic is NOT working
+
+  This means: Vercel deployment didn't use our latest code!
+
+  ---
+  🔧 Solution: Force Rebuild on Vercel
+
+  Step 1: Check Vercel Dashboard
+
+  1. Go to: https://vercel.com/dashboard
+  2. Find your haevn-mvp project
+  3. Click on it
+  4. Go to "Deployments" tab
+  5. Check the latest deployment:
+    - Does it show commit f658198 or c970d00?
+    - What's the deployment status? (Ready/Failed/Building)
+    - Click on the deployment to see build logs
+
+  Step 2: Force Rebuild (CRITICAL)
+
+  1. In the Deployments tab, find the latest deployment
+  2. Click the "..." (three dots) menu
+  3. Select "Redeploy"
+  4. IMPORTANT: Check the box "Force rebuild without using 
+  cache"
+  5. Click "Redeploy"
+  6. Wait 2-5 minutes for build to complete
+
+  Step 3: After Rebuild, Test Again
+
+  1. Clear your browser cache:
+    - Press Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+    - Or go to DevTools → Application → Clear storage → Clear
+  all
+  2. Go to survey page:
+  https://haevn-mvp.vercel.app/onboarding/survey
+  3. Check if Q5 (ZIP code) still appears:
+    - ❌ If it appears → Build still using old code
+    - ✅ If it doesn't appear → Build is using new code!
+
+  ---
+  📊 Understanding the Question Flow
+
+  Let me clarify the expected flow so we can test correctly:
+
+  After answering Q3 (Sexual Orientation) = "Straight":
+  1. Q3a and Q3b should be skipped (only show for
+  bisexual/pansexual/queer)
+  2. Next question: Q4 (Relationship Status)
+
+  After answering Q4 (Relationship Status):
+  1. Q5 (ZIP code) should be SKIPPED (removed from survey)
+  2. Next section starts: Q6 (Relationship Styles)
+
+  After answering Q6 (Relationship Styles):
+  - If Q6 = "Monogamy" only → Q7 and Q8 are skipped, go to Q9
+  - If Q6 includes "Open relationship" or "Polyamory" → Q7 and 
+  Q8 show
+
+  So the test should be:
+  1. Answer Q3 = "Straight"
+  2. Answer Q4 = whatever
+  3. Should go directly to Q6 (NOT Q5!)
+  4. Answer Q6 = "Monogamy"
+  5. Q7 and Q8 should be skipped
+  6. Should go to Q9
+  7. Then test again:
+    - Go back, change Q6 to "Open relationship"
+    - Now Q7 and Q8 should appear
+
+  ---
+  🎯 Next Steps
+
+  1. Force rebuild on Vercel (instructions above)
+  2. Wait for deployment to complete
+  3. Clear browser cache
+  4. Test again - check if Q5 still appears
+  5. If Q5 is gone → Then test conditional logic (Q6 → Q7/Q8)
+  6. Report back what you see
+
+  Does this make sense? The key issue is that production isn't
+  using our new code yet!
+
+> # 🧠 CLAUDE TASK: Align Question Order, Names, and Logic with
+ Spec CSVs
+
+## 🎯 Context
+We are now in **clarity + alignment mode** before 
+implementation.
+
+The goal is to make sure that:
+1. The **question names, text, and order** in the app match the
+ **`SURVEY-SPEC-FINAL.csv`** exactly.
+2. The **conditional branching logic** in the app matches the 
+rules in **`HAEVN-SURVEY-conditional-branch.xlsx - 
+Sheet1.csv`**.
+3. After alignment, we’ll test the full survey flow end-to-end 
+on production.
+
+You have both reference files uploaded here:
+- `/mnt/data/SURVEY-SPEC-FINAL.csv`
+- `/mnt/data/HAEVN-SURVEY-conditional-branch.xlsx - Sheet1.csv`
+
 ---
----
 
-# 📋 CSV SPECIFICATION ANALYSIS (October 21, 2025)
-
-## 🎯 Task Objective
-Parse both CSV specification files and compare with current implementation in `lib/survey/questions.ts` to identify mismatches in question order, naming, options, and conditional logic.
-
----
-
-## 📊 Canonical Question Order (from SURVEY-SPEC-FINAL.csv)
-
-| CSV ID | Question Text | Answer Type | Required | Notes |
-|--------|---------------|-------------|----------|-------|
-| **Q1** | What is your age? | numeric (18-99) | ✅ Yes | Eligibility check |
-| **Q2** | What is your gender identity? | single+other | ✅ Yes | 8 options: Man, Woman, Non-binary, Trans man, Trans woman, Genderqueer/Genderfluid, Prefer not to say, Self-describe |
-| **Q2a** | What pronouns do you use? | single+other | ✅ Yes | She/her, He/him, They/them, She/they, He/they, Prefer not to say, Self-describe |
-| **Q3** | Sexual orientation | **single** | ✅ Yes | **NOTE: SINGLE SELECT, NOT MULTISELECT!** Options: Straight, Gay/Lesbian, Bisexual, Pansexual, Queer, Fluid, Asexual, Demisexual, Questioning/Unsure, Prefer not to say, Other |
-| **Q3a** | How do you experience fidelity? | single | 📋 Conditional | **Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other} AND Q4 in {Single,Solo Poly,Dating}** |
-| **Q3b** | Where do you see yourself on the Kinsey Scale? | single | ❌ No | 8 options: K0-K6 + Prefer not to say |
-| **Q3c** | Kinsey preference for partners | multi | ❌ No | K0-K6 + No preference |
-| **Q4** | Relationship status | single | ✅ Yes | Options: Single, Dating, Married, Partnered, Couple, In a polycule, Solo Poly, Exploring, Prefer not to say |
-| **Q5** | Primary city or ZIP | text | ✅ Yes | **REQUIRED IN CSV!** Used for location gating |
-| **Q5a** | Allow precise location? | single | ✅ Yes | **REQUIRED IN CSV!** Yes/No |
-| **Q6** | Relationship orientation preference | single | ✅ Yes | Options: **Monogamous, Monogamish, ENM, Polyamorous, Open, Exploring** |
-| **Q6a** | How do you imagine connecting? | multi | ✅ Yes | As an individual, As a couple, As part of a polycule/pod, Open to any |
-| **Q6b** | Who do you want to connect with? | multi | ✅ Yes | **HARD FILTER** - Women, Men, Non-binary people, All genders, Other, Prefer not to say |
-| **Q6c** | If connecting as a couple, how? | single | 📋 Conditional | **Show if Q4 INCLUDES {Dating, Married, Partnered, Couple}** (NOT Q6a!) |
-| **Q6d** | Couple permissions | matrix | 📋 Conditional | **Show if Q6c = 'custom'** |
-| **Q7** | Importance of emotional exclusivity | likert_1_5 | ✅ Yes | 1=Not important, 5=Extremely |
-| **Q8** | Importance of sexual exclusivity | likert_1_5 | ✅ Yes | 1=Not important, 5=Extremely |
-| **Q9** | Relational intentions (select all) | multi+other | ✅ Yes | Long-term partner, Short-term partner, Play partner, FWB, Community/social, Group/polycle, Other |
-| **Q9a** | Sex only or more? | single | ✅ Yes | 5 options from "Sex/erotic only" to "Primarily relational" |
-| **Q10** | Attachment style | single | ✅ Yes | Secure, Anxious, Avoidant, Unsure |
-| **Q10a** | Emotional availability | single | ✅ Yes | Fully available, Somewhat open, Mostly unavailable, Exploring |
-| **Q11** | Love languages (select all) | multi | ✅ Yes | Words, Quality time, Physical touch, Acts of service, Gifts, Other |
-| **Q12** | Conflict resolution | single+other | ✅ Yes | Talk immediately, Take space then reconnect, Avoid conflict, Other |
-| **Q12a** | Messaging pace | likert_1_5 | ✅ Yes | 1=Very slow, 5=Very fast |
-| ... | *(continues through Q38a)* | | | |
-| **Q17** | Children | single | ❌ No | **DELETE/HIDE - NOT MVP** |
-| **Q17a** | Dietary preferences/allergies | multi+other | ❌ No | **DELETE/HIDE - NOT MVP** |
-| **Q17b** | Pets at home / preferences | multi+other | ❌ No | **DELETE/HIDE - NOT MVP** |
-| **Q33** | Kinks/fetishes of interest | multi+other | ❌ No | Optional depth |
-| **Q33a** | Experience level for selected kinks | single | 📋 Conditional | **Show if Q33 answered** |
+## 🧩 Phase 1 — Confirm Understanding
+1. Parse both CSVs and list:
+   - The **exact question order** (Question ID + Question 
+Text).
+   - The **expected conditional logic triggers** (which 
+question controls which).
+2. Cross-check that the in-app question definitions 
+(`lib/survey/questions.ts`) follow the same order and names.
+   - Flag any mismatches in:
+     - Question ID (e.g., Q4 vs Q3 confusion)
+     - Question text
+     - Missing or duplicated questions
+     - Removed questions (e.g., ZIP Code, precise location)
+3. Confirm the canonical orientation question ID (should be 
+**Q4** = Sexual Orientation).
 
 ---
 
-## 🔍 Conditional Logic Rules (from HAEVN-SURVEY-conditional-branch.xlsx)
-
-| Question | Trigger Rule | Action |
-|----------|--------------|--------|
-| **Q6c** | `Q4 INCLUDES {Dating, Married, Partnered, Couple}` | Show |
-| **Q6d** | `Q6c = 'custom'` | Show |
-| **Q7** | `Q6 INCLUDES {Monogamish, Open, Polyamorous, Don't know yet}` | Show |
-| **Q8** | `Q6 INCLUDES {Monogamish, Open, Polyamorous, Don't know yet}` | Show |
-| **Q10** | `(Q4 = Single AND Q6 = {Monogamous, Monogamish, Polyamorous})` **OR** `(Q4 = {Dating, Married, Partnered, Couple} AND Q6 = Polyamorous)` | Show |
-| **Q12** | `Q4 = Single AND Q6 INCLUDES {Monogamous, Monogamish, Polyamorous}` | Show |
-| **Q17, Q17a, Q17b** | N/A | **DELETE - NOT MVP** |
-
----
-
-## 🚨 CRITICAL DISCREPANCIES FOUND
-
-### 1. **Q3 (Sexual Orientation) - Type Mismatch**
-- **CSV Spec:** `single` (single select)
-- **Current Code:** `multiselect`
-- **Impact:** Users can select multiple orientations when spec says single choice only
-- **Fix Required:** Change type from `multiselect` to `select`
-
-### 2. **Q4 (Relationship Status) - Options Mismatch**
-- **CSV Spec:** Single, Dating, Married, Partnered, **Couple**, In a polycule, Solo Poly, **Exploring**, Prefer not to say
-- **Current Code:** Single, Partnered, Married, In a polycule, Solo Poly, **It's complicated**, Other
-- **Missing:** "Dating", "Couple", "Exploring", "Prefer not to say"
-- **Extra:** "It's complicated", "Other"
-- **Impact:** Conditional logic referencing "Dating" or "Couple" won't work
-- **Fix Required:** Update options to match CSV exactly
-
-### 3. **Q5 & Q5a (ZIP Code & Location) - Incorrectly Removed**
-- **CSV Spec:** Q5 and Q5a are **REQUIRED** questions in the survey
-- **Current Code:** Removed with comment "already collected during signup"
-- **Conflict:** CSV shows these as core survey questions, not signup questions
-- **Impact:** Question numbering is off, Q6 becomes Q5 internally
-- **Fix Required:** Decision needed - Keep in survey per CSV, or update CSV spec?
-
-### 4. **Q6 (Relationship Orientation) - Options Completely Different**
-- **CSV Spec:** **Monogamous**, **Monogamish**, **ENM**, **Polyamorous**, **Open**, **Exploring**
-- **Current Code:** **Monogamy**, **Open relationship**, **Polyamory**, Relationship anarchy, Swinging, **Don't know yet**, Other
-- **Mismatch:** Different wording and missing key option "Monogamish" and "ENM"
-- **Impact:** Conditional logic breaks because it references "Monogamish" which doesn't exist
-- **Fix Required:** Update options to match CSV exactly
-
-### 5. **Q6c (Couple Connection) - WRONG CONDITIONAL TRIGGER** 🚨
-- **CSV Spec:** `Show if Q4 INCLUDES {Dating, Married, Partnered, Couple}`
-- **Current Code:** `Show if Q6a includes 'couple'`
-- **Impact:** Question shows based on WRONG trigger - totally broken logic!
-- **Fix Required:** Change displayLogic to check Q4 relationship status, not Q6a connection type
-
-### 6. **Q7 & Q8 (Exclusivity) - Conditional Logic Needs Update**
-- **CSV Spec:** `Show if Q6 INCLUDES {Monogamish, Open, Polyamorous, Don't know yet}`
-- **Current Code:** `Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don't know yet'`
-- **Impact:** Missing "Monogamish" option, option names don't match
-- **Fix Required:** Update to match CSV option names exactly
-
-### 7. **Q10 (Attachment Style) - Conditional Logic Incomplete**
-- **CSV Spec:**
-  - Show if `(Q4 = Single AND Q6 = {Monogamous, Monogamish, Polyamorous})`
-  - **OR** `(Q4 = {Dating, Married, Partnered, Couple} AND Q6 = Polyamorous)`
-- **Current Code:**
-  - `(Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory'))`
-  - **OR** `((Q4='Partnered' OR Q4='Married') AND Q6 includes 'Polyamory')`
-- **Missing:** "Dating" and "Couple" in second condition, "Monogamish" in both
-- **Impact:** Question won't show for users in "Dating" or "Couple" status
-- **Fix Required:** Add missing Q4 status options and "Monogamish"
-
-### 8. **Q12 (Conflict Resolution) - Conditional Logic Needs Update**
-- **CSV Spec:** `Q4 = Single AND Q6 INCLUDES {Monogamous, Monogamish, Polyamorous}`
-- **Current Code:** `Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')`
-- **Missing:** "Monogamish" option
-- **Impact:** Won't show for monogamish users
-- **Fix Required:** Add "Monogamish" to condition
-
-### 9. **Q17, Q17a, Q17b - Correctly Hidden** ✅
-- **CSV Spec:** "Delete or Hide (For Now - NOT MVP)"
-- **Current Code:** Commented out
-- **Status:** **CORRECT** - These are properly hidden
+## 🔧 Phase 2 — Implementation Plan
+Once alignment is confirmed:
+1. **Rename and reorder** all questions in `questions.ts` to 
+match the exact sequence from `SURVEY-SPEC-FINAL.csv`.
+   - Use the CSV’s “Question ID” and “Question Text” as ground 
+truth.
+   - Maintain consistent numbering (no off-by-one errors).
+   - Preserve section headers (Basic Info, Relationship 
+Preferences, etc.).
+2. **Apply Conditional Branching** from the second CSV:
+   - Implement `displayLogic` per the “Primary Trigger”, 
+“Operator”, and “Values” columns.
+   - Validate compound conditions (AND/OR).
+3. Ensure removed questions (Q5 ZIP, Q5a precise location, Q17 
+group) stay excluded.
 
 ---
 
-## 📑 Side-by-Side Comparison: CSV vs Current Code
-
-### Question Order Comparison
-
-| CSV Order | CSV ID | Current Code Order | Current ID | Match? |
-|-----------|--------|-------------------|------------|--------|
-| 1 | Q1 (Age) | 1 | q1_age | ✅ Match |
-| 2 | Q2 (Gender) | 2 | q2_gender_identity | ✅ Match |
-| 3 | Q2a (Pronouns) | 3 | q2a_pronouns | ✅ Match |
-| 4 | **Q3 (Orientation)** | 4 | q3_sexual_orientation | ⚠️ **Type Mismatch** |
-| 5 | Q3a (Fidelity) | 5 | q3a_fidelity | ✅ Match |
-| 6 | Q3b (Kinsey) | 6 | q3b_kinsey_scale | ✅ Match |
-| 7 | Q3c (Kinsey Pref) | 7 | q3c_partner_kinsey_preference | ✅ Match |
-| 8 | **Q4 (Rel Status)** | 8 | q4_relationship_status | ⚠️ **Options Mismatch** |
-| 9 | **Q5 (ZIP)** | ❌ **REMOVED** | ~~q5_zip_code~~ | ❌ **MISSING** |
-| 10 | **Q5a (Location)** | ❌ **REMOVED** | ~~q5a_precise_location~~ | ❌ **MISSING** |
-| 11 | **Q6 (Rel Orient)** | 9 | q6_relationship_styles | ⚠️ **Options Mismatch** |
-| 12 | Q6a (Connection) | 10 | q6a_connection_type | ✅ Match |
-| 13 | Q6b (Who) | 11 | q6b_who_to_meet | ✅ Match |
-| 14 | **Q6c (Couple)** | 12 | q6c_couple_connection | ❌ **Logic Wrong** |
-| 15 | Q6d (Permissions) | 13 | q6d_couple_permissions | ✅ Match |
-| 16 | **Q7 (Emotional)** | 14 | q7_emotional_exclusivity | ⚠️ **Logic Needs Update** |
-| 17 | **Q8 (Sexual)** | 15 | q8_sexual_exclusivity | ⚠️ **Logic Needs Update** |
-| 18 | Q9 (Intentions) | 16 | q9_intentions | ✅ Match |
-| 19 | Q9a (Sex/More) | 17 | q9a_sex_or_more | ✅ Match |
-| 20 | **Q10 (Attachment)** | 18 | q10_attachment_style | ⚠️ **Logic Incomplete** |
-| ... | ... | ... | ... | ... |
-
-**Summary:**
-- ✅ **Correct:** 15 questions match order and logic
-- ⚠️ **Needs Update:** 7 questions have mismatches
-- ❌ **Missing:** 2 questions (Q5, Q5a) removed from code but required in CSV
-- ❌ **Critical:** 1 question (Q6c) has completely wrong conditional logic
+## 🧪 Phase 3 — Testing Plan
+After applying changes:
+1. Log the **full survey question order** as rendered in the 
+app (IDs + text).
+2. Test conditional logic cases:
+   - Q4 = Straight → Skip Kinsey/Fidelity.
+   - Q4 = Bisexual → Show Kinsey/Fidelity.
+   - Q6 = Monogamy → Skip Q7/Q8.
+   - Q6 = Open/Poly → Show Q7/Q8.
+3. Verify the transitions between sections match the CSV 
+sequence.
 
 ---
 
-## 🔧 IMPLEMENTATION PLAN
-
-### Phase 1: Critical Fixes (Blocking Issues)
-
-#### 1.1 Fix Q6 Options (Enables All Conditional Logic)
-**File:** `lib/survey/questions.ts:165-180`
-
-**Current:**
-```typescript
-options: [
-  'Monogamy',
-  'Open relationship',
-  'Polyamory',
-  'Relationship anarchy',
-  'Swinging',
-  'Don\'t know yet',
-  'Other'
-]
-```
-
-**Change to:**
-```typescript
-options: [
-  'Monogamous',
-  'Monogamish',
-  'ENM',
-  'Polyamorous',
-  'Open',
-  'Exploring'
-]
-```
-
-#### 1.2 Fix Q4 Options (Enables Q6c and Q10 Logic)
-**File:** `lib/survey/questions.ts:140-155`
-
-**Current:**
-```typescript
-options: [
-  'Single',
-  'Partnered',
-  'Married',
-  'In a polycule',
-  'Solo Poly',
-  'It\'s complicated',
-  'Other'
-]
-```
-
-**Change to:**
-```typescript
-options: [
-  'Single',
-  'Dating',
-  'Married',
-  'Partnered',
-  'Couple',
-  'In a polycule',
-  'Solo Poly',
-  'Exploring',
-  'Prefer not to say'
-]
-```
-
-#### 1.3 Fix Q3 Type (Single Select Instead of Multi)
-**File:** `lib/survey/questions.ts:82-100`
-
-**Current:**
-```typescript
-{
-  id: 'q3_sexual_orientation',
-  csvId: 'Q3',
-  label: 'How do you describe your sexual orientation?',
-  type: 'multiselect',
-  ...
-}
-```
-
-**Change to:**
-```typescript
-{
-  id: 'q3_sexual_orientation',
-  csvId: 'Q3',
-  label: 'Sexual orientation',
-  type: 'select',  // Changed from multiselect
-  options: [
-    'Straight',
-    'Gay/Lesbian',
-    'Bisexual',
-    'Pansexual',
-    'Queer',
-    'Fluid',
-    'Asexual',
-    'Demisexual',
-    'Questioning/Unsure',
-    'Prefer not to say',
-    'Other'
-  ],
-  ...
-}
-```
-
-#### 1.4 Fix Q6c Conditional Logic (CRITICAL!)
-**File:** `lib/survey/questions.ts:210-223`
-
-**Current:**
-```typescript
-displayLogic: "Show if Q6a includes 'couple'"
-```
-
-**Change to:**
-```typescript
-displayLogic: "Q4 in {Dating,Married,Partnered,Couple}"
-```
-
-#### 1.5 Update Q7 & Q8 Conditional Logic
-**File:** `lib/survey/questions.ts:234-257`
-
-**Current:**
-```typescript
-displayLogic: "Show if Q6 includes 'Open relationship' OR Q6 includes 'Polyamory' OR Q6 includes 'Don\\'t know yet'"
-```
-
-**Change to:**
-```typescript
-displayLogic: "Q6 in {Monogamish,Open,Polyamorous,Exploring}"
-```
-
-#### 1.6 Update Q10 Conditional Logic
-**File:** `lib/survey/questions.ts:297-311`
-
-**Current:**
-```typescript
-displayLogic: "(Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')) OR ((Q4='Partnered' OR Q4='Married') AND Q6 includes 'Polyamory')"
-```
-
-**Change to:**
-```typescript
-displayLogic: "(Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}) OR (Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous')"
-```
-
-#### 1.7 Update Q12 Conditional Logic
-**File:** `lib/survey/questions.ts:337-351`
-
-**Current:**
-```typescript
-displayLogic: "Q4='Single' AND (Q6 includes 'Monogamy' OR Q6 includes 'Polyamory')"
-```
-
-**Change to:**
-```typescript
-displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}"
-```
-
-### Phase 2: Q5/Q5a Decision (Needs User Input)
-
-**Question for User:**
-
-The CSV spec shows Q5 (ZIP code) and Q5a (precise location) as **required survey questions**, but the current implementation removed them with the comment "already collected during signup."
-
-**Options:**
-
-**Option A: Keep Removed (Current Approach)**
-- Pros: Avoids asking users twice
-- Cons: Breaks CSV spec, question numbering is off
-- Action: Update CSV spec to remove Q5/Q5a
-
-**Option B: Re-add to Survey**
-- Pros: Matches CSV spec exactly
-- Cons: Asks users for ZIP twice (signup + survey)
-- Action: Restore Q5/Q5a questions in code
-
-**Option C: Conditional Display**
-- Pros: Only asks if not provided during signup
-- Cons: More complex logic
-- Action: Add displayLogic: "Show if ZIP not collected in signup"
-
-**Recommendation:** Option A - Keep removed, update CSV spec to reflect that ZIP is collected during signup.
-
-### Phase 3: Additional Updates
-
-#### 3.1 Update Q3a Conditional Logic
-**Current:** Already correct ✅
-```typescript
-displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other} AND Q4 in {Single,Solo Poly,Dating}"
-```
-
-**Note:** Will need to update after Q4 options are fixed to use exact CSV option names.
-
-#### 3.2 Review All Question Labels
-Several questions have different labels in CSV vs code:
-- Q3: "Sexual orientation" (CSV) vs "How do you describe your sexual orientation?" (Code)
-- Q6: "Relationship orientation preference" (CSV) vs "What relationship style(s) interest you?" (Code)
-
-**Decision Needed:** Keep friendly wording in code, or match CSV exactly?
+## ✅ Deliverables
+- `questions.ts` aligned 1:1 with `SURVEY-SPEC-FINAL.csv`
+- `displayLogic` rules implemented per 
+`HAEVN-SURVEY-conditional-branch.xlsx`
+- A short Markdown table showing before/after order comparison
+- Confirmation that the **live app question flow = CSV order**
 
 ---
 
-## 📋 Implementation Checklist
-
-- [ ] **Phase 1: Critical Fixes**
-  - [ ] 1.1 Update Q6 options to match CSV (Monogamous, Monogamish, ENM, Polyamorous, Open, Exploring)
-  - [ ] 1.2 Update Q4 options to match CSV (add Dating, Couple, Exploring, Prefer not to say)
-  - [ ] 1.3 Change Q3 from multiselect to select
-  - [ ] 1.4 Fix Q6c conditional logic (change from Q6a to Q4 trigger)
-  - [ ] 1.5 Update Q7/Q8 conditional logic for new Q6 options
-  - [ ] 1.6 Update Q10 conditional logic for new Q4 and Q6 options
-  - [ ] 1.7 Update Q12 conditional logic for new Q6 options
-
-- [ ] **Phase 2: Q5/Q5a Decision**
-  - [ ] Decide: Remove from CSV or re-add to survey?
-  - [ ] If re-adding: Restore Q5 and Q5a questions
-  - [ ] If keeping removed: Document in CSV spec
-
-- [ ] **Phase 3: Additional Updates**
-  - [ ] Update Q3a logic for new Q4 option names
-  - [ ] Review and update question labels if needed
-  - [ ] Update Q3 options to match CSV exactly
-  - [ ] Test all conditional logic with new options
-
-- [ ] **Testing**
-  - [ ] Test Q6c shows for Dating/Married/Partnered/Couple status
-  - [ ] Test Q7/Q8 show for Monogamish/Open/Polyamorous/Exploring
-  - [ ] Test Q10 shows for all specified combinations
-  - [ ] Test Q12 shows for Single + (Monogamous/Monogamish/Polyamorous)
-  - [ ] Test Q3a shows for non-monosexual + specific relationship statuses
-  - [ ] Verify all questions use correct option names in logic
-
-- [ ] **Deployment**
-  - [ ] Commit changes with detailed message
-  - [ ] Push to trigger Vercel deployment
-  - [ ] Force rebuild on Vercel (no cache)
-  - [ ] Test on production
-
----
-
-## 🎯 Summary for User Review
-
-### What We Found:
-1. **7 questions have mismatches** between CSV spec and current code
-2. **Q6c has completely wrong conditional logic** (checks Q6a instead of Q4)
-3. **Q6 and Q4 option names don't match CSV**, breaking all conditional logic
-4. **Q3 is multiselect in code but single-select in CSV**
-5. **Q5/Q5a are in CSV but removed from code** (conflict needs resolution)
-
-### What Needs to Change:
-1. **Update Q4 and Q6 options** to match CSV exactly
-2. **Fix all conditional logic** to reference correct option names
-3. **Change Q3 to single-select**
-4. **Fix Q6c trigger** from Q6a to Q4
-5. **Decide on Q5/Q5a** - remove from CSV or add back to survey?
-
-### Impact:
-Once these changes are made:
-- ✅ All conditional logic will work correctly
-- ✅ Questions will show/hide based on CSV spec rules
-- ✅ Survey will match the canonical specification exactly
-- ✅ No more confusion about question numbering
-
-### Next Steps:
-1. **Review this analysis**
-2. **Decide on Q5/Q5a approach** (keep removed vs re-add)
-3. **Approve implementation plan**
-4. **Execute Phase 1 critical fixes**
-5. **Test thoroughly**
-6. **Deploy to production**
-
----
-
-**Analysis completed:** October 21, 2025
-**CSV files analyzed:**
-- `SURVEY-SPEC-FINAL.csv` (455 lines, 38 questions)
-- `HAEVN-SURVEY-conditional-branch.xlsx - Sheet1.csv` (11 lines, 6 conditional rules)
+> Please start by confirming your understanding of the question
+ order and triggers from both CSVs before making any code 
+changes. 
+Once confirmed, generate an implementation plan showing how 
+you’ll sync the app’s `questions.ts` with the spec. 

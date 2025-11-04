@@ -7,6 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
 import { SectionCelebrationModal } from '@/components/survey/SectionCelebrationModal'
+import { SectionIntro } from '@/components/survey/SectionIntro'
+import { SectionComplete } from '@/components/survey/SectionComplete'
 import { useAuth } from '@/lib/auth/context'
 import {
   surveySections,
@@ -40,6 +42,9 @@ export default function SurveyPage() {
     number: number
     message: string
   } | null>(null)
+  const [showSectionIntro, setShowSectionIntro] = useState(false)
+  const [showSectionComplete, setShowSectionComplete] = useState(false)
+  const [previousSectionId, setPreviousSectionId] = useState<string | null>(null)
 
   // Get active questions based on skip logic (memoized to prevent unnecessary recalculations)
   const activeQuestions = useMemo(() => {
@@ -76,6 +81,19 @@ export default function SurveyPage() {
 
   // Find current section
   const currentSection = currentQuestion ? getSectionForQuestion(currentQuestion.id) : undefined
+
+  // Detect section change and show intro animation
+  useEffect(() => {
+    if (currentSection && currentSection.id !== previousSectionId) {
+      console.log('[Survey] New section detected:', currentSection.title)
+      // Only show intro if this is not the first load (previousSectionId is set)
+      // and we're not resuming to a partially completed section
+      if (previousSectionId !== null && !completedSections.includes(currentSection.id)) {
+        setShowSectionIntro(true)
+      }
+      setPreviousSectionId(currentSection.id)
+    }
+  }, [currentSection, previousSectionId, completedSections])
 
   // Get section-specific progress
   const questionsInSection = currentSection
@@ -336,14 +354,20 @@ export default function SurveyPage() {
         const newCompletedSections = [...completedSections, currentSection.id]
         setCompletedSections(newCompletedSections)
 
-        // Show celebration modal
-        const sectionIndex = surveySections.findIndex(s => s.id === currentSection.id)
-        setCelebrationSection({
-          title: currentSection.title,
-          number: sectionIndex + 1,
-          message: getSectionCelebrationMessage(sectionIndex)
-        })
-        setShowCelebration(true)
+        // Show completion animation first
+        setShowSectionComplete(true)
+
+        // After animation completes, show celebration modal
+        setTimeout(() => {
+          setShowSectionComplete(false)
+          const sectionIndex = surveySections.findIndex(s => s.id === currentSection.id)
+          setCelebrationSection({
+            title: currentSection.title,
+            number: sectionIndex + 1,
+            message: getSectionCelebrationMessage(sectionIndex)
+          })
+          setShowCelebration(true)
+        }, 1600) // Match SectionComplete duration
 
         // Save with completed sections
         saveAnswers(newAnswers, currentQuestionIndex, newCompletedSections)
@@ -533,8 +557,29 @@ export default function SurveyPage() {
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 lg:p-12">
+          {/* Section Intro Animation */}
+          {showSectionIntro && currentSection && (
+            <SectionIntro
+              sectionId={currentSection.id}
+              sectionTitle={currentSection.title}
+              sectionDescription={currentSection.description}
+              onComplete={() => setShowSectionIntro(false)}
+            />
+          )}
+
+          {/* Section Complete Animation */}
+          {showSectionComplete && currentSection && (
+            <SectionComplete
+              sectionId={currentSection.id}
+              sectionTitle={currentSection.title}
+              sectionNumber={surveySections.findIndex(s => s.id === currentSection.id) + 1}
+              totalSections={surveySections.length}
+              onComplete={() => setShowSectionComplete(false)}
+            />
+          )}
+
           {/* Section title with progress */}
-          {currentSection && (
+          {!showSectionIntro && !showSectionComplete && currentSection && (
             <div className="mb-6">
               <h2 className="text-sm text-haevn-gold mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {currentSection.title}
@@ -550,26 +595,30 @@ export default function SurveyPage() {
             </div>
           )}
 
-          {/* Question */}
-          <QuestionRenderer
-            question={currentQuestion}
-            value={answers[currentQuestion.id]}
-            onChange={handleAnswerChange}
-            onEnterPress={handleNext}
-            canAdvance={isCurrentQuestionAnswered() && currentQuestionIndex < activeQuestions.length - 1}
-          />
+          {/* Question - hidden during animations */}
+          {!showSectionIntro && !showSectionComplete && (
+            <>
+              <QuestionRenderer
+                question={currentQuestion}
+                value={answers[currentQuestion.id]}
+                onChange={handleAnswerChange}
+                onEnterPress={handleNext}
+                canAdvance={isCurrentQuestionAnswered() && currentQuestionIndex < activeQuestions.length - 1}
+              />
 
-          {/* Continue button */}
-          <div className="mt-8">
-            <Button
-              onClick={handleNext}
-              disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
-              className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
-            >
-              {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
-            </Button>
-          </div>
+              {/* Continue button */}
+              <div className="mt-8">
+                <Button
+                  onClick={handleNext}
+                  disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
+                  className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                >
+                  {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Question counter - section specific */}
