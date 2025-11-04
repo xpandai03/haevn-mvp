@@ -399,6 +399,7 @@ export class OnboardingFlowController {
 export async function getServerOnboardingFlowController(): Promise<OnboardingFlowController> {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
+  console.log('[FLOW] Server controller created (server client)')
   return new OnboardingFlowController(supabase)
 }
 

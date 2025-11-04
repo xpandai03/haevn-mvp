@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
-import { getOnboardingFlowController, ONBOARDING_STEPS } from '@/lib/onboarding/flow'
+import { getClientOnboardingFlowController, ONBOARDING_STEPS } from '@/lib/onboarding/flow'
 import { ArrowLeft, Save, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
@@ -31,7 +31,7 @@ export function OnboardingLayout({
   const { toast } = useToast()
   const [progress, setProgress] = useState(0)
   const [saving, setSaving] = useState(false)
-  const flowController = getOnboardingFlowController()
+  const flowController = getClientOnboardingFlowController()
 
   // Calculate progress
   useEffect(() => {

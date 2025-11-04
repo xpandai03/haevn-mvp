@@ -308,8 +308,8 @@ export default function SurveyPage() {
           })
 
           // Mark survey step as complete
-          const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-          const flowController = getOnboardingFlowController()
+          const { getClientOnboardingFlowController } = await import('@/lib/onboarding/flow')
+          const flowController = getClientOnboardingFlowController()
           if (user?.id) {
             await flowController.markStepComplete(user.id, 7)
           }
@@ -411,8 +411,8 @@ export default function SurveyPage() {
       await saveAnswers(answers, currentQuestionIndex, completedSections)
 
       // Mark survey step as complete
-      const { getOnboardingFlowController } = await import('@/lib/onboarding/flow')
-      const flowController = getOnboardingFlowController()
+      const { getClientOnboardingFlowController } = await import('@/lib/onboarding/flow')
+      const flowController = getClientOnboardingFlowController()
       if (user?.id) {
         await flowController.markStepComplete(user.id, 7)
         console.log('[Survey] ✅ Step 7 marked complete')

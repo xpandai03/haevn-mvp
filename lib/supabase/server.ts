@@ -1,12 +1,27 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Regular server client with anon key for server components
-export async function createClient() {
-  const cookieStore = await cookies()
+// Lazy imports to avoid build-time SSR mismatch errors
+// This prevents "You're importing a component that needs next/headers" error
+let createServerClientFn: any
+let cookiesFn: any
 
-  return createServerClient<Database>(
+/**
+ * Creates a Supabase server client with lazy-loaded dependencies
+ * Safe to import in any context (middleware, route handlers, server components)
+ */
+export async function createClient(): Promise<SupabaseClient<Database>> {
+  // Lazy-load dependencies at runtime only when needed
+  if (!createServerClientFn) {
+    const ssr = await import('@supabase/ssr')
+    createServerClientFn = ssr.createServerClient
+    const nh = await import('next/headers')
+    cookiesFn = nh.cookies
+  }
+
+  const cookieStore = await cookiesFn()
+
+  return createServerClientFn<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -35,14 +50,22 @@ export async function createClient() {
   )
 }
 
-// Service role client for admin operations (API routes only!)
-// WARNING: Never expose this to the client or use in Server Components
-export function createServiceRoleClient() {
+/**
+ * Service role client for admin operations (API routes only!)
+ * WARNING: Never expose this to the client or use in Server Components
+ */
+export async function createServiceRoleClient(): Promise<SupabaseClient<Database>> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
-  return createServerClient<Database>(
+  // Lazy-load createServerClient
+  if (!createServerClientFn) {
+    const ssr = await import('@supabase/ssr')
+    createServerClientFn = ssr.createServerClient
+  }
+
+  return createServerClientFn<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
