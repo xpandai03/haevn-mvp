@@ -136,22 +136,18 @@ export async function POST(request: NextRequest) {
         // Add user as owner of the partnership
         console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnership_members insert')
         console.log('[API /survey/save] Adding user as partnership owner')
-        const { error: memberError } = await adminClient
+
+        // ✅ Corrected membership insert - removed invite_status (column doesn't exist)
+        const { error: memberInsertError } = await adminClient
           .from('partnership_members')
           .insert({
             partnership_id: partnershipId,
             user_id: user.id,
-            role: 'owner',
-            invite_status: 'accepted'
+            role: 'owner'           // keep only valid columns
           })
 
-        if (memberError) {
-          console.error('[API /survey/save] Membership insert failed:', {
-            message: memberError.message,
-            code: memberError.code,
-            details: memberError.details,
-            hint: memberError.hint
-          })
+        if (memberInsertError) {
+          console.error('[API /survey/save] Membership insert failed:', memberInsertError)
 
           // Clean up the partnership if member creation failed
           console.log('[API /survey/save] Rolling back partnership creation')
@@ -163,8 +159,8 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: `Partnership membership failed: ${memberError.message}`,
-              code: memberError.code
+              error: `Partnership membership failed: ${memberInsertError.message}`,
+              code: memberInsertError.code
             },
             { status: 500 }
           )
