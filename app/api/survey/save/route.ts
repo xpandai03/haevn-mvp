@@ -58,6 +58,15 @@ export async function POST(request: NextRequest) {
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
+    // DEBUG: Verify service role key is loaded (production verification)
+    const serviceKeyLoaded = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceKeyPrefix = process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 8) || 'NOT_FOUND'
+    console.log('[API /survey/save] 🔑 Service role key status:', {
+      loaded: serviceKeyLoaded,
+      prefix: serviceKeyPrefix,
+      environment: process.env.NODE_ENV
+    })
+
     // Get user's partnership (or create one if doesn't exist)
     console.log('[API /survey/save] Fetching user partnership...')
     const { data: membership, error: membershipError } = await adminClient
