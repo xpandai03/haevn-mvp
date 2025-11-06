@@ -9,7 +9,9 @@ import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
 import { SectionCelebrationModal } from '@/components/survey/SectionCelebrationModal'
 import { SectionIntro } from '@/components/survey/SectionIntro'
 import { SectionComplete } from '@/components/survey/SectionComplete'
+import { ProgressBar } from '@/components/survey/ProgressBar'
 import { useAuth } from '@/lib/auth/context'
+import type { SectionId } from '@/lib/theme/types'
 import {
   surveySections,
   getActiveQuestions,
@@ -522,20 +524,15 @@ export default function SurveyPage() {
       {/* Progress bar */}
       <div className="w-full px-4 pt-6 pb-4">
         <div className="max-w-2xl mx-auto">
-          <div className="w-full h-1 bg-white rounded-full overflow-hidden">
-            <div
-              className="h-full bg-haevn-gold rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${calculateCurrentCompletion()}%` }}
-              role="progressbar"
-              aria-valuenow={calculateCurrentCompletion()}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </div>
-          <div className="flex justify-between items-center mt-2">
-            <p className="text-xs text-haevn-charcoal" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
-              {calculateCurrentCompletion()}% complete
-            </p>
+          <ProgressBar
+            currentStep={currentQuestionIndex + 1}
+            totalSteps={activeQuestions.length}
+            completionPercentage={calculateCurrentCompletion()}
+            sectionName={currentSection?.title || ''}
+            sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
+            showPercentage={true}
+          />
+          <div className="flex justify-end items-center mt-2">
             <AutoSaveIndicator status={saveStatus} error={saveError} />
           </div>
         </div>
