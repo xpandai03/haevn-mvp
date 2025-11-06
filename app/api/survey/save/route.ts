@@ -87,14 +87,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API /survey/save] ✅ Using partnership_id:', partnershipId)
+    console.log('[API /survey/save] User ID:', user.id)
     console.log('[API /survey/save] User role:', membership.role)
 
-    // Get existing answers for this partnership (NOT user)
-    console.log('[API /survey/save] Fetching existing partnership survey...')
+    // Get existing answers for THIS USER (multi-user partnerships = one survey per user)
+    console.log('[API /survey/save] Fetching existing user survey...')
     const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
       .select('answers_json')
-      .eq('partnership_id', partnershipId)
+      .eq('user_id', user.id)
       .maybeSingle()
 
     if (selectError) {
@@ -124,13 +125,13 @@ export async function POST(request: NextRequest) {
     const completionPct = calculateSurveyCompletion(mergedAnswers)
     console.log('[API /survey/save] Completion:', completionPct + '%')
 
-    // Update survey response using admin client with PARTNERSHIP_ID
-    console.log('[API /survey/save] Upserting data for partnership:', partnershipId)
+    // Update survey response for THIS USER (multi-user partnerships = one survey per user)
+    console.log('[API /survey/save] Upserting survey for user:', user.id, 'in partnership:', partnershipId)
 
-    // Prepare update data
+    // Prepare update data - each user has their own survey record
     const updateData = {
-      partnership_id: partnershipId,
-      user_id: null,  // Explicitly null for partnership surveys
+      partnership_id: partnershipId,  // Links to shared partnership
+      user_id: user.id,               // Each user has their own record
       answers_json: mergedAnswers,
       completion_pct: completionPct,
       current_step: currentQuestionIndex,
@@ -138,15 +139,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API /survey/save] Update data prepared:', {
+      user_id: user.id,
       partnership_id: partnershipId,
       answers_count: Object.keys(mergedAnswers).length,
       completion_pct: completionPct
     })
 
-    // Upsert with onConflict on partnership_id
+    // Upsert by user_id (unique per user, NOT per partnership)
     const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
-      .upsert(updateData, { onConflict: 'partnership_id' })
+      .upsert(updateData)
+      .eq('user_id', user.id)
       .select()
 
     if (updateError) {
