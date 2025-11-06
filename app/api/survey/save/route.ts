@@ -102,20 +102,16 @@ export async function POST(request: NextRequest) {
         const { data: newPartnership, error: insertError } = await adminClient
           .from('partnerships')
           .insert({
-            owner_id: user.id,          // fixed column name (not created_by)
-            membership_tier: 'free',    // optional default
-            advocate_mode: false        // optional default
+            owner_id: user.id,        // ✅ correct field
+            city: 'Austin',           // ✅ default to Austin to satisfy NOT NULL constraint
+            membership_tier: 'free',
+            advocate_mode: false
           })
           .select('id')
           .single()
 
         if (insertError) {
-          console.error('[API /survey/save] Partnership insert failed:', {
-            message: insertError.message,
-            code: insertError.code,
-            details: insertError.details,
-            hint: insertError.hint
-          })
+          console.error('[API /survey/save] Partnership insert failed:', insertError)
           return NextResponse.json(
             {
               success: false,
