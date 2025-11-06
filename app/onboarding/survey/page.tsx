@@ -10,7 +10,6 @@ import { SectionCelebrationModal } from '@/components/survey/SectionCelebrationM
 import { SectionIntro } from '@/components/survey/SectionIntro'
 import { SectionComplete } from '@/components/survey/SectionComplete'
 import { ProgressBar } from '@/components/survey/ProgressBar'
-import { GlassButton } from '@/components/ui/GlassButton'
 import { useAuth } from '@/lib/auth/context'
 import type { SectionId } from '@/lib/theme/types'
 import {
@@ -542,23 +541,24 @@ export default function SurveyPage() {
       {/* Back button and Save & Exit */}
       <div className="w-full px-4 mb-6 sm:mb-8">
         <div className="max-w-2xl mx-auto flex justify-between items-center gap-2">
-          <GlassButton
-            variant="back"
+          <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
-            sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
+            className="flex items-center gap-1 sm:gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px]"
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Back</span>
-          </GlassButton>
+            <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+              Back
+            </span>
+          </button>
 
-          <GlassButton
-            variant="save"
+          <button
             onClick={handleSaveAndExit}
-            sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
+            className="text-xs sm:text-sm text-haevn-navy hover:text-haevn-teal transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center px-2"
+            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
           >
             Save & Exit
-          </GlassButton>
+          </button>
         </div>
       </div>
 
@@ -616,15 +616,14 @@ export default function SurveyPage() {
 
               {/* Continue button */}
               <div className="mt-8">
-                <GlassButton
-                  variant="continue"
+                <Button
                   onClick={handleNext}
                   disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
-                  sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
-                  className="w-full px-8 py-6 text-lg rounded-full"
+                  className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
                 >
                   {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
-                </GlassButton>
+                </Button>
               </div>
             </>
           )}
