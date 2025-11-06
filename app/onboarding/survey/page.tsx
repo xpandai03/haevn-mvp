@@ -12,6 +12,7 @@ import { SectionComplete } from '@/components/survey/SectionComplete'
 import { ProgressBar } from '@/components/survey/ProgressBar'
 import { useAuth } from '@/lib/auth/context'
 import type { SectionId } from '@/lib/theme/types'
+import { getSectionGlow } from '@/lib/theme/colors'
 import {
   surveySections,
   getActiveQuestions,
@@ -564,7 +565,14 @@ export default function SurveyPage() {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
-        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 lg:p-12">
+        <div
+          className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 lg:p-12 transition-all duration-300 ease-out"
+          style={{
+            boxShadow: currentSection
+              ? `0 0 24px ${getSectionGlow((currentSection.id as SectionId) || 'basic_demographics')}, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
+              : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }}
+        >
           {/* Section Intro Animation */}
           {showSectionIntro && currentSection && (
             <SectionIntro
