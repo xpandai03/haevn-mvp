@@ -107,55 +107,29 @@ export default function IdentityPage() {
     console.log('[Identity] Submitting:', { profileType, relationshipOrientation })
 
     try {
-      // Check if partnership record exists
-      const { data: partnership, error: selectError } = await supabase
-        .from('partnerships')
-        .select('id')
-        .eq('owner_id', user.id) // Fixed: use owner_id not primary_user_id
-        .maybeSingle() // Use maybeSingle instead of single to handle no results
+      // Call API endpoint to save identity data (uses admin client to bypass RLS)
+      console.log('[Identity] Calling /api/onboarding/save-identity')
+      const response = await fetch('/api/onboarding/save-identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          profileType,
+          relationshipOrientation,
+          city: userCity
+        })
+      })
 
-      if (selectError) {
-        console.error('[Identity] Error checking for partnership:', selectError)
-        throw selectError
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        console.error('[Identity] API error:', data.error)
+        throw new Error(data.error || 'Failed to save identity data')
       }
 
-      if (partnership) {
-        // UPDATE existing partnership
-        console.log('[Identity] Updating existing partnership:', partnership.id)
-        const { error: updateError } = await supabase
-          .from('partnerships')
-          .update({
-            profile_type: profileType,
-            relationship_orientation: [relationshipOrientation], // Array type in database
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', partnership.id)
-
-        if (updateError) {
-          console.error('[Identity] Update error:', updateError)
-          throw updateError
-        }
-
-        console.log('[Identity] ✅ Partnership updated successfully')
-      } else {
-        // INSERT new partnership
-        console.log('[Identity] Creating new partnership record')
-        const { error: insertError } = await supabase
-          .from('partnerships')
-          .insert({
-            owner_id: user.id, // Fixed: use owner_id not primary_user_id
-            city: userCity, // Get from user's profile
-            profile_type: profileType,
-            relationship_orientation: [relationshipOrientation] // Array type in database
-          })
-
-        if (insertError) {
-          console.error('[Identity] Insert error:', insertError)
-          throw insertError
-        }
-
-        console.log('[Identity] ✅ Partnership created successfully')
-      }
+      console.log('[Identity] ✅ Identity saved successfully:', data.action)
+      console.log('[Identity] Partnership ID:', data.partnershipId)
 
       // Mark step as complete
       await flowController.markStepComplete(user.id, 4)
