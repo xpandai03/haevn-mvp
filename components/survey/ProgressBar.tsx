@@ -46,19 +46,19 @@ export function ProgressBar({
   const isGradient = primaryColor.includes('gradient')
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Header with step info and completion percentage */}
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
             Step {currentStep} of {totalSteps}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 mt-0.5">
             {sectionName}
           </p>
         </div>
         {showPercentage && (
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
+          <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
             {completionPercentage}%
           </p>
         )}
@@ -68,7 +68,7 @@ export function ProgressBar({
       <ProgressPrimitive.Root
         value={completionPercentage}
         className={cn(
-          'relative h-2 w-full overflow-hidden rounded-full',
+          'relative h-1 sm:h-2 w-full overflow-hidden rounded-full',
           'bg-gray-200 dark:bg-gray-800',
           'shadow-inner'
         )}

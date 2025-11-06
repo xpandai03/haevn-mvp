@@ -521,9 +521,9 @@ export default function SurveyPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-haevn-lightgray">
+    <div className="min-h-screen flex flex-col bg-haevn-lightgray" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Progress bar */}
-      <div className="w-full px-4 pt-6 pb-4">
+      <div className="w-full px-4 sm:px-6 pt-6 sm:pt-8 pb-3 sm:pb-4">
         <div className="max-w-2xl mx-auto">
           <ProgressBar
             currentStep={currentQuestionIndex + 1}
@@ -533,14 +533,14 @@ export default function SurveyPage() {
             sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
             showPercentage={true}
           />
-          <div className="flex justify-end items-center mt-2">
+          <div className="flex justify-end items-center mt-1.5 sm:mt-2">
             <AutoSaveIndicator status={saveStatus} error={saveError} />
           </div>
         </div>
       </div>
 
       {/* Back button and Save & Exit */}
-      <div className="w-full px-4 mb-6 sm:mb-8">
+      <div className="w-full px-4 sm:px-6 mb-4 sm:mb-6">
         <div className="max-w-2xl mx-auto flex justify-between items-center gap-2">
           <button
             onClick={handlePrevious}
@@ -564,9 +564,9 @@ export default function SurveyPage() {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pb-8 sm:pb-12">
         <div
-          className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 lg:p-12 transition-shadow duration-[350ms] ease-out"
+          className="w-full max-w-[95vw] sm:max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-lg p-4 sm:p-8 lg:p-12 transition-shadow duration-[350ms] ease-out"
           style={{
             boxShadow: currentSection
               ? `0 0 24px ${getSectionGlow((currentSection.id as SectionId) || 'basic_demographics')}, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
@@ -596,16 +596,16 @@ export default function SurveyPage() {
 
           {/* Section title with progress */}
           {!showSectionIntro && !showSectionComplete && currentSection && (
-            <div className="mb-6">
-              <h2 className="text-sm text-haevn-gold mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-xs sm:text-sm text-haevn-gold mb-1.5 sm:mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {currentSection.title}
               </h2>
               {currentSection.description && (
-                <p className="text-sm text-haevn-charcoal/70 mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
+                <p className="text-xs sm:text-sm text-haevn-charcoal/70 mb-1.5 sm:mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
                   {currentSection.description}
                 </p>
               )}
-              <p className="text-xs text-haevn-charcoal/50" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}>
+              <p className="text-[11px] sm:text-xs text-haevn-charcoal/50" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}>
                 Question {questionIndexInSection + 1} of {questionsInSection.length}
               </p>
             </div>
@@ -623,11 +623,11 @@ export default function SurveyPage() {
               />
 
               {/* Continue button */}
-              <div className="mt-8">
+              <div className="mt-6 sm:mt-8">
                 <Button
                   onClick={handleNext}
                   disabled={!isCurrentQuestionAnswered()}
-                  className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-6 sm:px-8 py-5 sm:py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-base sm:text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                   style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
                 >
                   {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
@@ -638,19 +638,19 @@ export default function SurveyPage() {
         </div>
 
         {/* Question counter - section specific */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
+        <div className="mt-4 sm:mt-6 text-center">
+          <p className="text-xs sm:text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
             Question {questionIndexInSection + 1} of {questionsInSection.length}
           </p>
         </div>
       </main>
 
       {/* Step indicators */}
-      <div className="flex items-center justify-center gap-2 pb-6">
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2 pb-4 sm:pb-6">
         {Array.from({ length: Math.min(activeQuestions.length, 10) }).map((_, idx) => (
           <div
             key={idx}
-            className={`w-2 h-2 rounded-full ${
+            className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
               idx <= Math.floor((currentQuestionIndex / activeQuestions.length) * 10)
                 ? 'bg-haevn-gold'
                 : 'bg-white'

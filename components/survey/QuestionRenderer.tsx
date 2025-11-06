@@ -92,15 +92,15 @@ export function QuestionRenderer({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Question Label with Info Icon */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <h3
-          className="text-3xl lg:text-4xl text-haevn-navy leading-tight"
+          className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl text-haevn-navy leading-tight"
           style={{
             fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 700,
-            lineHeight: '100%',
+            lineHeight: '110%',
             letterSpacing: '-0.015em',
             textAlign: 'left'
           }}
@@ -113,7 +113,7 @@ export function QuestionRenderer({
       {/* SELECT - Single choice with cards */}
       {question.type === 'select' && question.options && (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {question.options.map((option) => (
               <button
                 key={option}
@@ -127,7 +127,7 @@ export function QuestionRenderer({
                   }
                 }}
                 className={`
-                  relative p-4 rounded-2xl border-2 text-left transition-all duration-200
+                  relative p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all duration-200 min-h-[44px]
                   ${(showCustomInput && option.includes('Other')) || value === option
                     ? 'border-haevn-teal bg-white shadow-sm'
                     : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
@@ -135,7 +135,7 @@ export function QuestionRenderer({
                 `}
               >
                 <span
-                  className="text-base text-haevn-charcoal"
+                  className="text-sm sm:text-base text-haevn-charcoal"
                   style={{
                     fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500
@@ -144,7 +144,7 @@ export function QuestionRenderer({
                   {option}
                 </span>
                 {((showCustomInput && option.includes('Other')) || value === option) && (
-                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                  <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -169,7 +169,7 @@ export function QuestionRenderer({
                   onEnterPress()
                 }
               }}
-              className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+              className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
@@ -184,7 +184,7 @@ export function QuestionRenderer({
       {question.type === 'multiselect' && question.options && (
         <div className="space-y-3">
           <p
-            className="text-sm text-haevn-charcoal mb-4"
+            className="text-xs sm:text-sm text-haevn-charcoal mb-3 sm:mb-4"
             style={{
               fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
@@ -194,7 +194,7 @@ export function QuestionRenderer({
           >
             Select all that apply
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {question.options.map((option) => {
               const isSelected = value?.includes(option) || false
               return (
@@ -209,7 +209,7 @@ export function QuestionRenderer({
                     }
                   }}
                   className={`
-                    relative p-4 rounded-2xl border-2 text-left transition-all duration-200
+                    relative p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all duration-200 min-h-[44px]
                     ${isSelected
                       ? 'border-haevn-teal bg-white shadow-sm'
                       : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
@@ -217,7 +217,7 @@ export function QuestionRenderer({
                   `}
                 >
                   <span
-                    className="text-base text-haevn-charcoal"
+                    className="text-sm sm:text-base text-haevn-charcoal"
                     style={{
                       fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500
@@ -226,7 +226,7 @@ export function QuestionRenderer({
                     {option}
                   </span>
                   {isSelected && (
-                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
+                    <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
@@ -252,7 +252,7 @@ export function QuestionRenderer({
               onEnterPress()
             }
           }}
-          className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+          className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
           style={{
             fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 300
@@ -275,7 +275,7 @@ export function QuestionRenderer({
           }}
           min={question.min}
           max={question.max}
-          className="w-full max-w-[200px] px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
+          className="w-full max-w-[200px] px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
           style={{
             fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 500
@@ -289,7 +289,7 @@ export function QuestionRenderer({
           placeholder={question.placeholder}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[120px]"
+          className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[120px]"
           style={{
             fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 300,
