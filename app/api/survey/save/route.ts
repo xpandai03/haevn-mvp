@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[API /survey/save] ✅ Guard active before user_survey_responses query:', partnershipId)
+    console.log('[API /survey/save] ✅ Using partnership_id:', partnershipId)
     console.log('[API /survey/save] User role:', membership.role)
 
     // Get existing answers for this partnership (NOT user)
@@ -125,19 +125,28 @@ export async function POST(request: NextRequest) {
     console.log('[API /survey/save] Completion:', completionPct + '%')
 
     // Update survey response using admin client with PARTNERSHIP_ID
-    console.log('[API /survey/save] Upserting data for partnership...')
+    console.log('[API /survey/save] Upserting data for partnership:', partnershipId)
+
+    // Prepare update data
+    const updateData = {
+      partnership_id: partnershipId,
+      user_id: null,  // Explicitly null for partnership surveys
+      answers_json: mergedAnswers,
+      completion_pct: completionPct,
+      current_step: currentQuestionIndex,
+      completed_sections: completedSections
+    }
+
+    console.log('[API /survey/save] Update data prepared:', {
+      partnership_id: partnershipId,
+      answers_count: Object.keys(mergedAnswers).length,
+      completion_pct: completionPct
+    })
+
+    // Upsert with onConflict on partnership_id
     const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
-      .upsert({
-        partnership_id: partnershipId,  // CHANGED: Use partnership_id instead of user_id
-        user_id: null,  // CHANGED: Explicitly null for partnership surveys
-        answers_json: mergedAnswers,
-        completion_pct: completionPct,
-        current_step: currentQuestionIndex,
-        completed_sections: completedSections
-      }, {
-        onConflict: 'partnership_id'  // CHANGED: Conflict resolution on partnership_id
-      })
+      .upsert(updateData, { onConflict: 'partnership_id' })
       .select()
 
     if (updateError) {
