@@ -626,7 +626,7 @@ export default function SurveyPage() {
               <div className="mt-8">
                 <Button
                   onClick={handleNext}
-                  disabled={!isCurrentQuestionAnswered() || currentQuestionIndex === activeQuestions.length - 1}
+                  disabled={!isCurrentQuestionAnswered()}
                   className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
                 >

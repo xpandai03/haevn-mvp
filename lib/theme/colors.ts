@@ -60,10 +60,10 @@ export const SECTION_COLORS: Record<string, SectionColorScheme> = {
     description: 'Teal to Gold Gradient - Creative expression'
   },
   personality_insights: {
-    primary: '#EBE6E3',
+    primary: '#008080', // Teal for visibility (not light gray)
     glow: 'rgba(0, 128, 128, 0.2)',
-    hover: '#F5F0ED',
-    description: 'Light Gray with Teal Outline - Reflective clarity'
+    hover: '#00A0A0',
+    description: 'Teal - Reflective clarity'
   }
 }
 
