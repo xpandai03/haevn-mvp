@@ -98,28 +98,29 @@ export async function POST(request: NextRequest) {
         console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnerships insert')
         console.log('[API /survey/save] Attempting partnership insert with user.id:', user.id)
 
-        const { data: newPartnership, error: createError } = await adminClient
+        // ✅ Corrected partnership insert - using owner_id (schema-aligned)
+        const { data: newPartnership, error: insertError } = await adminClient
           .from('partnerships')
           .insert({
-            created_by: user.id,
-            partnership_type: 'single', // Default to single, can be changed later
-            owner_id: user.id // Explicitly set owner_id for RLS policy compatibility
+            owner_id: user.id,          // fixed column name (not created_by)
+            membership_tier: 'free',    // optional default
+            advocate_mode: false        // optional default
           })
           .select('id')
           .single()
 
-        if (createError) {
+        if (insertError) {
           console.error('[API /survey/save] Partnership insert failed:', {
-            message: createError.message,
-            code: createError.code,
-            details: createError.details,
-            hint: createError.hint
+            message: insertError.message,
+            code: insertError.code,
+            details: insertError.details,
+            hint: insertError.hint
           })
           return NextResponse.json(
             {
               success: false,
-              error: `Partnership creation failed: ${createError.message}`,
-              code: createError.code
+              error: `Partnership creation failed: ${insertError.message}`,
+              code: insertError.code
             },
             { status: 500 }
           )
