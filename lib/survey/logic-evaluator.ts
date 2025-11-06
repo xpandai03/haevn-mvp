@@ -46,6 +46,12 @@ function evaluateSimpleCondition(
   answers: Record<string, any>
 ): boolean {
   const { questionId, operator, values } = condition
+
+  // Special case: __FALSE__ means always hidden
+  if (questionId === '__FALSE__') {
+    return false
+  }
+
   const answer = answers[questionId]
 
   switch (operator) {
@@ -69,6 +75,7 @@ function evaluateSimpleCondition(
 
 /**
  * Evaluate a compound condition (AND/OR)
+ * Now supports recursive evaluation for nested compound conditions
  */
 function evaluateCompoundCondition(
   condition: CompoundCondition,
@@ -78,12 +85,22 @@ function evaluateCompoundCondition(
 
   if (combinator === 'AND') {
     // All conditions must be true
-    return conditions.every(c => evaluateSimpleCondition(c, answers))
+    return conditions.every(c => {
+      if (c.type === 'compound') {
+        return evaluateCompoundCondition(c, answers)
+      }
+      return evaluateSimpleCondition(c, answers)
+    })
   }
 
   if (combinator === 'OR') {
     // At least one condition must be true
-    return conditions.some(c => evaluateSimpleCondition(c, answers))
+    return conditions.some(c => {
+      if (c.type === 'compound') {
+        return evaluateCompoundCondition(c, answers)
+      }
+      return evaluateSimpleCondition(c, answers)
+    })
   }
 
   return false

@@ -34,6 +34,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q1_age',
+        csvId: 'Q1',
         label: 'How old are you?',
         type: 'number',
         placeholder: 'Enter your age',
@@ -44,6 +45,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q2_gender_identity',
+        csvId: 'Q2',
         label: 'How do you describe your gender identity?',
         type: 'select',
         options: [
@@ -62,6 +64,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q2a_pronouns',
+        csvId: 'Q2a',
         label: 'Which pronouns do you want others to use for you?',
         type: 'select',
         options: [
@@ -106,11 +109,12 @@ export const surveySections: SurveySection[] = [
         type: 'textarea',
         placeholder: 'Share your thoughts on commitment...',
         required: false,
-        helperText: 'People define commitment differently (monogamy, openness, etc.). Tell us what it means to you.',
-        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other} AND Q4 in {Single,Solo Poly,Dating}"
+        helperText: 'People define commitment differently (monogamy, openness, etc.). Tell us what it means to you.'
+        // displayLogic removed - always shown per Rick's guidance (branching starts in Relationship Preferences)
       },
       {
         id: 'q3b_kinsey_scale',
+        csvId: 'Q3b',
         label: 'Where do you land on the Kinsey Scale?',
         type: 'select',
         required: false,
@@ -123,8 +127,8 @@ export const surveySections: SurveySection[] = [
           '4 - Predominantly homosexual, but more than incidentally heterosexual',
           '5 - Predominantly homosexual, only incidentally heterosexual',
           '6 - Exclusively homosexual'
-        ],
-        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other}"
+        ]
+        // displayLogic removed - always shown per Master CSV (no conditions in Basic Info)
       },
       {
         id: 'q3c_partner_kinsey_preference',
@@ -142,8 +146,8 @@ export const surveySections: SurveySection[] = [
           '5 - Predominantly homosexual, only incidentally heterosexual',
           '6 - Exclusively homosexual',
           'No preference'
-        ],
-        displayLogic: "Show if Q3 in {Bisexual,Pansexual,Queer,Fluid,Other}"
+        ]
+        // displayLogic removed - always shown per Master CSV (no conditions in Basic Info)
       },
       {
         id: 'q4_relationship_status',
@@ -204,6 +208,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q6b_who_to_meet',
+        csvId: 'Q6b',
         label: 'Who are you hoping to meet?',
         type: 'multiselect',
         options: [
@@ -316,9 +321,8 @@ export const surveySections: SurveySection[] = [
           'Not sure - I\'d like to learn more'
         ],
         required: true,
-        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.'
-        // Note: Complex nested logic removed temporarily - parser doesn't support parentheses
-        // TODO: Enhance parser to support: (Q4='Single' AND Q6 in {...}) OR (Q4 in {...} AND Q6='Polyamorous')
+        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.',
+        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous} OR Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous'"
       },
       {
         id: 'q10a_emotional_availability',
@@ -358,7 +362,7 @@ export const surveySections: SurveySection[] = [
         ],
         required: true,
         helperText: 'Helps others understand your style when things get tense.',
-        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous}"
+        displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous} OR Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous'"
       },
       {
         id: 'q12a_messaging_pace',

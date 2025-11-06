@@ -24,7 +24,7 @@ export interface SimpleCondition {
 export interface CompoundCondition {
   type: 'compound'
   combinator: LogicCombinator
-  conditions: SimpleCondition[]
+  conditions: DisplayCondition[] // Changed to support nested compound conditions
 }
 
 export type DisplayCondition = SimpleCondition | CompoundCondition
@@ -44,17 +44,66 @@ export function parseDisplayLogic(logicString: string): DisplayCondition | null 
     return null
   }
 
-  // Check for compound conditions (AND/OR)
+  // Special case: "false" means always hidden
+  if (cleaned.toLowerCase() === 'false') {
+    return {
+      type: 'simple',
+      questionId: '__FALSE__',
+      operator: 'equals',
+      values: ['false']
+    }
+  }
+
+  // Parse OR first (top-level combinator)
+  // This allows (A AND B) OR (C AND D) to work correctly
+  if (cleaned.includes(' OR ')) {
+    return parseOrCondition(cleaned)
+  }
+
+  // Check for AND conditions
   if (cleaned.includes(' AND ')) {
     return parseCompoundCondition(cleaned, 'AND')
   }
 
-  if (cleaned.includes(' OR ')) {
-    return parseCompoundCondition(cleaned, 'OR')
-  }
-
   // Parse as simple condition
   return parseSimpleCondition(cleaned)
+}
+
+/**
+ * Parse OR condition with potential nested AND clauses
+ * Example: "Q4='Single' AND Q6 in {...} OR Q4 in {...} AND Q6='Polyamorous'"
+ */
+function parseOrCondition(logicString: string): CompoundCondition | null {
+  const orParts = logicString.split(' OR ')
+  const conditions: DisplayCondition[] = []
+
+  for (const orPart of orParts) {
+    const trimmed = orPart.trim()
+
+    // Check if this OR clause contains AND (nested compound)
+    if (trimmed.includes(' AND ')) {
+      const andCondition = parseCompoundCondition(trimmed, 'AND')
+      if (andCondition) {
+        conditions.push(andCondition)
+      }
+    } else {
+      // Simple condition within OR
+      const simpleCondition = parseSimpleCondition(trimmed)
+      if (simpleCondition) {
+        conditions.push(simpleCondition)
+      }
+    }
+  }
+
+  if (conditions.length === 0) {
+    return null
+  }
+
+  return {
+    type: 'compound',
+    combinator: 'OR',
+    conditions
+  }
 }
 
 /**
@@ -66,11 +115,11 @@ function parseCompoundCondition(
 ): CompoundCondition | null {
   const parts = logicString.split(` ${combinator} `)
 
-  const conditions: SimpleCondition[] = []
+  const conditions: DisplayCondition[] = []
 
   for (const part of parts) {
     const condition = parseSimpleCondition(part.trim())
-    if (condition && condition.type === 'simple') {
+    if (condition) {
       conditions.push(condition)
     }
   }
