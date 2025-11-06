@@ -16,28 +16,28 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient()
 
-  // Check server-side session
-  console.log('[API /survey/save] Calling getSession()...')
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  // Check server-side authentication using getUser() instead of getSession()
+  // getUser() validates the JWT with Supabase auth server (more secure for server-side)
+  console.log('[API /survey/save] Calling getUser() for server-side auth validation...')
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  console.log('[API /survey/save] Session result:', {
-    hasSession: !!session,
-    hasUser: !!session?.user,
-    userId: session?.user?.id,
-    expiresAt: session?.expires_at,
-    error: sessionError?.message
+  console.log('[API /survey/save] Auth result:', {
+    hasUser: !!user,
+    userId: user?.id,
+    email: user?.email,
+    error: authError?.message
   })
 
-  // Verify session is valid
-  if (!session || !session.user) {
-    console.error('[API /survey/save] ❌ NO SESSION FOUND')
+  // Verify user is authenticated
+  if (!user || authError) {
+    console.error('[API /survey/save] ❌ AUTHENTICATION FAILED')
+    console.error('[API /survey/save] Error:', authError?.message)
     return NextResponse.json(
-      { success: false, error: 'Not authenticated', code: 'NO_SESSION' },
+      { success: false, error: 'Not authenticated', code: 'AUTH_FAILED' },
       { status: 401 }
     )
   }
 
-  const user = session.user
   console.log('[API /survey/save] ✅ User authenticated:', user.id)
 
   try {
