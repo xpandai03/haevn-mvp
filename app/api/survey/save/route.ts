@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Use admin client to bypass RLS
+    console.log('[API /survey/save] 🔧 Creating admin client with service role...')
     const adminClient = createAdminClient()
+    console.log('[API /survey/save] ✅ Admin client created successfully')
 
     // DEBUG: Verify service role key is loaded (production verification)
     const serviceKeyLoaded = !!process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Get user's partnership (or create one if doesn't exist)
+    console.log('[API /survey/save] 📖 Using adminClient for DB READ: partnership_members lookup')
     console.log('[API /survey/save] Fetching user partnership...')
     const { data: membership, error: membershipError } = await adminClient
       .from('partnership_members')
@@ -92,6 +95,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Create a new partnership using admin client (bypasses RLS)
+        console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnerships insert')
         console.log('[API /survey/save] Attempting partnership insert with user.id:', user.id)
 
         const { data: newPartnership, error: createError } = await adminClient
@@ -133,6 +137,7 @@ export async function POST(request: NextRequest) {
         console.log('[API /survey/save] ✅ Created partnership:', partnershipId)
 
         // Add user as owner of the partnership
+        console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnership_members insert')
         console.log('[API /survey/save] Adding user as partnership owner')
         const { error: memberError } = await adminClient
           .from('partnership_members')
@@ -207,6 +212,7 @@ export async function POST(request: NextRequest) {
     console.log('[API /survey/save] User role:', userRole)
 
     // Get existing answers for THIS USER (multi-user partnerships = one survey per user)
+    console.log('[API /survey/save] 📖 Using adminClient for DB READ: user_survey_responses lookup')
     console.log('[API /survey/save] Fetching existing user survey...')
     const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
@@ -242,6 +248,7 @@ export async function POST(request: NextRequest) {
     console.log('[API /survey/save] Completion:', completionPct + '%')
 
     // Update survey response for THIS USER (multi-user partnerships = one survey per user)
+    console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: user_survey_responses upsert')
     console.log('[API /survey/save] Upserting survey for user:', user.id, 'in partnership:', partnershipId)
 
     // Prepare update data - each user has their own survey record
@@ -281,6 +288,7 @@ export async function POST(request: NextRequest) {
 
     // Auto-mark owner as having reviewed the survey (they created it)
     if (userRole === 'owner') {
+      console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnership_members update (survey_reviewed)')
       console.log('[API /survey/save] Auto-marking owner as reviewed')
       await adminClient
         .from('partnership_members')
@@ -294,6 +302,7 @@ export async function POST(request: NextRequest) {
 
     // If 100% complete, update profile using admin client
     if (completionPct === 100) {
+      console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: profiles update (survey_complete)')
       await adminClient
         .from('profiles')
         .update({ survey_complete: true })
