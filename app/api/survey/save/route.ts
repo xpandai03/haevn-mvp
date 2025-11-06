@@ -82,20 +82,40 @@ export async function POST(request: NextRequest) {
       console.log('[API /survey/save] 🆕 New user detected - creating partnership...')
 
       try {
-        // Create a new partnership
+        // Create a new partnership using admin client (bypasses RLS)
+        console.log('[API /survey/save] Attempting partnership insert with user.id:', user.id)
+
         const { data: newPartnership, error: createError } = await adminClient
           .from('partnerships')
           .insert({
             created_by: user.id,
-            partnership_type: 'single' // Default to single, can be changed later
+            partnership_type: 'single', // Default to single, can be changed later
+            owner_id: user.id // Explicitly set owner_id for RLS policy compatibility
           })
           .select('id')
           .single()
 
-        if (createError || !newPartnership) {
-          console.error('[API /survey/save] Failed to create partnership:', createError)
+        if (createError) {
+          console.error('[API /survey/save] Partnership insert failed:', {
+            message: createError.message,
+            code: createError.code,
+            details: createError.details,
+            hint: createError.hint
+          })
           return NextResponse.json(
-            { success: false, error: 'Failed to create partnership' },
+            {
+              success: false,
+              error: `Partnership creation failed: ${createError.message}`,
+              code: createError.code
+            },
+            { status: 500 }
+          )
+        }
+
+        if (!newPartnership) {
+          console.error('[API /survey/save] Partnership created but no data returned')
+          return NextResponse.json(
+            { success: false, error: 'Partnership creation returned no data' },
             { status: 500 }
           )
         }
@@ -104,6 +124,7 @@ export async function POST(request: NextRequest) {
         console.log('[API /survey/save] ✅ Created partnership:', partnershipId)
 
         // Add user as owner of the partnership
+        console.log('[API /survey/save] Adding user as partnership owner')
         const { error: memberError } = await adminClient
           .from('partnership_members')
           .insert({
@@ -114,25 +135,44 @@ export async function POST(request: NextRequest) {
           })
 
         if (memberError) {
-          console.error('[API /survey/save] Failed to create membership:', memberError)
+          console.error('[API /survey/save] Membership insert failed:', {
+            message: memberError.message,
+            code: memberError.code,
+            details: memberError.details,
+            hint: memberError.hint
+          })
+
           // Clean up the partnership if member creation failed
+          console.log('[API /survey/save] Rolling back partnership creation')
           await adminClient
             .from('partnerships')
             .delete()
             .eq('id', partnershipId)
 
           return NextResponse.json(
-            { success: false, error: 'Failed to create partnership membership' },
+            {
+              success: false,
+              error: `Partnership membership failed: ${memberError.message}`,
+              code: memberError.code
+            },
             { status: 500 }
           )
         }
 
         userRole = 'owner'
         console.log('[API /survey/save] ✅ Added user as owner')
-      } catch (createErr) {
-        console.error('[API /survey/save] Unexpected error creating partnership:', createErr)
+      } catch (createErr: any) {
+        console.error('[API /survey/save] Unexpected error creating partnership:', {
+          message: createErr?.message || String(createErr),
+          stack: createErr?.stack,
+          name: createErr?.name
+        })
         return NextResponse.json(
-          { success: false, error: 'Failed to initialize user partnership' },
+          {
+            success: false,
+            error: `Failed to initialize user partnership: ${createErr?.message || 'Unknown error'}`,
+            code: 'PARTNERSHIP_CREATE_ERROR'
+          },
           { status: 500 }
         )
       }
