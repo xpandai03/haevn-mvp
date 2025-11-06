@@ -24,10 +24,48 @@ function VerificationReturnContent() {
   const [status, setStatus] = useState<VerificationStatus>('checking')
   const [attempts, setAttempts] = useState(0)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [authRehydrated, setAuthRehydrated] = useState(false)
+
+  // Session rehydration effect - runs once on mount
+  useEffect(() => {
+    const rehydrateAuth = async () => {
+      console.log('[Return] Attempting to rehydrate auth session...')
+
+      try {
+        // Try getSession first (from cookies)
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session) {
+          console.log('[Return] ✅ Session found in cookies:', session.user.id)
+          setAuthRehydrated(true)
+          return
+        }
+
+        // If no session, try getUser to validate JWT with auth server
+        console.log('[Return] No session in cookies, trying getUser()...')
+        const { data: { user: authUser }, error } = await supabase.auth.getUser()
+
+        if (authUser && !error) {
+          console.log('[Return] ✅ User rehydrated from JWT:', authUser.id)
+          setAuthRehydrated(true)
+        } else {
+          console.error('[Return] ❌ Auth rehydration failed:', error?.message)
+          // Only redirect to login if both session AND user fetch fail
+          console.log('[Return] Redirecting to login...')
+          router.push('/auth/login')
+        }
+      } catch (error) {
+        console.error('[Return] Error during auth rehydration:', error)
+        router.push('/auth/login')
+      }
+    }
+
+    rehydrateAuth()
+  }, [supabase, router])
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login')
+    // Wait for auth rehydration before proceeding
+    if (!authRehydrated || !user) {
       return
     }
 
@@ -41,7 +79,7 @@ function VerificationReturnContent() {
     } else {
       console.warn('[Return] No session ID found')
     }
-  }, [user, searchParams, router])
+  }, [user, searchParams, authRehydrated])
 
   useEffect(() => {
     if (!user || !sessionId) return

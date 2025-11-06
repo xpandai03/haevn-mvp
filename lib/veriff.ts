@@ -187,12 +187,19 @@ export function verifyVeriffSignature(
   payload: string
 ): boolean {
   try {
+    // Use HMAC-SHA256 as per Veriff's documentation
     const expectedSignature = crypto
-      .createHash('sha256')
-      .update(`${payload}${VERIFF_SIGNATURE_KEY}`)
+      .createHmac('sha256', VERIFF_SIGNATURE_KEY)
+      .update(payload)
       .digest('hex')
 
     const isValid = signature.toLowerCase() === expectedSignature.toLowerCase()
+
+    console.log('[Veriff] Signature verification:', {
+      provided: signature.substring(0, 10) + '...',
+      expected: expectedSignature.substring(0, 10) + '...',
+      isValid
+    })
 
     if (!isValid) {
       console.warn('[Veriff] Signature verification failed')
