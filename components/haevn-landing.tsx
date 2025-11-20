@@ -35,8 +35,8 @@ export default function HaevnLanding() {
 
       {/* Content Container */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Main Content - Logo + Tagline Centered */}
-        <main className="flex-1 flex items-center justify-center px-6 pt-12 pb-6">
+        {/* Main Content - Logo + Tagline at Top */}
+        <main className="flex-1 flex items-start justify-center px-6 pt-12 pb-6">
           <div className="w-full max-w-md flex flex-col items-center text-center space-y-6">
             {/* Logo - Centered */}
             <div className="relative w-[220px] md:w-[280px] h-[55px] md:h-[70px]">
