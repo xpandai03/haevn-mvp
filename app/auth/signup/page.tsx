@@ -1,11 +1,20 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 
-// Redirect to new 3-step signup flow
-export default function SignupPage() {
+// Loading fallback
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+    </div>
+  )
+}
+
+// Redirect component with useSearchParams
+function SignupRedirect() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -19,9 +28,14 @@ export default function SignupPage() {
     router.replace(redirectUrl)
   }, [router, searchParams])
 
+  return <LoadingSpinner />
+}
+
+// Main page wrapped in Suspense boundary
+export default function SignupPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-    </div>
+    <Suspense fallback={<LoadingSpinner />}>
+      <SignupRedirect />
+    </Suspense>
   )
 }
