@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-export default function SignupStep1() {
+function SignupStep1Form() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [firstName, setFirstName] = useState('')
@@ -140,5 +141,23 @@ export default function SignupStep1() {
         </div>
       </footer>
     </div>
+  )
+}
+
+// Loading fallback
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+    </div>
+  )
+}
+
+// Main export wrapped in Suspense
+export default function SignupStep1() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SignupStep1Form />
+    </Suspense>
   )
 }
