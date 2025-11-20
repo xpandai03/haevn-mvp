@@ -135,8 +135,8 @@ export default function IdentityPage() {
       await flowController.markStepComplete(user.id, 4)
       console.log('[Identity] Step 4 marked complete')
 
-      // Navigate to next step
-      router.push('/onboarding/verification')
+      // Navigate to relationship orientation page
+      router.push('/onboarding/relationship-orientation')
     } catch (error) {
       console.error('[Identity] Error saving identity:', error)
       toast({

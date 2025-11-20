@@ -26,8 +26,8 @@ export default function ExpectationsPage() {
 
     try {
       await flowController.markStepComplete(user.id, 2)
-      // Skip the deprecated welcome page, go straight to identity
-      router.push('/onboarding/identity')
+      // Route to new dating intentions page
+      router.push('/onboarding/dating-intentions')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({
