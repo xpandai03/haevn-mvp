@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { HaevnLogo } from '@/components/HaevnLogo'
 
 export default function HaevnLanding() {
   const router = useRouter()
@@ -36,9 +35,17 @@ export default function HaevnLanding() {
 
       {/* Content Container */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header - Logo */}
-        <header className="flex justify-center pt-8 md:pt-12 px-6">
-          <HaevnLogo size="lg" />
+        {/* Header - Logo (Top Left) */}
+        <header className="pt-6 md:pt-8 px-6 md:px-8">
+          <div className="relative w-[200px] md:w-[280px] h-[50px] md:h-[70px]">
+            <Image
+              src="/images/haevn-logo-icon-white.png"
+              alt="HAEVN"
+              fill
+              priority
+              className="object-contain object-left"
+            />
+          </div>
         </header>
 
         {/* Main Content - Centered Tagline */}
