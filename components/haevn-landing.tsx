@@ -35,28 +35,27 @@ export default function HaevnLanding() {
 
       {/* Content Container */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header - Logo (Top Left) */}
-        <header className="pt-6 md:pt-8 px-6 md:px-8">
-          <div className="relative w-[200px] md:w-[280px] h-[50px] md:h-[70px]">
-            <Image
-              src="/images/haevn-logo-icon-white.png"
-              alt="HAEVN"
-              fill
-              priority
-              className="object-contain object-left"
-            />
-          </div>
-        </header>
+        {/* Main Content - Logo + Tagline Centered */}
+        <main className="flex-1 flex items-center justify-center px-6 pt-12 pb-6">
+          <div className="w-full max-w-md flex flex-col items-center text-center space-y-6">
+            {/* Logo - Centered */}
+            <div className="relative w-[220px] md:w-[280px] h-[55px] md:h-[70px]">
+              <Image
+                src="/images/haevn-logo-icon-white.png"
+                alt="HAEVN"
+                fill
+                priority
+                className="object-contain"
+              />
+            </div>
 
-        {/* Main Content - Centered Tagline */}
-        <main className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-3xl">
+            {/* Tagline - Directly under logo */}
             <h1
-              className="text-white text-center"
+              className="text-white"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 400,
-                fontSize: '28px',
+                fontSize: '20px',
                 lineHeight: '130%',
                 letterSpacing: '-0.01em'
               }}
