@@ -29,7 +29,15 @@ export async function middleware(request: NextRequest) {
   )
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/auth/signup', '/auth/login', '/auth/callback']
+  const publicRoutes = [
+    '/',
+    '/auth/signup',
+    '/auth/signup/step-1',
+    '/auth/signup/step-2',
+    '/auth/signup/step-3',
+    '/auth/login',
+    '/auth/callback'
+  ]
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith('/auth/'))
 
   // API routes and onboarding routes - allow through but cookies are set up above
