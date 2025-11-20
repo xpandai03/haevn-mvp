@@ -26,7 +26,8 @@ export default function ExpectationsPage() {
 
     try {
       await flowController.markStepComplete(user.id, 2)
-      router.push('/onboarding/welcome')
+      // Skip the deprecated welcome page, go straight to identity
+      router.push('/onboarding/identity')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({
@@ -36,6 +37,9 @@ export default function ExpectationsPage() {
       })
     }
   }
+
+  // Get user's first name for personalization
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
@@ -53,7 +57,7 @@ export default function ExpectationsPage() {
               textAlign: 'left'
             }}
           >
-            Before we continue
+            Welcome to HAEVN, {firstName}!
           </h1>
           <p
             className="text-haevn-charcoal"
@@ -65,7 +69,7 @@ export default function ExpectationsPage() {
               textAlign: 'left'
             }}
           >
-            Let's set some expectations about what comes next.
+            Before we begin, here's what to expect.
           </p>
         </div>
 
@@ -107,6 +111,39 @@ export default function ExpectationsPage() {
           {/* Info Item 2 */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
+              <Shield className="h-5 w-5 text-haevn-teal" />
+            </div>
+            <div>
+              <h3
+                className="text-haevn-navy mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '18px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                Every step matters
+              </h3>
+              <p
+                className="text-haevn-charcoal"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '16px',
+                  lineHeight: '120%',
+                  textAlign: 'left'
+                }}
+              >
+                HAEVN is an intent-based matching platform. The process takes more time, but that's why it works.
+              </p>
+            </div>
+          </div>
+
+          {/* Info Item 3 */}
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
               <Save className="h-5 w-5 text-haevn-teal" />
             </div>
             <div>
@@ -133,39 +170,6 @@ export default function ExpectationsPage() {
                 }}
               >
                 Your progress saves automatically. Finish at your own pace.
-              </p>
-            </div>
-          </div>
-
-          {/* Info Item 3 */}
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-haevn-teal" />
-            </div>
-            <div>
-              <h3
-                className="text-haevn-navy mb-2"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 500,
-                  fontSize: '18px',
-                  lineHeight: '120%',
-                  textAlign: 'left'
-                }}
-              >
-                Every step matters
-              </h3>
-              <p
-                className="text-haevn-charcoal"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 300,
-                  fontSize: '16px',
-                  lineHeight: '120%',
-                  textAlign: 'left'
-                }}
-              >
-                Completing the process is required for introductions. This is how we keep HAEVN safe and intentional.
               </p>
             </div>
           </div>
