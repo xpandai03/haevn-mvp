@@ -57,8 +57,8 @@ export default function DatingIntentionsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Main content - centered */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md space-y-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+        <div className="w-full max-w-md space-y-6">
           {/* Heading */}
           <div className="space-y-3">
             <h1

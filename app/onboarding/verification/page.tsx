@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { OnboardingLayout, EducationCard } from '@/components/onboarding/OnboardingLayout'
+import { EducationCard } from '@/components/onboarding/OnboardingLayout'
 import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { ShieldCheck, Camera, CreditCard } from 'lucide-react'
@@ -96,16 +95,37 @@ export default function VerificationPage() {
   }
 
   return (
-    <OnboardingLayout currentStep={5}>
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Before we begin your survey...</CardTitle>
-            <CardDescription className="text-base">
-              We need to verify your identity to keep HAEVN safe and authentic for everyone.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+      <div className="w-full max-w-2xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1
+            className="text-haevn-navy mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700,
+              fontSize: '36px',
+              lineHeight: '100%',
+              letterSpacing: '-0.015em'
+            }}
+          >
+            Verify your identity
+          </h1>
+          <p
+            className="text-haevn-charcoal"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 300,
+              fontSize: '18px',
+              lineHeight: '120%'
+            }}
+          >
+            We verify every member to keep HAEVN safe, authentic, and trusted. Your ID is encrypted and never shown to other members.
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="bg-white rounded-3xl p-8 space-y-4">
             <EducationCard
               icon={<ShieldCheck className="h-5 w-5 text-primary" />}
               title="Every member is verified"
@@ -130,45 +150,63 @@ export default function VerificationPage() {
               </AlertDescription>
             </Alert>
 
-            <div className="pt-6 space-y-3">
-              <Button
-                onClick={handleStartVerification}
-                className="w-full bg-haevn-teal hover:opacity-90"
-                size="lg"
-                disabled={isStarting}
-              >
-                {isStarting ? 'Opening Verification...' : 'Start Verification'}
-              </Button>
+          <div className="pt-6 space-y-3">
+            <Button
+              onClick={handleStartVerification}
+              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+              size="lg"
+              disabled={isStarting}
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px'
+              }}
+            >
+              {isStarting ? 'Opening Verification...' : 'Start Verification'}
+            </Button>
 
-              <Button
-                onClick={handleSkip}
-                className="w-full"
-                size="lg"
-                variant="outline"
-              >
-                Skip for Now
-              </Button>
+            <Button
+              onClick={handleSkip}
+              className="w-full rounded-full"
+              size="lg"
+              variant="outline"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 500,
+                fontSize: '18px'
+              }}
+            >
+              Skip for Now
+            </Button>
 
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  onClick={() => setShowDetails(true)}
-                  className="text-sm text-primary hover:underline"
-                >
-                  How verification works
-                </button>
-                <a
-                  href="/onboarding/verification/return"
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  I've completed verification
-                </a>
-              </div>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => setShowDetails(true)}
+                className="text-sm text-haevn-teal hover:underline"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 400
+                }}
+              >
+                How verification works
+              </button>
+              <a
+                href="/onboarding/verification/return"
+                className="text-sm text-haevn-charcoal hover:underline"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300
+                }}
+              >
+                I've completed verification
+              </a>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
-        {/* Verification Details Modal */}
-        <Dialog open={showDetails} onOpenChange={setShowDetails}>
+      {/* Verification Details Modal */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>How Verification Works</DialogTitle>
@@ -196,14 +234,13 @@ export default function VerificationPage() {
                 <p className="text-sm font-semibold">
                   6. Once verified, you'll get a badge and unlock full access to introductions.
                 </p>
-              </div>
-              <Button onClick={() => setShowDetails(false)} className="w-full">
-                Got it
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </OnboardingLayout>
+            <Button onClick={() => setShowDetails(false)} className="w-full">
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { Clock, Save, Shield } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import Image from 'next/image'
 
 export default function ExpectationsPage() {
   const router = useRouter()
@@ -42,10 +43,21 @@ export default function ExpectationsPage() {
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-8 bg-white">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
+          {/* HAEVN Icon */}
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/images/haevn-logo-with-icon.png"
+              alt="HAEVN"
+              width={60}
+              height={60}
+              className="object-contain"
+            />
+          </div>
+
           <h1
             className="text-haevn-navy mb-4"
             style={{
@@ -54,7 +66,7 @@ export default function ExpectationsPage() {
               fontSize: '36px',
               lineHeight: '100%',
               letterSpacing: '-0.015em',
-              textAlign: 'left'
+              textAlign: 'center'
             }}
           >
             Welcome to HAEVN, {firstName}!
@@ -66,7 +78,7 @@ export default function ExpectationsPage() {
               fontWeight: 300,
               fontSize: '18px',
               lineHeight: '120%',
-              textAlign: 'left'
+              textAlign: 'center'
             }}
           >
             Before we begin, here's what to expect.
@@ -74,7 +86,7 @@ export default function ExpectationsPage() {
         </div>
 
         {/* Content Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm space-y-5">
           {/* Info Item 1 */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-teal/10 flex items-center justify-center">

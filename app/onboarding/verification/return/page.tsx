@@ -109,11 +109,6 @@ function VerificationReturnContent() {
 
           // Mark onboarding step as complete
           await flowController.markStepComplete(user.id, 5)
-
-          // Wait 2 seconds then navigate to survey
-          setTimeout(() => {
-            router.push('/onboarding/survey-intro')
-          }, 2000)
         } else if (profile.verification_status === 'declined') {
           // Verification declined
           setStatus('declined')
@@ -149,7 +144,7 @@ function VerificationReturnContent() {
     try {
       // Mark step as complete (even if verification pending)
       await flowController.markStepComplete(user.id, 5)
-      router.push('/onboarding/survey-intro')
+      router.push('/onboarding/expectations')
     } catch (error) {
       console.error('[Return] Error continuing:', error)
       toast({
@@ -186,11 +181,11 @@ function VerificationReturnContent() {
                 <div className="flex justify-center mb-4">
                   <CheckCircle2 className="h-12 w-12 text-green-500" />
                 </div>
-                <CardTitle className="text-2xl text-green-700">
-                  Verification Successful!
+                <CardTitle className="text-2xl text-haevn-navy">
+                  Thanks for verifying, {user?.user_metadata?.full_name?.split(' ')[0] || 'there'}
                 </CardTitle>
-                <CardDescription className="text-base">
-                  Your identity has been verified. Redirecting to survey...
+                <CardDescription className="text-base text-haevn-charcoal">
+                  Next up: Your Profile Builder
                 </CardDescription>
               </>
             )}
@@ -243,6 +238,23 @@ function VerificationReturnContent() {
               <div className="text-center text-sm text-muted-foreground">
                 <p className="mb-2">Checking with Veriff...</p>
                 <p>Attempt {attempts + 1} of 20</p>
+              </div>
+            )}
+
+            {status === 'approved' && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleContinue}
+                  className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+                  size="lg"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 500,
+                    fontSize: '18px'
+                  }}
+                >
+                  Continue
+                </Button>
               </div>
             )}
 

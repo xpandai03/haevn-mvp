@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -90,40 +90,72 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-haevn-lightgray">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8">
-          <h1
-            className="text-haevn-navy mb-3"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 700,
-              fontSize: '32px',
-              lineHeight: '100%',
-              letterSpacing: '-0.015em',
-              textAlign: 'left'
-            }}
-          >
-            Welcome back
-          </h1>
-          <p
-            className="text-haevn-charcoal"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 300,
-              fontSize: '16px',
-              lineHeight: '120%',
-              textAlign: 'left'
-            }}
-          >
-            Sign in to your HAEVN account.
-          </p>
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Hero Background Images */}
+      <div className="absolute inset-0 z-0">
+        {/* Mobile */}
+        <Image
+          src="/images/hero-mobile.png"
+          alt=""
+          fill
+          className="object-cover md:hidden"
+          priority
+        />
+        {/* Desktop */}
+        <Image
+          src="/images/hero-desktop.png"
+          alt=""
+          fill
+          className="hidden md:block object-cover"
+          priority
+        />
+        {/* Dark overlay for better text contrast */}
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Logo at top */}
+        <div className="flex justify-center pt-8 md:pt-12">
+          <Image
+            src="/images/haevn-logo-icon-white.png"
+            alt="HAEVN"
+            width={80}
+            height={80}
+            className="object-contain"
+          />
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Centered Form */}
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg">
+            <div className="text-center mb-6">
+              <h1
+                className="text-haevn-navy mb-2"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '28px',
+                  lineHeight: '100%',
+                  letterSpacing: '-0.015em'
+                }}
+              >
+                Welcome back
+              </h1>
+              <p
+                className="text-haevn-charcoal"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 300,
+                  fontSize: '16px',
+                  lineHeight: '120%'
+                }}
+              >
+                Sign in to your HAEVN account
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <Label
                 htmlFor="email"
@@ -214,7 +246,50 @@ export default function LoginPage() {
               </Link>
             </div>
           </form>
+          </div>
         </div>
+
+        {/* Footer with legal links */}
+        <footer className="pb-6 text-center">
+          <div className="flex justify-center gap-6 text-sm">
+            <a
+              href="https://haevn.co/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/90 hover:text-white transition-colors"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
+            >
+              Terms of Service
+            </a>
+            <a
+              href="https://haevn.co/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/90 hover:text-white transition-colors"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="https://haevn.co/cookies"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/90 hover:text-white transition-colors"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300
+              }}
+            >
+              Cookies Policy
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   )
