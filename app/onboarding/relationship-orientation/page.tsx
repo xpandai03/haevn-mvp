@@ -23,18 +23,37 @@ export default function RelationshipOrientationPage() {
   }, [user, loading, router])
 
   const handleContinue = async () => {
-    if (!selectedOrientation) return
+    if (!user || !selectedOrientation) return
 
     setIsSubmitting(true)
+    console.log('[RelationshipOrientation] Submitting:', { relationshipOrientation: selectedOrientation })
 
     try {
-      // Store in localStorage for now (will be saved with profile data later)
-      localStorage.setItem('haevn_relationship_orientation', selectedOrientation)
+      // Call API endpoint to save relationship orientation
+      console.log('[RelationshipOrientation] Calling /api/onboarding/save-identity')
+      const response = await fetch('/api/onboarding/save-identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          relationshipOrientation: selectedOrientation
+        })
+      })
 
-      // Navigate to next step (survey intro or verification)
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        console.error('[RelationshipOrientation] API error:', data.error)
+        throw new Error(data.error || 'Failed to save relationship orientation')
+      }
+
+      console.log('[RelationshipOrientation] ✅ Saved successfully')
+
+      // Navigate to verification
       router.push('/onboarding/verification')
     } catch (error) {
-      console.error('Error saving orientation:', error)
+      console.error('[RelationshipOrientation] Error saving orientation:', error)
       toast({
         title: 'Error',
         description: 'Failed to save your selection. Please try again.',

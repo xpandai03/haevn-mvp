@@ -10,12 +10,6 @@ import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 
 type ProfileType = 'solo' | 'couple' | 'pod'
-type RelationshipOrientation =
-  | 'monogamous'
-  | 'open'
-  | 'polyamorous'
-  | 'exploring'
-  | 'other'
 
 export default function IdentityPage() {
   const router = useRouter()
@@ -25,15 +19,13 @@ export default function IdentityPage() {
   const supabase = createClient()
 
   const [profileType, setProfileType] = useState<ProfileType | null>(null)
-  const [relationshipOrientation, setRelationshipOrientation] =
-    useState<RelationshipOrientation | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [userCity, setUserCity] = useState<string>('Austin') // Default city
 
   // Debug: log state changes
   useEffect(() => {
-    console.log('State updated:', { profileType, relationshipOrientation })
-  }, [profileType, relationshipOrientation])
+    console.log('State updated:', { profileType })
+  }, [profileType])
 
   useEffect(() => {
     if (loading) return // Wait for auth to finish loading
@@ -64,9 +56,9 @@ export default function IdentityPage() {
         // Load existing partnership data
         const { data: partnership, error } = await supabase
           .from('partnerships')
-          .select('profile_type, relationship_orientation')
-          .eq('owner_id', user.id) // Fixed: use owner_id not primary_user_id
-          .maybeSingle() // Use maybeSingle to handle no results gracefully
+          .select('profile_type')
+          .eq('owner_id', user.id)
+          .maybeSingle()
 
         if (error) {
           console.error('[Identity] Error loading data:', error)
@@ -76,11 +68,6 @@ export default function IdentityPage() {
         if (partnership) {
           console.log('[Identity] ✅ Loaded existing data:', partnership)
           setProfileType(partnership.profile_type as ProfileType)
-          // relationship_orientation is an array in DB, extract first element
-          const orientation = Array.isArray(partnership.relationship_orientation)
-            ? partnership.relationship_orientation[0]
-            : partnership.relationship_orientation
-          setRelationshipOrientation(orientation as RelationshipOrientation)
         } else {
           console.log('[Identity] No existing data found - first time setup')
         }
@@ -93,18 +80,18 @@ export default function IdentityPage() {
   }, [user, supabase])
 
   const handleContinue = async () => {
-    if (!user || !profileType || !relationshipOrientation) {
+    if (!user || !profileType) {
       toast({
         title: 'Selection Required',
         description:
-          'Please select both your profile type and relationship orientation.',
+          'Please select your profile type.',
         variant: 'destructive'
       })
       return
     }
 
     setIsSubmitting(true)
-    console.log('[Identity] Submitting:', { profileType, relationshipOrientation })
+    console.log('[Identity] Submitting:', { profileType })
 
     try {
       // Call API endpoint to save identity data (uses admin client to bypass RLS)
@@ -116,7 +103,6 @@ export default function IdentityPage() {
         },
         body: JSON.stringify({
           profileType,
-          relationshipOrientation,
           city: userCity
         })
       })
@@ -372,118 +358,11 @@ export default function IdentityPage() {
           </div>
         </div>
 
-        {/* Relationship Orientation Selection */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6 mb-6">
-          <h2
-            className="text-haevn-navy mb-4"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 500,
-              fontSize: '20px',
-              lineHeight: '120%'
-            }}
-          >
-            My relationship orientation is...
-          </h2>
-
-          <div className="space-y-3">
-            {[
-              {
-                value: 'monogamous',
-                label: 'Monogamous',
-                description:
-                  'Exclusive emotional and physical connection'
-              },
-              {
-                value: 'open',
-                label: 'Open',
-                description:
-                  'Primary partnership with consensual outside connections'
-              },
-              {
-                value: 'polyamorous',
-                label: 'Polyamorous',
-                description: 'Multiple loving relationships'
-              },
-              {
-                value: 'exploring',
-                label: 'Exploring',
-                description: 'Still figuring out what works for me'
-              },
-              {
-                value: 'other',
-                label: 'Other / Prefer to describe',
-                description: "I'll share more in my survey"
-              }
-            ].map(option => (
-              <button
-                key={option.value}
-                type="button"
-                className={`w-full text-left cursor-pointer transition-all p-4 border-2 hover:shadow-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[#008080] focus:ring-offset-2 ${
-                  relationshipOrientation === option.value
-                    ? 'border-[#008080] bg-[#008080]/5'
-                    : 'border-gray-200 hover:border-[#008080]/50'
-                }`}
-                onClick={(e) => {
-                  e.preventDefault()
-                  console.log('Selected orientation:', option.value)
-                  setRelationshipOrientation(
-                    option.value as RelationshipOrientation
-                  )
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    console.log('Selected orientation:', option.value, '(keyboard)')
-                    setRelationshipOrientation(
-                      option.value as RelationshipOrientation
-                    )
-                  }
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                      relationshipOrientation === option.value
-                        ? 'border-[#008080] bg-[#008080]'
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    {relationshipOrientation === option.value && (
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3
-                      className="text-haevn-navy font-medium"
-                      style={{
-                        fontFamily: 'Roboto, Helvetica, sans-serif',
-                        fontSize: '16px'
-                      }}
-                    >
-                      {option.label}
-                    </h3>
-                    <p
-                      className="text-haevn-charcoal text-sm"
-                      style={{
-                        fontFamily: 'Roboto, Helvetica, sans-serif',
-                        fontWeight: 300
-                      }}
-                    >
-                      {option.description}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Continue Button */}
         <div className="flex justify-center">
           <Button
             onClick={handleContinue}
-            disabled={!profileType || !relationshipOrientation || isSubmitting}
+            disabled={!profileType || isSubmitting}
             className="w-full max-w-md bg-haevn-teal hover:opacity-90 text-white rounded-full disabled:opacity-50"
             size="lg"
             style={{

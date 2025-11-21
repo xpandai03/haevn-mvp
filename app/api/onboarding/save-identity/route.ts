@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
 
     const { profileType, relationshipOrientation, city = 'Austin' } = body
 
-    if (!profileType || !relationshipOrientation) {
-      console.error('[API /onboarding/save-identity] Missing required fields')
+    // Validate: Need at least one field to update
+    if (!profileType && !relationshipOrientation) {
+      console.error('[API /onboarding/save-identity] No fields to update')
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: profileType and relationshipOrientation' },
+        { success: false, error: 'Must provide at least profileType or relationshipOrientation' },
         { status: 400 }
       )
     }
@@ -58,13 +59,20 @@ export async function POST(request: NextRequest) {
     if (existingPartnership) {
       // UPDATE existing partnership
       console.log('[API /onboarding/save-identity] ✍️ Updating existing partnership:', existingPartnership.id)
+
+      // Build update object - only include relationship_orientation if provided
+      const updateData: any = {
+        profile_type: profileType,
+        updated_at: new Date().toISOString()
+      }
+
+      if (relationshipOrientation) {
+        updateData.relationship_orientation = [relationshipOrientation] // Store as array
+      }
+
       const { error: updateError } = await adminClient
         .from('partnerships')
-        .update({
-          profile_type: profileType,
-          relationship_orientation: [relationshipOrientation], // Store as array
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', existingPartnership.id)
 
       if (updateError) {
@@ -84,16 +92,32 @@ export async function POST(request: NextRequest) {
     } else {
       // INSERT new partnership
       console.log('[API /onboarding/save-identity] ✍️ Creating new partnership')
+
+      // profileType is required when creating a new partnership
+      if (!profileType) {
+        console.error('[API /onboarding/save-identity] Cannot create partnership without profileType')
+        return NextResponse.json(
+          { success: false, error: 'profileType is required when creating a new partnership' },
+          { status: 400 }
+        )
+      }
+
+      // Build insert object - only include relationship_orientation if provided
+      const insertData: any = {
+        owner_id: user.id,
+        city: city,
+        profile_type: profileType,
+        membership_tier: 'free',
+        advocate_mode: false
+      }
+
+      if (relationshipOrientation) {
+        insertData.relationship_orientation = [relationshipOrientation] // Store as array
+      }
+
       const { data: newPartnership, error: insertError } = await adminClient
         .from('partnerships')
-        .insert({
-          owner_id: user.id,
-          city: city,
-          profile_type: profileType,
-          relationship_orientation: [relationshipOrientation], // Store as array
-          membership_tier: 'free',
-          advocate_mode: false
-        })
+        .insert(insertData)
         .select('id')
         .single()
 
