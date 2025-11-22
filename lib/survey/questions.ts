@@ -455,13 +455,13 @@ export const surveySections: SurveySection[] = [
         label: 'How do you like to meet for the first time?',
         type: 'select',
         options: [
-          'Coffee or tea',
+          'Walk or coffee',
           'Drinks',
-          'Meal',
-          'Activity or event',
+          'Dinner',
+          'An activity or event',
           'Video call first',
-          'Group event',
-          'Flexible'
+          'Group setting',
+          'I'm flexible'
         ],
         required: true,
         helperText: 'Coffee, video call, group event, etc.'
@@ -504,12 +504,12 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q18_substances',
         label: 'How do you relate to alcohol or other substances?',
-        type: 'select',
+        type: 'multiselect',
         options: [
           'Sober',
           'Social drinker',
-          'Regular drinker',
-          'Cannabis-friendly',
+          'Regular user',
+          'Cannabis user',
           '420 friendly',
           'Sober curious',
           'In recovery',
@@ -572,7 +572,7 @@ export const surveySections: SurveySection[] = [
         label: 'How important is privacy/discretion?',
         type: 'slider',
         required: true,
-        helperText: 'Helps match with people who share your privacy needs.',
+        helperText: 'Some folks need full discretion. Others are open. Neither is wrong—we just want to match you with people on the same page.',
         min: 1,
         max: 10,
         step: 1
