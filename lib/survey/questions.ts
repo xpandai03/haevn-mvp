@@ -679,12 +679,14 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q25_chemistry_vs_emotion',
         label: 'How important is sexual chemistry compared to emotional connection?',
-        type: 'slider',
+        type: 'select',
+        options: [
+          'Sexual chemistry matters most',
+          'Both are equally important',
+          'Emotional connection matters most'
+        ],
         required: true,
-        helperText: 'Slider or scale works well here.',
-        min: 1,
-        max: 10,
-        step: 1
+        helperText: 'Slider or scale works well here.'
       },
       {
         id: 'q25a_frequency',
@@ -732,18 +734,9 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q28_hard_boundaries',
         label: 'What are your absolute boundaries?',
-        type: 'multiselect',
-        options: [
-          'No pain',
-          'No marks',
-          'No photos/video',
-          'No group play',
-          'No substances',
-          'No roleplay',
-          'No power exchange',
-          'Other (specify in notes)'
-        ],
-        required: true,
+        type: 'textarea',
+        placeholder: 'List any activities you never want to engage in...',
+        required: false,
         helperText: 'Activities you never want to engage in.'
       },
       {
@@ -817,23 +810,11 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q32_looking_for',
-        label: 'In your own words, what are you looking for here?',
+        label: 'Tell us about yourself and what you're looking for',
         type: 'textarea',
         placeholder: 'Share your authentic desires and intentions...',
         required: true,
         helperText: 'Anything from one line to a short paragraph.'
-      },
-      {
-        id: 'q32a_need_inspiration',
-        label: 'Need inspiration?',
-        type: 'select',
-        options: [
-          'Show me prompts',
-          'I\'m good, thanks'
-        ],
-        required: false,
-        helperText: 'We\'ll show sample prompts if you\'d like ideas.',
-        skipCondition: (answers) => answers.q32_looking_for && answers.q32_looking_for.length > 20
       },
       {
         id: 'q33_kinks',
@@ -850,6 +831,20 @@ export const surveySections: SurveySection[] = [
           'Exhibitionism',
           'Impact play',
           'Sensory play',
+          'Primal play',
+          'Age play',
+          'Pet play',
+          'Rope play',
+          'Wax play',
+          'Temperature play',
+          'Orgasm control',
+          'Edging',
+          'Praise kink',
+          'Degradation',
+          'Humiliation',
+          'Cuckolding/hotwifing',
+          'Feet',
+          'Latex/leather',
           'None',
           'Prefer not to say',
           'Still exploring'
