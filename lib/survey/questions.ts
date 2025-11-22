@@ -178,17 +178,18 @@ export const surveySections: SurveySection[] = [
         id: 'q6_relationship_styles',
         csvId: 'Q6',
         label: 'What relationship style(s) interest you?',
-        type: 'select',
+        type: 'multiselect',
         options: [
           'Monogamous',
           'Monogamish',
           'ENM',
           'Polyamorous',
           'Open',
-          'Exploring'
+          'Exploring',
+          'Other (please specify)'
         ],
         required: true,
-        helperText: 'Choose the relationship orientation that best describes you.'
+        helperText: 'Choose all relationship styles that interest you.'
       },
       {
         id: 'q6a_connection_type',
@@ -298,6 +299,17 @@ export const surveySections: SurveySection[] = [
         ],
         required: false,
         helperText: 'Optional; helps set expectations.'
+      },
+      {
+        id: 'q9b_dating_readiness',
+        label: 'How ready are you to meet someone?',
+        type: 'select',
+        options: [
+          "Dating & Relationships — I'm open and ready to connect.",
+          "Still figuring it out — I'm exploring, learning, or just seeing what feels right."
+        ],
+        required: true,
+        helperText: 'Some people are ready to meet someone new, others are still exploring. Wherever you are helps us understand your pace.'
       }
     ]
   },
@@ -724,12 +736,39 @@ export const surveySections: SurveySection[] = [
         helperText: 'Top/bottom/verse, dominant/submissive, etc.'
       },
       {
-        id: 'q27_physical_preferences',
-        label: 'Any body or physical preferences?',
-        type: 'text',
-        placeholder: 'Optional - be respectful',
+        id: 'q27_body_type_self',
+        label: 'How would you describe your body type?',
+        type: 'select',
+        options: [
+          'Slim / lean',
+          'Athletic / fit',
+          'Average build',
+          'Curvy / soft',
+          'Muscular / strong',
+          'Broad / stocky',
+          'Plus-size',
+          'Prefer not to say',
+          'Other (please specify)'
+        ],
+        required: false
+      },
+      {
+        id: 'q27_body_type_preferences',
+        label: 'Do you have any body or physical preferences? (Select all that apply)',
+        type: 'multiselect',
+        options: [
+          'Slim / lean',
+          'Athletic / fit',
+          'Average build',
+          'Curvy / soft',
+          'Muscular / strong',
+          'Broad / stocky',
+          'Plus-size',
+          'Prefer not to say',
+          'Other (please specify)'
+        ],
         required: false,
-        helperText: 'Optional - helps with mutual attraction.'
+        helperText: 'Attraction is personal. These options help match you with people you\'re naturally drawn to, while keeping it kind and inclusive.'
       },
       {
         id: 'q28_hard_boundaries',
