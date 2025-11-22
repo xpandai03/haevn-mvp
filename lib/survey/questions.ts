@@ -30,7 +30,7 @@ export const surveySections: SurveySection[] = [
   {
     id: 'basic_demographics',
     title: 'Basic Information',
-    description: 'Let\'s start with some basic information about you',
+    description: "Let's start with some basic information about you",
     questions: [
       {
         id: 'q1_age',
@@ -39,7 +39,7 @@ export const surveySections: SurveySection[] = [
         type: 'date',
         placeholder: 'MM/DD/YYYY',
         required: true,
-        helperText: 'We use your birthdate only to confirm you\'re 18+ and to help match people in similar life stages.'
+        helperText: "We use your birthdate only to confirm you're 18+ and to help match people in similar life stages."
       },
       {
         id: 'q2_gender_identity',
@@ -150,7 +150,7 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q4_relationship_status',
         csvId: 'Q4',
-        label: 'What\'s your current relationship status?',
+        label: "What's your current relationship status?",
         type: 'select',
         options: [
           'Single',
@@ -172,7 +172,7 @@ export const surveySections: SurveySection[] = [
   {
     id: 'relationship_preferences',
     title: 'Relationship Preferences',
-    description: 'Help us understand what you\'re looking for',
+    description: "Help us understand what you're looking for",
     questions: [
       {
         id: 'q6_relationship_styles',
@@ -250,7 +250,7 @@ export const surveySections: SurveySection[] = [
         label: 'How important is emotional exclusivity to you?',
         type: 'slider',
         required: true,
-        helperText: 'This means sharing deep romantic feelings with only one person. Some people want this, some don't—both are valid.',
+        helperText: "This means sharing deep romantic feelings with only one person. Some people want this, some don't—both are valid.",
         min: 1,
         max: 10,
         step: 1,
@@ -312,14 +312,14 @@ export const surveySections: SurveySection[] = [
         label: 'Which attachment style best describes you?',
         type: 'select',
         options: [
-          'Secure - I\'m comfortable with intimacy and independence',
+          "Secure - I'm comfortable with intimacy and independence",
           'Anxious - I crave closeness but worry about relationships',
           'Avoidant - I value independence over intimacy',
           'Disorganized - I have mixed feelings about relationships',
-          'Not sure - I\'d like to learn more'
+          "Not sure - I'd like to learn more"
         ],
         required: true,
-        helperText: 'Not sure? [link to quick guide], it\'s about how you bond and communicate.',
+        helperText: "Not sure? [link to quick guide], it's about how you bond and communicate.",
         displayLogic: "Q4='Single' AND Q6 in {Monogamous,Monogamish,Polyamorous} OR Q4 in {Dating,Married,Partnered,Couple} AND Q6='Polyamorous'"
       },
       {
@@ -327,7 +327,7 @@ export const surveySections: SurveySection[] = [
         label: 'How emotionally available are you right now?',
         type: 'slider',
         required: true,
-        helperText: 'This is about your bandwidth—not your worth. We're asking where you're at emotionally right now, with no judgment.',
+        helperText: "This is about your bandwidth—not your worth. We're asking where you're at emotionally right now, with no judgment.",
         min: 1,
         max: 10,
         step: 1
@@ -425,7 +425,7 @@ export const surveySections: SurveySection[] = [
         label: 'How much time can you realistically give new relationships?',
         type: 'select',
         options: [
-          'Unlimited - I\'m very available',
+          "Unlimited - I'm very available",
           'Several days a week',
           'Once or twice a week',
           'A few times a month',
@@ -461,7 +461,7 @@ export const surveySections: SurveySection[] = [
           'An activity or event',
           'Video call first',
           'Group setting',
-          'I'm flexible'
+          "I'm flexible"
         ],
         required: true,
         helperText: 'Coffee, video call, group event, etc.'
@@ -476,7 +476,7 @@ export const surveySections: SurveySection[] = [
       //     'Have children',
       //     'Want children',
       //     'Have and want more',
-      //     'Don\'t have, don\'t want',
+      //     "Don't have, don't want",
       //     'Not sure',
       //     'Prefer not to say'
       //   ],
@@ -520,7 +520,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q19a_max_distance',
-        label: 'What\'s the farthest distance you\'d consider for connection?',
+        label: "What's the farthest distance you'd consider for connection?",
         type: 'select',
         options: [
           'My neighborhood only',
@@ -806,11 +806,11 @@ export const surveySections: SurveySection[] = [
   {
     id: 'personal_expression',
     title: 'Personal Expression',
-    description: 'Tell us more about what you\'re looking for',
+    description: "Tell us more about what you're looking for",
     questions: [
       {
         id: 'q32_looking_for',
-        label: 'Tell us about yourself and what you're looking for',
+        label: "Tell us about yourself and what you're looking for",
         type: 'textarea',
         placeholder: 'Share your authentic desires and intentions...',
         required: true,
@@ -855,7 +855,7 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q33a_experience_level',
         csvId: 'Q33a',
-        label: 'What\'s your experience level with those kinks?',
+        label: "What's your experience level with those kinks?",
         type: 'select',
         options: [
           'Very experienced',
@@ -887,7 +887,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q34a_variety',
-        label: 'I\'m drawn to variety and creativity in intimacy.',
+        label: "I'm drawn to variety and creativity in intimacy.",
         type: 'slider',
         required: true,
         helperText: '',
@@ -927,7 +927,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q36a_outgoing',
-        label: 'In new situations, I\'m usually outgoing and expressive.',
+        label: "In new situations, I'm usually outgoing and expressive.",
         type: 'slider',
         required: true,
         helperText: '',
@@ -937,7 +937,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q37_empathy',
-        label: 'I\'m empathetic and attuned to my partner\'s needs.',
+        label: "I'm empathetic and attuned to my partner's needs.",
         type: 'slider',
         required: true,
         helperText: '',
