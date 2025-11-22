@@ -5,7 +5,7 @@ export interface SurveyQuestion {
   id: string
   csvId?: string // CSV Question ID (e.g., Q1, Q2, Q3a)
   label: string
-  type: 'select' | 'multiselect' | 'text' | 'textarea' | 'scale' | 'boolean' | 'number' | 'slider'
+  type: 'select' | 'multiselect' | 'text' | 'textarea' | 'scale' | 'boolean' | 'number' | 'slider' | 'date'
   options?: string[]
   placeholder?: string
   required: boolean
@@ -35,13 +35,11 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q1_age',
         csvId: 'Q1',
-        label: 'How old are you?',
-        type: 'number',
-        placeholder: 'Enter your age',
+        label: 'What is your birthdate?',
+        type: 'date',
+        placeholder: 'MM/DD/YYYY',
         required: true,
-        helperText: 'We use age only to confirm you\'re 18+ and to help match people in similar life stages.',
-        min: 18,
-        max: 120
+        helperText: 'We use your birthdate only to confirm you\'re 18+ and to help match people in similar life stages.'
       },
       {
         id: 'q2_gender_identity',
@@ -109,7 +107,7 @@ export const surveySections: SurveySection[] = [
         type: 'textarea',
         placeholder: 'Share your thoughts on commitment...',
         required: false,
-        helperText: 'People define commitment differently (monogamy, openness, etc.). Tell us what it means to you.'
+        helperText: 'Everyone defines commitment differently. There's no right answer — just yours.'
         // displayLogic removed - always shown per Rick's guidance (branching starts in Relationship Preferences)
       },
       {
@@ -224,7 +222,7 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q6c_couple_connection',
         csvId: 'Q6c',
-        label: 'If connecting as a couple, how?',
+        label: 'How do you connect as a couple?',
         type: 'select',
         options: [
           'Together only',
@@ -239,11 +237,11 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q6d_couple_permissions',
         csvId: 'Q6d',
-        label: 'Couple permissions',
+        label: 'Tell us more about your couple structure',
         type: 'textarea',
         placeholder: 'Describe your agreements...',
         required: false,
-        helperText: 'Briefly describe any agreements partners should know.',
+        helperText: 'Help people understand how you connect. For example: do you date together? separately? both? with veto power? without? Are there people each of you date independently?',
         displayLogic: "Show if Q6c='Custom / differs by partner'"
       },
       {
@@ -252,7 +250,7 @@ export const surveySections: SurveySection[] = [
         label: 'How important is emotional exclusivity to you?',
         type: 'slider',
         required: true,
-        helperText: 'Emotional exclusivity means sharing deep romantic feelings with only one person.',
+        helperText: 'This means sharing deep romantic feelings with only one person. Some people want this, some don't—both are valid.',
         min: 1,
         max: 10,
         step: 1,
@@ -264,7 +262,7 @@ export const surveySections: SurveySection[] = [
         label: 'How important is sexual exclusivity to you?',
         type: 'slider',
         required: true,
-        helperText: 'Sexual exclusivity means sexual activity with only one person.',
+        helperText: 'This means sexual activity with only one person. No judgment—just clarity.',
         min: 1,
         max: 10,
         step: 1,
@@ -329,7 +327,7 @@ export const surveySections: SurveySection[] = [
         label: 'How emotionally available are you right now?',
         type: 'slider',
         required: true,
-        helperText: 'Your capacity for a new connection, no judgment.',
+        helperText: 'This is about your bandwidth—not your worth. We're asking where you're at emotionally right now, with no judgment.',
         min: 1,
         max: 10,
         step: 1
@@ -346,7 +344,7 @@ export const surveySections: SurveySection[] = [
           'Receiving gifts'
         ],
         required: true,
-        helperText: 'Words of affirmation, quality time, etc. Choose any that fit.'
+        helperText: 'How do you like to give and receive love? Pick all that resonate.'
       },
       {
         id: 'q12_conflict_resolution',

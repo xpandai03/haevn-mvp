@@ -283,6 +283,28 @@ export function QuestionRenderer({
         />
       )}
 
+      {/* DATE INPUT */}
+      {question.type === 'date' && (
+        <Input
+          type="date"
+          placeholder={question.placeholder}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && value && onEnterPress && canAdvance) {
+              e.preventDefault()
+              onEnterPress()
+            }
+          }}
+          max={new Date().toISOString().split('T')[0]}
+          className="w-full max-w-[280px] px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 500
+          }}
+        />
+      )}
+
       {/* TEXTAREA */}
       {question.type === 'textarea' && (
         <Textarea

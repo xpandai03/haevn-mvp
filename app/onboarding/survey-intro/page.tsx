@@ -52,20 +52,8 @@ export default function SurveyIntroPage() {
               textAlign: 'left'
             }}
           >
-            Your relationship survey
+            Profile Builder
           </h1>
-          <p
-            className="text-haevn-charcoal mb-3"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 500,
-              fontSize: '18px',
-              lineHeight: '120%',
-              textAlign: 'left'
-            }}
-          >
-            This is the foundation of HAEVN.
-          </p>
           <p
             className="text-haevn-charcoal"
             style={{
@@ -76,7 +64,7 @@ export default function SurveyIntroPage() {
               textAlign: 'left'
             }}
           >
-            Your answers guide the connections we introduce you to. Take your time — your progress saves automatically.
+            This next part's a little different from what you might expect. HAEVN builds your profile for you, so we need to understand what brings you here and what you want to find.
           </p>
         </div>
 
@@ -143,30 +131,6 @@ export default function SurveyIntroPage() {
                   }}
                 >
                   Progress saves automatically at each step.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span
-                  className="text-haevn-gold mt-1"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '16px'
-                  }}
-                >
-                  •
-                </span>
-                <span
-                  className="text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 300,
-                    fontSize: '16px',
-                    lineHeight: '120%',
-                    textAlign: 'left'
-                  }}
-                >
-                  You can take breaks and return anytime.
                 </span>
               </li>
               <li className="flex items-start gap-3">
