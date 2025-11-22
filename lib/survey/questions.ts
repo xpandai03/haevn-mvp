@@ -107,7 +107,7 @@ export const surveySections: SurveySection[] = [
         type: 'textarea',
         placeholder: 'Share your thoughts on commitment...',
         required: false,
-        helperText: 'Everyone defines commitment differently. There's no right answer — just yours.'
+        helperText: "Everyone defines commitment differently. There's no right answer — just yours."
         // displayLogic removed - always shown per Rick's guidance (branching starts in Relationship Preferences)
       },
       {
