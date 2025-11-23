@@ -9,7 +9,11 @@
  * 4. Sum across sections
  * 5. Apply tier logic
  * 6. Handle hard filters
+ *
+ * Phase 3 Enhancement: Now includes compatibility % and top factor extraction
  */
+
+import { extractTopFactor, getCompatibilityPercentage } from './compatibility'
 
 // ============================================================================
 // TYPES
@@ -47,11 +51,14 @@ export interface UserProfile {
 }
 
 export interface MatchScore {
-  score: number // 0-100
+  score: number // 0-100 (this IS the compatibility percentage)
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'Excluded'
   breakdown: ScoreBreakdown
   excluded: boolean
   exclusion_reason?: string
+  // Phase 3 enhancements (computed from breakdown)
+  compatibilityPercentage?: number // Same as score, for explicit clarity
+  topFactor?: string // Human-readable top contributing factor
 }
 
 export interface ScoreBreakdown {
@@ -256,7 +263,9 @@ export function calculateMatch(userA: UserProfile, userB: UserProfile): MatchSco
       tier: 'Excluded',
       breakdown,
       excluded: true,
-      exclusion_reason: 'Identity not in seeking preferences'
+      exclusion_reason: 'Identity not in seeking preferences',
+      compatibilityPercentage: 0,
+      topFactor: 'Not a match'
     }
   }
 
@@ -358,12 +367,19 @@ export function calculateMatch(userA: UserProfile, userB: UserProfile): MatchSco
   else if (totalScore >= TIER_THRESHOLDS.bronze) tier = 'Bronze'
   else tier = 'Excluded'
 
-  return {
+  // ====================================================================
+  // PHASE 3: Add compatibility percentage and top factor
+  // ====================================================================
+  const matchScore: MatchScore = {
     score: Math.round(totalScore),
     tier,
     breakdown,
-    excluded: tier === 'Excluded'
+    excluded: tier === 'Excluded',
+    compatibilityPercentage: Math.round(totalScore), // Explicit percentage
+    topFactor: extractTopFactor(breakdown) // Human-readable top factor
   }
+
+  return matchScore
 }
 
 /**
