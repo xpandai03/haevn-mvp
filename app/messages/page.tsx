@@ -1,10 +1,11 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export default function MessagesPage() {
+function MessagesPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const partner = searchParams.get('partner')
@@ -82,5 +83,17 @@ export default function MessagesPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
+        <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+      </div>
+    }>
+      <MessagesPageInner />
+    </Suspense>
   )
 }
