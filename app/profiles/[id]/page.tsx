@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { getProfileData, ProfileData } from '@/lib/actions/profiles'
 import { useAuth } from '@/lib/auth/context'
 import { SurveyDataDisplay } from '@/components/profiles/SurveyDataDisplay'
+import { sendNudge } from '@/lib/actions/nudges'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { useToast } from '@/hooks/use-toast'
 
 type TabKey = 'about' | 'compatibility' | 'photos'
 
@@ -16,6 +19,7 @@ export default function ProfileViewPage() {
   const router = useRouter()
   const params = useParams()
   const { user, loading: authLoading } = useAuth()
+  const { toast } = useToast()
   const partnershipId = params.id as string
 
   const [profile, setProfile] = useState<ProfileData | null>(null)
@@ -23,6 +27,8 @@ export default function ProfileViewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
+  const [nudging, setNudging] = useState(false)
 
   // Load profile data
   useEffect(() => {
@@ -31,14 +37,18 @@ export default function ProfileViewPage() {
 
       try {
         setLoading(true)
-        const profileData = await getProfileData(partnershipId)
-        
+        const [profileData, tierData] = await Promise.all([
+          getProfileData(partnershipId),
+          getUserMembershipTier()
+        ])
+
         if (!profileData) {
           setError('Profile not found')
           return
         }
 
         setProfile(profileData)
+        setMembershipTier(tierData)
         console.log('[ProfileView] Loaded profile:', profileData.displayName)
       } catch (err: any) {
         console.error('[ProfileView] Error:', err)
@@ -66,6 +76,71 @@ export default function ProfileViewPage() {
     if (profile && profile.photos.length > 0) {
       setPhotoIndex((prev) => (prev - 1 + profile.photos.length) % profile.photos.length)
     }
+  }
+
+  // Action handlers
+  const handleMessage = () => {
+    // Navigate to messages with this partnership
+    router.push(`/messages?partner=${partnershipId}`)
+  }
+
+  const handleNudge = async () => {
+    if (!user || !profile) return
+
+    // Check membership
+    if (membershipTier !== 'plus') {
+      toast({
+        title: 'HAEVN+ Required',
+        description: 'Upgrade to HAEVN+ to send nudges',
+        variant: 'destructive'
+      })
+      router.push('/pricing')
+      return
+    }
+
+    try {
+      setNudging(true)
+      // Need to get the recipient user ID from the partnership
+      // For now, this is a simplified version
+      const result = await sendNudge(profile.partnershipId)
+
+      if (result.success) {
+        toast({
+          title: 'Nudge Sent!',
+          description: `You nudged ${profile.displayName}`
+        })
+      } else {
+        toast({
+          title: 'Failed to Send Nudge',
+          description: result.error || 'Please try again',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send nudge',
+        variant: 'destructive'
+      })
+    } finally {
+      setNudging(false)
+    }
+  }
+
+  const handleBlock = () => {
+    // TODO: Implement block functionality
+    toast({
+      title: 'Block Feature',
+      description: 'Block functionality coming soon'
+    })
+  }
+
+  const handleReport = () => {
+    // TODO: Implement report functionality
+    toast({
+      title: 'Report Feature',
+      description: 'Report functionality coming soon'
+    })
   }
 
   // Loading state
@@ -323,27 +398,40 @@ export default function ProfileViewPage() {
           </div>
         </div>
 
-        {/* Action Buttons (Placeholder for BATCH 14) */}
+        {/* Action Buttons */}
         <div className="bg-white rounded-3xl p-6 shadow-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button className="bg-haevn-teal hover:opacity-90 text-white" disabled>
+            <Button
+              className="bg-haevn-teal hover:opacity-90 text-white"
+              onClick={handleMessage}
+            >
               Message
             </Button>
-            <Button variant="outline" className="text-haevn-charcoal" disabled>
-              Nudge
+            <Button
+              variant="outline"
+              className="text-haevn-charcoal"
+              onClick={handleNudge}
+              disabled={nudging}
+            >
+              {nudging ? 'Sending...' : 'Nudge'}
             </Button>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
-            <Button variant="outline" className="text-haevn-charcoal" disabled>
+            <Button
+              variant="outline"
+              className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
+              onClick={handleBlock}
+            >
               Block
             </Button>
-            <Button variant="outline" className="text-haevn-charcoal" disabled>
+            <Button
+              variant="outline"
+              className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
+              onClick={handleReport}
+            >
               Report
             </Button>
           </div>
-          <p className="text-sm text-haevn-charcoal/60 text-center mt-4">
-            Actions will be implemented in BATCH 14
-          </p>
         </div>
       </main>
     </div>
