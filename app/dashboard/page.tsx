@@ -11,6 +11,7 @@ import { ProfileCard, ProfileCardData } from '@/components/dashboard/ProfileCard
 import { getDashboardStats, getUserMembershipTier, getUserProfilePhoto } from '@/lib/actions/dashboard'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
 import { getConnections, Connection } from '@/lib/actions/connections'
+import { getReceivedNudges, Nudge } from '@/lib/actions/nudges'
 import Image from 'next/image'
 
 export default function DashboardPage() {
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>()
   const [matches, setMatches] = useState<MatchResult[]>([])
   const [connections, setConnections] = useState<Connection[]>([])
-  const [nudges, setNudges] = useState<ProfileCardData[]>([])
+  const [nudges, setNudges] = useState<Nudge[]>([])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,12 +56,13 @@ export default function DashboardPage() {
         setLoading(true)
 
         // Fetch all dashboard data in parallel
-        const [statsData, tierData, photoUrl, matchesData, connectionsData] = await Promise.all([
+        const [statsData, tierData, photoUrl, matchesData, connectionsData, nudgesData] = await Promise.all([
           getDashboardStats(),
           getUserMembershipTier(),
           getUserProfilePhoto(),
           getMatches('Bronze'),
-          getConnections()
+          getConnections(),
+          getReceivedNudges()
         ])
 
         setStats(statsData)
@@ -68,9 +70,7 @@ export default function DashboardPage() {
         setProfilePhotoUrl(photoUrl || undefined)
         setMatches(matchesData)
         setConnections(connectionsData)
-
-        // TODO: Load nudges in batch 10
-        setNudges([])
+        setNudges(nudgesData)
 
         console.log('[Dashboard] ✅ Data loaded')
       } catch (err: any) {
@@ -230,10 +230,17 @@ export default function DashboardPage() {
           {nudges.slice(0, 10).map((nudge) => (
             <ProfileCard
               key={nudge.id}
-              profile={nudge}
+              profile={{
+                id: nudge.senderPartnershipId,
+                photo: nudge.photo,
+                username: nudge.username,
+                city: nudge.city,
+                compatibilityPercentage: nudge.compatibilityPercentage,
+                topFactor: nudge.topFactor
+              }}
               variant="nudge"
               onClick={handleProfileClick}
-              nudgedAt={new Date()} // TODO: Get from nudge data
+              nudgedAt={nudge.nudgedAt}
             />
           ))}
         </DashboardSection>

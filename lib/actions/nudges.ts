@@ -1,265 +1,383 @@
+/**
+ * Nudges Actions
+ * Server actions for the nudge system (HAEVN+ premium feature)
+ *
+ * Definition: Nudges = lightweight way to express interest in a profile
+ * - Only HAEVN+ members can send and respond to nudges
+ * - Free users can see they received a nudge but must upgrade to respond
+ * - One nudge per sender-recipient pair
+ */
+
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
-export interface NudgeItem {
-  id: string
-  type:
-    | 'handshake_received'
-    | 'handshake_accepted'
-    | 'section_completed'
-    | 'partner_joined'
-    | 'partner_survey_progress'
-    | 'partner_reviewed_survey'
-    | 'invite_sent'
-  title: string
-  description: string
-  created_at: string
-  read: boolean
-  link?: string
-  metadata?: Record<string, any>
+export interface Nudge {
+  id: string // Nudge ID
+  senderId: string
+  senderPartnershipId: string
+  photo?: string
+  username: string
+  city?: string
+  compatibilityPercentage: number
+  topFactor: string
+  nudgedAt: Date
+  isRead: boolean
 }
 
 /**
- * Get all nudges/notifications for the current user
+ * Get all nudges received by the current user
+ * Returns profiles who have nudged the user
+ * Sorted by: unread first, then by date (most recent first)
  */
-export async function getUserNudges(): Promise<{ data: NudgeItem[], error: string | null }> {
+export async function getReceivedNudges(): Promise<Nudge[]> {
   const supabase = await createClient()
 
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (userError || !user) {
-    return { data: [], error: 'Not authenticated' }
+  if (!user) {
+    throw new Error('Not authenticated')
   }
 
   try {
-    const adminClient = createAdminClient()
-    const nudges: NudgeItem[] = []
+    console.log('[getReceivedNudges] Fetching for user:', user.id)
 
     // Get user's partnership
-    const { data: memberData } = await adminClient
+    const { data: userPartnership } = await supabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .single()
 
-    if (!memberData) {
-      return { data: [], error: null }
+    if (!userPartnership) {
+      console.log('[getReceivedNudges] No partnership found')
+      return []
     }
 
-    const partnershipId = memberData.partnership_id
-
-    // DEFENSIVE GUARD: Validate partnership_id before querying
-    if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
-      console.warn('[getUserNudges] ⚠️ Invalid partnershipId, returning empty nudges:', partnershipId)
-      return { data: [], error: null }
-    }
-
-    // 1. Get incoming handshake requests (not yet accepted)
-    const { data: incomingHandshakes } = await adminClient
-      .from('handshakes')
+    // Get all nudges where current user is recipient
+    const { data: nudges, error: nudgesError } = await supabase
+      .from('nudges')
       .select(`
         id,
+        sender_id,
         created_at,
-        a_partnership:partnerships!handshakes_a_partnership_id_fkey(id, display_name)
+        read_at
       `)
-      .eq('b_partnership_id', partnershipId)
-      .eq('a_consent', true)
-      .eq('b_consent', false)
-
-    if (incomingHandshakes) {
-      incomingHandshakes.forEach((hs: any) => {
-        nudges.push({
-          id: `handshake-${hs.id}`,
-          type: 'handshake_received',
-          title: 'New Handshake Request',
-          description: `${hs.a_partnership?.display_name || 'A partnership'} wants to connect with you!`,
-          created_at: hs.created_at,
-          read: false,
-          link: '/connections',
-          metadata: { handshake_id: hs.id }
-        })
-      })
-    }
-
-    // 2. Get accepted handshakes (mutual consent) from last 7 days
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const { data: acceptedHandshakes } = await adminClient
-      .from('handshakes')
-      .select(`
-        id,
-        updated_at,
-        a_partnership:partnerships!handshakes_a_partnership_id_fkey(id, display_name),
-        b_partnership:partnerships!handshakes_b_partnership_id_fkey(id, display_name)
-      `)
-      .or(`a_partnership_id.eq.${partnershipId},b_partnership_id.eq.${partnershipId}`)
-      .eq('a_consent', true)
-      .eq('b_consent', true)
-      .gte('updated_at', sevenDaysAgo.toISOString())
-
-    if (acceptedHandshakes) {
-      acceptedHandshakes.forEach((hs: any) => {
-        const otherPartnership = hs.a_partnership?.id === partnershipId
-          ? hs.b_partnership
-          : hs.a_partnership
-
-        nudges.push({
-          id: `accepted-${hs.id}`,
-          type: 'handshake_accepted',
-          title: 'New Connection!',
-          description: `You're now connected with ${otherPartnership?.display_name || 'a partnership'}`,
-          created_at: hs.updated_at,
-          read: false,
-          link: '/connections',
-          metadata: { handshake_id: hs.id }
-        })
-      })
-    }
-
-    // 3. Get recent partnership survey completions (partnership-based, last 7 days)
-    const { data: surveyData } = await adminClient
-      .from('user_survey_responses')
-      .select('completed_sections, updated_at, completion_pct')
-      .eq('partnership_id', partnershipId)
-      .gte('updated_at', sevenDaysAgo.toISOString())
-      .maybeSingle()
-
-    if (surveyData && surveyData.completed_sections) {
-      const sections = surveyData.completed_sections as string[]
-      if (sections.length > 0) {
-        nudges.push({
-          id: `survey-progress-${partnershipId}`,
-          type: 'section_completed',
-          title: 'Survey Progress!',
-          description: `Your partnership completed ${sections.length} survey section${sections.length > 1 ? 's' : ''} (${surveyData.completion_pct}%)`,
-          created_at: surveyData.updated_at,
-          read: false,
-          link: '/onboarding/survey',
-          metadata: { completion_pct: surveyData.completion_pct }
-        })
-      }
-    }
-
-    // 4. Get recent partner joins (last 30 days)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-    const { data: partnerJoins } = await adminClient
-      .from('partnership_members')
-      .select(`
-        user_id,
-        joined_at,
-        role,
-        profiles (
-          full_name,
-          email
-        )
-      `)
-      .eq('partnership_id', partnershipId)
-      .neq('user_id', user.id)
-      .gte('joined_at', thirtyDaysAgo.toISOString())
-      .order('joined_at', { ascending: false })
-
-    if (partnerJoins && partnerJoins.length > 0) {
-      partnerJoins.forEach((member: any) => {
-        const partnerName = member.profiles?.full_name || member.profiles?.email || 'Your partner'
-        nudges.push({
-          id: `partner-joined-${member.user_id}`,
-          type: 'partner_joined',
-          title: 'New Partner Joined!',
-          description: `${partnerName} joined your partnership`,
-          created_at: member.joined_at,
-          read: false,
-          link: '/dashboard',
-          metadata: { user_id: member.user_id }
-        })
-      })
-    }
-
-    // 5. Get recent partner survey reviews (last 30 days)
-    const { data: partnerReviews } = await adminClient
-      .from('partnership_members')
-      .select(`
-        user_id,
-        survey_reviewed,
-        survey_reviewed_at,
-        profiles (
-          full_name,
-          email
-        )
-      `)
-      .eq('partnership_id', partnershipId)
-      .neq('user_id', user.id)
-      .eq('survey_reviewed', true)
-      .not('survey_reviewed_at', 'is', null)
-      .gte('survey_reviewed_at', thirtyDaysAgo.toISOString())
-      .order('survey_reviewed_at', { ascending: false })
-
-    if (partnerReviews && partnerReviews.length > 0) {
-      partnerReviews.forEach((member: any) => {
-        const partnerName = member.profiles?.full_name || member.profiles?.email || 'Your partner'
-        nudges.push({
-          id: `partner-reviewed-${member.user_id}`,
-          type: 'partner_reviewed_survey',
-          title: 'Partner Reviewed Survey',
-          description: `${partnerName} reviewed and approved your partnership survey`,
-          created_at: member.survey_reviewed_at,
-          read: false,
-          link: '/dashboard',
-          metadata: { user_id: member.user_id }
-        })
-      })
-    }
-
-    // 6. Get pending invites sent (last 30 days)
-    const { data: sentInvites } = await adminClient
-      .from('partnership_requests')
-      .select('id, invite_code, to_email, created_at, status')
-      .eq('partnership_id', partnershipId)
-      .eq('from_user_id', user.id)
-      .eq('status', 'pending')
-      .gte('created_at', thirtyDaysAgo.toISOString())
+      .eq('recipient_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (sentInvites && sentInvites.length > 0) {
-      sentInvites.forEach((invite: any) => {
-        nudges.push({
-          id: `invite-sent-${invite.id}`,
-          type: 'invite_sent',
-          title: 'Invite Pending',
-          description: `Waiting for ${invite.to_email} to accept your partnership invite (Code: ${invite.invite_code})`,
-          created_at: invite.created_at,
-          read: false,
-          link: '/dashboard',
-          metadata: { invite_id: invite.id, invite_code: invite.invite_code }
-        })
+    if (nudgesError) {
+      console.error('[getReceivedNudges] Error fetching nudges:', nudgesError)
+      return []
+    }
+
+    if (!nudges || nudges.length === 0) {
+      console.log('[getReceivedNudges] No nudges found')
+      return []
+    }
+
+    // Build nudges array with sender partnership data
+    const nudgesWithData: Nudge[] = []
+
+    for (const nudge of nudges) {
+      // Get sender's partnership
+      const { data: senderPartnership } = await supabase
+        .from('partnership_members')
+        .select(`
+          partnership_id,
+          partnership:partnerships(id, display_name, city)
+        `)
+        .eq('user_id', nudge.sender_id)
+        .single()
+
+      if (!senderPartnership?.partnership) continue
+
+      const partnership = Array.isArray(senderPartnership.partnership)
+        ? senderPartnership.partnership[0]
+        : senderPartnership.partnership
+
+      // Get primary photo for sender's partnership
+      const { data: photoData } = await supabase
+        .from('partnership_photos')
+        .select('storage_path')
+        .eq('partnership_id', partnership.id)
+        .eq('is_primary', true)
+        .eq('photo_type', 'public')
+        .single()
+
+      let photoUrl: string | undefined
+      if (photoData) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('partnership-photos')
+          .getPublicUrl(photoData.storage_path)
+        photoUrl = publicUrl
+      }
+
+      // TODO: Calculate actual compatibility from survey responses
+      // For now, use stub values
+      const compatibilityPercentage = 80
+      const topFactor = 'Mutual interest'
+
+      nudgesWithData.push({
+        id: nudge.id,
+        senderId: nudge.sender_id,
+        senderPartnershipId: partnership.id,
+        photo: photoUrl,
+        username: partnership.display_name || 'User',
+        city: partnership.city,
+        compatibilityPercentage,
+        topFactor,
+        nudgedAt: new Date(nudge.created_at),
+        isRead: !!nudge.read_at
       })
     }
 
-    // Sort by date (newest first)
-    nudges.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    // Sort: unread first, then by date
+    nudgesWithData.sort((a, b) => {
+      if (!a.isRead && b.isRead) return -1
+      if (a.isRead && !b.isRead) return 1
+      return b.nudgedAt.getTime() - a.nudgedAt.getTime()
+    })
 
-    return { data: nudges, error: null }
-  } catch (err) {
-    console.error('[getUserNudges] Error:', err)
-    return { data: [], error: 'Failed to load notifications' }
+    console.log('[getReceivedNudges] Found', nudgesWithData.length, 'nudges')
+    return nudgesWithData
+
+  } catch (error) {
+    console.error('[getReceivedNudges] Error:', error)
+    return []
   }
 }
 
 /**
- * Get count of unread nudges
+ * Get all nudges sent by the current user
  */
-export async function getUnreadNudgesCount(): Promise<{ count: number, error: string | null }> {
-  const { data, error } = await getUserNudges()
+export async function getSentNudges(): Promise<Nudge[]> {
+  const supabase = await createClient()
 
-  if (error) {
-    return { count: 0, error }
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
   }
 
-  const unreadCount = data.filter(n => !n.read).length
-  return { count: unreadCount, error: null }
+  try {
+    console.log('[getSentNudges] Fetching for user:', user.id)
+
+    // Get user's partnership
+    const { data: userPartnership } = await supabase
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!userPartnership) {
+      console.log('[getSentNudges] No partnership found')
+      return []
+    }
+
+    // Get all nudges sent by current user
+    const { data: nudges, error: nudgesError } = await supabase
+      .from('nudges')
+      .select(`
+        id,
+        recipient_id,
+        created_at,
+        read_at
+      `)
+      .eq('sender_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (nudgesError) {
+      console.error('[getSentNudges] Error fetching nudges:', nudgesError)
+      return []
+    }
+
+    if (!nudges || nudges.length === 0) {
+      console.log('[getSentNudges] No sent nudges found')
+      return []
+    }
+
+    // Build nudges array with recipient partnership data
+    const nudgesWithData: Nudge[] = []
+
+    for (const nudge of nudges) {
+      // Get recipient's partnership
+      const { data: recipientPartnership } = await supabase
+        .from('partnership_members')
+        .select(`
+          partnership_id,
+          partnership:partnerships(id, display_name, city)
+        `)
+        .eq('user_id', nudge.recipient_id)
+        .single()
+
+      if (!recipientPartnership?.partnership) continue
+
+      const partnership = Array.isArray(recipientPartnership.partnership)
+        ? recipientPartnership.partnership[0]
+        : recipientPartnership.partnership
+
+      // Get primary photo for recipient's partnership
+      const { data: photoData } = await supabase
+        .from('partnership_photos')
+        .select('storage_path')
+        .eq('partnership_id', partnership.id)
+        .eq('is_primary', true)
+        .eq('photo_type', 'public')
+        .single()
+
+      let photoUrl: string | undefined
+      if (photoData) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('partnership-photos')
+          .getPublicUrl(photoData.storage_path)
+        photoUrl = publicUrl
+      }
+
+      // TODO: Calculate actual compatibility from survey responses
+      const compatibilityPercentage = 80
+      const topFactor = 'Mutual interest'
+
+      nudgesWithData.push({
+        id: nudge.id,
+        senderId: user.id,
+        senderPartnershipId: partnership.id,
+        photo: photoUrl,
+        username: partnership.display_name || 'User',
+        city: partnership.city,
+        compatibilityPercentage,
+        topFactor,
+        nudgedAt: new Date(nudge.created_at),
+        isRead: !!nudge.read_at
+      })
+    }
+
+    console.log('[getSentNudges] Found', nudgesWithData.length, 'sent nudges')
+    return nudgesWithData
+
+  } catch (error) {
+    console.error('[getSentNudges] Error:', error)
+    return []
+  }
+}
+
+/**
+ * Send a nudge to another user
+ * Requires HAEVN+ membership
+ */
+export async function sendNudge(recipientUserId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  try {
+    // Check if sender has HAEVN+ membership
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('membership_tier')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profile?.membership_tier !== 'plus') {
+      return { success: false, error: 'HAEVN+ membership required to send nudges' }
+    }
+
+    // Check if nudge already exists
+    const { data: existingNudge } = await supabase
+      .from('nudges')
+      .select('id')
+      .eq('sender_id', user.id)
+      .eq('recipient_id', recipientUserId)
+      .single()
+
+    if (existingNudge) {
+      return { success: false, error: 'You have already nudged this user' }
+    }
+
+    // Create nudge
+    const { error: insertError } = await supabase
+      .from('nudges')
+      .insert({
+        sender_id: user.id,
+        recipient_id: recipientUserId
+      })
+
+    if (insertError) {
+      console.error('[sendNudge] Error creating nudge:', insertError)
+      return { success: false, error: 'Failed to send nudge' }
+    }
+
+    console.log('[sendNudge] ✅ Nudge sent to user:', recipientUserId)
+    return { success: true }
+
+  } catch (error) {
+    console.error('[sendNudge] Error:', error)
+    return { success: false, error: 'Failed to send nudge' }
+  }
+}
+
+/**
+ * Mark a nudge as read
+ */
+export async function markNudgeAsRead(nudgeId: string): Promise<{ success: boolean }> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('nudges')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', nudgeId)
+      .eq('recipient_id', user.id) // Ensure user owns this nudge
+
+    if (error) {
+      console.error('[markNudgeAsRead] Error:', error)
+      return { success: false }
+    }
+
+    console.log('[markNudgeAsRead] ✅ Nudge marked as read:', nudgeId)
+    return { success: true }
+
+  } catch (error) {
+    console.error('[markNudgeAsRead] Error:', error)
+    return { success: false }
+  }
+}
+
+/**
+ * Check if current user has nudged a specific user
+ */
+export async function hasNudgedUser(recipientUserId: string): Promise<boolean> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return false
+  }
+
+  try {
+    const { data } = await supabase
+      .from('nudges')
+      .select('id')
+      .eq('sender_id', user.id)
+      .eq('recipient_id', recipientUserId)
+      .single()
+
+    return !!data
+
+  } catch (error) {
+    return false
+  }
 }
