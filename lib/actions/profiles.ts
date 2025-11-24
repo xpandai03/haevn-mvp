@@ -7,6 +7,18 @@
 
 import { createClient } from '@/lib/supabase/server'
 
+export interface SurveyDisplayData {
+  goals?: Record<string, any>
+  communication?: Record<string, any>
+  energy?: Record<string, any>
+  boundaries?: Record<string, any>
+  interests?: Record<string, any>
+  bodyType?: Record<string, any>
+  loveLanguages?: Record<string, any>
+  kinks?: Record<string, any>
+  preferences?: Record<string, any>
+}
+
 export interface ProfileData {
   partnershipId: string
   displayName: string
@@ -18,8 +30,7 @@ export interface ProfileData {
   photos: string[]
   compatibilityPercentage?: number
   topFactor?: string
-  // Survey data (will be populated in BATCH 13)
-  surveyData?: any
+  surveyData?: SurveyDisplayData
 }
 
 /**
@@ -89,12 +100,30 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
       })
     }
 
-    // TODO: Calculate compatibility with current user (BATCH 13)
+    // Get survey responses for this partnership's users
+    const { data: partnershipMembers } = await supabase
+      .from('partnership_members')
+      .select('user_id')
+      .eq('partnership_id', partnershipId)
+
+    let surveyData: SurveyDisplayData | undefined
+
+    if (partnershipMembers && partnershipMembers.length > 0) {
+      // Get first user's survey responses
+      const { data: surveyResponse } = await supabase
+        .from('user_survey_responses')
+        .select('answers_json')
+        .eq('user_id', partnershipMembers[0].user_id)
+        .single()
+
+      if (surveyResponse?.answers_json) {
+        surveyData = categorizeSurveyData(surveyResponse.answers_json)
+      }
+    }
+
+    // Calculate compatibility (stub for now - would use matching engine)
     const compatibilityPercentage = undefined
     const topFactor = undefined
-
-    // TODO: Fetch survey data (BATCH 13)
-    const surveyData = undefined
 
     return {
       partnershipId: partnership.id,
@@ -111,6 +140,56 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
   } catch (error) {
     console.error('[getProfileData] Error:', error)
     return null
+  }
+}
+
+/**
+ * Categorize raw survey answers into display sections
+ */
+function categorizeSurveyData(answersJson: Record<string, any>): SurveyDisplayData {
+  return {
+    goals: {
+      'Relationship Goals': answersJson.q7_relationship_goals,
+      'Long-term Intentions': answersJson.q8_long_term_intentions,
+      'Current Dating Stage': answersJson.q9_dating_stage
+    },
+    communication: {
+      'Communication Style': answersJson.q15_communication_style,
+      'Conflict Resolution': answersJson.q16_conflict_resolution,
+      'Meeting Preferences': answersJson.q17_meeting_preferences
+    },
+    energy: {
+      'Social Energy': answersJson.q18_social_energy,
+      'Activity Level': answersJson.q19_activity_level,
+      'Lifestyle Pace': answersJson.q20_lifestyle_pace
+    },
+    boundaries: {
+      'Emotional Exclusivity': answersJson.q10_emotional_exclusivity,
+      'Sexual Exclusivity': answersJson.q11_sexual_exclusivity,
+      'Discretion Level': answersJson.q12_discretion_level
+    },
+    interests: {
+      'Hobbies': answersJson.q21_hobbies,
+      'Interests': answersJson.q22_interests,
+      'Favorite Activities': answersJson.q23_activities
+    },
+    bodyType: {
+      'Body Type': answersJson.q13_body_type,
+      'Body Type Preferences': answersJson.q14_body_preferences
+    },
+    loveLanguages: {
+      'Primary Love Language': answersJson.q24_love_language,
+      'Secondary Love Language': answersJson.q25_secondary_love_language
+    },
+    kinks: {
+      'Kink Openness': answersJson.q26_kink_openness,
+      'Kink Interests': answersJson.q27_kink_interests
+    },
+    preferences: {
+      'Age Range': answersJson.q3_age_preferences,
+      'Location Preference': answersJson.q4_location_preference,
+      'Distance': answersJson.q5_max_distance
+    }
   }
 }
 

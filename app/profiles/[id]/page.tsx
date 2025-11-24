@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { getProfileData, ProfileData } from '@/lib/actions/profiles'
 import { useAuth } from '@/lib/auth/context'
+import { SurveyDataDisplay } from '@/components/profiles/SurveyDataDisplay'
 
 type TabKey = 'about' | 'compatibility' | 'photos'
 
@@ -253,18 +254,46 @@ export default function ProfileViewPage() {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'about' && (
-              <div className="space-y-4">
-                <p className="text-haevn-charcoal/60 text-center py-8">
-                  Survey data will be displayed here in BATCH 13
-                </p>
+              <div className="space-y-6">
+                {profile.surveyData ? (
+                  <>
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="goals" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="boundaries" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="communication" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="energy" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="interests" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="bodyType" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="loveLanguages" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="kinks" />
+                    <SurveyDataDisplay surveyData={profile.surveyData} category="preferences" />
+                  </>
+                ) : (
+                  <p className="text-haevn-charcoal/60 text-center py-8">
+                    No survey data available yet
+                  </p>
+                )}
               </div>
             )}
 
             {activeTab === 'compatibility' && (
               <div className="space-y-4">
-                <p className="text-haevn-charcoal/60 text-center py-8">
-                  Detailed compatibility breakdown will be displayed here in BATCH 13
-                </p>
+                {profile.compatibilityPercentage ? (
+                  <div className="text-center">
+                    <div className="text-6xl font-bold text-haevn-teal mb-4">
+                      {profile.compatibilityPercentage}%
+                    </div>
+                    <p className="text-haevn-charcoal text-lg mb-6">
+                      {profile.topFactor}
+                    </p>
+                    <p className="text-haevn-charcoal/60">
+                      Detailed compatibility breakdown coming soon
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-haevn-charcoal/60 text-center py-8">
+                    Compatibility data not available
+                  </p>
+                )}
               </div>
             )}
 
