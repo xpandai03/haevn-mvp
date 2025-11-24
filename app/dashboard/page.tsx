@@ -10,6 +10,7 @@ import { DashboardSection } from '@/components/dashboard/DashboardSection'
 import { ProfileCard, ProfileCardData } from '@/components/dashboard/ProfileCard'
 import { getDashboardStats, getUserMembershipTier, getUserProfilePhoto } from '@/lib/actions/dashboard'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
+import { getConnections, Connection } from '@/lib/actions/connections'
 import Image from 'next/image'
 
 export default function DashboardPage() {
@@ -26,7 +27,7 @@ export default function DashboardPage() {
   const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>()
   const [matches, setMatches] = useState<MatchResult[]>([])
-  const [connections, setConnections] = useState<ProfileCardData[]>([])
+  const [connections, setConnections] = useState<Connection[]>([])
   const [nudges, setNudges] = useState<ProfileCardData[]>([])
 
   const [loading, setLoading] = useState(true)
@@ -54,21 +55,21 @@ export default function DashboardPage() {
         setLoading(true)
 
         // Fetch all dashboard data in parallel
-        const [statsData, tierData, photoUrl, matchesData] = await Promise.all([
+        const [statsData, tierData, photoUrl, matchesData, connectionsData] = await Promise.all([
           getDashboardStats(),
           getUserMembershipTier(),
           getUserProfilePhoto(),
-          getMatches('Bronze')
+          getMatches('Bronze'),
+          getConnections()
         ])
 
         setStats(statsData)
         setMembershipTier(tierData)
         setProfilePhotoUrl(photoUrl || undefined)
         setMatches(matchesData)
+        setConnections(connectionsData)
 
-        // TODO: Load connections and nudges in batches 8 and 10
-        // For now, they're empty arrays
-        setConnections([])
+        // TODO: Load nudges in batch 10
         setNudges([])
 
         console.log('[Dashboard] ✅ Data loaded')
@@ -201,8 +202,8 @@ export default function DashboardPage() {
               profile={connection}
               variant="connection"
               onClick={handleProfileClick}
-              latestMessage="Latest message preview..." // TODO: Get from connection data
-              unreadCount={0} // TODO: Get from connection data
+              latestMessage={connection.latestMessage}
+              unreadCount={connection.unreadCount}
             />
           ))}
         </DashboardSection>
