@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, LogOut } from 'lucide-react'
+import { Loader2, LogOut, MessageSquare, User, FileText, Calendar, BookOpen, GraduationCap } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
 import { ProfileSummaryCard, ProfileSummaryStats } from '@/components/dashboard/ProfileSummaryCard'
@@ -245,46 +245,98 @@ export default function DashboardPage() {
           ))}
         </DashboardSection>
 
-        {/* Personal Navigation Section (Placeholder for Batch 17) */}
+        {/* Personal Navigation Section */}
         <div className="mt-12 bg-white rounded-3xl p-6 shadow-sm">
-          <h3 className="text-xl font-bold text-haevn-navy mb-4">Personal</h3>
+          <h3
+            className="text-xl font-bold text-haevn-navy mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700
+            }}
+          >
+            Personal
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Button
               variant="outline"
-              className="justify-start"
+              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
               onClick={() => router.push('/messages')}
             >
-              Messages
+              <MessageSquare className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Messages</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Chat with connections</div>
+              </div>
             </Button>
             <Button
               variant="outline"
-              className="justify-start"
+              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
               onClick={() => router.push('/settings')}
             >
-              Account Details
+              <User className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Account</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Settings & profile</div>
+              </div>
             </Button>
             <Button
               variant="outline"
-              className="justify-start"
+              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
               onClick={() => router.push('/onboarding/survey')}
             >
-              Survey
+              <FileText className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Survey</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Update preferences</div>
+              </div>
             </Button>
           </div>
         </div>
 
-        {/* Resources Section (Placeholder for Batch 17) */}
+        {/* Resources Section */}
         <div className="mt-6 bg-white rounded-3xl p-6 shadow-sm">
-          <h3 className="text-xl font-bold text-haevn-navy mb-4">Resources</h3>
+          <h3
+            className="text-xl font-bold text-haevn-navy mb-4"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 700
+            }}
+          >
+            Resources
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button variant="outline" className="justify-start" disabled>
-              Events (Coming Soon)
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <Calendar className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Events</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
+              </div>
             </Button>
-            <Button variant="outline" className="justify-start" disabled>
-              Glossary (Coming Soon)
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <BookOpen className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Glossary</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
+              </div>
             </Button>
-            <Button variant="outline" className="justify-start" disabled>
-              Learn (Coming Soon)
+            <Button
+              variant="outline"
+              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <GraduationCap className="h-5 w-5 mr-3 flex-shrink-0" />
+              <div className="text-left">
+                <div className="font-semibold">Learn</div>
+                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
+              </div>
             </Button>
           </div>
         </div>
