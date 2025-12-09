@@ -1,345 +1,62 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
+import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
+import { ProfileBannerCard } from '@/components/dashboard/ProfileBannerCard'
+import { MatchesSection } from '@/components/dashboard/MatchesSection'
+import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
+import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2, LogOut, MessageSquare, User, FileText, Calendar, BookOpen, GraduationCap } from 'lucide-react'
-import { useAuth } from '@/lib/auth/context'
-import { Button } from '@/components/ui/button'
-import { ProfileSummaryCard, ProfileSummaryStats } from '@/components/dashboard/ProfileSummaryCard'
-import { DashboardSection } from '@/components/dashboard/DashboardSection'
-import { ProfileCard, ProfileCardData } from '@/components/dashboard/ProfileCard'
-import { getDashboardStats, getUserMembershipTier, getUserProfilePhoto } from '@/lib/actions/dashboard'
-import { getMatches, MatchResult } from '@/lib/actions/matching'
-import { getConnections, Connection } from '@/lib/actions/connections'
-import { getReceivedNudges, Nudge } from '@/lib/actions/nudges'
-import Image from 'next/image'
+export default async function DashboardPage() {
+  // Load all dashboard data server-side
+  const data = await loadDashboardData()
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const { user, session, loading: authLoading, signOut } = useAuth()
-
-  // Dashboard data state
-  const [stats, setStats] = useState<ProfileSummaryStats>({
-    matchesCount: 0,
-    newMessagesCount: 0,
-    connectionsCount: 0,
-    profileViews: 0
-  })
-  const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>()
-  const [matches, setMatches] = useState<MatchResult[]>([])
-  const [connections, setConnections] = useState<Connection[]>([])
-  const [nudges, setNudges] = useState<Nudge[]>([])
-
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Auth validation
-  useEffect(() => {
-    if (authLoading) return
-
-    if (!user || !session) {
-      console.log('[Dashboard] No authenticated user, redirecting to login')
-      router.push('/auth/login')
-      return
-    }
-
-    console.log('[Dashboard] Loaded for user:', user.id)
-  }, [user, session, authLoading, router])
-
-  // Load dashboard data
-  useEffect(() => {
-    async function loadDashboardData() {
-      if (authLoading || !user || !session) return
-
-      try {
-        setLoading(true)
-
-        // Fetch all dashboard data in parallel
-        const [statsData, tierData, photoUrl, matchesData, connectionsData, nudgesData] = await Promise.all([
-          getDashboardStats(),
-          getUserMembershipTier(),
-          getUserProfilePhoto(),
-          getMatches('Bronze'),
-          getConnections(),
-          getReceivedNudges()
-        ])
-
-        setStats(statsData)
-        setMembershipTier(tierData)
-        setProfilePhotoUrl(photoUrl || undefined)
-        setMatches(matchesData)
-        setConnections(connectionsData)
-        setNudges(nudgesData)
-
-        console.log('[Dashboard] ✅ Data loaded')
-      } catch (err: any) {
-        console.error('[Dashboard] Error loading data:', err)
-        setError(err.message || 'Failed to load dashboard')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDashboardData()
-  }, [user, session, authLoading])
-
-  // Handle sign out
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/')
+  // Redirect to login if not authenticated
+  if (!data) {
+    redirect('/auth/login')
   }
 
-  // Handle profile card click
-  const handleProfileClick = (id: string) => {
-    router.push(`/profiles/${id}`)
-  }
+  const {
+    user,
+    profile,
+    partnership
+  } = data
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-          <p className="text-haevn-charcoal">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
-          <h2 className="text-2xl font-bold text-haevn-navy mb-4">Error Loading Dashboard</h2>
-          <p className="text-haevn-charcoal mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()} className="w-full bg-haevn-teal">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    )
+  // Mock stats for now - will come from real data later
+  const stats = {
+    matches: 12,
+    messages: 4,
+    connections: 8
   }
 
   return (
-    <div className="min-h-screen bg-haevn-lightgray">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <Image
-            src="/images/haevn-logo-with-icon.png"
-            alt="HAEVN"
-            width={120}
-            height={40}
-            className="h-8 sm:h-10 w-auto"
-          />
+      <HAEVNHeader />
 
-          {/* Sign Out Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="text-haevn-charcoal hover:text-haevn-teal"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Profile Summary Card */}
-        <div className="mb-8">
-          <ProfileSummaryCard
-            user={user!}
-            stats={stats}
-            membershipTier={membershipTier}
-            profilePhotoUrl={profilePhotoUrl}
-          />
-        </div>
+      {/* Main Content - Compact mobile-first layout */}
+      <main className="max-w-md mx-auto px-4 py-3 space-y-4">
+        {/* Profile Banner Card */}
+        <ProfileBannerCard
+          user={user}
+          profile={profile}
+          membershipTier={partnership?.tier}
+          stats={stats}
+        />
 
         {/* Matches Section */}
-        <DashboardSection
-          title="Matches"
-          count={matches.length}
-          viewAllHref="/dashboard/matches"
-          emptyMessage="No matches yet. Complete your survey to find compatible connections."
-          emptyAction={{
-            label: "Complete Survey",
-            href: "/onboarding/survey"
-          }}
-        >
-          {matches.slice(0, 10).map((match) => (
-            <ProfileCard
-              key={match.partnership_id}
-              profile={{
-                id: match.partnership_id,
-                photo: undefined, // TODO: Get photo from match data
-                username: match.display_name || 'User',
-                city: match.city,
-                compatibilityPercentage: match.score?.compatibilityPercentage || 0,
-                topFactor: match.score?.topFactor || 'Compatible match'
-              }}
-              variant="match"
-              onClick={handleProfileClick}
-            />
-          ))}
-        </DashboardSection>
+        <MatchesSection
+          totalMatches={stats.matches}
+          currentIndex={1}
+        />
 
         {/* Connections Section */}
-        <DashboardSection
-          title="Connections"
-          count={connections.length}
-          viewAllHref="/dashboard/connections"
-          emptyMessage="No active connections yet. Send a message to start connecting!"
-        >
-          {connections.slice(0, 10).map((connection) => (
-            <ProfileCard
-              key={connection.id}
-              profile={connection}
-              variant="connection"
-              onClick={handleProfileClick}
-              latestMessage={connection.latestMessage}
-              unreadCount={connection.unreadCount}
-            />
-          ))}
-        </DashboardSection>
+        <ConnectionsSection
+          totalConnections={stats.connections}
+          currentIndex={1}
+        />
 
-        {/* Nudges Section */}
-        <DashboardSection
-          title="Nudges"
-          count={nudges.length}
-          viewAllHref="/dashboard/nudges"
-          emptyMessage={
-            membershipTier === 'plus'
-              ? "No nudges received yet."
-              : "Upgrade to HAEVN+ to send and receive nudges!"
-          }
-          emptyAction={
-            membershipTier === 'free'
-              ? {
-                  label: "Upgrade to HAEVN+",
-                  href: "/pricing"
-                }
-              : undefined
-          }
-        >
-          {nudges.slice(0, 10).map((nudge) => (
-            <ProfileCard
-              key={nudge.id}
-              profile={{
-                id: nudge.senderPartnershipId,
-                photo: nudge.photo,
-                username: nudge.username,
-                city: nudge.city,
-                compatibilityPercentage: nudge.compatibilityPercentage,
-                topFactor: nudge.topFactor
-              }}
-              variant="nudge"
-              onClick={handleProfileClick}
-              nudgedAt={nudge.nudgedAt}
-            />
-          ))}
-        </DashboardSection>
-
-        {/* Personal Navigation Section */}
-        <div className="mt-12 bg-white rounded-3xl p-6 shadow-sm">
-          <h3
-            className="text-xl font-bold text-haevn-navy mb-4"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 700
-            }}
-          >
-            Personal
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
-              onClick={() => router.push('/messages')}
-            >
-              <MessageSquare className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Messages</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Chat with connections</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
-              onClick={() => router.push('/settings')}
-            >
-              <User className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Account</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Settings & profile</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 hover:border-haevn-teal hover:text-haevn-teal"
-              onClick={() => router.push('/onboarding/survey')}
-            >
-              <FileText className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Survey</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Update preferences</div>
-              </div>
-            </Button>
-          </div>
-        </div>
-
-        {/* Resources Section */}
-        <div className="mt-6 bg-white rounded-3xl p-6 shadow-sm">
-          <h3
-            className="text-xl font-bold text-haevn-navy mb-4"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 700
-            }}
-          >
-            Resources
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
-              disabled
-            >
-              <Calendar className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Events</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
-              disabled
-            >
-              <BookOpen className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Glossary</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start h-auto py-4 opacity-50 cursor-not-allowed"
-              disabled
-            >
-              <GraduationCap className="h-5 w-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
-                <div className="font-semibold">Learn</div>
-                <div className="text-xs text-haevn-charcoal/60 font-normal">Coming soon</div>
-              </div>
-            </Button>
-          </div>
-        </div>
+        {/* Personal & Resources Navigation */}
+        <DashboardNavigation />
       </main>
     </div>
   )

@@ -1,0 +1,237 @@
+/**
+ * Dashboard Data Loader
+ * Server-side function to load all dashboard data
+ */
+
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { calculateSurveyCompletion } from '@/lib/survey/questions'
+import type {
+  DashboardData,
+  PartnerInfo,
+  PendingInviteInfo,
+  CompatibilityScores,
+  PartnerStatus
+} from '@/lib/types/dashboard'
+
+// TODO: Replace with real compatibility calculation from matching engine
+// Integration point: lib/matching/calculateCompatibility.ts
+const MOCK_COMPATIBILITY: CompatibilityScores = {
+  overall: 85,
+  categories: {
+    goalsExpectations: 75,
+    structureFit: 75,
+    boundariesComfort: 100,
+    opennessCuriosity: 95,
+    sexualEnergy: 95
+  }
+}
+
+/**
+ * Determine partner status based on their survey data
+ */
+function getPartnerStatus(
+  surveyReviewed: boolean,
+  completionPct: number
+): PartnerStatus {
+  if (completionPct >= 100 && surveyReviewed) {
+    return 'completed'
+  }
+  if (completionPct > 0) {
+    return 'in_progress'
+  }
+  return 'not_started'
+}
+
+/**
+ * Load all dashboard data for the current user
+ */
+export async function loadDashboardData(): Promise<DashboardData | null> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (!user || authError) {
+    console.error('[loadDashboardData] No authenticated user')
+    return null
+  }
+
+  const adminClient = await createAdminClient()
+
+  try {
+    // 1. Fetch user profile
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('full_name, email')
+      .eq('user_id', user.id)
+      .single()
+
+    // 2. Get user's partnership membership
+    const { data: membership } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id, role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // Default data if no partnership
+    if (!membership) {
+      // Get user's own survey completion
+      const { data: userSurvey } = await adminClient
+        .from('user_survey_responses')
+        .select('answers_json, completion_pct')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const userCompletion = userSurvey?.completion_pct ?? 0
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email || ''
+        },
+        profile: profile ? {
+          fullName: profile.full_name || 'User',
+          photoUrl: undefined
+        } : null,
+        partnership: null,
+        partners: [],
+        pendingInvites: [],
+        onboarding: {
+          userCompletion,
+          allPartnersComplete: false
+        },
+        compatibility: null
+      }
+    }
+
+    const partnershipId = membership.partnership_id
+
+    // 3. Fetch partnership details
+    const { data: partnership } = await adminClient
+      .from('partnerships')
+      .select('id, owner_id, profile_type, membership_tier')
+      .eq('id', partnershipId)
+      .single()
+
+    // 4. Fetch all partnership members with their profiles
+    const { data: members } = await adminClient
+      .from('partnership_members')
+      .select(`
+        user_id,
+        role,
+        joined_at,
+        survey_reviewed,
+        profiles (
+          full_name,
+          email
+        )
+      `)
+      .eq('partnership_id', partnershipId)
+      .order('joined_at', { ascending: true })
+
+    // 5. Fetch survey responses for all members
+    const memberUserIds = members?.map(m => m.user_id) || []
+    const { data: surveyResponses } = await adminClient
+      .from('user_survey_responses')
+      .select('user_id, answers_json, completion_pct')
+      .in('user_id', memberUserIds)
+
+    // Create a map of survey responses by user_id
+    const surveyMap = new Map<string, { completion_pct: number; answers_json: any }>()
+    surveyResponses?.forEach(sr => {
+      surveyMap.set(sr.user_id, {
+        completion_pct: sr.completion_pct ?? 0,
+        answers_json: sr.answers_json
+      })
+    })
+
+    // 6. Build partner info list
+    const partners: PartnerInfo[] = (members || []).map((member: any) => {
+      const surveyData = surveyMap.get(member.user_id)
+      const completionPct = surveyData?.completion_pct ?? 0
+
+      return {
+        userId: member.user_id,
+        name: member.profiles?.full_name || 'Unknown',
+        email: member.profiles?.email || '',
+        role: member.role as 'owner' | 'member',
+        status: getPartnerStatus(member.survey_reviewed, completionPct),
+        onboardingCompletion: completionPct,
+        surveyReviewed: member.survey_reviewed || false
+      }
+    })
+
+    // 7. Fetch pending invites
+    const { data: invites } = await adminClient
+      .from('partnership_requests')
+      .select('id, to_email, invite_code, created_at')
+      .eq('partnership_id', partnershipId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    const pendingInvites: PendingInviteInfo[] = (invites || []).map(inv => ({
+      id: inv.id,
+      email: inv.to_email,
+      inviteCode: inv.invite_code,
+      createdAt: inv.created_at
+    }))
+
+    // 8. Calculate onboarding status
+    const currentUserSurvey = surveyMap.get(user.id)
+    const userCompletion = currentUserSurvey?.completion_pct ?? 0
+
+    // All partners complete if everyone has 100% completion AND has reviewed
+    const allPartnersComplete = partners.every(
+      p => p.onboardingCompletion >= 100 && p.surveyReviewed
+    )
+
+    // 9. Get user's profile photo
+    const { data: photoData } = await adminClient
+      .from('partnership_photos')
+      .select('storage_path')
+      .eq('partnership_id', partnershipId)
+      .eq('is_primary', true)
+      .eq('photo_type', 'public')
+      .maybeSingle()
+
+    let photoUrl: string | undefined
+    if (photoData?.storage_path) {
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('partnership-photos')
+        .getPublicUrl(photoData.storage_path)
+      photoUrl = publicUrl
+    }
+
+    // 10. Get compatibility (mock for now, real engine later)
+    // TODO: Replace with real compatibility calculation
+    // const compatibility = await getInternalCompatibility(partnershipId)
+    const compatibility = allPartnersComplete ? MOCK_COMPATIBILITY : null
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email || ''
+      },
+      profile: {
+        fullName: profile?.full_name || 'User',
+        photoUrl
+      },
+      partnership: partnership ? {
+        id: partnership.id,
+        type: (partnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
+        tier: (partnership.membership_tier as 'free' | 'premium') || 'free',
+        ownerId: partnership.owner_id
+      } : null,
+      partners,
+      pendingInvites,
+      onboarding: {
+        userCompletion,
+        allPartnersComplete
+      },
+      compatibility
+    }
+  } catch (error) {
+    console.error('[loadDashboardData] Error:', error)
+    return null
+  }
+}
