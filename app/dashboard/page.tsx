@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
-import { ProfileBannerCard } from '@/components/dashboard/ProfileBannerCard'
+import { DashboardClient } from '@/components/dashboard/DashboardClient'
 import { MatchesSection } from '@/components/dashboard/MatchesSection'
 import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
@@ -35,8 +35,8 @@ export default async function DashboardPage() {
 
       {/* Main Content - Compact mobile-first layout */}
       <main className="max-w-md mx-auto px-4 py-3 space-y-4">
-        {/* Profile Banner Card */}
-        <ProfileBannerCard
+        {/* Profile Banner Card with Photo Modal */}
+        <DashboardClient
           user={user}
           profile={profile}
           membershipTier={partnership?.tier}

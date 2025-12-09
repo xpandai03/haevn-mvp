@@ -12,6 +12,7 @@ interface ProfileBannerCardProps {
     connections: number
   }
   onAvatarUpload?: (file: File) => Promise<void>
+  onAvatarClick?: () => void
 }
 
 export function ProfileBannerCard({
@@ -19,7 +20,8 @@ export function ProfileBannerCard({
   profile,
   membershipTier = 'free',
   stats = { matches: 0, messages: 0, connections: 0 },
-  onAvatarUpload
+  onAvatarUpload,
+  onAvatarClick
 }: ProfileBannerCardProps) {
   const displayName = profile?.fullName || 'User'
 
@@ -101,8 +103,9 @@ export function ProfileBannerCard({
             photoUrl={profile?.photoUrl}
             displayName={displayName}
             onUpload={onAvatarUpload}
+            onClick={onAvatarClick}
             size="lg"
-            editable={!!onAvatarUpload}
+            editable={!!onAvatarClick || !!onAvatarUpload}
           />
         </div>
       </div>

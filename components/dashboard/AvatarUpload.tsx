@@ -9,6 +9,7 @@ interface AvatarUploadProps {
   photoUrl?: string | null
   displayName: string
   onUpload?: (file: File) => Promise<void>
+  onClick?: () => void // Opens modal instead of file picker
   size?: 'sm' | 'md' | 'lg'
   editable?: boolean
 }
@@ -35,6 +36,7 @@ export function AvatarUpload({
   photoUrl,
   displayName,
   onUpload,
+  onClick,
   size = 'lg',
   editable = true
 }: AvatarUploadProps) {
@@ -42,6 +44,12 @@ export function AvatarUpload({
   const [isUploading, setIsUploading] = useState(false)
 
   const handleClick = () => {
+    // If onClick prop is provided, use it (opens modal)
+    if (onClick) {
+      onClick()
+      return
+    }
+    // Otherwise, use default file input behavior
     if (editable && fileInputRef.current) {
       fileInputRef.current.click()
     }
