@@ -32,13 +32,33 @@ const TIER_LABELS = {
   Bronze: 'MATCH',
 }
 
-// 5 compatibility categories matching PPT
+// 5 compatibility categories matching PPT with descriptions
 const CATEGORIES = [
-  { key: 'goals_expectations', label: 'Goals & Expectations' },
-  { key: 'structure_fit', label: 'Structure Fit' },
-  { key: 'boundaries_comfort', label: 'Boundaries & Comfort Levels' },
-  { key: 'openness_curiosity', label: 'Openness & Curiosity' },
-  { key: 'sexual_energy', label: 'Sexual Energy' },
+  {
+    key: 'goals_expectations',
+    label: 'Goals & Expectations',
+    description: 'What each of you is looking for right now; dating, play, exploration, or something more defined.'
+  },
+  {
+    key: 'structure_fit',
+    label: 'Structure Fit',
+    description: "How well your relationship setups line up, whether you're solo, partnered, or part of a more complex structure."
+  },
+  {
+    key: 'boundaries_comfort',
+    label: 'Boundaries & Comfort Levels',
+    description: "What each person is open to, what each person isn't open to, and whether those limits work together."
+  },
+  {
+    key: 'openness_curiosity',
+    label: 'Openness & Curiosity',
+    description: 'How comfortable each of you is with trying new things, exploring different dynamics, or learning as you go.'
+  },
+  {
+    key: 'sexual_energy',
+    label: 'Sexual Energy',
+    description: 'The kind of sexual tone, pace, and vibe each of you naturally enjoys.'
+  },
 ]
 
 export function MatchProfileView({ match, open, onClose, onConnect, onPass }: MatchProfileViewProps) {
@@ -88,8 +108,8 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass }: Ma
         </button>
       </div>
 
-      {/* Main Content - NO SCROLL */}
-      <div className="flex-1 flex flex-col px-5 py-4">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
         {/* Avatar */}
         <div className="flex justify-center mb-3">
           {partnership.photo_url ? (
@@ -138,23 +158,24 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass }: Ma
         </div>
 
         {/* Compatibility Breakdown */}
-        <div className="flex-1">
+        <div className="pb-4">
           <p className="text-xs font-semibold text-gray-700 mb-2">Compatibility Breakdown</p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {CATEGORIES.map((cat) => {
               const pct = getPercentage(cat.key)
               return (
-                <div key={cat.key}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs text-gray-600">{cat.label}</span>
-                    <span className="text-xs font-semibold text-gray-700">{pct}%</span>
+                <div key={cat.key} className="bg-white border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-gray-800">{cat.label}</span>
+                    <span className="text-sm font-bold text-gray-700">{pct}%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
                     <div
                       className="h-full bg-[#1B9A9A] rounded-full"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">{cat.description}</p>
                 </div>
               )
             })}
