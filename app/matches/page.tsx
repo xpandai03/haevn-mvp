@@ -7,6 +7,7 @@ import { getMatches, MatchResult } from '@/lib/actions/matching'
 import { canSendHandshake } from '@/lib/actions/handshakes'
 import { HandshakeMatchCard } from '@/components/HandshakeMatchCard'
 import { SendHandshakeModal } from '@/components/SendHandshakeModal'
+import { MatchProfileView } from '@/components/MatchProfileView'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowLeft, Filter } from 'lucide-react'
 import { HaevnLogo } from '@/components/HaevnLogo'
@@ -25,6 +26,7 @@ export default function MatchesPage() {
   const [filteredMatches, setFilteredMatches] = useState<MatchResult[]>([])
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [minTier, setMinTier] = useState<'Platinum' | 'Gold' | 'Silver' | 'Bronze'>('Bronze')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +84,7 @@ export default function MatchesPage() {
 
   const handleViewDetails = (match: MatchResult) => {
     setSelectedMatch(match)
+    setDetailsOpen(true)
   }
 
   if (authLoading || loading) {
@@ -199,6 +202,20 @@ export default function MatchesPage() {
           onSuccess={handleHandshakeSuccess}
         />
       )}
+
+      {/* Full-Screen Match Profile View */}
+      <MatchProfileView
+        match={selectedMatch}
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        onConnect={(partnershipId) => {
+          setDetailsOpen(false)
+          handleSendHandshake(partnershipId)
+        }}
+        onPass={() => {
+          setDetailsOpen(false)
+        }}
+      />
     </div>
   )
 }

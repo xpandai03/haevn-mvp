@@ -29,14 +29,15 @@ export function ConnectionsSection({
         <div className="overflow-x-auto pb-2 -mx-4 px-4">
           <div className="flex gap-3" style={{ minWidth: 'min-content' }}>
             {totalConnections > 0 ? (
-              // Placeholder cards - will be replaced with real connection data
+              // Placeholder cards - clickable to go to connections page
               Array.from({ length: Math.min(totalConnections, 5) }).map((_, i) => (
-                <div
+                <Link
                   key={i}
-                  className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center"
+                  href="/dashboard/connections"
+                  className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
                 >
                   <span className="text-xs text-gray-400">Connection {i + 1}</span>
-                </div>
+                </Link>
               ))
             ) : (
               // Empty state

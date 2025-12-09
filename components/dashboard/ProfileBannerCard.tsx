@@ -58,7 +58,7 @@ export function ProfileBannerCard({
           {/* Stats Row - Labels ABOVE numbers */}
           <div className="grid grid-cols-3 gap-4">
             <Link
-              href="/dashboard/matches"
+              href="/matches"
               className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
             >
               <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
@@ -82,11 +82,11 @@ export function ProfileBannerCard({
             </Link>
 
             <Link
-              href="/dashboard/connections"
+              href={membershipTier === 'plus' ? '/dashboard/connections' : '/dashboard/nudges'}
               className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
             >
               <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
-                Connections
+                {membershipTier === 'plus' ? 'Connections' : 'Nudges'}
               </p>
               <p className="text-3xl font-bold text-white">
                 {stats.connections}

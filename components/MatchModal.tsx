@@ -22,6 +22,7 @@ interface MatchModalProps {
   } | null
   open: boolean
   onClose: () => void
+  onConnect?: (partnershipId: string) => void
 }
 
 const TIER_COLORS = {
@@ -38,7 +39,7 @@ const TIER_BADGE_COLORS = {
   Bronze: 'bg-haevn-orange-100 text-haevn-orange-900 border-haevn-orange-300',
 }
 
-export function MatchModal({ match, open, onClose }: MatchModalProps) {
+export function MatchModal({ match, open, onClose, onConnect }: MatchModalProps) {
   if (!match) return null
 
   const { partnership, score, tier, breakdown } = match
@@ -141,13 +142,25 @@ export function MatchModal({ match, open, onClose }: MatchModalProps) {
           </p>
         </div>
 
-        {/* Action button */}
+        {/* Action buttons - CONNECT / PASS */}
         <div className="mt-6 flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            Close
+          <Button
+            variant="outline"
+            className="flex-1 border-gray-300 text-gray-600 hover:bg-gray-100"
+            onClick={onClose}
+          >
+            PASS
           </Button>
-          <Button className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-            Send Interest
+          <Button
+            className="flex-1 bg-[#1B9A9A] hover:bg-[#178787] text-white font-semibold"
+            onClick={() => {
+              if (onConnect) {
+                onConnect(partnership.id)
+              }
+              onClose()
+            }}
+          >
+            CONNECT
           </Button>
         </div>
       </DialogContent>
