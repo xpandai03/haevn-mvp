@@ -175,20 +175,13 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
     // 9. Get user's profile photo
     const { data: photoData } = await adminClient
       .from('partnership_photos')
-      .select('storage_path')
+      .select('photo_url')
       .eq('partnership_id', partnershipId)
       .eq('is_primary', true)
       .eq('photo_type', 'public')
       .maybeSingle()
 
-    let photoUrl: string | undefined
-    if (photoData?.storage_path) {
-      const { data: { publicUrl } } = supabase
-        .storage
-        .from('partnership-photos')
-        .getPublicUrl(photoData.storage_path)
-      photoUrl = publicUrl
-    }
+    const photoUrl = photoData?.photo_url || undefined
 
     // 10. Get compatibility from matching engine
     let compatibility: CompatibilityScores | null = null
