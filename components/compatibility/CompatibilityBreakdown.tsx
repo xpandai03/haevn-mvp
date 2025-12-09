@@ -6,31 +6,34 @@ interface CategoryConfig {
   description: string
 }
 
+/**
+ * Category configurations matching the 5-category matching engine
+ */
 const categoryConfigs: CategoryConfig[] = [
   {
-    key: 'goalsExpectations',
-    label: 'Goals & Expectations',
-    description: 'What each of you is looking for right now; dating, play, exploration, or something more defined.'
+    key: 'intent',
+    label: 'Intent & Goals',
+    description: 'How well your relationship goals, timing, and expectations align with each other.'
   },
   {
-    key: 'structureFit',
+    key: 'structure',
     label: 'Structure Fit',
-    description: "How well your relationship setups line up, whether you're solo, partnered, or part of a more complex structure."
+    description: "How well your relationship setups line up, including orientation, boundaries, and safer-sex practices."
   },
   {
-    key: 'boundariesComfort',
-    label: 'Boundaries & Comfort Levels',
-    description: "What each person is open to, what each person isn't open to, and whether those limits work together."
+    key: 'connection',
+    label: 'Connection Style',
+    description: 'How you communicate, handle conflict, and connect emotionally with each other.'
   },
   {
-    key: 'opennessCuriosity',
-    label: 'Openness & Curiosity',
-    description: 'How comfortable each of you is with trying new things, exploring different dynamics, or learning as you go.'
+    key: 'chemistry',
+    label: 'Sexual Chemistry',
+    description: 'Your erotic alignment, roles, kinks, and sexual energy compatibility.'
   },
   {
-    key: 'sexualEnergy',
-    label: 'Sexual Energy',
-    description: 'The kind of sexual tone, pace, and vibe each of you naturally enjoys.'
+    key: 'lifestyle',
+    label: 'Lifestyle Fit',
+    description: 'How well your daily lives align - distance, social energy, and lifestyle preferences.'
   }
 ]
 
@@ -45,6 +48,11 @@ export function CompatibilityBreakdown({
   showDescriptions = true,
   compact = false
 }: CompatibilityBreakdownProps) {
+  // Filter out lifestyle if it's not included
+  const displayCategories = categoryConfigs.filter(
+    cat => cat.key !== 'lifestyle' || scores.lifestyleIncluded
+  )
+
   return (
     <div className={compact ? 'space-y-3' : 'space-y-4'}>
       <h4
@@ -59,7 +67,7 @@ export function CompatibilityBreakdown({
       </h4>
 
       <div className={compact ? 'space-y-3' : 'space-y-4'}>
-        {categoryConfigs.map((category) => {
+        {displayCategories.map((category) => {
           const score = scores.categories[category.key]
 
           return (

@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
-import { getMatches, MatchResult } from '@/lib/actions/matching'
-import { canSendHandshake } from '@/lib/actions/handshakes'
-import { HandshakeMatchCard } from '@/components/HandshakeMatchCard'
-import { SendHandshakeModal } from '@/components/SendHandshakeModal'
-import { MatchProfileView } from '@/components/MatchProfileView'
+import { getMatchesV2, type ExternalMatchResult, type CompatibilityTier } from '@/lib/actions/matching'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, Filter } from 'lucide-react'
+import { Loader2, ArrowLeft, Filter, User, MapPin } from 'lucide-react'
 import { HaevnLogo } from '@/components/HaevnLogo'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -19,18 +17,30 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+// Tier badge colors
+const TIER_COLORS: Record<string, string> = {
+  Platinum: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white',
+  Gold: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white',
+  Silver: 'bg-gradient-to-r from-gray-400 to-gray-500 text-white',
+  Bronze: 'bg-gradient-to-r from-amber-700 to-orange-700 text-white',
+}
+
+// Top category label lookup
+const CATEGORY_LABELS: Record<string, string> = {
+  intent: 'Intent & Goals',
+  structure: 'Structure Fit',
+  connection: 'Connection Style',
+  chemistry: 'Sexual Chemistry',
+  lifestyle: 'Lifestyle Fit',
+}
+
 export default function MatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const [matches, setMatches] = useState<MatchResult[]>([])
-  const [filteredMatches, setFilteredMatches] = useState<MatchResult[]>([])
-  const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [detailsOpen, setDetailsOpen] = useState(false)
-  const [minTier, setMinTier] = useState<'Platinum' | 'Gold' | 'Silver' | 'Bronze'>('Bronze')
+  const [matches, setMatches] = useState<ExternalMatchResult[]>([])
+  const [minTier, setMinTier] = useState<CompatibilityTier>('Bronze')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pendingHandshakes, setPendingHandshakes] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -44,9 +54,8 @@ export default function MatchesPage() {
 
       try {
         setLoading(true)
-        const matchData = await getMatches(minTier)
+        const matchData = await getMatchesV2(minTier)
         setMatches(matchData)
-        setFilteredMatches(matchData)
       } catch (err: any) {
         console.error('Error loading matches:', err)
         setError(err.message || 'Failed to load matches')
@@ -58,33 +67,20 @@ export default function MatchesPage() {
     loadMatches()
   }, [user, minTier])
 
-  const handleSendHandshake = async (matchId: string) => {
-    // Check if can send
-    const { canSend, reason } = await canSendHandshake(matchId)
-
-    if (!canSend) {
-      alert(reason || 'Cannot send handshake')
-      return
-    }
-
-    // Find match to get score
-    const match = matches.find(m => m.partnership.id === matchId)
-
-    // Open modal
-    setSelectedMatch(match || null)
-    setModalOpen(true)
+  // Navigate to match detail page
+  const handleViewMatch = (matchId: string) => {
+    router.push(`/matches/${matchId}`)
   }
 
-  const handleHandshakeSuccess = () => {
-    // Add to pending set
-    if (selectedMatch) {
-      setPendingHandshakes(prev => new Set(prev).add(selectedMatch.partnership.id))
-    }
-  }
+  // Get top scoring category for a match
+  const getTopCategory = (match: ExternalMatchResult): string => {
+    const categories = match.compatibility.categories.filter(c => c.included)
+    if (categories.length === 0) return 'Compatible'
 
-  const handleViewDetails = (match: MatchResult) => {
-    setSelectedMatch(match)
-    setDetailsOpen(true)
+    const top = categories.reduce((best, cat) =>
+      cat.score > best.score ? cat : best
+    )
+    return CATEGORY_LABELS[top.category] || 'Compatible'
   }
 
   if (authLoading || loading) {
@@ -144,7 +140,7 @@ export default function MatchesPage() {
                 Your Matches
               </h1>
               <p className="text-body text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
-                {filteredMatches.length} compatible {filteredMatches.length === 1 ? 'partnership' : 'partnerships'} found
+                {matches.length} compatible {matches.length === 1 ? 'partnership' : 'partnerships'} found
               </p>
             </div>
 
@@ -167,55 +163,80 @@ export default function MatchesPage() {
         </div>
 
         {/* Matches Grid */}
-        {filteredMatches.length === 0 ? (
+        {matches.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-[#252627]/20">
               <h3 className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
                 No matches found
               </h3>
               <p className="text-body text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
-                Try adjusting your filter or check back later for new matches.
+                Complete your survey or check back later for new matches.
               </p>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredMatches.map((match) => (
-              <HandshakeMatchCard
-                key={match.partnership.id}
-                match={match}
-                onSendHandshake={handleSendHandshake}
-                onViewDetails={handleViewDetails}
-                isPending={pendingHandshakes.has(match.partnership.id)}
-              />
-            ))}
+            {matches.map((match) => {
+              const { partnership, compatibility } = match
+              const initials = partnership.display_name
+                ?.split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2) || '??'
+
+              return (
+                <div
+                  key={partnership.id}
+                  onClick={() => handleViewMatch(partnership.id)}
+                  className="bg-white rounded-2xl border border-[#252627]/10 p-5 cursor-pointer hover:shadow-lg transition-all duration-200"
+                >
+                  {/* Header: Avatar + Name */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <Avatar className="h-16 w-16 border-2 border-haevn-teal flex-shrink-0">
+                      {partnership.photo_url ? (
+                        <AvatarImage src={partnership.photo_url} alt={partnership.display_name || 'Match'} />
+                      ) : (
+                        <AvatarFallback className="bg-haevn-navy text-white text-lg font-bold">
+                          {initials}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-[#252627] truncate mb-1" style={{ fontFamily: 'Roboto' }}>
+                        {partnership.display_name || 'Anonymous'}
+                      </h3>
+                      <div className="flex items-center gap-1 text-[#252627]/60 text-sm">
+                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{partnership.city || 'Unknown'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compatibility Score */}
+                  <div className="mb-3">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-4xl font-bold text-haevn-teal" style={{ fontFamily: 'Roboto' }}>
+                        {compatibility.overallScore}%
+                      </span>
+                      <span className="text-sm text-[#252627]/60">match</span>
+                    </div>
+                    <Badge className={`${TIER_COLORS[compatibility.tier]} text-xs px-2 py-0.5`}>
+                      {compatibility.tier}
+                    </Badge>
+                  </div>
+
+                  {/* Top Factor */}
+                  <p className="text-sm text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
+                    Top match: <span className="font-medium">{getTopCategory(match)}</span>
+                  </p>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
-
-      {/* Send Handshake Modal */}
-      {selectedMatch && (
-        <SendHandshakeModal
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-          match={selectedMatch}
-          onSuccess={handleHandshakeSuccess}
-        />
-      )}
-
-      {/* Full-Screen Match Profile View */}
-      <MatchProfileView
-        match={selectedMatch}
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        onConnect={(partnershipId) => {
-          setDetailsOpen(false)
-          handleSendHandshake(partnershipId)
-        }}
-        onPass={() => {
-          setDetailsOpen(false)
-        }}
-      />
     </div>
   )
 }

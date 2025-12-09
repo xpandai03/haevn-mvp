@@ -6,6 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateSurveyCompletion } from '@/lib/survey/questions'
+import { getInternalCompatibility } from './getInternalCompatibility'
 import type {
   DashboardData,
   PartnerInfo,
@@ -13,19 +14,6 @@ import type {
   CompatibilityScores,
   PartnerStatus
 } from '@/lib/types/dashboard'
-
-// TODO: Replace with real compatibility calculation from matching engine
-// Integration point: lib/matching/calculateCompatibility.ts
-const MOCK_COMPATIBILITY: CompatibilityScores = {
-  overall: 85,
-  categories: {
-    goalsExpectations: 75,
-    structureFit: 75,
-    boundariesComfort: 100,
-    opennessCuriosity: 95,
-    sexualEnergy: 95
-  }
-}
 
 /**
  * Determine partner status based on their survey data
@@ -202,10 +190,16 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       photoUrl = publicUrl
     }
 
-    // 10. Get compatibility (mock for now, real engine later)
-    // TODO: Replace with real compatibility calculation
-    // const compatibility = await getInternalCompatibility(partnershipId)
-    const compatibility = allPartnersComplete ? MOCK_COMPATIBILITY : null
+    // 10. Get compatibility from matching engine
+    let compatibility: CompatibilityScores | null = null
+    if (allPartnersComplete && partnership) {
+      const profileType = (partnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo'
+      compatibility = await getInternalCompatibility(
+        adminClient,
+        partnershipId,
+        profileType
+      )
+    }
 
     return {
       user: {

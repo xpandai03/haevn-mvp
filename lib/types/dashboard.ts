@@ -22,15 +22,35 @@ export interface PendingInviteInfo {
   createdAt: string
 }
 
+/**
+ * Category score from the matching engine
+ */
+export interface CategoryScoreDisplay {
+  key: 'intent' | 'structure' | 'connection' | 'chemistry' | 'lifestyle'
+  score: number
+  weight: number
+  coverage: number
+  included: boolean
+  reason?: string
+}
+
+/**
+ * Compatibility scores from the internal matching engine
+ */
 export interface CompatibilityScores {
   overall: number
+  tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
   categories: {
-    goalsExpectations: number
-    structureFit: number
-    boundariesComfort: number
-    opennessCuriosity: number
-    sexualEnergy: number
+    intent: number
+    structure: number
+    connection: number
+    chemistry: number
+    lifestyle: number
   }
+  /** Detailed category scores with coverage info */
+  categoryDetails?: CategoryScoreDisplay[]
+  /** Whether lifestyle was included in calculation */
+  lifestyleIncluded: boolean
 }
 
 export interface CompatibilityCategoryDisplay {

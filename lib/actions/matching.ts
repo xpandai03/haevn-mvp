@@ -3,6 +3,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateMatch, calculateMatches, UserProfile, MatchScore } from '@/lib/matching/scoring'
+import {
+  getExternalMatches as getExternalMatchesService,
+  getExternalMatchDetails as getExternalMatchDetailsService,
+  getMatchStatus as getMatchStatusService,
+  type ExternalMatchResult,
+} from '@/lib/matching/getExternalMatches'
+import type { CompatibilityTier } from '@/lib/matching'
+
+// Re-export types for consumers
+export type { ExternalMatchResult } from '@/lib/matching/getExternalMatches'
+export type { CompatibilityTier } from '@/lib/matching'
 
 export interface MatchResult {
   partnership: {
@@ -283,4 +294,46 @@ export async function getMatchDetails(matchId: string) {
     partnership: matchPartnership,
     score,
   }
+}
+
+// =============================================================================
+// V2 FUNCTIONS - Using NEW 5-category matching engine
+// =============================================================================
+
+/**
+ * Get external matches using the NEW 5-category matching engine.
+ *
+ * This function replaces the legacy `getMatches()` for external discovery.
+ * It uses the same engine as internal compatibility but for partnerships.
+ *
+ * @param minTier - Minimum tier to include (default: 'Bronze')
+ * @param limit - Maximum number of matches to return (default: 50)
+ */
+export async function getMatchesV2(
+  minTier: CompatibilityTier = 'Bronze',
+  limit: number = 50
+): Promise<ExternalMatchResult[]> {
+  return getExternalMatchesService(minTier, limit)
+}
+
+/**
+ * Get details for a specific match using the NEW 5-category engine.
+ *
+ * @param matchId - The partnership ID to get details for
+ */
+export async function getMatchDetailsV2(
+  matchId: string
+): Promise<ExternalMatchResult | null> {
+  return getExternalMatchDetailsService(matchId)
+}
+
+/**
+ * Get the current status of a match relationship.
+ *
+ * @param matchId - The partnership ID to check status for
+ */
+export async function getMatchStatusV2(
+  matchId: string
+): Promise<'none' | 'pending_sent' | 'pending_received' | 'connected' | 'dismissed'> {
+  return getMatchStatusService(matchId)
 }
