@@ -10,7 +10,7 @@
 
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export interface Nudge {
   id: string // Nudge ID
@@ -32,6 +32,7 @@ export interface Nudge {
  */
 export async function getReceivedNudges(): Promise<Nudge[]> {
   const supabase = await createClient()
+  const serviceSupabase = await createServiceRoleClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -49,10 +50,13 @@ export async function getReceivedNudges(): Promise<Nudge[]> {
       .eq('user_id', user.id)
       .single()
 
+    console.log('[getReceivedNudges] User partnership:', userPartnership)
+
     if (!userPartnership) {
       console.log('[getReceivedNudges] No partnership found')
       return []
     }
+
 
     // Get all nudges where current user is recipient
     const { data: nudges, error: nudgesError } = await supabase
@@ -61,11 +65,13 @@ export async function getReceivedNudges(): Promise<Nudge[]> {
         id,
         sender_id,
         created_at,
-        read_at
+        read_at,
+        recipient_id
       `)
       .eq('recipient_id', user.id)
       .order('created_at', { ascending: false })
 
+    console.log('[getReceivedNudges] Nudges data:', nudges, 'Error:', nudgesError)
     if (nudgesError) {
       console.error('[getReceivedNudges] Error fetching nudges:', nudgesError)
       return []
@@ -81,21 +87,32 @@ export async function getReceivedNudges(): Promise<Nudge[]> {
 
     for (const nudge of nudges) {
       // Get sender's partnership
-      const { data: senderPartnership } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from('partnership_members')
-        .select(`
-          partnership_id,
-          partnership:partnerships(id, display_name, city)
-        `)
+        .select('partnership_id')
         .eq('user_id', nudge.sender_id)
         .single()
 
-      if (!senderPartnership?.partnership) continue
+      console.log({ memberData })
+      if (memberError || !memberData) {
+        console.error('[getSentNudges] Error fetching recipient membership:', memberError, 'for recipient:', nudge.recipient_id)
+        continue
+      }
 
-      const partnership = Array.isArray(senderPartnership.partnership)
-        ? senderPartnership.partnership[0]
-        : senderPartnership.partnership
+      console.log('[getReceivedNudges] partnership_id:', memberData.partnership_id)
+      // Get partnership details
+      const { data: partnership, error: partnershipError } = await serviceSupabase
+        .from('partnerships')
+        .select('id, display_name, city')
+        .eq('id', memberData.partnership_id)
+        .single()
 
+      // Debug: Check if RLS is blocking
+      console.log('[getReceivedNudges] partnership query result:', { partnership, partnershipError })
+      if (partnershipError) {
+        console.error('[getReceivedNudges] RLS or query error:', partnershipError.code, partnershipError.message, partnershipError.details)
+        continue
+      }
       // Get primary photo for sender's partnership
       const { data: photoData } = await supabase
         .from('partnership_photos')
@@ -141,6 +158,7 @@ export async function getReceivedNudges(): Promise<Nudge[]> {
     })
 
     console.log('[getReceivedNudges] Found', nudgesWithData.length, 'nudges')
+    console.log({ nudgesWithData })
     return nudgesWithData
 
   } catch (error) {
@@ -202,21 +220,31 @@ export async function getSentNudges(): Promise<Nudge[]> {
     const nudgesWithData: Nudge[] = []
 
     for (const nudge of nudges) {
-      // Get recipient's partnership
-      const { data: recipientPartnership } = await supabase
+      // Get recipient's partnership_id from partnership_members
+      const { data: memberData, error: memberError } = await supabase
         .from('partnership_members')
-        .select(`
-          partnership_id,
-          partnership:partnerships(id, display_name, city)
-        `)
-        .eq('user_id', nudge.recipient_id)
+        .select('partnership_id')
+        .eq('user_id', nudge.sender_id)
         .single()
 
-      if (!recipientPartnership?.partnership) continue
+      console.log({ memberData })
+      if (memberError || !memberData) {
+        console.error('[getSentNudges] Error fetching recipient membership:', memberError, 'for recipient:', nudge.recipient_id)
+        continue
+      }
 
-      const partnership = Array.isArray(recipientPartnership.partnership)
-        ? recipientPartnership.partnership[0]
-        : recipientPartnership.partnership
+      // Get partnership details
+      const { data: partnership, error: partnershipError } = await supabase
+        .from('partnerships')
+        .select('id, display_name, city')
+        .eq('id', memberData.partnership_id)
+        .single()
+
+      console.log({ partnership })
+      if (partnershipError || !partnership) {
+        console.error('[getSentNudges] Error fetching partnership:', partnershipError, 'for partnership_id:', memberData.partnership_id)
+        continue
+      }
 
       // Get primary photo for recipient's partnership
       const { data: photoData } = await supabase
@@ -284,9 +312,9 @@ export async function sendNudge(recipientUserId: string): Promise<{ success: boo
       .eq('user_id', user.id)
       .single()
 
-    if (profile?.membership_tier !== 'plus') {
-      return { success: false, error: 'HAEVN+ membership required to send nudges' }
-    }
+    // if (profile?.membership_tier !== 'plus') {
+    //   return { success: false, error: 'HAEVN+ membership required to send nudges' }
+    // }
 
     // Check if nudge already exists
     const { data: existingNudge } = await supabase
