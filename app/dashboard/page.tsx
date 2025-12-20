@@ -7,6 +7,7 @@ import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
 import { SendNudgeButton } from '@/components/dashboard/SendNudgeButton'
+import { getConnectionCards } from '@/lib/actions/handshakes'
 
 export default async function DashboardPage() {
   // Load all dashboard data server-side
@@ -26,15 +27,17 @@ export default async function DashboardPage() {
   const isPaidTier = partnership && partnership?.tier !== 'free'
 
   const { getReceivedNudges } = await import('@/lib/actions/nudges')
+
   const nudgesWithData = await getReceivedNudges()
-  console.log(`[Dashboard] User ${user.id} has ${nudgesWithData.length} nudges`)
+  const connectionCards = await getConnectionCards()
+  console.log(`[Dashboard] User ${user.id} has ${nudgesWithData.length} nudges, ${connectionCards.length} connections`)
 
   // Mock stats for now - will come from real data later
   const stats = {
     matches: 12,
     messages: 4,
-    connections: 8,
-    nudges: 2
+    connections: connectionCards.length,
+    nudges: nudgesWithData.length
   }
 
   return (
@@ -61,14 +64,11 @@ export default async function DashboardPage() {
 
         {/* Connections Section */}
 
-        {isPaidTier ? (
+        {/* Nudges Section (for free tier) */}
+        {!isPaidTier && <NudgesSection nudges={nudgesWithData} />}
 
-          <ConnectionsSection
-            totalConnections={stats.connections}
-            currentIndex={1}
-          />
-        ) : (<NudgesSection nudges={nudgesWithData} />)}
-
+        {/* Connections Section */}
+        <ConnectionsSection connections={connectionCards} />
         {/* Send Nudge Test Button */}
         <SendNudgeButton />
 

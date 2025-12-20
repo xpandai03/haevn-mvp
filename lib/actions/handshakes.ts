@@ -329,3 +329,113 @@ export async function getIncomingHandshakeCount(): Promise<number> {
     return 0
   }
 }
+
+/**
+ * Connection card data for UI display
+ */
+export interface ConnectionCardData {
+  id: string // handshake id
+  partnershipId: string
+  displayName: string
+  city: string | null
+  age: number | null
+  identity: string | null
+  photoUrl: string | null
+  compatibilityScore: number
+  topFactor: string
+  matchedAt: string | null
+}
+
+/**
+ * Get connections with enriched data for UI cards
+ * Returns the "other" partnership's info with photos
+ */
+export async function getConnectionCards(): Promise<ConnectionCardData[]> {
+  try {
+    const supabase = await createClient()
+    const adminClient = createAdminClient()
+    const currentPartnershipId = await getCurrentPartnershipId()
+
+    const { data: handshakes, error } = await adminClient
+      .from('handshakes')
+      .select(`
+        id,
+        a_partnership,
+        b_partnership,
+        match_score,
+        matched_at,
+        partnership_a:a_partnership(id, display_name, city, age, identity),
+        partnership_b:b_partnership(id, display_name, city, age, identity)
+      `)
+      .or(`a_partnership.eq.${currentPartnershipId},b_partnership.eq.${currentPartnershipId}`)
+      .eq('a_consent', true)
+      .eq('b_consent', true)
+      .eq('state', 'matched')
+      .order('matched_at', { ascending: false })
+
+    if (error) {
+      console.error('[getConnectionCards] Error:', error)
+      return []
+    }
+
+    if (!handshakes || handshakes.length === 0) {
+      return []
+    }
+
+    // Process each connection to get the "other" partnership and their photo
+    const connectionCards: ConnectionCardData[] = []
+
+    for (const handshake of handshakes) {
+      // Determine which partnership is the OTHER one
+      const isCurrentA = handshake.a_partnership === currentPartnershipId
+      const otherPartnership = isCurrentA
+        ? (handshake.partnership_b as any)
+        : (handshake.partnership_a as any)
+
+      if (!otherPartnership) continue
+
+      // Get photo for the other partnership
+      const { data: photoData } = await adminClient
+        .from('partnership_photos')
+        .select('storage_path')
+        .eq('partnership_id', otherPartnership.id)
+        .eq('is_primary', true)
+        .eq('photo_type', 'public')
+        .maybeSingle()
+
+      let photoUrl: string | null = null
+      if (photoData?.storage_path) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('partnership-photos')
+          .getPublicUrl(photoData.storage_path)
+        photoUrl = publicUrl
+      }
+
+      // Determine top compatibility factor based on score
+      const score = handshake.match_score || 0
+      let topFactor = 'Compatible'
+      if (score >= 85) topFactor = 'Great Match'
+      else if (score >= 70) topFactor = 'Strong Connection'
+      else if (score >= 55) topFactor = 'Good Fit'
+
+      connectionCards.push({
+        id: handshake.id,
+        partnershipId: otherPartnership.id,
+        displayName: otherPartnership.display_name || 'User',
+        city: otherPartnership.city,
+        age: otherPartnership.age,
+        identity: otherPartnership.identity,
+        photoUrl,
+        compatibilityScore: handshake.match_score || 0,
+        topFactor,
+        matchedAt: handshake.matched_at
+      })
+    }
+
+    return connectionCards
+  } catch (error: any) {
+    console.error('[getConnectionCards] Error:', error)
+    return []
+  }
+}
