@@ -68,6 +68,46 @@ export default function HaevnLanding() {
         {/* Footer - CTAs and Legal Links */}
         <footer className="pb-8 md:pb-12 px-6">
           <div className="w-full max-w-md mx-auto space-y-6">
+            {/* Disclaimer Text */}
+            <p
+              className="text-center text-white/90"
+              style={{
+                fontFamily: 'Roboto, Helvetica, sans-serif',
+                fontWeight: 300,
+                fontSize: '12px',
+                lineHeight: '150%'
+              }}
+            >
+              By signing up for HAEVN, you agreed to our{' '}
+              <a
+                href="https://www.haevn.co/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-white transition-colors"
+              >
+                terms of service
+              </a>
+              . Learn how we process your data in our{' '}
+              <a
+                href="https://www.haevn.co/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-white transition-colors"
+              >
+                privacy policy
+              </a>
+              {' '}and{' '}
+              <a
+                href="https://www.haevn.co/cookies-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-white transition-colors"
+              >
+                cookies policy
+              </a>
+              .
+            </p>
+
             {/* CTA Buttons */}
             <div className="space-y-3">
               <Button
