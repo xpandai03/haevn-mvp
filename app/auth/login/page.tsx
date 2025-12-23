@@ -117,13 +117,15 @@ export default function LoginPage() {
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Logo at top */}
         <div className="flex justify-center pt-8 md:pt-12">
-          <Image
-            src="/images/haevn-logo-icon-white.png"
-            alt="HAEVN"
-            width={80}
-            height={80}
-            className="object-contain"
-          />
+          <div className="relative w-[220px] md:w-[280px] h-[55px] md:h-[70px]">
+            <Image
+              src="/images/haevn-logo-icon-white.png"
+              alt="HAEVN"
+              fill
+              priority
+              className="object-contain"
+            />
+          </div>
         </div>
 
         {/* Centered Form */}
