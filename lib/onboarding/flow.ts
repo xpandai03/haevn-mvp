@@ -267,13 +267,13 @@ export class OnboardingFlowController {
       }
 
       console.log('[FLOW] Valid partnershipId:', partnershipId)
-      console.log('[FLOW] ✅ Guard active before user_survey_responses query:', partnershipId)
+      console.log('[FLOW] ✅ Querying survey by user_id:', userId)
 
-      // Check partnership survey completion (NOT user survey)
+      // Check user's survey completion (stable across partnership changes)
       const { data: surveyData, error: surveyError } = await this.supabase
         .from('user_survey_responses')
         .select('completion_pct')
-        .eq('partnership_id', partnershipId)
+        .eq('user_id', userId)
         .maybeSingle()
 
       if (surveyError) {

@@ -84,11 +84,11 @@ export async function middleware(request: NextRequest) {
           console.warn('[TRACE-MW] ⚠️ Invalid partnershipId in onboarding check:', partnershipId)
           console.log('[TRACE-MW] Allowing access to onboarding to fix data')
         } else {
-          console.log('[TRACE-MW] ✅ Guard active before user_survey_responses query:', partnershipId)
+          console.log('[TRACE-MW] ✅ Querying survey by user_id:', session.user.id)
           const { data: surveyData, error: surveyError } = await supabase
             .from('user_survey_responses')
             .select('completion_pct')
-            .eq('partnership_id', partnershipId)
+            .eq('user_id', session.user.id)
             .maybeSingle()
 
           if (surveyError) {
@@ -207,13 +207,13 @@ export async function middleware(request: NextRequest) {
     }
 
     console.log('[TRACE-MW] Valid partnershipId:', partnershipId)
-    console.log('[TRACE-MW] ✅ Guard active before user_survey_responses query:', partnershipId)
+    console.log('[TRACE-MW] ✅ Querying survey by user_id:', session.user.id)
 
-    // Check partnership survey completion (NOT user survey)
+    // Check user's survey completion (stable across partnership changes)
     const { data: surveyData, error: surveyError } = await supabase
       .from('user_survey_responses')
       .select('completion_pct')
-      .eq('partnership_id', partnershipId)
+      .eq('user_id', session.user.id)
       .maybeSingle()
 
     if (surveyError) {
