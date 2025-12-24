@@ -59,17 +59,16 @@ export function AvatarUpload({
     const file = e.target.files?.[0]
     if (!file || !onUpload) return
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      alert('Please select a valid image file (JPEG, PNG, or WebP)')
+    // Validate file type - permissive for mobile (iOS HEIC, etc.)
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file')
       return
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024
+    // Validate file size (max 10MB for iOS compatibility)
+    const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
-      alert('Image must be less than 5MB')
+      alert('Image must be less than 10MB')
       return
     }
 
@@ -118,11 +117,11 @@ export function AvatarUpload({
         )}
       </button>
 
-      {/* Hidden File Input */}
+      {/* Hidden File Input - use image/* for iOS compatibility */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
         aria-hidden="true"

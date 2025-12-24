@@ -3,8 +3,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+// Expanded list for iOS compatibility (HEIC/HEIF support)
+const ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/jpg' // Some browsers report this
+]
+const MAX_SIZE = 10 * 1024 * 1024 // 10MB (iOS photos can be larger)
 
 export interface UploadProfilePhotoResult {
   success: boolean
@@ -23,14 +31,17 @@ export async function uploadProfilePhoto(formData: FormData): Promise<UploadProf
       return { success: false, error: 'No file provided' }
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return { success: false, error: 'Invalid file type. Please upload a JPG, PNG, or WebP image.' }
+    // Validate file type - be permissive for mobile compatibility
+    const fileType = file.type.toLowerCase()
+    const isAllowedType = ALLOWED_TYPES.includes(fileType) || fileType.startsWith('image/')
+    if (!isAllowedType) {
+      console.error('Rejected file type:', file.type)
+      return { success: false, error: 'Invalid file type. Please upload an image file.' }
     }
 
     // Validate file size
     if (file.size > MAX_SIZE) {
-      return { success: false, error: 'File too large. Maximum size is 5MB.' }
+      return { success: false, error: 'File too large. Maximum size is 10MB.' }
     }
 
     // Get authenticated user

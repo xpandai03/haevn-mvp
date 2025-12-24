@@ -14,8 +14,8 @@ interface ProfilePhotoModalProps {
   onPhotoUpdated: (newUrl: string) => void
 }
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+// Permissive for mobile (iOS HEIC support)
+const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
 export function ProfilePhotoModal({
   open,
@@ -34,15 +34,15 @@ export function ProfilePhotoModal({
 
     setError(null)
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Please upload a JPG, PNG, or WebP image.')
+    // Validate file type - permissive for mobile (iOS HEIC, etc.)
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file.')
       return
     }
 
     // Validate file size
     if (file.size > MAX_SIZE) {
-      setError('File too large. Maximum size is 5MB.')
+      setError('File too large. Maximum size is 10MB.')
       return
     }
 
@@ -133,11 +133,11 @@ export function ProfilePhotoModal({
             <p className="text-sm text-red-500 mb-4 text-center">{error}</p>
           )}
 
-          {/* Hidden File Input */}
+          {/* Hidden File Input - use image/* for iOS compatibility */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -168,7 +168,7 @@ export function ProfilePhotoModal({
 
           {/* File type hint */}
           <p className="text-xs text-gray-400 mt-3 text-center">
-            Supported: JPG, PNG, WebP (max 5MB)
+            Supported: JPG, PNG, WebP, HEIC (max 10MB)
           </p>
         </div>
       </DialogContent>
