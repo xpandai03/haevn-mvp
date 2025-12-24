@@ -7,13 +7,11 @@ import { getServerOnboardingFlowController } from '@/lib/onboarding/flow'
  *
  * Purpose: Determine where an authenticated user should resume their onboarding flow
  *
- * This replaces client-side calls to OnboardingFlowController.getResumeStep()
- * which were causing 400 errors due to RLS policies when using browser client.
+ * Returns:
+ * - { status: "complete", resumePath: null } if onboarding is done
+ * - { status: "incomplete", resumePath: "/onboarding/..." } if onboarding needed
  *
- * Returns: { resumePath: string }
- * Example: { resumePath: "/dashboard" } or { resumePath: "/onboarding/survey" }
- *
- * Security: Requires valid session (authenticated user only)
+ * Security: Requires valid user (uses getUser() for verified identity)
  */
 export async function GET(request: Request) {
   try {
@@ -22,36 +20,74 @@ export async function GET(request: Request) {
     // Create server client (uses SSR cookies)
     const supabase = await createClient()
 
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // CRITICAL: Use getUser() not getSession() for verified identity
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    if (sessionError || !session) {
-      console.error('[API /resume-step] No session found:', sessionError?.message)
+    if (userError || !user) {
+      console.error('[API /resume-step] No verified user:', userError?.message)
       return NextResponse.json(
-        { error: 'Unauthorized', resumePath: '/auth/login' },
+        { error: 'Unauthorized', status: 'error', resumePath: '/auth/login' },
         { status: 401 }
       )
     }
 
-    console.log('[API /resume-step] User ID:', session.user.id)
-    console.log('[API /resume-step] User email:', session.user.email)
+    console.log('[API /resume-step] Verified User ID:', user.id)
+    console.log('[API /resume-step] Verified User email:', user.email)
 
-    // Use server flow controller (with server Supabase client)
+    // SHORT-CIRCUIT: Check onboarding completion BEFORE calling getResumeStep
+    // Use the SAME logic as middleware
+    const { data: membership } = await supabase
+      .from('partnership_members')
+      .select('partnership_id, survey_reviewed, role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (membership?.partnership_id) {
+      const { data: surveyData } = await supabase
+        .from('user_survey_responses')
+        .select('completion_pct')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      // SAME completion logic as middleware
+      const isComplete = surveyData?.completion_pct === 100 &&
+        (membership.role === 'owner' || membership.survey_reviewed === true)
+
+      console.log('[API /resume-step] Completion check:', {
+        completionPct: surveyData?.completion_pct,
+        role: membership.role,
+        surveyReviewed: membership.survey_reviewed,
+        isComplete
+      })
+
+      if (isComplete) {
+        console.log('[API /resume-step] ✅ Onboarding COMPLETE - returning early')
+        console.log('[API /resume-step] =====================================')
+        return NextResponse.json({
+          status: 'complete',
+          resumePath: null,
+          userId: user.id,
+          timestamp: new Date().toISOString()
+        })
+      }
+    }
+
+    // Only call getResumeStep if onboarding is NOT complete
+    console.log('[API /resume-step] Onboarding incomplete, calling getResumeStep()')
     const flowController = await getServerOnboardingFlowController()
+    const resumePath = await flowController.getResumeStep(user.id)
 
-    // Get resume path - this executes server-side with proper client
-    const resumePath = await flowController.getResumeStep(session.user.id)
-
-    // null means onboarding is complete - map to /dashboard
+    // null means complete (shouldn't happen here, but handle it)
     const finalPath = resumePath ?? '/dashboard'
 
-    console.log('[API /resume-step] Resume path determined:', resumePath)
-    console.log('[API /resume-step] Final path (null → /dashboard):', finalPath)
+    console.log('[API /resume-step] getResumeStep returned:', resumePath)
+    console.log('[API /resume-step] Final path:', finalPath)
     console.log('[API /resume-step] =====================================')
 
     return NextResponse.json({
+      status: 'incomplete',
       resumePath: finalPath,
-      userId: session.user.id,
+      userId: user.id,
       timestamp: new Date().toISOString()
     })
 
@@ -61,6 +97,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error: 'Failed to determine resume path',
+        status: 'error',
         resumePath: '/dashboard', // Safe fallback
         details: error instanceof Error ? error.message : 'Unknown error'
       },
