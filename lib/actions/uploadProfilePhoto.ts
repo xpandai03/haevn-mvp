@@ -3,15 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Expanded list for iOS compatibility (HEIC/HEIF support)
-const ALLOWED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'image/jpg' // Some browsers report this
-]
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB (iOS photos can be larger)
 
 export interface UploadProfilePhotoResult {
@@ -24,35 +15,58 @@ export interface UploadProfilePhotoResult {
  * Upload a profile photo and set it as the primary avatar
  */
 export async function uploadProfilePhoto(formData: FormData): Promise<UploadProfilePhotoResult> {
+  console.log('[uploadProfilePhoto] Starting upload...')
+
   try {
     // Get file from FormData
     const file = formData.get('file') as File | null
     if (!file) {
+      console.error('[uploadProfilePhoto] No file in FormData')
       return { success: false, error: 'No file provided' }
     }
 
-    // Validate file type - be permissive for mobile compatibility
-    const fileType = file.type.toLowerCase()
-    const isAllowedType = ALLOWED_TYPES.includes(fileType) || fileType.startsWith('image/')
-    if (!isAllowedType) {
-      console.error('Rejected file type:', file.type)
+    console.log('[uploadProfilePhoto] File received:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    })
+
+    // Validate file type - be very permissive for mobile compatibility
+    // iOS Safari can send empty type or unusual types
+    const fileType = (file.type || '').toLowerCase()
+    const fileName = file.name.toLowerCase()
+    const isImage = fileType.startsWith('image/') ||
+                    fileName.endsWith('.jpg') ||
+                    fileName.endsWith('.jpeg') ||
+                    fileName.endsWith('.png') ||
+                    fileName.endsWith('.webp') ||
+                    fileName.endsWith('.heic') ||
+                    fileName.endsWith('.heif')
+
+    if (!isImage && fileType !== '') {
+      console.error('[uploadProfilePhoto] Rejected file type:', file.type, 'name:', file.name)
       return { success: false, error: 'Invalid file type. Please upload an image file.' }
     }
 
     // Validate file size
     if (file.size > MAX_SIZE) {
+      console.error('[uploadProfilePhoto] File too large:', file.size)
       return { success: false, error: 'File too large. Maximum size is 10MB.' }
     }
 
     // Get authenticated user
+    console.log('[uploadProfilePhoto] Getting authenticated user...')
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error('[uploadProfilePhoto] Auth error:', authError)
       return { success: false, error: 'Not authenticated' }
     }
+    console.log('[uploadProfilePhoto] User:', user.id)
 
     // Get user's partnership
+    console.log('[uploadProfilePhoto] Getting partnership...')
     const adminClient = await createAdminClient()
     const { data: membership, error: membershipError } = await adminClient
       .from('partnership_members')
@@ -61,38 +75,56 @@ export async function uploadProfilePhoto(formData: FormData): Promise<UploadProf
       .single()
 
     if (membershipError || !membership) {
-      return { success: false, error: 'No partnership found' }
+      console.error('[uploadProfilePhoto] Membership error:', membershipError)
+      return { success: false, error: 'No partnership found. Please complete onboarding first.' }
     }
 
     const partnershipId = membership.partnership_id
+    console.log('[uploadProfilePhoto] Partnership ID:', partnershipId)
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const fileName = `${partnershipId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-    const bucketName = 'public-photos'
+    // Generate unique filename - always use jpg extension for compatibility
+    const originalExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(originalExt) ? originalExt : 'jpg'
+    const uniqueFileName = `${partnershipId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${safeExt}`
+    const bucketName = 'partnership-photos' // Use consistent bucket name
+
+    console.log('[uploadProfilePhoto] Uploading to:', bucketName, uniqueFileName)
 
     // Convert File to ArrayBuffer for server-side upload
-    const arrayBuffer = await file.arrayBuffer()
-    const fileBuffer = new Uint8Array(arrayBuffer)
+    // Use try-catch specifically for this as it can fail on mobile
+    let fileBuffer: Uint8Array
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      fileBuffer = new Uint8Array(arrayBuffer)
+      console.log('[uploadProfilePhoto] File buffer created, size:', fileBuffer.length)
+    } catch (bufferError) {
+      console.error('[uploadProfilePhoto] Failed to read file buffer:', bufferError)
+      return { success: false, error: 'Failed to read file. Please try a different photo.' }
+    }
+
+    // Determine content type - default to jpeg if unknown
+    const contentType = file.type || 'image/jpeg'
 
     // Upload to Supabase Storage using admin client
+    console.log('[uploadProfilePhoto] Starting storage upload...')
     const { data: uploadData, error: uploadError } = await adminClient.storage
       .from(bucketName)
-      .upload(fileName, fileBuffer, {
-        contentType: file.type,
+      .upload(uniqueFileName, fileBuffer, {
+        contentType: contentType,
         cacheControl: '3600',
-        upsert: false
+        upsert: true // Allow overwrite in case of retry
       })
 
     if (uploadError) {
-      console.error('Upload error:', uploadError)
-      return { success: false, error: 'Failed to upload image' }
+      console.error('[uploadProfilePhoto] Storage upload error:', uploadError)
+      return { success: false, error: `Upload failed: ${uploadError.message}` }
     }
+    console.log('[uploadProfilePhoto] Storage upload success:', uploadData)
 
-    // Get public URL
+    // Get public URL - use uniqueFileName (the actual uploaded path)
     const { data: { publicUrl } } = adminClient.storage
       .from(bucketName)
-      .getPublicUrl(fileName)
+      .getPublicUrl(uniqueFileName)
 
     // First, unset any existing primary photos
     await adminClient
@@ -130,7 +162,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<UploadProf
     if (dbError) {
       console.error('Database error:', dbError)
       // Clean up uploaded file if database insert fails
-      await adminClient.storage.from(bucketName).remove([fileName])
+      await adminClient.storage.from(bucketName).remove([uniqueFileName])
       return { success: false, error: 'Failed to save photo record' }
     }
 
