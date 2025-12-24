@@ -255,9 +255,17 @@ export async function middleware(request: NextRequest) {
       const resumePath = await flowController.getResumeStep(session.user.id)
 
       console.log('[TRACE-MW] getResumeStep returned:', resumePath)
-      console.log('[TRACE-MW] Redirecting to:', resumePath)
-      console.log('[TRACE-MW] =========================================')
-      return NextResponse.redirect(new URL(resumePath, request.url))
+
+      // If resumePath is null, onboarding is complete - allow access
+      if (!resumePath) {
+        console.log('[TRACE-MW] ✅ getResumeStep returned null - onboarding complete, allowing access')
+        console.log('[TRACE-MW] =========================================')
+        // Don't redirect - let user access the protected route
+      } else {
+        console.log('[TRACE-MW] Redirecting to:', resumePath)
+        console.log('[TRACE-MW] =========================================')
+        return NextResponse.redirect(new URL(resumePath, request.url))
+      }
     }
 
     console.log('[TRACE-MW] ✅ All checks passed, allowing access to', pathname)

@@ -42,11 +42,15 @@ export async function GET(request: Request) {
     // Get resume path - this executes server-side with proper client
     const resumePath = await flowController.getResumeStep(session.user.id)
 
+    // null means onboarding is complete - map to /dashboard
+    const finalPath = resumePath ?? '/dashboard'
+
     console.log('[API /resume-step] Resume path determined:', resumePath)
+    console.log('[API /resume-step] Final path (null → /dashboard):', finalPath)
     console.log('[API /resume-step] =====================================')
 
     return NextResponse.json({
-      resumePath,
+      resumePath: finalPath,
       userId: session.user.id,
       timestamp: new Date().toISOString()
     })

@@ -231,7 +231,7 @@ export class OnboardingFlowController {
     return Math.round((completedRequired / requiredSteps.length) * 100)
   }
 
-  async getResumeStep(userId: string): Promise<string> {
+  async getResumeStep(userId: string): Promise<string | null> {
     try {
       console.log('[FLOW] ===== GET RESUME STEP =====')
       console.log('[FLOW] Getting resume step for user:', userId)
@@ -300,9 +300,9 @@ export class OnboardingFlowController {
       )
 
       if (isComplete) {
-        console.log('[FLOW] ✅ Survey complete and reviewed, sending to dashboard')
+        console.log('[FLOW] ✅ Survey complete - SHORT CIRCUIT - no resume needed')
         console.log('[FLOW] =========================================')
-        return '/dashboard'
+        return null  // No resume step needed - onboarding is complete
       }
 
       // PRIORITY 2: If partner (not owner) and hasn't reviewed survey yet
