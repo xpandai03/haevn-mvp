@@ -105,8 +105,22 @@ export default function SignupForm() {
       }
 
       const data = await response.json()
+      console.log('[Signup] Status from API:', data.status)
       console.log('[Signup] Resume path from API:', data.resumePath)
-      router.push(data.resumePath)
+
+      // CRITICAL: Check status BEFORE redirecting
+      if (data.status === 'complete') {
+        // Onboarding is complete - go to dashboard
+        console.log('[Signup] ✅ Onboarding COMPLETE - going to dashboard')
+        router.push('/dashboard')
+      } else if (data.status === 'incomplete' && data.resumePath) {
+        // Onboarding incomplete - resume where they left off
+        console.log('[Signup] Onboarding incomplete - resuming at:', data.resumePath)
+        router.push(data.resumePath)
+      } else {
+        // Fallback
+        router.push('/dashboard')
+      }
     } catch (error) {
       console.error('[Signup] Failed to fetch resume path:', error)
       router.push('/dashboard')

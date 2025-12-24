@@ -70,12 +70,24 @@ export default function LoginPage() {
 
         const data = await response.json()
         console.log('[Login] ===== RESUME PATH DETERMINED =====')
+        console.log('[Login] Status:', data.status)
         console.log('[Login] Resume path returned:', data.resumePath)
-        console.log('[Login] Redirecting to:', data.resumePath)
         console.log('[Login] =====================================')
 
-        // Use window.location for reliable redirect
-        window.location.href = data.resumePath
+        // CRITICAL: Check status BEFORE redirecting
+        if (data.status === 'complete') {
+          // Onboarding is complete - go to dashboard
+          console.log('[Login] ✅ Onboarding COMPLETE - going to dashboard')
+          window.location.href = '/dashboard'
+        } else if (data.status === 'incomplete' && data.resumePath) {
+          // Onboarding incomplete - resume where they left off
+          console.log('[Login] Onboarding incomplete - resuming at:', data.resumePath)
+          window.location.href = data.resumePath
+        } else {
+          // Fallback - should not happen but be safe
+          console.log('[Login] Unknown status, falling back to dashboard')
+          window.location.href = '/dashboard'
+        }
       } catch (fetchError) {
         console.error('[Login] Failed to fetch resume path:', fetchError)
         // Fallback to dashboard
