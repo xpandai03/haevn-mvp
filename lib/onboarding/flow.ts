@@ -288,10 +288,11 @@ export class OnboardingFlowController {
         error: surveyError?.message
       })
 
-      // PRIORITY 1: If survey complete and user has reviewed, go to dashboard
-      // This is the SOURCE OF TRUTH - database state overrides localStorage
-      const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
-      console.log('[FLOW] DECISION user=%s pct=%s reviewed=%s result=%s',
+      // PRIORITY 1: If survey complete, go to dashboard
+      // Owners implicitly reviewed (they created it), members must explicitly review
+      const isComplete = surveyData?.completion_pct === 100 &&
+        (membership.role === 'owner' || membership.survey_reviewed === true)
+      console.log('[FLOW] DECISION user=%s pct=%s role=%s reviewed=%s result=%s',
         userId,
         surveyData?.completion_pct,
         membership.survey_reviewed,
@@ -355,7 +356,8 @@ export class OnboardingFlowController {
       // If database says they're done, trust it over localStorage
 
       // Double-check database state one more time before trusting localStorage
-      if (surveyData?.completion_pct === 100 && membership.survey_reviewed) {
+      // Owners implicitly reviewed, members need explicit review
+      if (surveyData?.completion_pct === 100 && (membership.role === 'owner' || membership.survey_reviewed)) {
         console.log('[FlowController] ✅ Database confirms completion, ignoring localStorage - going to dashboard')
         return '/dashboard'
       }

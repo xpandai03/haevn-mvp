@@ -95,7 +95,8 @@ export async function middleware(request: NextRequest) {
             console.error('[TRACE-MW] ❌ Error fetching survey in onboarding check:', surveyError.message)
           }
 
-          const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
+          const isComplete = surveyData?.completion_pct === 100 &&
+            (membership.role === 'owner' || membership.survey_reviewed === true)
 
           console.log('[TRACE-MW] Onboarding completion check:', {
             hasPartnership: !!membership,
@@ -228,9 +229,11 @@ export async function middleware(request: NextRequest) {
       error: surveyError?.message
     })
 
-    // DATABASE-FIRST PRIORITY: Survey completion AND review are source of truth
-    const isComplete = surveyData?.completion_pct === 100 && membership.survey_reviewed === true
-    console.log('[TRACE-MW] user=%s pct=%s reviewed=%s path=%s decision=%s',
+    // DATABASE-FIRST PRIORITY: Survey completion is source of truth
+    // Owners implicitly reviewed (they created it), members must explicitly review
+    const isComplete = surveyData?.completion_pct === 100 &&
+      (membership.role === 'owner' || membership.survey_reviewed === true)
+    console.log('[TRACE-MW] user=%s pct=%s role=%s reviewed=%s path=%s decision=%s',
       session.user.email,
       surveyData?.completion_pct,
       membership.survey_reviewed,
