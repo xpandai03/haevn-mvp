@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getServerOnboardingFlowController } from '@/lib/onboarding/flow'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 
 /**
  * GET /api/onboarding/resume-step
@@ -49,20 +50,16 @@ export async function GET(request: Request) {
     }
 
     // SHORT-CIRCUIT: Check onboarding completion BEFORE calling getResumeStep
-    // Use the SAME logic as middleware
-    const { data: membership, error: membershipError } = await supabase
-      .from('partnership_members')
-      .select('partnership_id, survey_reviewed, role')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Use deterministic selection for users with multiple partnerships
+    const membership = await selectBestPartnership(supabase, user.id)
 
     // DIAGNOSTIC: Log membership state BEFORE any checks
     console.log('[API /resume-step] 🔍 MEMBERSHIP DIAGNOSTIC:', {
       hasMembership: !!membership,
-      membershipError: membershipError?.message || null,
       partnershipId: membership?.partnership_id || 'NULL',
       role: membership?.role || 'NULL',
-      surveyReviewed: membership?.survey_reviewed ?? 'NULL'
+      surveyReviewed: membership?.survey_reviewed ?? 'NULL',
+      membershipTier: membership?.membership_tier || 'NULL'
     })
 
     // Also fetch survey data regardless of membership for diagnostics

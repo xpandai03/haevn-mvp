@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 
 /**
  * Get dashboard stats for the current user
@@ -101,16 +102,14 @@ export async function getUserProfilePhoto(): Promise<string | null> {
   }
 
   try {
-    // Get partnership for this user
-    const { data: partnership } = await supabase
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', user.id)
-      .single()
+    // Get partnership for this user (use deterministic selection for multiple)
+    const membership = await selectBestPartnership(supabase, user.id)
 
-    if (!partnership) {
+    if (!membership) {
       return null
     }
+
+    const partnership = { partnership_id: membership.partnership_id }
 
     // Get primary photo for partnership
     const { data: photo } = await supabase

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateSurveyCompletion } from '@/lib/survey/questions'
 import { getInternalCompatibility } from './getInternalCompatibility'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import type {
   DashboardData,
   PartnerInfo,
@@ -53,12 +54,8 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       .eq('user_id', user.id)
       .single()
 
-    // 2. Get user's partnership membership
-    const { data: membership } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id, role')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // 2. Get user's partnership membership (use deterministic selection for multiple)
+    const membership = await selectBestPartnership(adminClient, user.id)
 
     // Default data if no partnership
     if (!membership) {

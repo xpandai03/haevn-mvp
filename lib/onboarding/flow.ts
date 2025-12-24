@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 
 export type OnboardingStep = {
   id: number
@@ -236,18 +237,15 @@ export class OnboardingFlowController {
       console.log('[FLOW] ===== GET RESUME STEP =====')
       console.log('[FLOW] Getting resume step for user:', userId)
 
-      // Check if user has a partnership
-      const { data: membership } = await this.supabase
-        .from('partnership_members')
-        .select('partnership_id, survey_reviewed, role')
-        .eq('user_id', userId)
-        .maybeSingle()
+      // Check if user has a partnership (use deterministic selection for multiple)
+      const membership = await selectBestPartnership(this.supabase, userId)
 
       console.log('[FLOW] Partnership membership:', {
         hasPartnership: !!membership,
         partnershipId: membership?.partnership_id,
         role: membership?.role,
-        surveyReviewed: membership?.survey_reviewed
+        surveyReviewed: membership?.survey_reviewed,
+        membershipTier: membership?.membership_tier
       })
 
       if (!membership) {

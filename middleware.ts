@@ -3,7 +3,62 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 // DEBUG: Build ID for verifying deploy - remove after debugging
-const BUILD_ID = 'getUser-fix'
+const BUILD_ID = 'multi-partnership-fix'
+
+/**
+ * Deterministic partnership selection for users with multiple partnerships.
+ * Priority: 1) Pro/Plus tier, 2) Most recently joined
+ */
+async function selectBestPartnership(
+  supabase: any,
+  userId: string
+): Promise<{ partnership_id: string; role: string; survey_reviewed: boolean } | null> {
+  const { data: memberships, error } = await supabase
+    .from('partnership_members')
+    .select(`
+      partnership_id,
+      role,
+      survey_reviewed,
+      joined_at,
+      partnerships!inner (
+        membership_tier
+      )
+    `)
+    .eq('user_id', userId)
+    .order('joined_at', { ascending: false })
+
+  if (error || !memberships || memberships.length === 0) {
+    return null
+  }
+
+  if (memberships.length > 1) {
+    console.log(`[MW] User ${userId} has ${memberships.length} partnerships - selecting best one`)
+  }
+
+  // Priority 1: Pro/Plus tier
+  const proMembership = memberships.find((m: any) => {
+    const tier = m.partnerships?.membership_tier
+    return tier === 'pro' || tier === 'plus'
+  })
+
+  if (proMembership) {
+    console.log(`[MW] Selected PRO partnership: ${proMembership.partnership_id}`)
+    return {
+      partnership_id: proMembership.partnership_id,
+      role: proMembership.role,
+      survey_reviewed: proMembership.survey_reviewed || false
+    }
+  }
+
+  // Priority 2: Most recent (first due to order)
+  const best = memberships[0]
+  console.log(`[MW] Selected most recent partnership: ${best.partnership_id}`)
+  return {
+    partnership_id: best.partnership_id,
+    role: best.role,
+    survey_reviewed: best.survey_reviewed || false
+  }
+}
 
 type RedirectReason =
   | 'NO_SESSION'
@@ -108,11 +163,8 @@ export async function middleware(request: NextRequest) {
       console.log('[TRACE-MW] Route:', pathname)
 
       // Check if user has completed onboarding (partnership + survey + reviewed)
-      const { data: membership } = await supabase
-        .from('partnership_members')
-        .select('partnership_id, survey_reviewed, role')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      // Use deterministic selection for users with multiple partnerships
+      const membership = await selectBestPartnership(supabase, user.id)
 
       if (membership?.partnership_id) {
         // DEFENSIVE GUARD: Validate partnership_id before querying
@@ -222,19 +274,14 @@ export async function middleware(request: NextRequest) {
     console.log('[TRACE-MW] Verified User ID:', user.id)
     console.log('[TRACE-MW] Verified User email:', user.email)
 
-    // Check if user has a partnership
-    const { data: membership, error: membershipError } = await supabase
-      .from('partnership_members')
-      .select('partnership_id, survey_reviewed, role')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Check if user has a partnership (use deterministic selection for multiple)
+    const membership = await selectBestPartnership(supabase, user.id)
 
     console.log('[MW] Partnership membership:', {
       hasPartnership: !!membership,
       partnershipId: membership?.partnership_id,
       role: membership?.role,
-      surveyReviewed: membership?.survey_reviewed,
-      error: membershipError?.message
+      surveyReviewed: membership?.survey_reviewed
     })
 
     if (!membership) {
