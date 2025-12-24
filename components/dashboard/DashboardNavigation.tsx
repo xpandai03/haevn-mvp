@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { MessageSquare, User, FileText, Calendar, BookOpen, GraduationCap, ChevronRight } from 'lucide-react'
+import { MessageSquare, User, FileText, Calendar, BookOpen, GraduationCap, ChevronRight, Sparkles } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface NavItemProps {
@@ -48,8 +48,13 @@ function NavItem({ icon, label, sublabel, disabled, onClick }: NavItemProps) {
   )
 }
 
-export function DashboardNavigation() {
+interface DashboardNavigationProps {
+  membershipTier?: 'free' | 'plus'
+}
+
+export function DashboardNavigation({ membershipTier = 'free' }: DashboardNavigationProps) {
   const router = useRouter()
+  const isPro = membershipTier === 'plus'
 
   return (
     <div className="space-y-3">
@@ -63,13 +68,23 @@ export function DashboardNavigation() {
             Personal
           </h3>
           <div className="space-y-0.5">
-            <NavItem
-              icon={<MessageSquare className="h-5 w-5" />}
-              label="Messages"
-              sublabel="Chat with connections"
-              href="/messages"
-              onClick={() => router.push('/messages')}
-            />
+            {isPro ? (
+              <NavItem
+                icon={<MessageSquare className="h-5 w-5" />}
+                label="Messages"
+                sublabel="Chat with connections"
+                href="/messages"
+                onClick={() => router.push('/messages')}
+              />
+            ) : (
+              <NavItem
+                icon={<Sparkles className="h-5 w-5" />}
+                label="Upgrade Account"
+                sublabel="Unlock messaging & more"
+                href="/onboarding/membership"
+                onClick={() => router.push('/onboarding/membership')}
+              />
+            )}
             <NavItem
               icon={<User className="h-5 w-5" />}
               label="Account Details"

@@ -73,7 +73,7 @@ export default async function DashboardPage() {
         <SendNudgeButton />
 
         {/* Personal & Resources Navigation */}
-        <DashboardNavigation />
+        <DashboardNavigation membershipTier={partnership?.tier} />
       </main>
     </div>
   )
