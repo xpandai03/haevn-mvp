@@ -10,6 +10,8 @@ interface ProfileBannerCardProps {
     matches: number
     messages: number
     connections: number
+    nudges?: number
+    profileViews?: number
   }
   onAvatarUpload?: (file: File) => Promise<void>
   onAvatarClick?: () => void
@@ -58,9 +60,9 @@ export function ProfileBannerCard({
           </div>
 
           {/* Stats Row - Labels ABOVE numbers */}
-          {/* Free users: 2 columns (Matches, Nudges) */}
+          {/* Free users: 3 columns (Matches, Nudges, Profile Views) */}
           {/* Pro users: 3 columns (Matches, New Messages, Connections) */}
-          <div className={`grid gap-4 ${membershipTier === 'plus' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className="grid grid-cols-3 gap-4">
             <Link
               href="/matches"
               className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
@@ -73,8 +75,8 @@ export function ProfileBannerCard({
               </p>
             </Link>
 
-            {/* New Messages - Pro users only */}
-            {membershipTier === 'plus' && (
+            {membershipTier === 'plus' ? (
+              /* Pro users: New Messages */
               <Link
                 href="/messages"
                 className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
@@ -86,19 +88,45 @@ export function ProfileBannerCard({
                   {stats.messages}
                 </p>
               </Link>
+            ) : (
+              /* Free users: Nudges */
+              <Link
+                href="/dashboard/nudges"
+                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
+                  Nudges
+                </p>
+                <p className="text-3xl font-bold text-white">
+                  {stats.nudges ?? 0}
+                </p>
+              </Link>
             )}
 
-            <Link
-              href={membershipTier === 'plus' ? '/dashboard/connections' : '/dashboard/nudges'}
-              className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
-                {membershipTier === 'plus' ? 'Connections' : 'Nudges'}
-              </p>
-              <p className="text-3xl font-bold text-white">
-                {stats.connections}
-              </p>
-            </Link>
+            {membershipTier === 'plus' ? (
+              /* Pro users: Connections */
+              <Link
+                href="/dashboard/connections"
+                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
+                  Connections
+                </p>
+                <p className="text-3xl font-bold text-white">
+                  {stats.connections}
+                </p>
+              </Link>
+            ) : (
+              /* Free users: Profile Views */
+              <div className="text-center py-2">
+                <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
+                  Profile Views
+                </p>
+                <p className="text-3xl font-bold text-white">
+                  {stats.profileViews ?? 0}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
