@@ -206,7 +206,7 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       partnership: partnership ? {
         id: partnership.id,
         type: (partnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
-        tier: (partnership.membership_tier as 'free' | 'premium') || 'free',
+        tier: partnership.membership_tier === 'free' ? 'free' : 'plus',
         ownerId: partnership.owner_id
       } : null,
       partners,

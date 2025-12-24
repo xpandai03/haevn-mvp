@@ -72,7 +72,7 @@ export interface DashboardData {
   partnership: {
     id: string
     type: 'solo' | 'couple' | 'pod'
-    tier: 'free' | 'premium'
+    tier: 'free' | 'plus'
     ownerId: string
   } | null
   partners: PartnerInfo[]
