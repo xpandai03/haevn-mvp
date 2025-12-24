@@ -2,6 +2,38 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+// DEBUG: Build ID for verifying deploy - remove after debugging
+const BUILD_ID = 'ef9c026-debug'
+
+type RedirectReason =
+  | 'NO_SESSION'
+  | 'NO_PARTNERSHIP'
+  | 'INVALID_PARTNERSHIP_ID'
+  | 'NO_SURVEY_ROW'
+  | 'SURVEY_ERROR'
+  | 'INCOMPLETE_SURVEY'
+  | 'NOT_REVIEWED_MEMBER'
+  | 'RESUME_STEP_REDIRECT'
+  | 'COMPLETE_ALLOW'
+  | 'RESUME_STEP_NULL_ALLOW'
+  | 'ONBOARDING_ROUTE_ALLOW'
+  | 'ONBOARDING_ROUTE_COMPLETE_REDIRECT'
+
+function logOnboardingGate(data: {
+  email?: string
+  userId?: string
+  partnershipId?: string | null
+  completionPct?: number | null
+  role?: string | null
+  surveyReviewed?: boolean | null
+  isComplete?: boolean
+  redirectTo?: string | null
+  reason: RedirectReason
+  decision: 'allow' | 'redirect'
+}) {
+  console.log(`[ONBOARDING_GATE] build=${BUILD_ID} email=${data.email || 'N/A'} user_id=${data.userId || 'N/A'} partnership_id=${data.partnershipId || 'N/A'} completion_pct=${data.completionPct ?? 'N/A'} role=${data.role || 'N/A'} survey_reviewed=${data.surveyReviewed ?? 'N/A'} isComplete=${data.isComplete ?? 'N/A'} redirect_to=${data.redirectTo || 'N/A'} reason=${data.reason} decision=${data.decision}`)
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next()
   const pathname = request.nextUrl.pathname
@@ -192,18 +224,36 @@ export async function middleware(request: NextRequest) {
 
     if (!membership) {
       // No partnership - redirect to onboarding
-      console.log('[TRACE-MW] ❌ No partnership found, redirecting to expectations')
-      console.log('[TRACE-MW] =========================================')
+      logOnboardingGate({
+        email: session.user.email,
+        userId: session.user.id,
+        partnershipId: null,
+        completionPct: null,
+        role: null,
+        surveyReviewed: null,
+        isComplete: false,
+        redirectTo: '/onboarding/expectations',
+        reason: 'NO_PARTNERSHIP',
+        decision: 'redirect'
+      })
       return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
     }
 
     // DEFENSIVE GUARD: Validate partnership_id before querying
     const partnershipId = membership.partnership_id
     if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
-      console.warn('[TRACE-MW] ⚠️ Missing or invalid partnershipId:', partnershipId)
-      console.warn('[TRACE-MW] User has membership but no valid partnership_id')
-      console.log('[TRACE-MW] Redirecting to onboarding to fix data')
-      console.log('[TRACE-MW] =========================================')
+      logOnboardingGate({
+        email: session.user.email,
+        userId: session.user.id,
+        partnershipId: partnershipId,
+        completionPct: null,
+        role: membership.role,
+        surveyReviewed: membership.survey_reviewed,
+        isComplete: false,
+        redirectTo: '/onboarding/expectations',
+        reason: 'INVALID_PARTNERSHIP_ID',
+        decision: 'redirect'
+      })
       return NextResponse.redirect(new URL('/onboarding/expectations', request.url))
     }
 
@@ -243,10 +293,7 @@ export async function middleware(request: NextRequest) {
 
     // Require survey completion AND user review before accessing protected routes
     if (!isComplete) {
-      console.log('[TRACE-MW] ❌ Survey incomplete or not reviewed, redirecting')
-      console.log('[TRACE-MW] Survey complete:', surveyData?.completion_pct === 100)
-      console.log('[TRACE-MW] Survey reviewed:', membership.survey_reviewed)
-      console.log('[TRACE-MW] About to call getResumeStep()')
+      console.log('[TRACE-MW] ❌ Survey incomplete or not reviewed, calling getResumeStep()')
 
       // Use flow controller to determine correct redirect
       // Import dynamically to avoid circular dependencies
@@ -258,19 +305,51 @@ export async function middleware(request: NextRequest) {
 
       // If resumePath is null, onboarding is complete - allow access
       if (!resumePath) {
-        console.log('[TRACE-MW] ✅ getResumeStep returned null - onboarding complete, allowing access')
-        console.log('[TRACE-MW] =========================================')
+        logOnboardingGate({
+          email: session.user.email,
+          userId: session.user.id,
+          partnershipId: partnershipId,
+          completionPct: surveyData?.completion_pct,
+          role: membership.role,
+          surveyReviewed: membership.survey_reviewed,
+          isComplete: false,
+          redirectTo: null,
+          reason: 'RESUME_STEP_NULL_ALLOW',
+          decision: 'allow'
+        })
         // Don't redirect - let user access the protected route
       } else {
-        console.log('[TRACE-MW] Redirecting to:', resumePath)
-        console.log('[TRACE-MW] =========================================')
+        logOnboardingGate({
+          email: session.user.email,
+          userId: session.user.id,
+          partnershipId: partnershipId,
+          completionPct: surveyData?.completion_pct,
+          role: membership.role,
+          surveyReviewed: membership.survey_reviewed,
+          isComplete: false,
+          redirectTo: resumePath,
+          reason: 'RESUME_STEP_REDIRECT',
+          decision: 'redirect'
+        })
         return NextResponse.redirect(new URL(resumePath, request.url))
       }
+    } else {
+      // isComplete is true - allow access
+      logOnboardingGate({
+        email: session.user.email,
+        userId: session.user.id,
+        partnershipId: partnershipId,
+        completionPct: surveyData?.completion_pct,
+        role: membership.role,
+        surveyReviewed: membership.survey_reviewed,
+        isComplete: true,
+        redirectTo: null,
+        reason: 'COMPLETE_ALLOW',
+        decision: 'allow'
+      })
     }
 
     console.log('[TRACE-MW] ✅ All checks passed, allowing access to', pathname)
-    console.log('[TRACE-MW] Decision: next() - allow protected route')
-    console.log('[TRACE-MW] =========================================')
     // Allow access to protected routes
   }
 

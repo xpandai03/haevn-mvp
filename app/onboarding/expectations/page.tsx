@@ -202,6 +202,10 @@ export default function ExpectationsPage() {
             </Button>
           </div>
         </div>
+        {/* DEBUG: Build ID - remove after debugging */}
+        <p className="text-xs text-gray-300 mt-4 text-center">
+          Build: ef9c026-{new Date().toISOString().slice(0, 16)}
+        </p>
       </div>
     </div>
   )
