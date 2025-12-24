@@ -72,10 +72,10 @@ export function DashboardNavigation() {
             />
             <NavItem
               icon={<User className="h-5 w-5" />}
-              label="Account"
-              sublabel="Settings & profile"
-              href="/settings"
-              onClick={() => router.push('/settings')}
+              label="Account Details"
+              sublabel="Manage your account"
+              href="/account-details"
+              onClick={() => router.push('/account-details')}
             />
             <NavItem
               icon={<FileText className="h-5 w-5" />}
