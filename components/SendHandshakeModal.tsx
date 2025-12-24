@@ -61,7 +61,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
 
       if (result.success) {
         toast({
-          title: 'Handshake Sent! 🤝',
+          title: 'Connection Request Sent! 🤝',
           description: `Your request has been sent to ${match.partnership.display_name}. You'll be notified if they accept.`,
         })
         onOpenChange(false)
@@ -70,7 +70,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
       } else {
         toast({
           title: 'Failed to Send',
-          description: result.error || 'Could not send handshake request',
+          description: result.error || 'Could not send connection request',
           variant: 'destructive',
         })
       }
@@ -91,7 +91,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="text-h3 text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
-            Send Handshake Request
+            Send Connection Request
           </DialogTitle>
           <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
             Let {match.partnership.display_name} know you're interested in connecting
@@ -142,7 +142,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
           {/* Info */}
           <div className="bg-[#008080]/10 border border-[#008080]/20 rounded-lg p-3">
             <p className="text-sm text-[#008080]" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
-              💡 If they accept your handshake, you'll both unlock full profiles, photos, and be able to message each other.
+              💡 If they accept your connection request, you'll both unlock full profiles, photos, and be able to message each other.
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Send Handshake
+                Send Connection Request
               </>
             )}
           </Button>

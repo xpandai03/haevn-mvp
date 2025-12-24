@@ -102,7 +102,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
             className="w-full bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
             style={{ fontFamily: 'Roboto', fontWeight: 500 }}
           >
-            {isPending ? 'Request Sent' : 'Send Handshake'}
+            {isPending ? 'Request Sent' : 'Send Connection Request'}
           </Button>
         </div>
       </CardContent>

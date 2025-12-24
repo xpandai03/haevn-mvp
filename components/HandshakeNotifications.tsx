@@ -97,7 +97,7 @@ export function HandshakeNotifications() {
         <PopoverContent className="w-80 p-0" align="end">
           <div className="p-4 border-b border-[#252627]/10">
             <h3 className="text-lg font-bold text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
-              Handshake Requests
+              Connection Requests
             </h3>
             <p className="text-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
               {count === 0 ? 'No pending requests' : `${count} ${count === 1 ? 'request' : 'requests'} waiting`}

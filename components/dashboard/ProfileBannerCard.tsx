@@ -58,7 +58,9 @@ export function ProfileBannerCard({
           </div>
 
           {/* Stats Row - Labels ABOVE numbers */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Free users: 2 columns (Matches, Nudges) */}
+          {/* Pro users: 3 columns (Matches, New Messages, Connections) */}
+          <div className={`grid gap-4 ${membershipTier === 'plus' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <Link
               href="/matches"
               className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
@@ -71,17 +73,20 @@ export function ProfileBannerCard({
               </p>
             </Link>
 
-            <Link
-              href="/messages"
-              className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
-                {membershipTier === 'plus' ? 'New Messages' : 'Messages'}
-              </p>
-              <p className="text-3xl font-bold text-white">
-                {stats.messages}
-              </p>
-            </Link>
+            {/* New Messages - Pro users only */}
+            {membershipTier === 'plus' && (
+              <Link
+                href="/messages"
+                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
+                  New Messages
+                </p>
+                <p className="text-3xl font-bold text-white">
+                  {stats.messages}
+                </p>
+              </Link>
+            )}
 
             <Link
               href={membershipTier === 'plus' ? '/dashboard/connections' : '/dashboard/nudges'}

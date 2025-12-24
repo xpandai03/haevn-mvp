@@ -36,6 +36,7 @@ export interface ExternalMatchResult {
     city: string
     age: number
     photo_url?: string
+    membership_tier: 'free' | 'plus' | 'select'
   }
   compatibility: {
     overallScore: number
@@ -253,7 +254,7 @@ export async function getExternalMatches(
   // 5. Fetch potential matches (same city/MSA, with display_name)
   const { data: potentialMatches, error: matchesError } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, profile_type, city, msa, age')
+    .select('id, display_name, short_bio, identity, profile_type, city, msa, age, membership_tier')
     .not('display_name', 'is', null)
     .neq('id', currentPartnershipId)
 
@@ -337,6 +338,7 @@ export async function getExternalMatches(
         city: match.city || 'Unknown',
         age: match.age || 0,
         photo_url: photoUrl,
+        membership_tier: ((match as any).membership_tier as 'free' | 'plus' | 'select') || 'free',
       },
       compatibility: {
         overallScore: result.overallScore,
@@ -384,7 +386,7 @@ export async function getExternalMatchDetails(
   // 3. Get match partnership details
   const { data: matchPartnership } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, profile_type, city, age')
+    .select('id, display_name, short_bio, identity, profile_type, city, age, membership_tier')
     .eq('id', matchPartnershipId)
     .single()
 
@@ -432,6 +434,7 @@ export async function getExternalMatchDetails(
       city: matchPartnership.city || 'Unknown',
       age: matchPartnership.age || 0,
       photo_url: photoUrl,
+      membership_tier: ((matchPartnership as any).membership_tier as 'free' | 'plus' | 'select') || 'free',
     },
     compatibility: {
       overallScore: result.overallScore,

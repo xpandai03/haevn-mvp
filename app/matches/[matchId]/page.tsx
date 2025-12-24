@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
 import { getMatchDetailsV2, type ExternalMatchResult } from '@/lib/actions/matching'
 import { sendConnectionRequest, passOnMatch, getMatchStatus, type MatchStatus } from '@/lib/actions/matchActions'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { sendNudge } from '@/lib/actions/nudges'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MatchDetailBreakdown } from '@/components/matches/MatchDetailBreakdown'
 import { useToast } from '@/hooks/use-toast'
@@ -36,6 +38,7 @@ export default function MatchDetailPage() {
 
   const [match, setMatch] = useState<ExternalMatchResult | null>(null)
   const [status, setStatus] = useState<MatchStatus>('none')
+  const [viewerTier, setViewerTier] = useState<'free' | 'plus'>('free')
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,9 +50,10 @@ export default function MatchDetailPage() {
 
       try {
         setLoading(true)
-        const [matchData, matchStatus] = await Promise.all([
+        const [matchData, matchStatus, userTier] = await Promise.all([
           getMatchDetailsV2(matchId),
           getMatchStatus(matchId),
+          getUserMembershipTier(),
         ])
 
         if (!matchData) {
@@ -59,6 +63,7 @@ export default function MatchDetailPage() {
 
         setMatch(matchData)
         setStatus(matchStatus)
+        setViewerTier(userTier)
       } catch (err: any) {
         console.error('[MatchDetail] Error:', err)
         setError(err.message || 'Failed to load match')
@@ -98,6 +103,37 @@ export default function MatchDetailPage() {
       toast({
         title: 'Error',
         description: err.message || 'Failed to send connection request',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Handle send nudge action (Pro viewer → Free target)
+  const handleSendNudge = async () => {
+    if (!match) return
+
+    setActionLoading(true)
+    try {
+      const result = await sendNudge(match.partnership.id)
+
+      if (result.success) {
+        toast({
+          title: 'Nudge sent!',
+          description: `You've nudged ${match.partnership.display_name || 'this match'}. They'll be notified of your interest.`,
+        })
+      } else {
+        toast({
+          title: 'Failed to send nudge',
+          description: result.error || 'Something went wrong',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to send nudge',
         variant: 'destructive',
       })
     } finally {
@@ -350,13 +386,46 @@ export default function MatchDetailPage() {
             >
               {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'PASS'}
             </Button>
-            <Button
-              className="flex-1 h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full"
-              onClick={handleConnect}
-              disabled={actionLoading}
-            >
-              {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'CONNECT'}
-            </Button>
+            {/*
+              Button logic:
+              - FREE viewer → CONNECT (triggers upgrade prompt)
+              - PRO viewer + PRO target → CONNECT (sends real request)
+              - PRO viewer + FREE target → SEND NUDGE
+            */}
+            {viewerTier === 'free' ? (
+              // Free viewer: show Connect but redirect to upgrade
+              <Button
+                className="flex-1 h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full"
+                onClick={() => {
+                  toast({
+                    title: 'Upgrade Required',
+                    description: 'Upgrade to HAEVN+ to connect with matches.',
+                  })
+                  router.push('/onboarding/membership')
+                }}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'CONNECT'}
+              </Button>
+            ) : match?.partnership.membership_tier === 'free' ? (
+              // Pro viewer + Free target: show Send Nudge
+              <Button
+                className="flex-1 h-12 text-base font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-full"
+                onClick={handleSendNudge}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'SEND NUDGE'}
+              </Button>
+            ) : (
+              // Pro viewer + Pro target: show Connect
+              <Button
+                className="flex-1 h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full"
+                onClick={handleConnect}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'CONNECT'}
+              </Button>
+            )}
           </div>
         </div>
       )}

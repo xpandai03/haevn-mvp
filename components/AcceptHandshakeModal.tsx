@@ -62,8 +62,8 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
           })
         } else {
           toast({
-            title: 'Handshake Declined',
-            description: `You've declined the handshake from ${handshake.partnership.display_name}.`,
+            title: 'Connection Request Declined',
+            description: `You've declined the connection request from ${handshake.partnership.display_name}.`,
           })
         }
         onOpenChange(false)
@@ -71,7 +71,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
       } else {
         toast({
           title: 'Failed to Respond',
-          description: result.error || 'Could not respond to handshake',
+          description: result.error || 'Could not respond to connection request',
           variant: 'destructive',
         })
       }
@@ -92,7 +92,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="text-h3 text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
-            Handshake Request
+            Connection Request
           </DialogTitle>
           <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
             {handshake.partnership.display_name} wants to connect with you
@@ -190,7 +190,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
             ) : (
               <>
                 <Check className="h-4 w-4 mr-2" />
-                Accept Handshake
+                Accept Connection
               </>
             )}
           </Button>

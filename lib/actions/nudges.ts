@@ -312,9 +312,9 @@ export async function sendNudge(recipientUserId: string): Promise<{ success: boo
       .eq('user_id', user.id)
       .single()
 
-    // if (profile?.membership_tier !== 'plus') {
-    //   return { success: false, error: 'HAEVN+ membership required to send nudges' }
-    // }
+    if (profile?.membership_tier !== 'plus') {
+      return { success: false, error: 'HAEVN+ membership required to send nudges' }
+    }
 
     // Check if nudge already exists
     const { data: existingNudge } = await supabase

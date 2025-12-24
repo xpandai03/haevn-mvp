@@ -34,8 +34,8 @@ const tiers = [
     description: 'Full access to connections',
     features: [
       'Unlimited matches',
-      'Send likes and nudges',
-      'Chat after handshake',
+      'Send connections and nudges',
+      'Chat after connection',
       'Share photos',
       'Advanced filters',
       'Priority support'

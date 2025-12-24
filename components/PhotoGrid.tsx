@@ -24,7 +24,7 @@ export function PhotoGrid({ photos, locked = false, lockMessage }: PhotoGridProp
             <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Photos Locked</h3>
             <p className="text-sm text-muted-foreground">
-              {lockMessage || 'Photos unlock after a handshake'}
+              {lockMessage || 'Photos unlock after a connection'}
             </p>
           </div>
         </CardContent>

@@ -48,10 +48,10 @@ export function MatchCard({
 
       if (result.matched) {
         toast({
-          title: '🎉 Handshake unlocked!',
+          title: '🎉 Connection made!',
           description: (
             <div className="flex flex-col gap-2">
-              <p>You and {displayName} both liked each other!</p>
+              <p>You and {displayName} are now connected!</p>
               {result.handshakeId && (
                 <Button
                   size="sm"
@@ -68,8 +68,8 @@ export function MatchCard({
         })
       } else {
         toast({
-          title: 'Like sent!',
-          description: `If ${displayName} likes you back, you will match!`,
+          title: 'Connection request sent!',
+          description: `If ${displayName} connects back, you will match!`,
           duration: 3000
         })
       }
@@ -78,9 +78,9 @@ export function MatchCard({
         onLikeComplete(result.matched, result.handshakeId)
       }
     } catch (error) {
-      console.error('Error sending like:', error)
+      console.error('Error sending connection request:', error)
       toast({
-        title: 'Failed to send like',
+        title: 'Failed to send connection request',
         description: 'Please try again later.',
         variant: 'destructive'
       })
@@ -123,7 +123,7 @@ export function MatchCard({
         <div className="bg-secondary/50 rounded-lg p-8 text-center">
           <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">
-            Photos hidden until handshake
+            Photos hidden until connection
           </p>
         </div>
 
@@ -166,7 +166,7 @@ export function MatchCard({
               onClick={onUpgrade}
             >
               <Lock className="h-4 w-4 mr-2" />
-              Upgrade to Like
+              Upgrade to Connect
             </Button>
           ) : (
             <Button
@@ -175,14 +175,14 @@ export function MatchCard({
               disabled={isLiking}
             >
               <Heart className="h-4 w-4 mr-2" />
-              {isLiking ? 'Sending...' : 'Like'}
+              {isLiking ? 'Sending...' : 'Connect'}
             </Button>
           )}
         </div>
 
         {membershipTier === 'free' && (
           <p className="text-xs text-center text-muted-foreground">
-            Upgrade to HAEVN+ to send likes and start conversations
+            Upgrade to HAEVN+ to connect and start conversations
           </p>
         )}
       </CardContent>

@@ -311,7 +311,7 @@ export default function DiscoveryPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="bg-secondary p-4 rounded-lg text-center text-sm text-muted-foreground">
-                    Photos hidden until handshake
+                    Photos hidden until connection
                   </div>
                   {!profile.has_liked && (
                     <div className="flex gap-2 mt-4">
