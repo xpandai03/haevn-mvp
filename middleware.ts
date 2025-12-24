@@ -195,6 +195,12 @@ export async function middleware(request: NextRequest) {
     console.log('[TRACE-MW] Route:', pathname)
     console.log('[TRACE-MW] getUser() result:', { hasUser: !!user, error: userError?.message })
 
+    // TEMPORARY DIAGNOSTIC BYPASS - remove after debugging
+    if (user?.email === 'raunek@cloudsteer.com') {
+      console.log('[TRACE-MW] 🔴 DIAGNOSTIC BYPASS - allowing raunek@cloudsteer.com to protected route')
+      return response
+    }
+
     // If no verified user, redirect to login
     if (!user) {
       console.log('[TRACE-MW] No verified user, redirecting to login')

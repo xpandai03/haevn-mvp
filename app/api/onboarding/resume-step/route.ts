@@ -34,27 +34,58 @@ export async function GET(request: Request) {
     console.log('[API /resume-step] Verified User ID:', user.id)
     console.log('[API /resume-step] Verified User email:', user.email)
 
+    // TEMPORARY DIAGNOSTIC BYPASS - remove after debugging
+    // Forces complete status for specific test user to verify deploy works
+    if (user.email === 'raunek@cloudsteer.com') {
+      console.log('[API /resume-step] 🔴 DIAGNOSTIC BYPASS for raunek@cloudsteer.com')
+      console.log('[API /resume-step] Forcing complete status to verify deploy')
+      return NextResponse.json({
+        status: 'complete',
+        resumePath: null,
+        userId: user.id,
+        timestamp: new Date().toISOString(),
+        _debug: 'FORCED_COMPLETE_FOR_DIAGNOSTIC'
+      })
+    }
+
     // SHORT-CIRCUIT: Check onboarding completion BEFORE calling getResumeStep
     // Use the SAME logic as middleware
-    const { data: membership } = await supabase
+    const { data: membership, error: membershipError } = await supabase
       .from('partnership_members')
       .select('partnership_id, survey_reviewed, role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (membership?.partnership_id) {
-      const { data: surveyData } = await supabase
-        .from('user_survey_responses')
-        .select('completion_pct')
-        .eq('user_id', user.id)
-        .maybeSingle()
+    // DIAGNOSTIC: Log membership state BEFORE any checks
+    console.log('[API /resume-step] 🔍 MEMBERSHIP DIAGNOSTIC:', {
+      hasMembership: !!membership,
+      membershipError: membershipError?.message || null,
+      partnershipId: membership?.partnership_id || 'NULL',
+      role: membership?.role || 'NULL',
+      surveyReviewed: membership?.survey_reviewed ?? 'NULL'
+    })
 
+    // Also fetch survey data regardless of membership for diagnostics
+    const { data: surveyData, error: surveyError } = await supabase
+      .from('user_survey_responses')
+      .select('completion_pct')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    console.log('[API /resume-step] 🔍 SURVEY DIAGNOSTIC:', {
+      hasSurveyData: !!surveyData,
+      surveyError: surveyError?.message || null,
+      completionPct: surveyData?.completion_pct ?? 'NULL'
+    })
+
+    // Now do the completion check
+    if (membership?.partnership_id && surveyData) {
       // SAME completion logic as middleware
-      const isComplete = surveyData?.completion_pct === 100 &&
+      const isComplete = surveyData.completion_pct === 100 &&
         (membership.role === 'owner' || membership.survey_reviewed === true)
 
       console.log('[API /resume-step] Completion check:', {
-        completionPct: surveyData?.completion_pct,
+        completionPct: surveyData.completion_pct,
         role: membership.role,
         surveyReviewed: membership.survey_reviewed,
         isComplete
@@ -70,6 +101,12 @@ export async function GET(request: Request) {
           timestamp: new Date().toISOString()
         })
       }
+    } else {
+      console.log('[API /resume-step] ⚠️ SKIPPING completion check - missing data:', {
+        hasMembership: !!membership,
+        hasPartnershipId: !!membership?.partnership_id,
+        hasSurveyData: !!surveyData
+      })
     }
 
     // Only call getResumeStep if onboarding is NOT complete
