@@ -95,9 +95,9 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
             <NavItem
               icon={<FileText className="h-5 w-5" />}
               label="Survey"
-              sublabel="Update preferences"
-              href="/onboarding/survey"
-              onClick={() => router.push('/onboarding/survey')}
+              sublabel="View & update responses"
+              href="/survey-results"
+              onClick={() => router.push('/survey-results')}
             />
           </div>
         </CardContent>
