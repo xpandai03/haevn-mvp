@@ -11,27 +11,50 @@ export async function ensureUserPartnership(userId: string) {
     console.log('[Partnership] Checking for existing partnership for user:', userId)
 
     // Check if user already has a partnership
-    const { data: existingMember, error: memberCheckError } = await supabase
+    // CRITICAL: Use select without .single() to properly distinguish "no rows" from "fetch error"
+    const { data: memberships, error: memberCheckError, status } = await supabase
       .from('partnership_members')
       .select('partnership_id, partnerships(*)')
       .eq('user_id', userId)
-      .single()
 
-    if (memberCheckError && memberCheckError.code !== 'PGRST116') {
-      console.error('[Partnership] Error checking existing membership:', memberCheckError)
-      throw memberCheckError
+    // CRITICAL FIX: If fetch failed (any error, including 406), DO NOT auto-create
+    // Only proceed if we got a successful response with zero rows
+    if (memberCheckError) {
+      console.error('[Partnership] Fetch failed - NOT creating new partnership:', {
+        error: memberCheckError,
+        code: memberCheckError.code,
+        status,
+        message: memberCheckError.message
+      })
+      // Return error state - do NOT auto-create on fetch failure
+      return {
+        partnership: null,
+        isNew: false,
+        error: memberCheckError
+      }
     }
 
-    if (existingMember?.partnership_id) {
-      console.log('[Partnership] Found existing partnership:', existingMember.partnership_id)
+    // If we got data back, use the first partnership (or apply deterministic selection)
+    if (memberships && memberships.length > 0) {
+      // Prefer pro/plus tier, then oldest
+      const sorted = memberships.sort((a: any, b: any) => {
+        const tierA = a.partnerships?.membership_tier === 'pro' || a.partnerships?.membership_tier === 'plus' ? 1 : 0
+        const tierB = b.partnerships?.membership_tier === 'pro' || b.partnerships?.membership_tier === 'plus' ? 1 : 0
+        return tierB - tierA
+      })
+      const selected = sorted[0]
+      console.log('[Partnership] Found existing partnership:', selected.partnership_id)
       return {
-        partnership: existingMember.partnerships,
+        partnership: selected.partnerships,
         isNew: false,
         error: null
       }
     }
 
-    console.log('[Partnership] No existing partnership, creating new one...')
+    // ONLY create new partnership if:
+    // 1. Fetch succeeded (no error)
+    // 2. AND returned zero rows (user genuinely has no partnership)
+    console.log('[Partnership] No existing partnership found (0 rows), creating new one...')
 
     // Get user profile for city info
     const { data: profile, error: profileError } = await supabase
