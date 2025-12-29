@@ -17,22 +17,41 @@ export interface DiscoveryProfile {
   has_passed?: boolean
 }
 
-export async function getDiscoveryProfiles(userId: string, city?: string) {
+export async function getDiscoveryProfiles(userId: string, city?: string, partnershipId?: string) {
   const supabase = createClient()
 
   try {
-    // Get user's partnership first
-    const { data: userMembership } = await supabase
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', userId)
-      .single()
+    let userPartnershipId = partnershipId
 
-    if (!userMembership) {
-      return { profiles: [], error: 'User has no partnership' }
+    // If no partnershipId provided, fetch it
+    if (!userPartnershipId) {
+      // CRITICAL: Use array select (no .single()) to distinguish "no rows" from "fetch error"
+      const { data: memberships, error: memberError, status } = await supabase
+        .from('partnership_members')
+        .select('partnership_id')
+        .eq('user_id', userId)
+
+      // CRITICAL FIX: If fetch failed, DO NOT interpret as "no partnership"
+      if (memberError) {
+        console.error('[Discovery] Partnership fetch failed (NOT "no partnership"):', {
+          error: memberError,
+          code: memberError.code,
+          status,
+          message: memberError.message
+        })
+        return { profiles: [], error: 'Failed to load partnership data' }
+      }
+
+      // Only if fetch succeeded AND returned zero rows = user truly has no partnership
+      if (!memberships || memberships.length === 0) {
+        console.log('[Discovery] User has no partnership (0 rows returned)')
+        return { profiles: [], error: 'User has no partnership' }
+      }
+
+      userPartnershipId = memberships[0].partnership_id
     }
 
-    const userPartnershipId = userMembership.partnership_id
+    console.log('[Discovery] Using partnership:', userPartnershipId)
 
     // Get user's survey responses for compatibility scoring
     const { data: userSurvey } = await supabase

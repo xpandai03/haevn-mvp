@@ -72,10 +72,11 @@ export default function DiscoveryPage() {
         return
       }
 
-      // Load discovery profiles
+      // Load discovery profiles - pass partnershipId to avoid redundant fetch
       const { profiles: discoveryProfiles, error } = await getDiscoveryProfiles(
         user.id,
-        profile.city || undefined
+        profile.city || undefined,
+        partnership.id  // Pass already-loaded partnership to avoid 406 errors
       )
 
       if (error) {

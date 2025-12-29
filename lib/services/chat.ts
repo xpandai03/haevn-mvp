@@ -146,14 +146,21 @@ export async function getHandshakeMessages(
 
   try {
     // Verify user has access to this handshake
-    const { data: membership } = await supabase
+    // CRITICAL: Use array select to distinguish "no rows" from "fetch error"
+    const { data: memberships, error: memberError } = await supabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('user_id', userId)
-      .single()
 
-    if (!membership) {
-      throw new Error('User has no partnership')
+    // CRITICAL FIX: If fetch failed, return empty (don't throw misleading error)
+    if (memberError) {
+      console.error('[Chat] Partnership fetch failed:', memberError)
+      return []
+    }
+
+    if (!memberships || memberships.length === 0) {
+      console.error('[Chat] User has no partnership (0 rows)')
+      return []
     }
 
     // Get messages with sender info
@@ -281,17 +288,23 @@ export async function togglePhotoGrant(
       return { success: false, error: 'Handshake not found' }
     }
 
-    const { data: membership } = await supabase
+    // CRITICAL: Use array select to distinguish "no rows" from "fetch error"
+    const { data: memberships, error: memberError } = await supabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('user_id', userId)
-      .single()
 
-    if (!membership) {
+    // CRITICAL FIX: If fetch failed, return error (don't assume no partnership)
+    if (memberError) {
+      console.error('[Chat] Partnership fetch failed:', memberError)
+      return { success: false, error: 'Failed to verify partnership' }
+    }
+
+    if (!memberships || memberships.length === 0) {
       return { success: false, error: 'User has no partnership' }
     }
 
-    const userPartnershipId = membership.partnership_id
+    const userPartnershipId = memberships[0].partnership_id
     const isPartOfHandshake =
       handshake.a_partnership === userPartnershipId ||
       handshake.b_partnership === userPartnershipId
