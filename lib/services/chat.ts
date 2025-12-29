@@ -6,7 +6,8 @@ type Handshake = Database['public']['Tables']['handshakes']['Row']
 
 export interface HandshakeWithPartnerships {
   id: string
-  created_at: string
+  triggered_at: string
+  matched_at?: string
   a_partnership: {
     id: string
     display_name: string
@@ -59,12 +60,13 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
 
     const userPartnershipId = membership.partnership_id
 
-    // Get all handshakes involving this partnership
+    // Get all MATCHED handshakes involving this partnership (chat only unlocks after match)
     const { data: handshakes, error } = await supabase
       .from('handshakes')
       .select(`
         id,
-        created_at,
+        triggered_at,
+        matched_at,
         a_partnership:partnerships!handshakes_a_partnership_fkey(
           id,
           display_name,
@@ -87,7 +89,8 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
         )
       `)
       .or(`a_partnership.eq.${userPartnershipId},b_partnership.eq.${userPartnershipId}`)
-      .order('created_at', { ascending: false })
+      .eq('state', 'matched')
+      .order('matched_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching handshakes:', error)
