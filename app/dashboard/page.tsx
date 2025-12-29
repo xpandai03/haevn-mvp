@@ -7,6 +7,7 @@ import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
 import { SendNudgeButton } from '@/components/dashboard/SendNudgeButton'
+import { CompleteProfileCTA } from '@/components/dashboard/CompleteProfileCTA'
 import { getConnectionCards } from '@/lib/actions/handshakes'
 
 export default async function DashboardPage() {
@@ -54,6 +55,9 @@ export default async function DashboardPage() {
           membershipTier={partnership?.tier}
           stats={stats}
         />
+
+        {/* Complete Profile CTA - shown when profile is not live */}
+        {partnership?.profileState !== 'live' && <CompleteProfileCTA />}
 
         {/* Matches Section */}
         <MatchesSection

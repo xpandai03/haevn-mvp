@@ -74,6 +74,7 @@ export interface DashboardData {
     type: 'solo' | 'couple' | 'pod'
     tier: 'free' | 'plus'
     ownerId: string
+    profileState: 'draft' | 'pending' | 'live'
   } | null
   partners: PartnerInfo[]
   pendingInvites: PendingInviteInfo[]

@@ -93,7 +93,7 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
     // 3. Fetch partnership details
     const { data: partnership } = await adminClient
       .from('partnerships')
-      .select('id, owner_id, profile_type, membership_tier')
+      .select('id, owner_id, profile_type, membership_tier, profile_state')
       .eq('id', partnershipId)
       .single()
 
@@ -204,7 +204,8 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
         id: partnership.id,
         type: (partnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
         tier: partnership.membership_tier === 'free' ? 'free' : 'plus',
-        ownerId: partnership.owner_id
+        ownerId: partnership.owner_id,
+        profileState: (partnership.profile_state as 'draft' | 'pending' | 'live') || 'draft'
       } : null,
       partners,
       pendingInvites,

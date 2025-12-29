@@ -175,6 +175,30 @@ export default function ProfileViewPage() {
     )
   }
 
+  // Guard: Draft profiles are not visible to non-owners
+  if (profileData.profile.profile_state !== 'live' && !isOwner) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Profile Not Available</h2>
+            <p className="text-muted-foreground">
+              This profile is not yet public.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => router.push('/discovery')}
+            >
+              Back to Discovery
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const { profile, photos, visibility, compatibility } = profileData
   const publicPhotos = photos.filter(p => p.photo_type === 'public')
   const privatePhotos = photos.filter(p => p.photo_type === 'private')
