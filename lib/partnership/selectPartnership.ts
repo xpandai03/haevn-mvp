@@ -1,12 +1,18 @@
 /**
  * Deterministic Partnership Selection
  *
- * When a user has multiple partnerships, this helper selects the "best" one:
- * 1. Prefer partnerships where membership_tier = 'pro'
- * 2. Fall back to most recently created partnership
+ * When a user has multiple partnerships, this helper selects the "active" one:
  *
- * This is a TEMPORARY fix for testing - eventually users should be able
- * to explicitly switch between partnerships.
+ * ACTIVE PARTNERSHIP RULE:
+ * 1. If user has any partnerships with profile_state = 'live'
+ *    → select the most recently updated LIVE partnership
+ * 2. Else
+ *    → select the most recently updated partnership overall
+ * 3. Never auto-create a partnership during read
+ * 4. Never return an arbitrary draft partnership if a live one exists
+ *
+ * This ensures all user-facing flows (dashboard, discovery, profile, connections)
+ * operate on the same, correct partnership.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -18,14 +24,16 @@ export interface SelectedPartnership {
   survey_reviewed: boolean
   joined_at: string
   membership_tier: 'free' | 'pro' | 'plus'
+  profile_state: 'draft' | 'pending' | 'live'
 }
 
 /**
- * Select the best partnership for a user from potentially multiple memberships.
+ * Select the active partnership for a user from potentially multiple memberships.
  *
- * Priority:
- * 1. Pro/Plus tier partnership
- * 2. Most recently joined partnership
+ * ACTIVE PARTNERSHIP RULE:
+ * 1. LIVE partnerships first (profile_state = 'live')
+ * 2. Then by updated_at DESC (most recently updated)
+ * 3. Never return a draft if a live exists
  *
  * @param supabase - Supabase client (can be user client or admin client)
  * @param userId - The user ID to find partnership for
@@ -47,11 +55,11 @@ export async function selectBestPartnership(
       partnerships!inner (
         id,
         membership_tier,
-        created_at
+        profile_state,
+        updated_at
       )
     `)
     .eq('user_id', userId)
-    .order('joined_at', { ascending: false })
 
   if (error) {
     console.error('[selectBestPartnership] Error fetching memberships:', error.message)
@@ -62,54 +70,47 @@ export async function selectBestPartnership(
     return null
   }
 
-  console.log(`[selectBestPartnership] User ${userId} has ${memberships.length} partnership(s)`)
+  // Sort memberships: LIVE first, then by updated_at DESC
+  const sortedMemberships = [...memberships].sort((a, b) => {
+    const partnershipA = a.partnerships as any
+    const partnershipB = b.partnerships as any
 
-  // If only one membership, return it
-  if (memberships.length === 1) {
-    const m = memberships[0]
-    const partnership = m.partnerships as any
-    return {
-      partnership_id: m.partnership_id,
-      user_id: m.user_id,
-      role: m.role as 'owner' | 'member',
-      survey_reviewed: m.survey_reviewed || false,
-      joined_at: m.joined_at,
-      membership_tier: partnership?.membership_tier || 'free'
-    }
-  }
+    const stateA = partnershipA?.profile_state || 'draft'
+    const stateB = partnershipB?.profile_state || 'draft'
 
-  // Multiple memberships - find the best one
-  // Priority 1: Pro/Plus tier
-  const proMembership = memberships.find(m => {
-    const partnership = m.partnerships as any
-    return partnership?.membership_tier === 'pro' || partnership?.membership_tier === 'plus'
+    // LIVE partnerships come first
+    if (stateA === 'live' && stateB !== 'live') return -1
+    if (stateB === 'live' && stateA !== 'live') return 1
+
+    // Within same state, sort by updated_at DESC
+    const updatedA = new Date(partnershipA?.updated_at || 0).getTime()
+    const updatedB = new Date(partnershipB?.updated_at || 0).getTime()
+    return updatedB - updatedA
   })
 
-  if (proMembership) {
-    const partnership = proMembership.partnerships as any
-    console.log(`[selectBestPartnership] Selected PRO partnership: ${proMembership.partnership_id}`)
-    return {
-      partnership_id: proMembership.partnership_id,
-      user_id: proMembership.user_id,
-      role: proMembership.role as 'owner' | 'member',
-      survey_reviewed: proMembership.survey_reviewed || false,
-      joined_at: proMembership.joined_at,
-      membership_tier: partnership?.membership_tier || 'pro'
-    }
+  // Select the first (best) partnership
+  const selected = sortedMemberships[0]
+  const partnership = selected.partnerships as any
+
+  const result: SelectedPartnership = {
+    partnership_id: selected.partnership_id,
+    user_id: selected.user_id,
+    role: selected.role as 'owner' | 'member',
+    survey_reviewed: selected.survey_reviewed || false,
+    joined_at: selected.joined_at,
+    membership_tier: partnership?.membership_tier || 'free',
+    profile_state: partnership?.profile_state || 'draft'
   }
 
-  // Priority 2: Most recently joined (first in array due to order)
-  const mostRecent = memberships[0]
-  const partnership = mostRecent.partnerships as any
-  console.log(`[selectBestPartnership] Selected most recent partnership: ${mostRecent.partnership_id}`)
-  return {
-    partnership_id: mostRecent.partnership_id,
-    user_id: mostRecent.user_id,
-    role: mostRecent.role as 'owner' | 'member',
-    survey_reviewed: mostRecent.survey_reviewed || false,
-    joined_at: mostRecent.joined_at,
-    membership_tier: partnership?.membership_tier || 'free'
-  }
+  // Instrumentation log for verification
+  console.log('[ACTIVE_PARTNERSHIP_SELECTED]', {
+    userId,
+    partnershipId: result.partnership_id,
+    profile_state: result.profile_state,
+    totalPartnerships: memberships.length
+  })
+
+  return result
 }
 
 /**

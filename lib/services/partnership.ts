@@ -34,16 +34,34 @@ export async function ensureUserPartnership(userId: string) {
       }
     }
 
-    // If we got data back, use the first partnership (or apply deterministic selection)
+    // If we got data back, apply ACTIVE PARTNERSHIP RULE
     if (memberships && memberships.length > 0) {
-      // Prefer pro/plus tier, then oldest
+      // ACTIVE PARTNERSHIP RULE:
+      // 1. LIVE partnerships first (profile_state = 'live')
+      // 2. Then by updated_at DESC (most recently updated)
       const sorted = memberships.sort((a: any, b: any) => {
-        const tierA = a.partnerships?.membership_tier === 'pro' || a.partnerships?.membership_tier === 'plus' ? 1 : 0
-        const tierB = b.partnerships?.membership_tier === 'pro' || b.partnerships?.membership_tier === 'plus' ? 1 : 0
-        return tierB - tierA
+        const stateA = a.partnerships?.profile_state || 'draft'
+        const stateB = b.partnerships?.profile_state || 'draft'
+
+        // LIVE partnerships come first
+        if (stateA === 'live' && stateB !== 'live') return -1
+        if (stateB === 'live' && stateA !== 'live') return 1
+
+        // Within same state, sort by updated_at DESC
+        const updatedA = new Date(a.partnerships?.updated_at || 0).getTime()
+        const updatedB = new Date(b.partnerships?.updated_at || 0).getTime()
+        return updatedB - updatedA
       })
       const selected = sorted[0]
-      console.log('[Partnership] Found existing partnership:', selected.partnership_id)
+      const profileState = selected.partnerships?.profile_state || 'draft'
+
+      // Instrumentation log
+      console.log('[ACTIVE_PARTNERSHIP_SELECTED]', {
+        partnershipId: selected.partnership_id,
+        profile_state: profileState,
+        totalPartnerships: memberships.length
+      })
+
       return {
         partnership: selected.partnerships,
         isNew: false,

@@ -6,13 +6,15 @@ import { createServerClient } from '@supabase/ssr'
 const BUILD_ID = 'multi-partnership-fix'
 
 /**
- * Deterministic partnership selection for users with multiple partnerships.
- * Priority: 1) Pro/Plus tier, 2) Most recently joined
+ * ACTIVE PARTNERSHIP RULE (inline for edge runtime):
+ * 1. LIVE partnerships first (profile_state = 'live')
+ * 2. Then by updated_at DESC (most recently updated)
+ * 3. Never return a draft if a live exists
  */
 async function selectBestPartnership(
   supabase: any,
   userId: string
-): Promise<{ partnership_id: string; role: string; survey_reviewed: boolean } | null> {
+): Promise<{ partnership_id: string; role: string; survey_reviewed: boolean; profile_state: string } | null> {
   const { data: memberships, error } = await supabase
     .from('partnership_members')
     .select(`
@@ -21,42 +23,48 @@ async function selectBestPartnership(
       survey_reviewed,
       joined_at,
       partnerships!inner (
-        membership_tier
+        membership_tier,
+        profile_state,
+        updated_at
       )
     `)
     .eq('user_id', userId)
-    .order('joined_at', { ascending: false })
 
   if (error || !memberships || memberships.length === 0) {
     return null
   }
 
-  if (memberships.length > 1) {
-    console.log(`[MW] User ${userId} has ${memberships.length} partnerships - selecting best one`)
-  }
+  // Sort: LIVE first, then by updated_at DESC
+  const sortedMemberships = [...memberships].sort((a: any, b: any) => {
+    const stateA = a.partnerships?.profile_state || 'draft'
+    const stateB = b.partnerships?.profile_state || 'draft'
 
-  // Priority 1: Pro/Plus tier
-  const proMembership = memberships.find((m: any) => {
-    const tier = m.partnerships?.membership_tier
-    return tier === 'pro' || tier === 'plus'
+    // LIVE partnerships come first
+    if (stateA === 'live' && stateB !== 'live') return -1
+    if (stateB === 'live' && stateA !== 'live') return 1
+
+    // Within same state, sort by updated_at DESC
+    const updatedA = new Date(a.partnerships?.updated_at || 0).getTime()
+    const updatedB = new Date(b.partnerships?.updated_at || 0).getTime()
+    return updatedB - updatedA
   })
 
-  if (proMembership) {
-    console.log(`[MW] Selected PRO partnership: ${proMembership.partnership_id}`)
-    return {
-      partnership_id: proMembership.partnership_id,
-      role: proMembership.role,
-      survey_reviewed: proMembership.survey_reviewed || false
-    }
-  }
+  const best = sortedMemberships[0]
+  const profileState = best.partnerships?.profile_state || 'draft'
 
-  // Priority 2: Most recent (first due to order)
-  const best = memberships[0]
-  console.log(`[MW] Selected most recent partnership: ${best.partnership_id}`)
+  // Instrumentation log
+  console.log('[ACTIVE_PARTNERSHIP_SELECTED]', {
+    userId,
+    partnershipId: best.partnership_id,
+    profile_state: profileState,
+    totalPartnerships: memberships.length
+  })
+
   return {
     partnership_id: best.partnership_id,
     role: best.role,
-    survey_reviewed: best.survey_reviewed || false
+    survey_reviewed: best.survey_reviewed || false,
+    profile_state: profileState
   }
 }
 
