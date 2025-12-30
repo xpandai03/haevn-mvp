@@ -184,9 +184,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('[Auth] Signing out user:', user?.id)
 
-      // Clear localStorage
+      // Clear ALL localStorage to prevent stale partnership IDs
       localStorage.removeItem('haevn-auth')
       localStorage.removeItem('haevn_onboarding')
+      localStorage.removeItem('haevn_user')
+      localStorage.removeItem('haevn_survey_responses')
+      localStorage.removeItem('haevn_profiles')
+      localStorage.removeItem('haevn_photos')
+      localStorage.removeItem('haevn_handshakes')
+      localStorage.removeItem('haevn_photo_grants')
 
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut()
@@ -207,6 +213,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       localStorage.removeItem('haevn-auth')
       localStorage.removeItem('haevn_onboarding')
+      localStorage.removeItem('haevn_user')
+      localStorage.removeItem('haevn_survey_responses')
+      localStorage.removeItem('haevn_profiles')
+      localStorage.removeItem('haevn_photos')
+      localStorage.removeItem('haevn_handshakes')
+      localStorage.removeItem('haevn_photo_grants')
     }
   }
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import type { Database } from '@/lib/types/supabase'
 
 type Partnership = Database['public']['Tables']['partnerships']['Row']
@@ -60,15 +61,13 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
       .eq('partnership_id', userPartnershipId)
       .single()
 
-    // Query computed_matches BIDIRECTIONALLY (user can be partnership_a OR partnership_b)
-    const { data: computedMatches, error: matchesError } = await supabase
-      .from('computed_matches')
-      .select('partnership_a, partnership_b, score, tier')
-      .or(`partnership_a.eq.${userPartnershipId},partnership_b.eq.${userPartnershipId}`)
+    // Query computed_matches BIDIRECTIONALLY via server action (bypasses RLS)
+    // RLS on computed_matches only checks partnership_a, so we use admin client
+    const { matches: computedMatches, error: matchesError } = await getComputedMatchesForPartnership(userPartnershipId)
 
     if (matchesError) {
       console.error('[Discovery] computed_matches query error:', matchesError)
-      throw matchesError
+      throw new Error(matchesError)
     }
 
     if (!computedMatches || computedMatches.length === 0) {
