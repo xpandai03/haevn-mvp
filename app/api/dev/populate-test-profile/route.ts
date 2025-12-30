@@ -23,9 +23,9 @@ export async function POST(request: Request) {
 
     const adminClient = createAdminClient()
 
-    // Sample profile data
+    // Sample profile data (short_bio max 140 chars)
     const profileData = {
-      short_bio: "We're Chris & Sam - adventurous spirits who love hiking, trying new restaurants, and cozy nights in. Looking to meet like-minded couples for genuine connections.",
+      short_bio: "Adventurous couple who love hiking, good food, and cozy nights. Looking for genuine connections with like-minded people.",
       long_bio: "Together for 5 years, we've always been curious about ethical non-monogamy. We communicate openly, respect boundaries, and believe in building real friendships first. Chris is a software engineer who loves cooking, Sam is a yoga instructor passionate about wellness. We're based in LA but travel often for outdoor adventures.",
       intentions: ['Long-term relationship', 'Friendship', 'Exploring'],
       lifestyle_tags: ['Active', 'Foodie', 'Travel', 'Outdoorsy', 'Social', 'Fitness'],
