@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
 /**
  * Update the current user's profile
@@ -38,4 +39,12 @@ export async function updateProfile(data: {
     console.error('[updateProfile] Unexpected error:', error)
     return { success: false, error: 'Failed to update profile' }
   }
+}
+
+/**
+ * Revalidate dashboard data after profile changes
+ * Call this after updating partnership profile_state
+ */
+export async function revalidateDashboard() {
+  revalidatePath('/dashboard')
 }

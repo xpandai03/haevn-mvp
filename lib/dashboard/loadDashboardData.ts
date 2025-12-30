@@ -169,13 +169,15 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       p => p.onboardingCompletion >= 100 && p.surveyReviewed
     )
 
-    // 9. Get user's profile photo
+    // 9. Get user's profile photo (first public photo by order, or primary if set)
     const { data: photoData } = await adminClient
       .from('partnership_photos')
       .select('photo_url')
       .eq('partnership_id', partnershipId)
-      .eq('is_primary', true)
       .eq('photo_type', 'public')
+      .order('is_primary', { ascending: false, nullsFirst: false })
+      .order('order_index', { ascending: true })
+      .limit(1)
       .maybeSingle()
 
     const photoUrl = photoData?.photo_url || undefined

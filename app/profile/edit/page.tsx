@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth/context'
 import { useProfile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
 import { ensureUserPartnership } from '@/lib/services/partnership'
+import { revalidateDashboard } from '@/lib/actions/profile'
 import { getPartnershipPhotos } from '@/lib/services/photos'
 import { createClient } from '@/lib/supabase/client'
 import { Save, AlertCircle, Loader2, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -192,6 +193,9 @@ export default function ProfileEditPage() {
       if (error) throw error
 
       setProfileState(newState)
+
+      // Revalidate dashboard to reflect new profile state
+      await revalidateDashboard()
 
       toast({
         title: 'Profile saved',
