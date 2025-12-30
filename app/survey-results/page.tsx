@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { SurveyTab } from '@/components/settings/SurveyTab'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
-import { Loader2 } from 'lucide-react'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 export default function SurveyResultsPage() {
   const { user, loading } = useAuth()
@@ -19,11 +19,7 @@ export default function SurveyResultsPage() {
   }, [user, loading, router])
 
   if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   return (

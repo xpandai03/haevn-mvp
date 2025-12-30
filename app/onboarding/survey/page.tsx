@@ -22,8 +22,9 @@ import {
   isSectionComplete,
   getSectionCelebrationMessage
 } from '@/lib/survey/questions'
-import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
+import { AlertCircle, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -495,16 +496,7 @@ export default function SurveyPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-          <p className="text-haevn-charcoal" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
-            Loading survey...
-          </p>
-        </div>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   if (!currentQuestion) {

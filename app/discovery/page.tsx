@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Heart, X, Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { ArrowLeft, Heart, X, AlertCircle, Sparkles } from 'lucide-react'
+import FullPageLoader from '@/components/ui/full-page-loader'
 import { useAuth } from '@/lib/auth/context'
 import { useProfile } from '@/hooks/useProfile'
 import { getDiscoveryProfiles, sendSignal } from '@/lib/services/discovery'
@@ -150,14 +151,7 @@ export default function DiscoveryPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading discovery...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   // Filter profiles based on selected bucket

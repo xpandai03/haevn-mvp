@@ -20,7 +20,8 @@ import { ensureUserPartnership } from '@/lib/services/partnership'
 import { revalidateDashboard } from '@/lib/actions/profile'
 import { getPartnershipPhotos } from '@/lib/services/photos'
 import { createClient } from '@/lib/supabase/client'
-import { Save, AlertCircle, Loader2, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Save, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
+import FullPageLoader from '@/components/ui/full-page-loader'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 
 // Lifestyle tag options
@@ -246,11 +247,7 @@ export default function ProfileEditPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   return (

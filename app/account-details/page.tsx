@@ -6,8 +6,8 @@ import { ArrowLeft, Mail, Calendar, Users, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
-import { Loader2 } from 'lucide-react'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 export default function AccountDetailsPage() {
   const { user, loading } = useAuth()
@@ -35,11 +35,7 @@ export default function AccountDetailsPage() {
   }, [user, loading, router])
 
   if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   return (

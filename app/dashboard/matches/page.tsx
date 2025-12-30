@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProfileCard, ProfileCardData } from '@/components/dashboard/ProfileCard'
 import { getMatches, MatchResult } from '@/lib/actions/matching'
 import { useAuth } from '@/lib/auth/context'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 export default function MatchesPage() {
   const router = useRouter()
@@ -46,14 +47,7 @@ export default function MatchesPage() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-          <p className="text-haevn-charcoal">Loading matches...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   // Error state

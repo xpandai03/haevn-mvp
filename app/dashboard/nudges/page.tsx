@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProfileCard } from '@/components/dashboard/ProfileCard'
 import { getReceivedNudges, Nudge } from '@/lib/actions/nudges'
 import { useAuth } from '@/lib/auth/context'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 export default function NudgesPage() {
   const router = useRouter()
@@ -52,14 +53,7 @@ export default function NudgesPage() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-          <p className="text-haevn-charcoal">Loading nudges...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   // Error state
