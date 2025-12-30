@@ -1,12 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, MessageCircle, Construction } from 'lucide-react'
+import { ArrowLeft, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
 import { getConnectionById, type ConnectionResult } from '@/lib/actions/connections'
+import { getHandshakeMessages, sendMessage, subscribeToMessages, markMessagesAsRead, type ChatMessage } from '@/lib/services/chat'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { format, isToday, isYesterday } from 'date-fns'
 
 export default function ChatWithConnectionPage() {
   const router = useRouter()
@@ -15,10 +18,14 @@ export default function ChatWithConnectionPage() {
   const { user, loading: authLoading } = useAuth()
 
   const [connection, setConnection] = useState<ConnectionResult | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Load connection details to show partner name
+  // Load connection details and messages
   useEffect(() => {
     async function loadConnection() {
       if (authLoading || !user || !connectionId) return
@@ -33,6 +40,14 @@ export default function ChatWithConnectionPage() {
         }
 
         setConnection(connectionData)
+
+        // Load messages using the handshake ID
+        const msgs = await getHandshakeMessages(connectionData.handshakeId, user.id)
+        setMessages(msgs)
+
+        // Mark messages as read
+        await markMessagesAsRead(connectionData.handshakeId, user.id)
+
       } catch (err: any) {
         console.error('[ChatWithConnection] Error:', err)
         setError(err.message || 'Failed to load connection')
@@ -43,6 +58,51 @@ export default function ChatWithConnectionPage() {
 
     loadConnection()
   }, [user, authLoading, connectionId])
+
+  // Subscribe to new messages
+  useEffect(() => {
+    if (!user || !connection) return
+
+    const unsubscribe = subscribeToMessages(connection.handshakeId, (newMsg) => {
+      newMsg.is_own_message = newMsg.sender_user === user.id
+      setMessages(prev => [...prev, newMsg])
+
+      // Mark as read
+      markMessagesAsRead(connection.handshakeId, user.id)
+    })
+
+    return () => unsubscribe()
+  }, [connection, user])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending || !user || !connection) return
+
+    setSending(true)
+    const messageText = newMessage.trim()
+    setNewMessage('')
+
+    const { message, error: sendError } = await sendMessage(connection.handshakeId, user.id, messageText)
+
+    if (sendError) {
+      setNewMessage(messageText) // Restore on error
+    } else if (message) {
+      setMessages(prev => [...prev, message])
+    }
+
+    setSending(false)
+  }
+
+  const formatMessageTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    if (isToday(date)) return format(date, 'h:mm a')
+    if (isYesterday(date)) return `Yesterday ${format(date, 'h:mm a')}`
+    return format(date, 'MMM d, h:mm a')
+  }
 
   // Loading state
   if (loading || authLoading) {
@@ -115,67 +175,81 @@ export default function ChatWithConnectionPage() {
         <div className="w-5" /> {/* Spacer for centering */}
       </header>
 
-      {/* Coming Soon Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <div className="bg-haevn-teal/10 rounded-full p-6 inline-block mb-6">
-            <Construction className="h-12 w-12 text-haevn-teal" />
-          </div>
-
-          <h2
-            className="text-2xl font-bold text-haevn-navy mb-3"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-          >
-            Chat Coming Soon!
-          </h2>
-
-          <p
-            className="text-haevn-charcoal/70 mb-6 leading-relaxed"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-          >
-            We're building secure messaging features so you can connect with {partnership.display_name || 'your match'} safely.
-          </p>
-
-          <div className="bg-haevn-lightgray rounded-2xl p-4 mb-6">
-            <div className="flex items-center gap-3 text-left">
-              <MessageCircle className="h-5 w-5 text-haevn-teal flex-shrink-0" />
-              <p
-                className="text-sm text-haevn-charcoal"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-              >
-                In the meantime, you can view their profile and compatibility details from the connections page.
-              </p>
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="bg-haevn-teal/10 rounded-full p-4 mb-4">
+              <Send className="h-8 w-8 text-haevn-teal" />
             </div>
+            <p className="text-haevn-charcoal font-medium mb-1">No messages yet</p>
+            <p className="text-haevn-charcoal/60 text-sm">
+              Say hello to {partnership.display_name || 'your match'}!
+            </p>
           </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => {
+              const isOwn = message.is_own_message
 
-          <Button
-            variant="outline"
-            className="w-full rounded-full"
-            onClick={() => router.push(`/connections/${connectionId}`)}
-          >
-            View Connection Details
-          </Button>
-        </div>
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                      isOwn
+                        ? 'bg-haevn-teal text-white rounded-br-md'
+                        : 'bg-white border border-gray-200 text-haevn-charcoal rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-sm break-words">{message.body}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        isOwn ? 'text-white/70' : 'text-gray-400'
+                      }`}
+                    >
+                      {formatMessageTime(message.created_at)}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
-      {/* Placeholder Input Area */}
-      <div className="px-4 pb-6 pt-3 bg-white border-t border-haevn-gray-200 flex-shrink-0">
-        <div className="bg-haevn-lightgray rounded-full py-3 px-5 flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Message coming soon..."
-            disabled
-            className="flex-1 bg-transparent outline-none text-haevn-charcoal/50 placeholder:text-haevn-charcoal/30 cursor-not-allowed"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+      {/* Message Input */}
+      <div className="px-4 pb-6 pt-3 bg-white border-t border-gray-200 flex-shrink-0">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSend()
+          }}
+          className="flex items-center gap-2"
+        >
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            disabled={sending}
+            maxLength={2000}
+            className="flex-1 rounded-full border-gray-300 focus:border-haevn-teal focus:ring-haevn-teal"
           />
           <Button
-            size="sm"
-            disabled
-            className="rounded-full bg-haevn-teal/50 hover:bg-haevn-teal/50 cursor-not-allowed"
+            type="submit"
+            disabled={!newMessage.trim() || sending}
+            className="rounded-full bg-haevn-teal hover:bg-haevn-teal/90 h-10 w-10 p-0"
           >
-            Send
+            {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   )

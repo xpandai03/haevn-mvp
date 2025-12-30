@@ -196,7 +196,7 @@ async function getPartnershipPhotosAdmin(
 ): Promise<ConnectionPhoto[]> {
   const { data: photos, error } = await adminClient
     .from('partnership_photos')
-    .select('id, storage_path, photo_type, order_index, is_primary')
+    .select('id, photo_url, photo_type, order_index, is_primary')
     .eq('partnership_id', partnershipId)
     .eq('photo_type', 'public')
     .order('order_index', { ascending: true })
@@ -206,21 +206,13 @@ async function getPartnershipPhotosAdmin(
     return []
   }
 
-  // Convert storage paths to public URLs
-  return photos.map(photo => {
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('partnership-photos')
-      .getPublicUrl(photo.storage_path)
-
-    return {
-      id: photo.id,
-      photo_url: publicUrl,
-      photo_type: photo.photo_type as 'public' | 'private',
-      order_index: photo.order_index,
-      is_primary: photo.is_primary,
-    }
-  })
+  return photos.map(photo => ({
+    id: photo.id,
+    photo_url: photo.photo_url,
+    photo_type: photo.photo_type as 'public' | 'private',
+    order_index: photo.order_index,
+    is_primary: photo.is_primary,
+  }))
 }
 
 /**
