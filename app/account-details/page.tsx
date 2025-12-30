@@ -117,6 +117,39 @@ export default function AccountDetailsPage() {
           </CardContent>
         </Card>
 
+        {/* Match Profile Card */}
+        <Card className="mb-6 bg-white border-2 border-[#252627]/10 rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-h3 text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              Match Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 bg-[#E8E6E3] rounded-lg">
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-[#008080]/10 rounded-lg">
+                  <Users className="h-5 w-5 text-[#008080]" />
+                </div>
+                <div>
+                  <p className="text-body text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                    Your Connection Profile
+                  </p>
+                  <p className="text-body-sm text-[#252627]/60 mt-1" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                    Photos, bio, and what connections see
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="border-[#008080] text-[#008080] hover:bg-[#008080]/10"
+                onClick={() => router.push('/profile/edit')}
+              >
+                Edit Profile
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Security Section */}
         <Card className="mb-6 bg-white border-2 border-[#252627]/10 rounded-2xl">
           <CardHeader>
