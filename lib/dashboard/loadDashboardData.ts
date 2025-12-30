@@ -169,25 +169,26 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       p => p.onboardingCompletion >= 100 && p.surveyReviewed
     )
 
-    // 9. Get user's profile photo (first public photo by order, or primary if set)
-    const { data: photoData, error: photoError } = await adminClient
+    // 9. Get first profile photo (public type, ordered by index)
+    // Query ALL photos first to debug, then select first public one
+    const { data: allPhotos } = await adminClient
       .from('partnership_photos')
-      .select('photo_url')
+      .select('id, photo_url, photo_type, order_index')
       .eq('partnership_id', partnershipId)
-      .eq('photo_type', 'public')
-      .order('is_primary', { ascending: false, nullsFirst: false })
       .order('order_index', { ascending: true })
-      .limit(1)
-      .maybeSingle()
 
-    console.log('[loadDashboardData] Photo query result:', {
+    // Get first public photo for avatar
+    const publicPhotos = (allPhotos || []).filter(p => p.photo_type === 'public')
+    const photoUrl = publicPhotos.length > 0 ? publicPhotos[0].photo_url : undefined
+
+    // Debug log (will remove after verification)
+    console.log('[DASHBOARD_PHOTO_DEBUG]', {
       partnershipId,
-      photoData,
-      photoError,
+      totalPhotos: allPhotos?.length || 0,
+      publicPhotos: publicPhotos.length,
+      selectedUrl: photoUrl ? 'found' : 'none',
       profileState: partnership?.profile_state
     })
-
-    const photoUrl = photoData?.photo_url || undefined
 
     // 10. Get compatibility from matching engine
     let compatibility: CompatibilityScores | null = null

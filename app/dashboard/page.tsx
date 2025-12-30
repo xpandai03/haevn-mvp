@@ -28,6 +28,13 @@ export default async function DashboardPage() {
     partnership
   } = data
 
+  // Debug log (will remove after verification)
+  console.log('[DASHBOARD_STATE]', {
+    profileState: partnership?.profileState,
+    hasPhoto: !!profile?.photoUrl,
+    showCTA: partnership?.profileState !== 'live'
+  })
+
   const isPaidTier = partnership && partnership?.tier !== 'free'
 
   const { getReceivedNudges } = await import('@/lib/actions/nudges')
