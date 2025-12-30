@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,8 +35,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Use admin client for membership verification to bypass RLS
+    // This matches the pattern in uploadProfilePhoto server action
+    const adminSupabase = createAdminClient()
+
     // Verify user owns the partnership
-    const { data: membership, error: membershipError } = await supabase
+    const { data: membership, error: membershipError } = await adminSupabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('partnership_id', partnershipId)
@@ -44,6 +48,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (membershipError || !membership) {
+      console.error('[photo-upload] Membership verification failed:', {
+        userId: user.id,
+        partnershipId,
+        error: membershipError
+      })
       return NextResponse.json(
         { error: 'Unauthorized: You do not own this partnership' },
         { status: 403 }
@@ -72,8 +81,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${partnershipId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
     const bucketName = photoType === 'public' ? 'public-photos' : 'private-photos'
 
-    // Use service role client for storage operations
-    const adminSupabase = createServiceRoleClient()
+    // adminSupabase already created above for membership verification
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer()
@@ -101,8 +109,8 @@ export async function POST(request: NextRequest) {
       .from(bucketName)
       .getPublicUrl(fileName)
 
-    // Get next order index
-    const { data: existingPhotos } = await supabase
+    // Get next order index (using admin client for consistency)
+    const { data: existingPhotos } = await adminSupabase
       .from('partnership_photos')
       .select('order_index')
       .eq('partnership_id', partnershipId)
@@ -114,8 +122,8 @@ export async function POST(request: NextRequest) {
       ? (existingPhotos[0].order_index || 0) + 1
       : 0
 
-    // Save metadata to database
-    const { data: photoRecord, error: dbError } = await supabase
+    // Save metadata to database (using admin client)
+    const { data: photoRecord, error: dbError } = await adminSupabase
       .from('partnership_photos')
       .insert({
         partnership_id: partnershipId,
@@ -174,15 +182,23 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // Use admin client for all database operations (consistent with POST handler)
+    const adminSupabase = createAdminClient()
+
     // Verify user owns the partnership
-    const { data: membership } = await supabase
+    const { data: membership, error: membershipError } = await adminSupabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('partnership_id', partnershipId)
       .eq('user_id', user.id)
       .single()
 
-    if (!membership) {
+    if (membershipError || !membership) {
+      console.error('[photo-delete] Membership verification failed:', {
+        userId: user.id,
+        partnershipId,
+        error: membershipError
+      })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -190,7 +206,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get photo details first
-    const { data: photo, error: fetchError } = await supabase
+    const { data: photo, error: fetchError } = await adminSupabase
       .from('partnership_photos')
       .select('photo_url, photo_type')
       .eq('id', photoId)
@@ -210,7 +226,7 @@ export async function DELETE(request: NextRequest) {
     const fileName = `${partnershipId}/${urlParts[urlParts.length - 1]}`
 
     // Delete from database first
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await adminSupabase
       .from('partnership_photos')
       .delete()
       .eq('id', photoId)
@@ -223,8 +239,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Then delete from storage (use service role for this)
-    const adminSupabase = createServiceRoleClient()
+    // Then delete from storage
     const { error: storageError } = await adminSupabase.storage
       .from(bucketName)
       .remove([fileName])
