@@ -215,17 +215,22 @@ export async function sendMessage(
 ): Promise<{ message?: ChatMessage; error?: string }> {
   const supabase = createClient()
 
+  console.log('[sendMessage] Starting:', { handshakeId, userId, bodyLength: body.length })
+
   try {
     // Validate message
     if (!body.trim()) {
+      console.log('[sendMessage] Validation failed: empty message')
       return { error: 'Message cannot be empty' }
     }
 
     if (body.length > 2000) {
+      console.log('[sendMessage] Validation failed: too long')
       return { error: 'Message too long (max 2000 characters)' }
     }
 
     // Send message
+    console.log('[sendMessage] Inserting into messages table...')
     const { data: newMessage, error } = await supabase
       .from('messages')
       .insert({
@@ -235,6 +240,8 @@ export async function sendMessage(
       })
       .select()
       .single()
+
+    console.log('[sendMessage] Insert result:', { newMessage, error })
 
     if (error) throw error
 

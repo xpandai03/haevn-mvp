@@ -80,7 +80,21 @@ export default function ChatWithConnectionPage() {
   }, [messages])
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending || !user || !connection) return
+    if (!newMessage.trim() || sending || !user || !connection) {
+      console.log('[Chat] handleSend blocked:', {
+        hasMessage: !!newMessage.trim(),
+        sending,
+        hasUser: !!user,
+        hasConnection: !!connection
+      })
+      return
+    }
+
+    console.log('[Chat] Sending message:', {
+      handshakeId: connection.handshakeId,
+      userId: user.id,
+      messageLength: newMessage.trim().length
+    })
 
     setSending(true)
     const messageText = newMessage.trim()
@@ -88,7 +102,10 @@ export default function ChatWithConnectionPage() {
 
     const { message, error: sendError } = await sendMessage(connection.handshakeId, user.id, messageText)
 
+    console.log('[Chat] Send result:', { message, sendError })
+
     if (sendError) {
+      console.error('[Chat] Send failed:', sendError)
       setNewMessage(messageText) // Restore on error
     } else if (message) {
       setMessages(prev => [...prev, message])
