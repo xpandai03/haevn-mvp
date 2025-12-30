@@ -9,7 +9,6 @@ import { MatchesSection } from '@/components/dashboard/MatchesSection'
 import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
-import { SendNudgeButton } from '@/components/dashboard/SendNudgeButton'
 import { CompleteProfileCTA } from '@/components/dashboard/CompleteProfileCTA'
 import { getConnectionCards } from '@/lib/actions/handshakes'
 
@@ -83,8 +82,6 @@ export default async function DashboardPage() {
 
         {/* Connections Section */}
         <ConnectionsSection connections={connectionCards} />
-        {/* Send Nudge Test Button */}
-        <SendNudgeButton />
 
         {/* Personal & Resources Navigation */}
         <DashboardNavigation membershipTier={partnership?.tier} />
