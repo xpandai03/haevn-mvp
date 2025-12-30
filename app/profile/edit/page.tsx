@@ -328,7 +328,7 @@ export default function ProfileEditPage() {
               className="text-orange-800"
               style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
             >
-              Add at least 1 public photo to make your profile live
+              Add at least 1 profile photo to make your profile live
             </AlertDescription>
           </Alert>
         )}
@@ -340,7 +340,7 @@ export default function ProfileEditPage() {
               className="text-[#0F2A4A]"
               style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
             >
-              Your profile is live and visible in discovery!
+              Your profile is live and visible to people you connect with.
             </AlertDescription>
           </Alert>
         )}

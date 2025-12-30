@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Upload, X, Image as ImageIcon, Loader2, Lock, Globe, AlertCircle } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, Loader2, Lock, Users, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface PhotoMetadata {
@@ -181,8 +181,8 @@ export function PhotoUpload({
             <CardTitle className="flex items-center gap-2">
               {photoType === 'public' ? (
                 <>
-                  <Globe className="h-4 w-4" />
-                  Public Photos
+                  <Users className="h-4 w-4" />
+                  Profile Photos
                 </>
               ) : (
                 <>
@@ -193,7 +193,7 @@ export function PhotoUpload({
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {photoType === 'public'
-                ? 'Visible to everyone viewing your profile'
+                ? 'Visible to people you connect with'
                 : 'Only visible after you grant access'}
             </p>
           </div>
@@ -319,7 +319,7 @@ export function PhotoUpload({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                At least 1 public photo is required to make your profile live
+                At least 1 profile photo is required to make your profile live
               </AlertDescription>
             </Alert>
           )}

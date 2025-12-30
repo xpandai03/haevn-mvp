@@ -26,7 +26,7 @@ export function CompleteProfileCTA() {
             lineHeight: '140%'
           }}
         >
-          Upload at least one photo to make your profile visible in Discovery.
+          Add a profile photo to complete your profile and start connecting.
         </p>
         <Button
           onClick={() => router.push('/profile/edit')}
