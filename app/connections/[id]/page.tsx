@@ -3,28 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, Loader2, MoreVertical, AlertTriangle, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, MessageCircle, MapPin, Users, User, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/auth/context'
 import { getConnectionById, type ConnectionResult } from '@/lib/actions/connections'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { MatchDetailBreakdown } from '@/components/matches/MatchDetailBreakdown'
-
-// Tier label display
-const TIER_LABELS: Record<string, string> = {
-  Platinum: 'PLATINUM MATCH',
-  Gold: 'HIGH MATCH',
-  Silver: 'GOOD MATCH',
-  Bronze: 'MATCH',
-}
-
-// Tier-specific summary messages
-const TIER_SUMMARY: Record<string, string> = {
-  Platinum: 'Exceptional alignment across all core categories.',
-  Gold: 'Strong alignment across most core categories.',
-  Silver: 'Good alignment in key areas of compatibility.',
-  Bronze: 'Some shared values and compatible areas.',
-}
+import { getPartnershipPhotos, type PhotoMetadata } from '@/lib/services/photos'
+import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 // Profile type labels
 const PROFILE_TYPE_LABELS: Record<string, string> = {
@@ -33,17 +19,37 @@ const PROFILE_TYPE_LABELS: Record<string, string> = {
   pod: 'Pod',
 }
 
+// Full partnership profile data
+interface FullPartnershipData {
+  id: string
+  display_name: string | null
+  short_bio: string | null
+  long_bio: string | null
+  city: string | null
+  age: number | null
+  identity: string | null
+  profile_type: string | null
+  structure: { type: string; open_to?: string[] } | null
+  intentions: string[] | null
+  lifestyle_tags: string[] | null
+  orientation: { value: string; seeking?: string[] } | null
+}
+
 export default function ConnectionDetailPage() {
   const router = useRouter()
   const params = useParams()
   const connectionId = params.id as string
   const { user, loading: authLoading } = useAuth()
+  const supabase = createClient()
 
   const [connection, setConnection] = useState<ConnectionResult | null>(null)
+  const [fullProfile, setFullProfile] = useState<FullPartnershipData | null>(null)
+  const [photos, setPhotos] = useState<PhotoMetadata[]>([])
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load connection details
+  // Load connection details, full profile, and photos
   useEffect(() => {
     async function loadConnection() {
       if (authLoading || !user || !connectionId) return
@@ -58,6 +64,23 @@ export default function ConnectionDetailPage() {
         }
 
         setConnection(connectionData)
+
+        // Fetch full partnership profile
+        const { data: partnershipData } = await supabase
+          .from('partnerships')
+          .select('id, display_name, short_bio, long_bio, city, age, identity, profile_type, structure, intentions, lifestyle_tags, orientation')
+          .eq('id', connectionData.partnership.id)
+          .single()
+
+        if (partnershipData) {
+          setFullProfile(partnershipData)
+        }
+
+        // Fetch photos for this partnership
+        const partnershipPhotos = await getPartnershipPhotos(connectionData.partnership.id)
+        // Filter to public photos only
+        setPhotos(partnershipPhotos.filter(p => p.photo_type === 'public'))
+
       } catch (err: any) {
         console.error('[ConnectionDetail] Error:', err)
         setError(err.message || 'Failed to load connection')
@@ -67,7 +90,7 @@ export default function ConnectionDetailPage() {
     }
 
     loadConnection()
-  }, [user, authLoading, connectionId])
+  }, [user, authLoading, connectionId, supabase])
 
   // Handle message action
   const handleMessage = () => {
@@ -107,10 +130,11 @@ export default function ConnectionDetailPage() {
   }
 
   const { partnership, compatibility, matchedAt } = connection
+  const profile = fullProfile || partnership
 
   // Get initials for avatar fallback
-  const initials = partnership.display_name
-    ?.split(' ')
+  const initials = (profile.display_name || '')
+    .split(' ')
     .map(n => n[0])
     .join('')
     .toUpperCase()
@@ -119,8 +143,12 @@ export default function ConnectionDetailPage() {
   // Format connection date
   const connectedAgo = formatDistanceToNow(new Date(matchedAt), { addSuffix: true })
 
+  // Get structure type label
+  const structureType = fullProfile?.structure?.type || partnership.profile_type || 'solo'
+  const structureLabel = PROFILE_TYPE_LABELS[structureType] || 'Solo'
+
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-haevn-teal h-12 flex items-center justify-between px-4 flex-shrink-0">
         <button
@@ -129,138 +157,205 @@ export default function ConnectionDetailPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
+        <span className="text-white font-medium text-sm">Connected Profile</span>
         <button className="text-white hover:opacity-80">
           <MoreVertical className="w-5 h-5" />
         </button>
       </header>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-6">
-        {/* Avatar */}
-        <div className="flex justify-center mb-4">
-          <Avatar className="w-24 h-24 border-4 border-haevn-teal">
-            {partnership.photo_url ? (
-              <AvatarImage src={partnership.photo_url} alt={partnership.display_name || 'Connection'} />
-            ) : (
-              <AvatarFallback className="bg-haevn-navy text-white text-2xl font-bold">
-                {initials}
-              </AvatarFallback>
+      <div className="flex-1 overflow-y-auto">
+        {/* Photo Gallery */}
+        {photos.length > 0 ? (
+          <div className="relative bg-black">
+            <div className="aspect-[4/3] relative">
+              <Image
+                src={photos[activePhotoIndex]?.photo_url || ''}
+                alt={profile.display_name || 'Profile photo'}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+            {/* Photo dots indicator */}
+            {photos.length > 1 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                {photos.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActivePhotoIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === activePhotoIndex
+                        ? 'bg-white w-4'
+                        : 'bg-white/50 hover:bg-white/70'
+                    }`}
+                  />
+                ))}
+              </div>
             )}
-          </Avatar>
-        </div>
-
-        {/* Name and Basic Info */}
-        <div className="text-center mb-6">
-          <h1
-            className="text-2xl font-bold text-haevn-navy mb-1"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-          >
-            {partnership.display_name || 'Anonymous'}
-          </h1>
-          <p
-            className="text-sm text-haevn-charcoal/70"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
-          >
-            <span>{PROFILE_TYPE_LABELS[partnership.profile_type] || 'Solo'}</span>
-            {partnership.age > 0 && (
+            {/* Photo navigation arrows */}
+            {photos.length > 1 && (
               <>
-                <span className="mx-1.5">·</span>
-                <span>{partnership.age}</span>
+                <button
+                  onClick={() => setActivePhotoIndex(i => (i > 0 ? i - 1 : photos.length - 1))}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setActivePhotoIndex(i => (i < photos.length - 1 ? i + 1 : 0))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white"
+                >
+                  ›
+                </button>
               </>
             )}
-            <span className="mx-1.5">·</span>
-            <span>{partnership.city || 'Unknown'}</span>
-          </p>
-        </div>
-
-        {/* Compatibility Score Card */}
-        <div className="bg-haevn-lightgray rounded-2xl p-6 mb-6 text-center">
-          <p
-            className="text-xs text-haevn-charcoal/60 uppercase tracking-wider mb-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
-          >
-            Compatibility Score
-          </p>
-          <p
-            className="text-5xl font-bold text-haevn-teal mb-1"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-          >
-            {compatibility.overallScore}%
-          </p>
-          <p
-            className="text-sm font-semibold text-haevn-teal uppercase tracking-wide mb-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
-          >
-            {TIER_LABELS[compatibility.tier]}
-          </p>
-          <p
-            className="text-xs text-haevn-charcoal/60 mb-3"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-          >
-            {TIER_SUMMARY[compatibility.tier]}
-          </p>
-          <p
-            className="text-xs text-haevn-charcoal/50"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-          >
-            Connected {connectedAgo}
-          </p>
-        </div>
-
-        {/* Their Intent Section */}
-        {partnership.short_bio && (
-          <div className="mb-6">
-            <h3
-              className="text-sm font-semibold text-haevn-navy mb-2"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
-            >
-              Their Intent, In Their Words:
-            </h3>
-            <p
-              className="text-sm text-haevn-charcoal leading-relaxed"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-            >
-              {partnership.short_bio}
-            </p>
+          </div>
+        ) : (
+          /* No photos placeholder */
+          <div className="aspect-[4/3] bg-gray-200 flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-gray-300 flex items-center justify-center">
+                <span className="text-3xl font-bold text-gray-500">{initials}</span>
+              </div>
+              <p className="text-sm">No photos yet</p>
+            </div>
           </div>
         )}
 
-        {/* Divider */}
-        <div className="border-t border-haevn-gray-200 my-6" />
+        {/* Profile Content */}
+        <div className="px-5 py-5 space-y-5">
+          {/* Name & Basic Info Card */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h1
+                  className="text-2xl font-bold text-haevn-navy"
+                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
+                >
+                  {profile.display_name || 'Anonymous'}
+                </h1>
+                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                  {structureType === 'couple' || structureType === 'pod' ? (
+                    <Users className="w-4 h-4" />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
+                  <span>{structureLabel}</span>
+                  {profile.age && profile.age > 0 && (
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <span>{profile.age}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              {/* Compatibility Badge */}
+              {compatibility.overallScore > 0 && (
+                <div className="flex items-center gap-1.5 bg-haevn-teal/10 px-3 py-1.5 rounded-full">
+                  <Heart className="w-4 h-4 text-haevn-teal" />
+                  <span className="text-sm font-semibold text-haevn-teal">
+                    {compatibility.overallScore}%
+                  </span>
+                </div>
+              )}
+            </div>
 
-        {/* Compatibility Breakdown */}
-        <MatchDetailBreakdown
-          categories={compatibility.categories}
-          lifestyleIncluded={compatibility.lifestyleIncluded}
-        />
+            {/* Location */}
+            {profile.city && (
+              <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                <MapPin className="w-4 h-4" />
+                <span>{profile.city}</span>
+              </div>
+            )}
 
-        {/* Divider */}
-        <div className="border-t border-haevn-gray-200 my-6" />
+            {/* Connected date */}
+            <p className="text-xs text-gray-400 mt-2">
+              Connected {connectedAgo}
+            </p>
+          </div>
 
-        {/* Safety Reminder */}
-        <div className="bg-amber-50 rounded-xl p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4
-                className="text-sm font-semibold text-amber-800 mb-1"
+          {/* About Section */}
+          {(profile.short_bio || fullProfile?.long_bio) && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <h2
+                className="text-base font-semibold text-haevn-navy mb-3"
                 style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
               >
-                Safety Reminder
-              </h4>
-              <p
-                className="text-xs text-amber-700 leading-relaxed"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-              >
-                Always meet in a public place for the first time. Trust your instincts and take your time getting to know new connections.
-              </p>
+                About
+              </h2>
+              {profile.short_bio && (
+                <p
+                  className="text-sm text-gray-700 leading-relaxed"
+                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+                >
+                  {profile.short_bio}
+                </p>
+              )}
+              {fullProfile?.long_bio && (
+                <p
+                  className="text-sm text-gray-600 leading-relaxed mt-3"
+                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+                >
+                  {fullProfile.long_bio}
+                </p>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Intentions Section */}
+          {fullProfile?.intentions && fullProfile.intentions.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <h2
+                className="text-base font-semibold text-haevn-navy mb-3"
+                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              >
+                Looking For
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {fullProfile.intentions.map(intention => (
+                  <Badge
+                    key={intention}
+                    variant="secondary"
+                    className="bg-haevn-teal/10 text-haevn-teal hover:bg-haevn-teal/10 cursor-default"
+                  >
+                    {intention}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lifestyle Section */}
+          {fullProfile?.lifestyle_tags && fullProfile.lifestyle_tags.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <h2
+                className="text-base font-semibold text-haevn-navy mb-3"
+                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              >
+                Lifestyle & Interests
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {fullProfile.lifestyle_tags.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="border-gray-300 text-gray-600 hover:bg-transparent cursor-default"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Spacer for bottom button */}
+          <div className="h-4" />
         </div>
       </div>
 
       {/* Fixed Bottom Action - Message Button */}
-      <div className="px-5 pb-6 pt-3 bg-white border-t border-haevn-gray-200 flex-shrink-0">
+      <div className="px-5 pb-6 pt-3 bg-white border-t border-gray-200 flex-shrink-0">
         <Button
           className="w-full h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full flex items-center justify-center gap-2"
           onClick={handleMessage}
