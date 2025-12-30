@@ -34,7 +34,7 @@ export function ConnectionsSection({ connections }: ConnectionsSectionProps) {
               connections.slice(0, 5).map((connection) => (
                 <Link
                   key={connection.id}
-                  href={`/profile/${connection.partnershipId}`}
+                  href={`/connections/${connection.partnershipId}`}
                   className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer overflow-hidden"
                 >
                   {/* Photo */}
