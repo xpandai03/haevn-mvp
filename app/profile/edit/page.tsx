@@ -19,7 +19,8 @@ import { useToast } from '@/hooks/use-toast'
 import { ensureUserPartnership } from '@/lib/services/partnership'
 import { getPartnershipPhotos } from '@/lib/services/photos'
 import { createClient } from '@/lib/supabase/client'
-import { Save, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
+import { Save, AlertCircle, Loader2, CheckCircle, ArrowLeft } from 'lucide-react'
+import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 
 // Lifestyle tag options
 const LIFESTYLE_OPTIONS = [
@@ -251,45 +252,90 @@ export default function ProfileEditPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Edit Profile</h1>
-            <p className="text-muted-foreground mt-2">
-              Create your partnership profile for discovery
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={profileState === 'live' ? 'default' : 'secondary'}>
-              {profileState}
+    <div className="min-h-screen bg-gray-50">
+      {/* HAEVN Header */}
+      <HAEVNHeader />
+
+      {/* Main Content */}
+      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+        {/* Page Header */}
+        <div className="space-y-4">
+          {/* Back + Title Row */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            <div className="flex-1">
+              <h1
+                className="text-xl font-bold text-haevn-navy"
+                style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+              >
+                Edit Profile
+              </h1>
+              <p
+                className="text-sm text-gray-500"
+                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+              >
+                Create your partnership profile
+              </p>
+            </div>
+            {/* Status Badge */}
+            <Badge
+              className={`rounded-full text-xs px-3 py-1 font-semibold ${
+                profileState === 'live'
+                  ? 'bg-[#1B9A9A] text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {profileState.toUpperCase()}
             </Badge>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save Changes
-            </Button>
           </div>
+
+          {/* Save Button - Full Width */}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full h-12"
+            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Profile status alert */}
         {profileState === 'draft' && publicPhotos.length === 0 && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert className="rounded-xl border-orange-200 bg-orange-50">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription
+              className="text-orange-800"
+              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+            >
               Add at least 1 public photo to make your profile live
             </AlertDescription>
           </Alert>
         )}
 
         {profileState === 'live' && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="rounded-xl border-[#1B9A9A]/30 bg-[#1B9A9A]/10">
+            <CheckCircle className="h-4 w-4 text-[#1B9A9A]" />
+            <AlertDescription
+              className="text-[#0F2A4A]"
+              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+            >
               Your profile is live and visible in discovery!
             </AlertDescription>
           </Alert>
@@ -297,19 +343,19 @@ export default function ProfileEditPage() {
 
         {/* Form Tabs */}
         <Tabs defaultValue="identity" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="identity">Identity</TabsTrigger>
-            <TabsTrigger value="bio">Bio</TabsTrigger>
-            <TabsTrigger value="lifestyle">Lifestyle</TabsTrigger>
-            <TabsTrigger value="photos">Photos</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 rounded-xl bg-gray-100 p-1">
+            <TabsTrigger value="identity" className="rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Identity</TabsTrigger>
+            <TabsTrigger value="bio" className="rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Bio</TabsTrigger>
+            <TabsTrigger value="lifestyle" className="rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Lifestyle</TabsTrigger>
+            <TabsTrigger value="photos" className="rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Photos</TabsTrigger>
           </TabsList>
 
           {/* Identity Tab */}
           <TabsContent value="identity" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>How you'll appear to others</CardDescription>
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-haevn-navy">Basic Information</CardTitle>
+                <CardDescription className="text-sm">How you'll appear to others</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -364,10 +410,10 @@ export default function ProfileEditPage() {
 
           {/* Bio Tab */}
           <TabsContent value="bio" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>About You</CardTitle>
-                <CardDescription>Tell others about your partnership</CardDescription>
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-haevn-navy">About You</CardTitle>
+                <CardDescription className="text-sm">Tell others about your partnership</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -416,10 +462,10 @@ export default function ProfileEditPage() {
 
           {/* Lifestyle Tab */}
           <TabsContent value="lifestyle" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Lifestyle & Interests</CardTitle>
-                <CardDescription>Help find compatible matches</CardDescription>
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-haevn-navy">Lifestyle & Interests</CardTitle>
+                <CardDescription className="text-sm">Help find compatible matches</CardDescription>
               </CardHeader>
               <CardContent>
                 <Label>Lifestyle Tags</Label>
@@ -460,7 +506,7 @@ export default function ProfileEditPage() {
             />
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   )
 }
