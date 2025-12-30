@@ -10,10 +10,10 @@
  */
 
 // Test account user IDs that can trigger synthetic behavior
-// Get these by running:
-// SELECT id, email FROM auth.users WHERE email IN ('raunek@xpandai.com', 'raunek@cloudsteer.com', 'rik@haevn.co');
 export const TEST_ACCOUNT_USER_IDS: string[] = [
-  // Add actual user IDs here after querying the database
+  'f4cb13a5-747a-4e72-994d-874840f92071', // raunek@cloudsteer.com
+  'cea67699-afa2-47c6-8a33-f1d472aeb74b', // rikfoote@haevn.co
+  'dc5c3a21-9565-4a0a-a7c5-18dcf095b400', // raunek@xpandai.com
 ]
 
 // Partnership IDs that are synthetic (auto-accept connections)
