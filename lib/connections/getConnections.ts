@@ -29,11 +29,17 @@ export interface ConnectionResult {
     id: string
     display_name: string | null
     short_bio: string | null
+    long_bio: string | null
     identity: string
     profile_type: 'solo' | 'couple' | 'pod'
     city: string
     age: number
     photo_url?: string
+    structure: { type: string; open_to?: string[] } | null
+    intentions: string[] | null
+    lifestyle_tags: string[] | null
+    orientation: { value: string; seeking?: string[] } | null
+    photos: ConnectionPhoto[]
   }
   compatibility: {
     overallScore: number
@@ -63,10 +69,26 @@ interface PartnershipRow {
   id: string
   display_name: string | null
   short_bio: string | null
+  long_bio: string | null
   identity: string | null
   profile_type: string | null
   city: string | null
   age: number | null
+  structure: { type: string; open_to?: string[] } | null
+  intentions: string[] | null
+  lifestyle_tags: string[] | null
+  orientation: { value: string; seeking?: string[] } | null
+}
+
+/**
+ * Photo data for connected profiles
+ */
+export interface ConnectionPhoto {
+  id: string
+  photo_url: string
+  photo_type: 'public' | 'private'
+  order_index: number
+  is_primary: boolean
 }
 
 // =============================================================================
@@ -162,6 +184,43 @@ async function getPartnershipPhotoUrl(
   }
 
   return undefined
+}
+
+/**
+ * Get all photos for a partnership (server-side, bypasses RLS)
+ */
+async function getPartnershipPhotosAdmin(
+  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  partnershipId: string
+): Promise<ConnectionPhoto[]> {
+  const { data: photos, error } = await adminClient
+    .from('partnership_photos')
+    .select('id, storage_path, photo_type, order_index, is_primary')
+    .eq('partnership_id', partnershipId)
+    .eq('photo_type', 'public')
+    .order('order_index', { ascending: true })
+
+  if (error || !photos) {
+    console.error('[getPartnershipPhotosAdmin] Error:', error)
+    return []
+  }
+
+  // Convert storage paths to public URLs
+  return photos.map(photo => {
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('partnership-photos')
+      .getPublicUrl(photo.storage_path)
+
+    return {
+      id: photo.id,
+      photo_url: publicUrl,
+      photo_type: photo.photo_type as 'public' | 'private',
+      order_index: photo.order_index,
+      is_primary: photo.is_primary,
+    }
+  })
 }
 
 /**
@@ -267,8 +326,8 @@ export async function getConnectionsWithCompatibility(): Promise<ConnectionResul
       b_partnership,
       match_score,
       matched_at,
-      partnership_a:a_partnership(id, display_name, short_bio, identity, profile_type, city, age),
-      partnership_b:b_partnership(id, display_name, short_bio, identity, profile_type, city, age)
+      partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+      partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
     `)
     .or(`a_partnership.eq.${currentPartnershipId},b_partnership.eq.${currentPartnershipId}`)
     .eq('a_consent', true)
@@ -314,8 +373,9 @@ export async function getConnectionsWithCompatibility(): Promise<ConnectionResul
       continue
     }
 
-    // Get photo URL
+    // Get photo URL and all photos
     const photoUrl = await getPartnershipPhotoUrl(adminClient, supabase, otherPartnership.id)
+    const photos = await getPartnershipPhotosAdmin(adminClient, supabase, otherPartnership.id)
 
     connections.push({
       handshakeId: handshake.id,
@@ -324,11 +384,17 @@ export async function getConnectionsWithCompatibility(): Promise<ConnectionResul
         id: otherPartnership.id,
         display_name: otherPartnership.display_name,
         short_bio: otherPartnership.short_bio,
+        long_bio: otherPartnership.long_bio,
         identity: otherPartnership.identity || 'Unknown',
         profile_type: (otherPartnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
         city: otherPartnership.city || 'Unknown',
         age: otherPartnership.age || 0,
         photo_url: photoUrl,
+        structure: otherPartnership.structure,
+        intentions: otherPartnership.intentions,
+        lifestyle_tags: otherPartnership.lifestyle_tags,
+        orientation: otherPartnership.orientation,
+        photos,
       },
       compatibility,
     })
@@ -375,8 +441,8 @@ export async function getConnectionDetails(
       b_partnership,
       match_score,
       matched_at,
-      partnership_a:a_partnership(id, display_name, short_bio, identity, profile_type, city, age),
-      partnership_b:b_partnership(id, display_name, short_bio, identity, profile_type, city, age)
+      partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+      partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
     `)
     .eq('id', connectionId)
     .eq('a_consent', true)
@@ -396,8 +462,8 @@ export async function getConnectionDetails(
         b_partnership,
         match_score,
         matched_at,
-        partnership_a:a_partnership(id, display_name, short_bio, identity, profile_type, city, age),
-        partnership_b:b_partnership(id, display_name, short_bio, identity, profile_type, city, age)
+        partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+        partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
       `)
       .or(`and(a_partnership.eq.${currentPartnershipId},b_partnership.eq.${connectionId}),and(a_partnership.eq.${connectionId},b_partnership.eq.${currentPartnershipId})`)
       .eq('a_consent', true)
@@ -445,8 +511,9 @@ export async function getConnectionDetails(
     return null
   }
 
-  // 7. Get photo URL
+  // 7. Get photo URL and all photos
   const photoUrl = await getPartnershipPhotoUrl(adminClient, supabase, otherPartnership.id)
+  const photos = await getPartnershipPhotosAdmin(adminClient, supabase, otherPartnership.id)
 
   return {
     handshakeId: handshake.id,
@@ -455,11 +522,17 @@ export async function getConnectionDetails(
       id: otherPartnership.id,
       display_name: otherPartnership.display_name,
       short_bio: otherPartnership.short_bio,
+      long_bio: otherPartnership.long_bio,
       identity: otherPartnership.identity || 'Unknown',
       profile_type: (otherPartnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
       city: otherPartnership.city || 'Unknown',
       age: otherPartnership.age || 0,
       photo_url: photoUrl,
+      structure: otherPartnership.structure,
+      intentions: otherPartnership.intentions,
+      lifestyle_tags: otherPartnership.lifestyle_tags,
+      orientation: otherPartnership.orientation,
+      photos,
     },
     compatibility,
   }

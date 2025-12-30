@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/auth/context'
 import { getConnectionById, type ConnectionResult } from '@/lib/actions/connections'
-import { getPartnershipPhotos, type PhotoMetadata } from '@/lib/services/photos'
-import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
 
 // Profile type labels
@@ -19,37 +17,18 @@ const PROFILE_TYPE_LABELS: Record<string, string> = {
   pod: 'Pod',
 }
 
-// Full partnership profile data
-interface FullPartnershipData {
-  id: string
-  display_name: string | null
-  short_bio: string | null
-  long_bio: string | null
-  city: string | null
-  age: number | null
-  identity: string | null
-  profile_type: string | null
-  structure: { type: string; open_to?: string[] } | null
-  intentions: string[] | null
-  lifestyle_tags: string[] | null
-  orientation: { value: string; seeking?: string[] } | null
-}
-
 export default function ConnectionDetailPage() {
   const router = useRouter()
   const params = useParams()
   const connectionId = params.id as string
   const { user, loading: authLoading } = useAuth()
-  const supabase = createClient()
 
   const [connection, setConnection] = useState<ConnectionResult | null>(null)
-  const [fullProfile, setFullProfile] = useState<FullPartnershipData | null>(null)
-  const [photos, setPhotos] = useState<PhotoMetadata[]>([])
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load connection details, full profile, and photos
+  // Load connection details (all data comes from server action, bypasses RLS)
   useEffect(() => {
     async function loadConnection() {
       if (authLoading || !user || !connectionId) return
@@ -64,23 +43,6 @@ export default function ConnectionDetailPage() {
         }
 
         setConnection(connectionData)
-
-        // Fetch full partnership profile
-        const { data: partnershipData } = await supabase
-          .from('partnerships')
-          .select('id, display_name, short_bio, long_bio, city, age, identity, profile_type, structure, intentions, lifestyle_tags, orientation')
-          .eq('id', connectionData.partnership.id)
-          .single()
-
-        if (partnershipData) {
-          setFullProfile(partnershipData)
-        }
-
-        // Fetch photos for this partnership
-        const partnershipPhotos = await getPartnershipPhotos(connectionData.partnership.id)
-        // Filter to public photos only
-        setPhotos(partnershipPhotos.filter(p => p.photo_type === 'public'))
-
       } catch (err: any) {
         console.error('[ConnectionDetail] Error:', err)
         setError(err.message || 'Failed to load connection')
@@ -90,7 +52,7 @@ export default function ConnectionDetailPage() {
     }
 
     loadConnection()
-  }, [user, authLoading, connectionId, supabase])
+  }, [user, authLoading, connectionId])
 
   // Handle message action
   const handleMessage = () => {
@@ -130,10 +92,10 @@ export default function ConnectionDetailPage() {
   }
 
   const { partnership, compatibility, matchedAt } = connection
-  const profile = fullProfile || partnership
+  const photos = partnership.photos || []
 
   // Get initials for avatar fallback
-  const initials = (profile.display_name || '')
+  const initials = (partnership.display_name || '')
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -144,7 +106,7 @@ export default function ConnectionDetailPage() {
   const connectedAgo = formatDistanceToNow(new Date(matchedAt), { addSuffix: true })
 
   // Get structure type label
-  const structureType = fullProfile?.structure?.type || partnership.profile_type || 'solo'
+  const structureType = partnership.structure?.type || partnership.profile_type || 'solo'
   const structureLabel = PROFILE_TYPE_LABELS[structureType] || 'Solo'
 
   return (
@@ -171,7 +133,7 @@ export default function ConnectionDetailPage() {
             <div className="aspect-[4/3] relative">
               <Image
                 src={photos[activePhotoIndex]?.photo_url || ''}
-                alt={profile.display_name || 'Profile photo'}
+                alt={partnership.display_name || 'Profile photo'}
                 fill
                 className="object-cover"
                 priority
@@ -233,7 +195,7 @@ export default function ConnectionDetailPage() {
                   className="text-2xl font-bold text-haevn-navy"
                   style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
                 >
-                  {profile.display_name || 'Anonymous'}
+                  {partnership.display_name || 'Anonymous'}
                 </h1>
                 <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
                   {structureType === 'couple' || structureType === 'pod' ? (
@@ -242,10 +204,10 @@ export default function ConnectionDetailPage() {
                     <User className="w-4 h-4" />
                   )}
                   <span>{structureLabel}</span>
-                  {profile.age && profile.age > 0 && (
+                  {partnership.age && partnership.age > 0 && (
                     <>
                       <span className="text-gray-300">•</span>
-                      <span>{profile.age}</span>
+                      <span>{partnership.age}</span>
                     </>
                   )}
                 </div>
@@ -262,10 +224,10 @@ export default function ConnectionDetailPage() {
             </div>
 
             {/* Location */}
-            {profile.city && (
+            {partnership.city && (
               <div className="flex items-center gap-1.5 text-sm text-gray-500">
                 <MapPin className="w-4 h-4" />
-                <span>{profile.city}</span>
+                <span>{partnership.city}</span>
               </div>
             )}
 
@@ -276,7 +238,7 @@ export default function ConnectionDetailPage() {
           </div>
 
           {/* About Section */}
-          {(profile.short_bio || fullProfile?.long_bio) && (
+          {(partnership.short_bio || partnership.long_bio) && (
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2
                 className="text-base font-semibold text-haevn-navy mb-3"
@@ -284,27 +246,27 @@ export default function ConnectionDetailPage() {
               >
                 About
               </h2>
-              {profile.short_bio && (
+              {partnership.short_bio && (
                 <p
                   className="text-sm text-gray-700 leading-relaxed"
                   style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
                 >
-                  {profile.short_bio}
+                  {partnership.short_bio}
                 </p>
               )}
-              {fullProfile?.long_bio && (
+              {partnership.long_bio && (
                 <p
                   className="text-sm text-gray-600 leading-relaxed mt-3"
                   style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
                 >
-                  {fullProfile.long_bio}
+                  {partnership.long_bio}
                 </p>
               )}
             </div>
           )}
 
           {/* Intentions Section */}
-          {fullProfile?.intentions && fullProfile.intentions.length > 0 && (
+          {partnership.intentions && partnership.intentions.length > 0 && (
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2
                 className="text-base font-semibold text-haevn-navy mb-3"
@@ -313,7 +275,7 @@ export default function ConnectionDetailPage() {
                 Looking For
               </h2>
               <div className="flex flex-wrap gap-2">
-                {fullProfile.intentions.map(intention => (
+                {partnership.intentions.map(intention => (
                   <Badge
                     key={intention}
                     variant="secondary"
@@ -327,7 +289,7 @@ export default function ConnectionDetailPage() {
           )}
 
           {/* Lifestyle Section */}
-          {fullProfile?.lifestyle_tags && fullProfile.lifestyle_tags.length > 0 && (
+          {partnership.lifestyle_tags && partnership.lifestyle_tags.length > 0 && (
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2
                 className="text-base font-semibold text-haevn-navy mb-3"
@@ -336,7 +298,7 @@ export default function ConnectionDetailPage() {
                 Lifestyle & Interests
               </h2>
               <div className="flex flex-wrap gap-2">
-                {fullProfile.lifestyle_tags.map(tag => (
+                {partnership.lifestyle_tags.map(tag => (
                   <Badge
                     key={tag}
                     variant="outline"
