@@ -8,14 +8,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * Body: { partnershipId: string }
  */
 export async function POST(request: Request) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_DEV_ENDPOINTS) {
-    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
-  }
-
   try {
     const body = await request.json()
-    const { partnershipId } = body
+    const { partnershipId, secret } = body
+
+    // Allow with secret key in production
+    if (process.env.NODE_ENV === 'production' && secret !== 'haevn-dev-2024') {
+      return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
+    }
 
     if (!partnershipId) {
       return NextResponse.json({ error: 'partnershipId required' }, { status: 400 })
