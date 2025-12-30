@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkSyntheticAutoAccept } from '@/lib/synthetic/autoAccept'
 
 export interface HandshakeData {
   id: string
@@ -132,6 +133,17 @@ export async function sendHandshakeRequest(
     }
 
     console.log('[sendHandshakeRequest] Handshake created:', handshake.id)
+
+    // Check for synthetic auto-accept (for deterministic testing)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { autoAccepted } = await checkSyntheticAutoAccept(handshake.id, user.id)
+      if (autoAccepted) {
+        console.log('[sendHandshakeRequest] Synthetic user auto-accepted')
+      }
+    }
+
     return { success: true, handshakeId: handshake.id }
   } catch (error: any) {
     console.error('[sendHandshakeRequest] Error:', error)
