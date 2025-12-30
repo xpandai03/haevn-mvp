@@ -12,6 +12,8 @@ import {
   getConnectionDetails,
   type ConnectionResult,
 } from '@/lib/connections/getConnections'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 // Re-export types for convenience
 export type { ConnectionResult }
@@ -106,4 +108,122 @@ export async function getConnections(): Promise<Connection[]> {
 export async function getConnection(partnershipId: string): Promise<Connection | null> {
   const connections = await getConnections()
   return connections.find(c => c.id === partnershipId) || null
+}
+
+// =============================================================================
+// CHAT ACTIONS (Admin client to bypass RLS)
+// =============================================================================
+
+export interface ChatMessage {
+  id: string
+  handshake_id: string
+  sender_user: string
+  sender_name?: string
+  sender_partnership_id?: string
+  body: string
+  created_at: string
+  is_own_message?: boolean
+}
+
+/**
+ * Send a message in a connection chat using admin client.
+ * Bypasses RLS to ensure message inserts work regardless of partnership_members setup.
+ */
+export async function sendMessageAction(
+  handshakeId: string,
+  body: string
+): Promise<{ message?: ChatMessage; error?: string }> {
+  try {
+    // Get current user from server-side auth
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'Not authenticated' }
+    }
+
+    const userId = user.id
+
+    // Validate message
+    if (!body.trim()) {
+      return { error: 'Message cannot be empty' }
+    }
+
+    if (body.length > 2000) {
+      return { error: 'Message too long (max 2000 characters)' }
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Verify handshake exists and user is part of it
+    const { data: handshake, error: handshakeError } = await adminClient
+      .from('handshakes')
+      .select('id, a_partnership, b_partnership, state')
+      .eq('id', handshakeId)
+      .single()
+
+    if (handshakeError || !handshake) {
+      console.error('[sendMessageAction] Handshake not found:', handshakeError)
+      return { error: 'Handshake not found' }
+    }
+
+    if (handshake.state !== 'matched') {
+      return { error: 'Chat is only available for matched connections' }
+    }
+
+    // Get user's partnership
+    const { data: membership } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', userId)
+      .single()
+
+    // Check if user is part of the handshake
+    const userPartnershipId = membership?.partnership_id
+    const isPartOfHandshake = userPartnershipId &&
+      (handshake.a_partnership === userPartnershipId || handshake.b_partnership === userPartnershipId)
+
+    if (!isPartOfHandshake) {
+      return { error: 'Unauthorized to send messages in this chat' }
+    }
+
+    // Insert message using admin client (bypasses RLS)
+    const { data: newMessage, error: insertError } = await adminClient
+      .from('messages')
+      .insert({
+        handshake_id: handshakeId,
+        sender_user: userId,
+        body: body.trim()
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('[sendMessageAction] Insert failed:', insertError)
+      return { error: 'Failed to send message' }
+    }
+
+    // Get sender info
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', userId)
+      .single()
+
+    const chatMessage: ChatMessage = {
+      id: newMessage.id,
+      handshake_id: newMessage.handshake_id,
+      sender_user: newMessage.sender_user,
+      sender_name: profile?.full_name || 'Unknown',
+      sender_partnership_id: userPartnershipId,
+      body: newMessage.body,
+      created_at: newMessage.created_at,
+      is_own_message: true
+    }
+
+    return { message: chatMessage }
+  } catch (error) {
+    console.error('[sendMessageAction] Error:', error)
+    return { error: 'Failed to send message' }
+  }
 }
