@@ -98,9 +98,8 @@ export default function ProfileEditPage() {
     discretion_summary: ''
   })
 
-  // Photos
+  // Photos (profile photos only - visible to connections)
   const [publicPhotos, setPublicPhotos] = useState<PhotoMetadata[]>([])
-  const [privatePhotos, setPrivatePhotos] = useState<PhotoMetadata[]>([])
 
   useEffect(() => {
     async function loadProfile() {
@@ -140,10 +139,9 @@ export default function ProfileEditPage() {
           setProfileState(partnershipData.profile_state || 'draft')
         }
 
-        // Load photos from database
+        // Load profile photos from database
         const photos = await getPartnershipPhotos(partnership.id)
         setPublicPhotos(photos.filter(p => p.photo_type === 'public'))
-        setPrivatePhotos(photos.filter(p => p.photo_type === 'private'))
 
       } catch (error) {
         console.error('Error loading profile:', error)
@@ -498,15 +496,6 @@ export default function ProfileEditPage() {
               currentPhotos={publicPhotos}
               onPhotoUploaded={(photo) => setPublicPhotos(prev => [...prev, photo])}
               onPhotoDeleted={(photoId) => setPublicPhotos(prev => prev.filter(p => p.id !== photoId))}
-            />
-
-            <PhotoUpload
-              partnershipId={partnershipId}
-              photoType="private"
-              maxPhotos={12}
-              currentPhotos={privatePhotos}
-              onPhotoUploaded={(photo) => setPrivatePhotos(prev => [...prev, photo])}
-              onPhotoDeleted={(photoId) => setPrivatePhotos(prev => prev.filter(p => p.id !== photoId))}
             />
           </TabsContent>
         </Tabs>

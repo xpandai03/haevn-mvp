@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
+
+// Force dynamic rendering to ensure fresh data on each request
+export const dynamic = 'force-dynamic'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
 import { MatchesSection } from '@/components/dashboard/MatchesSection'

@@ -170,7 +170,7 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
     )
 
     // 9. Get user's profile photo (first public photo by order, or primary if set)
-    const { data: photoData } = await adminClient
+    const { data: photoData, error: photoError } = await adminClient
       .from('partnership_photos')
       .select('photo_url')
       .eq('partnership_id', partnershipId)
@@ -179,6 +179,13 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       .order('order_index', { ascending: true })
       .limit(1)
       .maybeSingle()
+
+    console.log('[loadDashboardData] Photo query result:', {
+      partnershipId,
+      photoData,
+      photoError,
+      profileState: partnership?.profile_state
+    })
 
     const photoUrl = photoData?.photo_url || undefined
 

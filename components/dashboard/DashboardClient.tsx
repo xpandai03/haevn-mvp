@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ProfileBannerCard } from './ProfileBannerCard'
 import { ProfilePhotoModal } from './ProfilePhotoModal'
 
@@ -22,10 +22,19 @@ export function DashboardClient({
   stats
 }: DashboardClientProps) {
   const [photoModalOpen, setPhotoModalOpen] = useState(false)
-  const [currentPhotoUrl, setCurrentPhotoUrl] = useState(profile?.photoUrl || null)
+  // Use prop directly, with local override only when photo is updated via modal
+  const [localPhotoOverride, setLocalPhotoOverride] = useState<string | null>(null)
+
+  // Reset local override when server-provided photo changes
+  useEffect(() => {
+    setLocalPhotoOverride(null)
+  }, [profile?.photoUrl])
+
+  // Use local override if set, otherwise use server-provided photo
+  const currentPhotoUrl = localPhotoOverride || profile?.photoUrl || null
 
   const handlePhotoUpdated = (newUrl: string) => {
-    setCurrentPhotoUrl(newUrl)
+    setLocalPhotoOverride(newUrl)
   }
 
   return (
