@@ -216,7 +216,7 @@ export function PhotoUpload({
           )}
 
           {/* Photo grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${currentPhotos.length === 0 ? 'grid-cols-1 place-items-center' : 'grid-cols-2 sm:grid-cols-3'}`}>
             {currentPhotos.map((photo) => (
               <div
                 key={photo.id}
@@ -269,7 +269,7 @@ export function PhotoUpload({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center hover:border-muted-foreground/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center hover:border-muted-foreground/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${currentPhotos.length === 0 ? 'w-32 h-32' : ''}`}
               >
                 {uploading ? (
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
