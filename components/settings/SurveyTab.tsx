@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, Save } from 'lucide-react'
 import { getUserSurveyData, saveUserSurveyData } from '@/lib/actions/survey-user'
 import { surveySections } from '@/lib/survey/questions'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
@@ -59,62 +60,80 @@ export function SurveyTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-haevn-teal-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-haevn-teal" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-h3 text-haevn-gray-900 mb-4">Survey Responses</h3>
-        <p className="text-body-sm text-haevn-gray-600 mb-6">
-          Review and update your survey answers. These help us find your best matches.
+    <div className="space-y-4">
+      {/* Save Button - Full Width at Top */}
+      <Button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full h-12"
+        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+      >
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
+          </>
+        )}
+      </Button>
+
+      {/* Info Card */}
+      <div className="rounded-xl bg-haevn-teal/5 border border-haevn-teal/20 p-3">
+        <p className="text-xs text-gray-600 text-center">
+          These responses help us find your best matches. Update anytime.
         </p>
       </div>
 
-      <div className="space-y-4">
+      {/* Survey Sections as Cards */}
+      <div className="space-y-3">
         {surveySections.map((section) => (
-          <div key={section.id} className="border-2 border-haevn-gray-300 rounded-lg">
+          <Card key={section.id} className="rounded-2xl border-gray-100 shadow-sm overflow-hidden">
             <button
               onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
-              className="w-full px-4 py-3 flex justify-between items-center hover:bg-haevn-gray-50 transition-colors"
+              className="w-full text-left"
             >
-              <div className="text-left">
-                <h4 className="font-medium text-haevn-gray-900">{section.title}</h4>
-                <p className="text-sm text-haevn-gray-600">{section.description}</p>
-              </div>
-              <span className="text-haevn-gray-600">
-                {expandedSection === section.id ? '−' : '+'}
-              </span>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-base text-haevn-navy">{section.title}</CardTitle>
+                  <p className="text-xs text-gray-500 mt-0.5">{section.description}</p>
+                </div>
+                <div className="p-1.5 rounded-full bg-gray-100">
+                  {expandedSection === section.id ? (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </div>
+              </CardHeader>
             </button>
 
             {expandedSection === section.id && (
-              <div className="px-4 pb-4 space-y-6 border-t border-haevn-gray-300 pt-4">
-                {section.questions.map((question) => (
-                  <div key={question.id} className="space-y-2">
-                    <QuestionRenderer
-                      question={question}
-                      value={answers[question.id]}
-                      onChange={(value) => handleAnswerChange(question.id, value)}
-                    />
-                  </div>
-                ))}
-              </div>
+              <CardContent className="pt-0 pb-4 space-y-4 border-t border-gray-100">
+                <div className="pt-4 space-y-4">
+                  {section.questions.map((question) => (
+                    <div key={question.id} className="space-y-2">
+                      <QuestionRenderer
+                        question={question}
+                        value={answers[question.id]}
+                        onChange={(value) => handleAnswerChange(question.id, value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
             )}
-          </div>
+          </Card>
         ))}
-      </div>
-
-      <div className="flex justify-end pt-4">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white"
-        >
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Save Changes
-        </Button>
       </div>
     </div>
   )
