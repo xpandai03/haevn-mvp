@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateSurveyCompletion } from '@/lib/survey/questions'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 
 export interface UserSurveyData {
   answers_json: Record<string, any>
@@ -57,20 +58,12 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     // Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
-    // Get user's partnership
-    console.log('[getUserSurveyData] Fetching user partnership...')
-    const { data: membership, error: membershipError } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (membershipError && membershipError.code !== 'PGRST116') {
-      console.error('[getUserSurveyData] Partnership lookup error:', membershipError)
-    }
+    // Get user's ACTIVE partnership using deterministic selection (LIVE first)
+    console.log('[SURVEY_FETCH] Selecting active partnership for user:', user.id)
+    const membership = await selectBestPartnership(adminClient, user.id)
 
     if (!membership || !membership.partnership_id) {
-      console.log('[getUserSurveyData] No partnership found - returning empty survey')
+      console.log('[SURVEY_FETCH] No partnership found - returning empty survey')
       return {
         data: {
           answers_json: {},
@@ -83,6 +76,11 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     }
 
     const partnershipId = membership.partnership_id
+    console.log('[SURVEY_FETCH] Selected partnership:', {
+      partnershipId,
+      profile_state: membership.profile_state,
+      userId: user.id
+    })
 
     // DEFENSIVE GUARD: Validate partnership_id before querying
     if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {
@@ -210,20 +208,21 @@ export async function saveUserSurveyData(
     // Use admin client to bypass RLS issues (same pattern as matching.ts)
     const adminClient = createAdminClient()
 
-    // Get user's partnership
-    console.log('[saveUserSurveyData] Fetching user partnership...')
-    const { data: membership, error: membershipError } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id, role')
-      .eq('user_id', user.id)
-      .single()
+    // Get user's ACTIVE partnership using deterministic selection (LIVE first)
+    console.log('[SURVEY_FETCH] Selecting active partnership for save, user:', user.id)
+    const membership = await selectBestPartnership(adminClient, user.id)
 
-    if (membershipError || !membership) {
-      console.error('[saveUserSurveyData] No partnership found:', membershipError)
+    if (!membership) {
+      console.error('[saveUserSurveyData] No partnership found')
       return { success: false, error: 'No partnership found. Please complete onboarding first.' }
     }
 
     const partnershipId = membership.partnership_id
+    console.log('[SURVEY_FETCH] Selected partnership for save:', {
+      partnershipId,
+      profile_state: membership.profile_state,
+      role: membership.role
+    })
 
     // DEFENSIVE GUARD: Validate partnership_id before querying
     if (!partnershipId || typeof partnershipId !== 'string' || partnershipId.length < 10) {

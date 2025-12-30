@@ -18,7 +18,16 @@ export function SurveyTab() {
 
   useEffect(() => {
     async function loadSurvey() {
+      console.log('[SURVEY_RENDER] Loading survey data...')
       const { data, error } = await getUserSurveyData()
+
+      console.log('[SURVEY_RENDER] Fetch result:', {
+        hasData: !!data,
+        hasError: !!error,
+        answersCount: data ? Object.keys(data.answers_json || {}).length : 0,
+        completionPct: data?.completion_pct
+      })
+
       if (data && !error) {
         setAnswers(data.answers_json || {})
       }
