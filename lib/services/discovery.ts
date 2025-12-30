@@ -60,7 +60,37 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
       .eq('partnership_id', userPartnershipId)
       .single()
 
-    // Query partnerships that are live and in the same city
+    // Query computed_matches BIDIRECTIONALLY (user can be partnership_a OR partnership_b)
+    const { data: computedMatches, error: matchesError } = await supabase
+      .from('computed_matches')
+      .select('partnership_a, partnership_b, score, tier')
+      .or(`partnership_a.eq.${userPartnershipId},partnership_b.eq.${userPartnershipId}`)
+
+    if (matchesError) {
+      console.error('[Discovery] computed_matches query error:', matchesError)
+      throw matchesError
+    }
+
+    if (!computedMatches || computedMatches.length === 0) {
+      console.log('[Discovery] No computed matches found for partnership:', userPartnershipId)
+      return { profiles: [], error: null }
+    }
+
+    console.log('[Discovery] Found', computedMatches.length, 'computed matches')
+
+    // Extract the OTHER partnership IDs (not the current user's)
+    const matchPartnershipIds = computedMatches.map(m =>
+      m.partnership_a === userPartnershipId ? m.partnership_b : m.partnership_a
+    )
+
+    // Build a map of scores by partnership ID
+    const scoreMap = new Map<string, { score: number; tier: string }>()
+    for (const m of computedMatches) {
+      const otherId = m.partnership_a === userPartnershipId ? m.partnership_b : m.partnership_a
+      scoreMap.set(otherId, { score: m.score, tier: m.tier })
+    }
+
+    // Fetch partnership details for the matches
     let query = supabase
       .from('partnerships')
       .select(`
@@ -73,8 +103,8 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
         lifestyle_tags,
         profile_state
       `)
+      .in('id', matchPartnershipIds)
       .eq('profile_state', 'live')
-      .neq('id', userPartnershipId) // Exclude own partnership
 
     if (city) {
       query = query.eq('city', city)
@@ -96,27 +126,18 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
 
     const likedPartnershipIds = new Set(signals?.map(s => s.to_partnership) || [])
 
-    // Calculate compatibility scores (simplified version)
+    // Map partnerships to profiles with pre-computed scores
     const profilesWithScores = partnerships.map(partnership => {
-      // Simple compatibility calculation based on shared lifestyle tags
-      let compatibilityScore = 50 // Base score
+      const matchData = scoreMap.get(partnership.id)
+      const compatibilityScore = matchData?.score || 50
 
-      if (userSurvey?.answers_json && partnership.lifestyle_tags) {
-        const userTags = userSurvey.answers_json.lifestyle_tags || []
-        const partnershipTags = partnership.lifestyle_tags as string[]
-
-        const sharedTags = userTags.filter((tag: string) =>
-          partnershipTags.includes(tag)
-        )
-
-        compatibilityScore += sharedTags.length * 10
-        compatibilityScore = Math.min(100, compatibilityScore)
-      }
-
-      // Determine compatibility bucket
+      // Determine compatibility bucket from tier or score
       let bucket: 'high' | 'medium' | 'low' = 'low'
-      if (compatibilityScore >= 85) bucket = 'high'
-      else if (compatibilityScore >= 70) bucket = 'medium'
+      if (matchData?.tier === 'Platinum' || matchData?.tier === 'Gold' || compatibilityScore >= 85) {
+        bucket = 'high'
+      } else if (matchData?.tier === 'Silver' || compatibilityScore >= 70) {
+        bucket = 'medium'
+      }
 
       return {
         id: partnership.id,
@@ -129,7 +150,7 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
         compatibility_score: compatibilityScore,
         compatibility_bucket: bucket,
         has_liked: likedPartnershipIds.has(partnership.id),
-        has_passed: false // Would need a separate passes table
+        has_passed: false
       }
     })
 
