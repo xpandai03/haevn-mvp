@@ -20,7 +20,7 @@ import { ensureUserPartnership } from '@/lib/services/partnership'
 import { revalidateDashboard } from '@/lib/actions/profile'
 import { getPartnershipPhotos } from '@/lib/services/photos'
 import { createClient } from '@/lib/supabase/client'
-import { Save, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Save, AlertCircle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 

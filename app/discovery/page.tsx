@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Heart, X, AlertCircle, Sparkles } from 'lucide-react'
+import { ArrowLeft, Heart, X, AlertCircle, Sparkles, Loader2 } from 'lucide-react'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import { useAuth } from '@/lib/auth/context'
 import { useProfile } from '@/hooks/useProfile'
