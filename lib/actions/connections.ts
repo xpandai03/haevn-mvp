@@ -133,10 +133,13 @@ export async function sendMessageAction(
   handshakeId: string,
   body: string
 ): Promise<{ message?: ChatMessage; error?: string }> {
+  console.log('[sendMessageAction] Called with:', { handshakeId, bodyLength: body?.length })
+
   try {
     // Get current user from server-side auth
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log('[sendMessageAction] Auth check:', { userId: user?.id, authError: authError?.message })
 
     if (authError || !user) {
       return { error: 'Not authenticated' }
@@ -188,6 +191,7 @@ export async function sendMessageAction(
     }
 
     // Insert message using admin client (bypasses RLS)
+    console.log('[sendMessageAction] Inserting message...')
     const { data: newMessage, error: insertError } = await adminClient
       .from('messages')
       .insert({
@@ -197,6 +201,8 @@ export async function sendMessageAction(
       })
       .select()
       .single()
+
+    console.log('[sendMessageAction] Insert result:', { newMessage, insertError: insertError?.message })
 
     if (insertError) {
       console.error('[sendMessageAction] Insert failed:', insertError)

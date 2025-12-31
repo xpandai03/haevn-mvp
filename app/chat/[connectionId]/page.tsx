@@ -80,7 +80,16 @@ export default function ChatWithConnectionPage() {
   }, [messages])
 
   const handleSend = async () => {
+    console.log('[CHAT] handleSend fired', {
+      newMessage: newMessage.trim(),
+      sending,
+      hasUser: !!user,
+      hasConnection: !!connection,
+      handshakeId: connection?.handshakeId
+    })
+
     if (!newMessage.trim() || sending || !user || !connection) {
+      console.log('[CHAT] handleSend blocked - conditions not met')
       return
     }
 
@@ -88,14 +97,19 @@ export default function ChatWithConnectionPage() {
     const messageText = newMessage.trim()
     setNewMessage('')
 
-    // Use server action (admin client) to bypass RLS
-    const { message, error: sendError } = await sendMessageAction(connection.handshakeId, messageText)
+    console.log('[CHAT] Calling sendMessageAction', { handshakeId: connection.handshakeId, text: messageText })
 
-    if (sendError) {
-      console.error('[Chat] Send failed:', sendError)
+    // Use server action (admin client) to bypass RLS
+    const result = await sendMessageAction(connection.handshakeId, messageText)
+
+    console.log('[CHAT] sendMessageAction result:', result)
+
+    if (result.error) {
+      console.error('[CHAT] Send failed:', result.error)
       setNewMessage(messageText) // Restore on error
-    } else if (message) {
-      setMessages(prev => [...prev, message])
+    } else if (result.message) {
+      console.log('[CHAT] Appending message to state:', result.message)
+      setMessages(prev => [...prev, result.message!])
     }
 
     setSending(false)
@@ -230,6 +244,7 @@ export default function ChatWithConnectionPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
+            console.log('[CHAT] Form submitted')
             handleSend()
           }}
           className="flex items-center gap-2"
@@ -237,6 +252,13 @@ export default function ChatWithConnectionPage() {
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                console.log('[CHAT] Enter key pressed')
+                handleSend()
+              }
+            }}
             placeholder="Type a message..."
             disabled={sending}
             maxLength={2000}
@@ -245,6 +267,9 @@ export default function ChatWithConnectionPage() {
           <Button
             type="submit"
             disabled={!newMessage.trim() || sending}
+            onClick={(e) => {
+              console.log('[CHAT] Send button clicked')
+            }}
             className="rounded-full bg-haevn-teal hover:bg-haevn-teal/90 h-10 w-10 p-0"
           >
             {sending ? (
