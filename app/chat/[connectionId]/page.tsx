@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
 import { getConnectionById, sendMessageAction, type ConnectionResult, type ChatMessage } from '@/lib/actions/connections'
 import { getHandshakeMessages, subscribeToMessages, markMessagesAsRead } from '@/lib/services/chat'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { useToast } from '@/hooks/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format, isToday, isYesterday } from 'date-fns'
 
@@ -16,6 +18,7 @@ export default function ChatWithConnectionPage() {
   const params = useParams()
   const connectionId = params.connectionId as string
   const { user, loading: authLoading } = useAuth()
+  const { toast } = useToast()
 
   const [connection, setConnection] = useState<ConnectionResult | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -32,6 +35,19 @@ export default function ChatWithConnectionPage() {
 
       try {
         setLoading(true)
+
+        // Check membership tier first
+        const membershipTier = await getUserMembershipTier()
+        if (membershipTier !== 'plus') {
+          toast({
+            title: 'Upgrade Required',
+            description: 'Upgrade to HAEVN+ to access chat',
+            variant: 'destructive'
+          })
+          router.push('/onboarding/membership')
+          return
+        }
+
         const connectionData = await getConnectionById(connectionId)
 
         if (!connectionData) {
@@ -57,7 +73,7 @@ export default function ChatWithConnectionPage() {
     }
 
     loadConnection()
-  }, [user, authLoading, connectionId])
+  }, [user, authLoading, connectionId, router, toast])
 
   // Subscribe to new messages
   useEffect(() => {

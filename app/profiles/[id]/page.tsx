@@ -80,6 +80,16 @@ export default function ProfileViewPage() {
 
   // Action handlers
   const handleMessage = () => {
+    // Check membership before allowing message
+    if (membershipTier !== 'plus') {
+      toast({
+        title: 'HAEVN+ Required',
+        description: 'Upgrade to HAEVN+ to message profiles',
+        variant: 'destructive'
+      })
+      router.push('/onboarding/membership')
+      return
+    }
     // Navigate to messages with this partnership
     router.push(`/messages?partner=${partnershipId}`)
   }
@@ -165,6 +175,40 @@ export default function ProfileViewPage() {
           <Button onClick={handleBack} className="w-full bg-haevn-teal">
             Go Back
           </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Free user gating - show upgrade prompt instead of full profile
+  if (membershipTier !== 'plus') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-haevn-teal/10 flex items-center justify-center">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h2 className="text-2xl font-bold text-haevn-navy mb-4">
+            Upgrade to View Profile
+          </h2>
+          <p className="text-haevn-charcoal mb-6">
+            Full profiles, messaging, and connections are available to HAEVN+ members.
+          </p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => router.push('/onboarding/membership')}
+              className="w-full bg-haevn-teal hover:bg-haevn-teal/90"
+            >
+              Upgrade to HAEVN+
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              className="w-full"
+            >
+              Go Back
+            </Button>
+          </div>
         </div>
       </div>
     )

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/auth/context'
 import { getConnectionById, type ConnectionResult } from '@/lib/actions/connections'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { useToast } from '@/hooks/use-toast'
 import Image from 'next/image'
 
 // Profile type labels
@@ -22,11 +24,13 @@ export default function ConnectionDetailPage() {
   const params = useParams()
   const connectionId = params.id as string
   const { user, loading: authLoading } = useAuth()
+  const { toast } = useToast()
 
   const [connection, setConnection] = useState<ConnectionResult | null>(null)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
 
   // Load connection details (all data comes from server action, bypasses RLS)
   useEffect(() => {
@@ -35,6 +39,11 @@ export default function ConnectionDetailPage() {
 
       try {
         setLoading(true)
+
+        // Check membership tier
+        const tier = await getUserMembershipTier()
+        setMembershipTier(tier)
+
         const connectionData = await getConnectionById(connectionId)
 
         if (!connectionData) {
@@ -57,6 +66,18 @@ export default function ConnectionDetailPage() {
   // Handle message action
   const handleMessage = () => {
     if (!connection) return
+
+    // Check membership before allowing message
+    if (membershipTier !== 'plus') {
+      toast({
+        title: 'Upgrade Required',
+        description: 'Upgrade to HAEVN+ to message connections',
+        variant: 'destructive'
+      })
+      router.push('/onboarding/membership')
+      return
+    }
+
     router.push(`/chat/${connection.partnership.id}`)
   }
 
