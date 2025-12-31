@@ -11,6 +11,7 @@ import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
 import { CompleteProfileCTA } from '@/components/dashboard/CompleteProfileCTA'
 import { getConnectionCards } from '@/lib/actions/handshakes'
+import { getUnreadCounts } from '@/lib/actions/connections'
 
 export default async function DashboardPage() {
   // Load all dashboard data server-side
@@ -38,14 +39,17 @@ export default async function DashboardPage() {
 
   const { getReceivedNudges } = await import('@/lib/actions/nudges')
 
-  const nudgesWithData = await getReceivedNudges()
-  const connectionCards = await getConnectionCards()
-  console.log(`[Dashboard] User ${user.id} has ${nudgesWithData.length} nudges, ${connectionCards.length} connections`)
+  const [nudgesWithData, connectionCards, unreadCounts] = await Promise.all([
+    getReceivedNudges(),
+    getConnectionCards(),
+    getUnreadCounts()
+  ])
+  console.log(`[Dashboard] User ${user.id} has ${nudgesWithData.length} nudges, ${connectionCards.length} connections, ${unreadCounts.total} unread messages`)
 
-  // Mock stats for now - will come from real data later
+  // Stats with real unread message count
   const stats = {
     matches: 12,
-    messages: 4,
+    messages: unreadCounts.total,
     connections: connectionCards.length,
     nudges: nudgesWithData.length
   }

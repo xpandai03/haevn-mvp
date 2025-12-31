@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSyntheticAutoAccept } from '@/lib/synthetic/autoAccept'
+import { getUnreadMessageCounts } from '@/lib/services/chat'
 
 export interface HandshakeData {
   id: string
@@ -356,17 +357,22 @@ export interface ConnectionCardData {
   compatibilityScore: number
   topFactor: string
   matchedAt: string | null
+  unreadCount: number
 }
 
 /**
  * Get connections with enriched data for UI cards
- * Returns the "other" partnership's info with photos
+ * Returns the "other" partnership's info with photos and unread counts
  */
 export async function getConnectionCards(): Promise<ConnectionCardData[]> {
   try {
     const supabase = await createClient()
     const adminClient = createAdminClient()
     const currentPartnershipId = await getCurrentPartnershipId()
+
+    // Get current user for unread counts
+    const { data: { user } } = await supabase.auth.getUser()
+    const unreadCounts = user ? await getUnreadMessageCounts(user.id) : { total: 0, byHandshake: {} }
 
     const { data: handshakes, error } = await adminClient
       .from('handshakes')
@@ -441,7 +447,8 @@ export async function getConnectionCards(): Promise<ConnectionCardData[]> {
         photoUrl,
         compatibilityScore: handshake.match_score || 0,
         topFactor,
-        matchedAt: handshake.matched_at
+        matchedAt: handshake.matched_at,
+        unreadCount: unreadCounts.byHandshake[handshake.id] || 0
       })
     }
 

@@ -53,6 +53,14 @@ export function ConnectionsSection({ connections }: ConnectionsSectionProps) {
                         </span>
                       </div>
                     )}
+                    {/* Unread message badge */}
+                    {connection.unreadCount > 0 && (
+                      <div className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-orange-500 rounded-full flex items-center justify-center px-1">
+                        <span className="text-[10px] font-bold text-white">
+                          {connection.unreadCount > 99 ? '99+' : connection.unreadCount}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Info */}

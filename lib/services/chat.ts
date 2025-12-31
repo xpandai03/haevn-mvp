@@ -381,6 +381,108 @@ export async function markMessagesAsRead(
   }
 }
 
+// =============================================================================
+// UNREAD COUNT HELPERS
+// =============================================================================
+
+export interface UnreadCounts {
+  total: number
+  byHandshake: Record<string, number>
+}
+
+/**
+ * Get unread message counts for a user across all their matched handshakes.
+ * Uses existing message_reads table with last_read_at timestamp.
+ */
+export async function getUnreadMessageCounts(userId: string): Promise<UnreadCounts> {
+  const supabase = createClient()
+
+  try {
+    // Get user's partnership(s)
+    const { data: memberships, error: memberError } = await supabase
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', userId)
+
+    if (memberError || !memberships || memberships.length === 0) {
+      return { total: 0, byHandshake: {} }
+    }
+
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+
+    // Get all matched handshakes involving user's partnerships
+    // Build OR condition for all user's partnerships
+    const orConditions = userPartnershipIds
+      .map(pid => `a_partnership.eq.${pid},b_partnership.eq.${pid}`)
+      .join(',')
+
+    const { data: handshakes, error: handshakeError } = await supabase
+      .from('handshakes')
+      .select(`
+        id,
+        a_partnership,
+        b_partnership,
+        messages(
+          id,
+          sender_partnership,
+          created_at
+        )
+      `)
+      .or(orConditions)
+      .eq('state', 'matched')
+
+    if (handshakeError || !handshakes) {
+      console.error('[getUnreadMessageCounts] Handshake fetch error:', handshakeError)
+      return { total: 0, byHandshake: {} }
+    }
+
+    // Get all read statuses for this user
+    const handshakeIds = handshakes.map(h => h.id)
+    const { data: readStatuses } = await supabase
+      .from('message_reads')
+      .select('handshake_id, last_read_at')
+      .eq('user_id', userId)
+      .in('handshake_id', handshakeIds)
+
+    const readStatusMap = new Map<string, Date>()
+    readStatuses?.forEach(rs => {
+      readStatusMap.set(rs.handshake_id, new Date(rs.last_read_at))
+    })
+
+    // Calculate unread counts
+    const byHandshake: Record<string, number> = {}
+    let total = 0
+
+    for (const handshake of handshakes) {
+      const messages = handshake.messages as any[] || []
+      const lastReadAt = readStatusMap.get(handshake.id) || new Date(0)
+
+      // Find which of user's partnerships is in this handshake
+      const userPartnershipInHandshake = userPartnershipIds.find(
+        pid => pid === handshake.a_partnership || pid === handshake.b_partnership
+      )
+
+      if (!userPartnershipInHandshake) continue
+
+      // Count unread: messages from OTHER partnership, created AFTER last_read_at
+      const unreadCount = messages.filter(msg =>
+        msg.sender_partnership !== userPartnershipInHandshake &&
+        new Date(msg.created_at) > lastReadAt
+      ).length
+
+      if (unreadCount > 0) {
+        byHandshake[handshake.id] = unreadCount
+        total += unreadCount
+      }
+    }
+
+    return { total, byHandshake }
+  } catch (error) {
+    console.error('[getUnreadMessageCounts] Error:', error)
+    return { total: 0, byHandshake: {} }
+  }
+}
+
 // Subscribe to new messages for a handshake
 export function subscribeToMessages(
   handshakeId: string,

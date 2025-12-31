@@ -12,8 +12,12 @@ import {
   getConnectionDetails,
   type ConnectionResult,
 } from '@/lib/connections/getConnections'
+import { getUnreadMessageCounts as getUnreadCountsService, type UnreadCounts } from '@/lib/services/chat'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+
+// Re-export UnreadCounts type
+export type { UnreadCounts }
 
 // Re-export types for convenience
 export type { ConnectionResult }
@@ -37,6 +41,24 @@ export async function getConnectionById(
   connectionId: string
 ): Promise<ConnectionResult | null> {
   return getConnectionDetails(connectionId)
+}
+
+/**
+ * Get unread message counts for the current user.
+ * Returns total count and per-handshake breakdown.
+ *
+ * @returns UnreadCounts with total and byHandshake map
+ */
+export async function getUnreadCounts(): Promise<UnreadCounts> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    console.error('[getUnreadCounts] No authenticated user')
+    return { total: 0, byHandshake: {} }
+  }
+
+  return getUnreadCountsService(user.id)
 }
 
 // =============================================================================
