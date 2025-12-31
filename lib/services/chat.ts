@@ -61,6 +61,7 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
     const userPartnershipId = membership.partnership_id
 
     // Get all MATCHED handshakes involving this partnership (chat only unlocks after match)
+    // NOTE: messages schema uses sender_partnership + content (not sender_user + body)
     const { data: handshakes, error } = await supabase
       .from('handshakes')
       .select(`
@@ -80,9 +81,9 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
           badges
         ),
         messages(
-          body,
+          content,
           created_at,
-          sender_user
+          sender_partnership
         ),
         photo_grants(
           granted
@@ -112,19 +113,26 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
         .eq('user_id', userId)
         .single()
 
-      // Count unread messages
+      // Count unread messages (using sender_partnership instead of sender_user)
       let unreadCount = 0
       if (messages && messages.length > 0) {
         const lastReadAt = readStatus?.last_read_at ? new Date(readStatus.last_read_at) : new Date(0)
         unreadCount = messages.filter(msg =>
-          msg.sender_user !== userId &&
+          msg.sender_partnership !== userPartnershipId &&
           new Date(msg.created_at) > lastReadAt
         ).length
       }
 
+      // Map last_message fields for UI compatibility
+      const mappedLastMessage = lastMessage ? {
+        body: lastMessage.content,
+        created_at: lastMessage.created_at,
+        sender_user: lastMessage.sender_partnership // Use partnership ID as sender identifier
+      } : undefined
+
       return {
         ...handshake,
-        last_message: lastMessage,
+        last_message: mappedLastMessage,
         photo_grant: handshake.photo_grants?.[0],
         unread_count: unreadCount,
         last_read_at: readStatus?.last_read_at
@@ -163,41 +171,42 @@ export async function getHandshakeMessages(
       return []
     }
 
-    // Get messages with sender info
+    // Get messages - NOTE: schema uses sender_partnership + content (not sender_user + body)
     const { data: messages, error } = await supabase
       .from('messages')
       .select(`
         id,
         handshake_id,
-        sender_user,
-        body,
-        created_at,
-        profiles!messages_sender_user_fkey(
-          full_name
-        )
+        sender_partnership,
+        content,
+        created_at
       `)
       .eq('handshake_id', handshakeId)
       .order('created_at', { ascending: true })
 
     if (error) throw error
 
-    // Get partnership info for each sender
+    // Get user's partnership to determine which messages are own
+    const userPartnershipId = memberships[0].partnership_id
+
+    // Get partnership display names for sender info
     const processedMessages = await Promise.all((messages || []).map(async (msg) => {
-      const { data: senderMembership } = await supabase
-        .from('partnership_members')
-        .select('partnership_id')
-        .eq('user_id', msg.sender_user)
+      // Get partnership display name
+      const { data: partnership } = await supabase
+        .from('partnerships')
+        .select('display_name')
+        .eq('id', msg.sender_partnership)
         .single()
 
       return {
         id: msg.id,
         handshake_id: msg.handshake_id,
-        sender_user: msg.sender_user,
-        sender_name: msg.profiles?.full_name || 'Unknown',
-        sender_partnership_id: senderMembership?.partnership_id,
-        body: msg.body,
+        sender_user: '', // Not stored in new schema
+        sender_name: partnership?.display_name || 'Unknown',
+        sender_partnership_id: msg.sender_partnership,
+        body: msg.content, // Map content -> body
         created_at: msg.created_at,
-        is_own_message: msg.sender_user === userId
+        is_own_message: msg.sender_partnership === userPartnershipId
       } as ChatMessage
     }))
 
@@ -229,14 +238,25 @@ export async function sendMessage(
       return { error: 'Message too long (max 2000 characters)' }
     }
 
-    // Send message
+    // Get user's partnership ID first (schema uses sender_partnership)
+    const { data: membership } = await supabase
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', userId)
+      .single()
+
+    if (!membership) {
+      return { error: 'User has no partnership' }
+    }
+
+    // Send message - NOTE: schema uses sender_partnership + content (not sender_user + body)
     console.log('[sendMessage] Inserting into messages table...')
     const { data: newMessage, error } = await supabase
       .from('messages')
       .insert({
         handshake_id: handshakeId,
-        sender_user: userId,
-        body: body.trim()
+        sender_partnership: membership.partnership_id,
+        content: body.trim()
       })
       .select()
       .single()
@@ -246,25 +266,19 @@ export async function sendMessage(
     if (error) throw error
 
     // Get sender info
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('user_id', userId)
-      .single()
-
-    const { data: membership } = await supabase
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', userId)
+    const { data: partnership } = await supabase
+      .from('partnerships')
+      .select('display_name')
+      .eq('id', membership.partnership_id)
       .single()
 
     const chatMessage: ChatMessage = {
       id: newMessage.id,
       handshake_id: newMessage.handshake_id,
-      sender_user: newMessage.sender_user,
-      sender_name: profile?.full_name || 'Unknown',
-      sender_partnership_id: membership?.partnership_id,
-      body: newMessage.body,
+      sender_user: userId,
+      sender_name: partnership?.display_name || 'Unknown',
+      sender_partnership_id: newMessage.sender_partnership,
+      body: newMessage.content, // Map content -> body
       created_at: newMessage.created_at,
       is_own_message: true
     }
@@ -387,26 +401,20 @@ export function subscribeToMessages(
       async (payload) => {
         console.log('New message received:', payload)
 
-        // Get sender info
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('user_id', payload.new.sender_user)
-          .single()
-
-        const { data: membership } = await supabase
-          .from('partnership_members')
-          .select('partnership_id')
-          .eq('user_id', payload.new.sender_user)
+        // Get sender partnership info (schema uses sender_partnership, not sender_user)
+        const { data: partnership } = await supabase
+          .from('partnerships')
+          .select('display_name')
+          .eq('id', payload.new.sender_partnership)
           .single()
 
         const message: ChatMessage = {
           id: payload.new.id,
           handshake_id: payload.new.handshake_id,
-          sender_user: payload.new.sender_user,
-          sender_name: profile?.full_name || 'Unknown',
-          sender_partnership_id: membership?.partnership_id,
-          body: payload.new.body,
+          sender_user: '', // Not stored in new schema
+          sender_name: partnership?.display_name || 'Unknown',
+          sender_partnership_id: payload.new.sender_partnership,
+          body: payload.new.content, // Map content -> body
           created_at: payload.new.created_at,
           is_own_message: false // Will be determined by the component
         }

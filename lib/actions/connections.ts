@@ -133,13 +133,10 @@ export async function sendMessageAction(
   handshakeId: string,
   body: string
 ): Promise<{ message?: ChatMessage; error?: string }> {
-  console.log('[sendMessageAction] Called with:', { handshakeId, bodyLength: body?.length })
-
   try {
     // Get current user from server-side auth
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('[sendMessageAction] Auth check:', { userId: user?.id, authError: authError?.message })
 
     if (authError || !user) {
       return { error: 'Not authenticated' }
@@ -174,35 +171,41 @@ export async function sendMessageAction(
       return { error: 'Chat is only available for matched connections' }
     }
 
-    // Get user's partnership
-    const { data: membership } = await adminClient
+    // Get ALL user's partnerships (user may have multiple)
+    const { data: memberships, error: membershipError } = await adminClient
       .from('partnership_members')
       .select('partnership_id')
       .eq('user_id', userId)
-      .single()
 
-    // Check if user is part of the handshake
-    const userPartnershipId = membership?.partnership_id
-    const isPartOfHandshake = userPartnershipId &&
-      (handshake.a_partnership === userPartnershipId || handshake.b_partnership === userPartnershipId)
+    if (membershipError || !memberships || memberships.length === 0) {
+      console.error('[sendMessageAction] No partnerships found for user:', membershipError)
+      return { error: 'User has no partnership' }
+    }
 
-    if (!isPartOfHandshake) {
+    // Check if ANY of user's partnerships is part of the handshake
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+    const matchingPartnershipId = userPartnershipIds.find(pid =>
+      pid === handshake.a_partnership || pid === handshake.b_partnership
+    )
+
+    if (!matchingPartnershipId) {
+      console.error('[sendMessageAction] User not part of handshake:', { userPartnershipIds, handshake })
       return { error: 'Unauthorized to send messages in this chat' }
     }
 
+    const userPartnershipId = matchingPartnershipId
+
     // Insert message using admin client (bypasses RLS)
-    console.log('[sendMessageAction] Inserting message...')
+    // NOTE: Schema uses sender_partnership + content (not sender_user + body)
     const { data: newMessage, error: insertError } = await adminClient
       .from('messages')
       .insert({
         handshake_id: handshakeId,
-        sender_user: userId,
-        body: body.trim()
+        sender_partnership: userPartnershipId,
+        content: body.trim()
       })
       .select()
       .single()
-
-    console.log('[sendMessageAction] Insert result:', { newMessage, insertError: insertError?.message })
 
     if (insertError) {
       console.error('[sendMessageAction] Insert failed:', insertError)
@@ -216,13 +219,14 @@ export async function sendMessageAction(
       .eq('user_id', userId)
       .single()
 
+    // Map DB columns (sender_partnership, content) to ChatMessage fields (sender_user, body)
     const chatMessage: ChatMessage = {
       id: newMessage.id,
       handshake_id: newMessage.handshake_id,
-      sender_user: newMessage.sender_user,
+      sender_user: userId, // Use the authenticated user ID
       sender_name: profile?.full_name || 'Unknown',
-      sender_partnership_id: userPartnershipId,
-      body: newMessage.body,
+      sender_partnership_id: newMessage.sender_partnership,
+      body: newMessage.content, // Map content -> body
       created_at: newMessage.created_at,
       is_own_message: true
     }
