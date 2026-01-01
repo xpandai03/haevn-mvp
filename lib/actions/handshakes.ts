@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSyntheticAutoAccept } from '@/lib/synthetic/autoAccept'
-import { getUnreadMessageCounts } from '@/lib/services/chat'
+import { getUnreadCountsForUser } from '@/lib/actions/connections'
 
 export interface HandshakeData {
   id: string
@@ -372,7 +372,7 @@ export async function getConnectionCards(): Promise<ConnectionCardData[]> {
 
     // Get current user for unread counts
     const { data: { user } } = await supabase.auth.getUser()
-    const unreadCounts = user ? await getUnreadMessageCounts(user.id) : { total: 0, byHandshake: {} }
+    const unreadCounts = user ? await getUnreadCountsForUser(user.id) : { total: 0, byHandshake: {} }
 
     const { data: handshakes, error } = await adminClient
       .from('handshakes')

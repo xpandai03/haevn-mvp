@@ -12,7 +12,7 @@ import {
   getConnectionDetails,
   type ConnectionResult,
 } from '@/lib/connections/getConnections'
-import { getUnreadMessageCounts as getUnreadCountsService, type UnreadCounts } from '@/lib/services/chat'
+import { type UnreadCounts } from '@/lib/services/chat'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -44,8 +44,102 @@ export async function getConnectionById(
 }
 
 /**
+ * Internal helper to get unread counts for a specific user.
+ * Uses admin client to bypass RLS issues with messages table.
+ */
+export async function getUnreadCountsForUser(userId: string): Promise<UnreadCounts> {
+  const adminClient = await createAdminClient()
+
+  try {
+    // Get user's partnership(s)
+    const { data: memberships, error: memberError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', userId)
+
+    if (memberError || !memberships || memberships.length === 0) {
+      return { total: 0, byHandshake: {} }
+    }
+
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+
+    // Build OR condition for all user's partnerships
+    const orConditions = userPartnershipIds
+      .map(pid => `a_partnership.eq.${pid},b_partnership.eq.${pid}`)
+      .join(',')
+
+    // Get all matched handshakes with messages
+    const { data: handshakes, error: handshakeError } = await adminClient
+      .from('handshakes')
+      .select(`
+        id,
+        a_partnership,
+        b_partnership,
+        messages(
+          id,
+          sender_partnership,
+          created_at
+        )
+      `)
+      .or(orConditions)
+      .eq('state', 'matched')
+
+    if (handshakeError || !handshakes) {
+      console.error('[getUnreadCountsForUser] Handshake fetch error:', handshakeError)
+      return { total: 0, byHandshake: {} }
+    }
+
+    // Get all read statuses for this user
+    const handshakeIds = handshakes.map(h => h.id)
+    const { data: readStatuses } = await adminClient
+      .from('message_reads')
+      .select('handshake_id, last_read_at')
+      .eq('user_id', userId)
+      .in('handshake_id', handshakeIds)
+
+    const readStatusMap = new Map<string, Date>()
+    readStatuses?.forEach(rs => {
+      readStatusMap.set(rs.handshake_id, new Date(rs.last_read_at))
+    })
+
+    // Calculate unread counts
+    const byHandshake: Record<string, number> = {}
+    let total = 0
+
+    for (const handshake of handshakes) {
+      const messages = (handshake.messages as any[]) || []
+      const lastReadAt = readStatusMap.get(handshake.id) || new Date(0)
+
+      // Find which of user's partnerships is in this handshake
+      const userPartnershipInHandshake = userPartnershipIds.find(
+        pid => pid === handshake.a_partnership || pid === handshake.b_partnership
+      )
+
+      if (!userPartnershipInHandshake) continue
+
+      // Count unread: messages from OTHER partnership, created AFTER last_read_at
+      const unreadCount = messages.filter(msg =>
+        msg.sender_partnership !== userPartnershipInHandshake &&
+        new Date(msg.created_at) > lastReadAt
+      ).length
+
+      if (unreadCount > 0) {
+        byHandshake[handshake.id] = unreadCount
+        total += unreadCount
+      }
+    }
+
+    return { total, byHandshake }
+  } catch (error) {
+    console.error('[getUnreadCountsForUser] Error:', error)
+    return { total: 0, byHandshake: {} }
+  }
+}
+
+/**
  * Get unread message counts for the current user.
  * Returns total count and per-handshake breakdown.
+ * Uses admin client to bypass RLS issues with messages table.
  *
  * @returns UnreadCounts with total and byHandshake map
  */
@@ -58,7 +152,7 @@ export async function getUnreadCounts(): Promise<UnreadCounts> {
     return { total: 0, byHandshake: {} }
   }
 
-  return getUnreadCountsService(user.id)
+  return getUnreadCountsForUser(user.id)
 }
 
 // =============================================================================

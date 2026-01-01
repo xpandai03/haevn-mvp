@@ -7310,3 +7310,242 @@ End with:
 > **"Free → Pro gating is verified and enforced across all user actions."**
 
 * * * * *
+        74363cc..13fb3a0  main -> main
+
+⏺ Pushed 13fb3a0.
+
+  ---
+  Final Verification Report
+
+  | Scenario                                | Works? | File(s) Verified                 | Fix Applied? |
+  |-----------------------------------------|--------|----------------------------------|--------------|
+  | Free user clicks Connect (Match Card)   | ✅     | components/MatchCard.tsx         | No           |
+  | Free user clicks Connect (Match Detail) | ✅     | app/matches/[matchId]/page.tsx   | No           |
+  | Free user views Nudge list              | ✅     | app/dashboard/nudges/page.tsx    | No           |
+  | Free user clicks Nudge → Profile        | ✅     | app/profiles/[id]/page.tsx       | Yes          |
+  | Free user sends Nudge                   | ✅     | app/profiles/[id]/page.tsx       | No           |
+  | Free user accesses /chat                | ✅     | app/chat/page.tsx                | No           |
+  | Free user accesses /chat/[id]           | ✅     | app/chat/[connectionId]/page.tsx | Yes          |
+  | Free user views full profile            | ✅     | app/profiles/[id]/page.tsx       | Yes          |
+  | Free user clicks Message (profile)      | ✅     | app/profiles/[id]/page.tsx       | Yes          |
+  | Free user clicks Message (connection)   | ✅     | app/connections/[id]/page.tsx    | Yes          |
+
+  Fixes Applied:
+  - app/profiles/[id]/page.tsx - Added page-level gate + Message button check
+  - app/chat/[connectionId]/page.tsx - Added membership check before loading
+  - app/connections/[id]/page.tsx - Added Message button check
+
+  "Free → Pro gating is verified and enforced across all user actions."
+
+
+⏺ Summary
+
+  Root cause: getUserMembershipTier() was checking profiles.membership_tier === 'plus', but:
+  1. The user's tier is stored in partnerships.membership_tier, not profiles
+  2. The value is 'pro', not 'plus' — so the strict equality failed
+
+  File + Lines: lib/actions/dashboard.ts:69-94
+
+  What was changed:
+  - Changed query from profiles table to partnership_members → partnerships join
+  - Changed comparison from === 'plus' to !== 'free' (matches dashboard logic)
+
+  Why this fix is safe:
+  - Uses the same data source as dashboard (partnerships table)
+  - Uses the same logic as dashboard (tier !== 'free' → pro)
+  - No new gating logic added, just fixed the existing check
+  - Prefers owner role when user has multiple partnerships (matches selectBestPartnership pattern)
+
+  Pushed 75593af.
+
+  "Pro users can now send messages in connected chats without being incorrectly gated."
+
+
+> ### **CONTEXT (CONFIRMED FACTS)**
+
+We have verified the following:
+
+-   User **A (raunek@cloudsteer.com)** sends a message successfully
+
+-   Message is persisted in messages table
+
+-   Chat UI works for sender
+
+-   User **B (raunek@xpandai.com)** is **Pro**
+
+-   User B logs in successfully
+
+-   User B sees:
+
+    -   Pro dashboard layout
+
+    -   Connections
+
+-   BUT User B does **NOT** see:
+
+    -   Messages count increment in the blue dashboard container
+
+    -   Messages surfaced correctly via dashboard → Messages
+
+This is incorrect.
+
+* * * * *
+
+**🎯 EXPECTED BEHAVIOR (LOCKED)**
+---------------------------------
+
+For **Pro users only**:
+
+1.  When a new message is received:
+
+    -   Dashboard → Messages count increments
+
+2.  Messages tab is visible and functional
+
+3.  Clicking Messages shows the conversation
+
+No push notifications yet --- **in-app only**.
+
+* * * * *
+
+**🔍 REQUIRED INVESTIGATION (NO SKIPPING)**
+-------------------------------------------
+
+### **1️⃣ Identify how dashboard m is calculated**
+
+Find where this value comes from.
+
+Search for:
+
+-   stats.messages
+
+-   newMessages
+
+-   unread
+
+-   getUnread
+
+-   getUserHandshakes
+
+-   message_reads
+
+Specifically inspect:
+
+-   lib/dashboard/loadDashboardData.ts
+
+-   Any server action used to populate dashboard stats
+
+Answer explicitly:
+
+-   Is the value hardcoded?
+
+-   Is it derived from getUserHandshakes()?
+
+-   Is it derived from a different function than the chat page?
+
+* * * * *
+
+### **2️⃣ Verify unread logic for the RECIPIENT**
+
+Confirm whether unread messages are being counted for:
+
+-   receiver_partnership
+
+-   NOT the sender
+
+Common failure modes to check:
+
+-   Unread query only checks sender_partnership
+
+-   last_read_at initialized incorrectly
+
+-   message_reads row not created for recipient
+
+-   Recipient partnership ID mismatch (multi-partnership bug)
+
+You must state:
+
+> "Unread messages exist in DB but are not counted because ___"
+
+* * * * *
+
+### **3️⃣ Verify Messages tab visibility logic**
+
+Check where the Messagn is conditionally rendered.
+
+Confirm:
+
+-   Is it gated by membershipTier === 'plus'?
+
+-   Is it gated by stats.messages > 0?
+
+-   Is it gated by an incorrect user role?
+
+If Messages is hidden when unread count = 0, that is **wrong**.
+
+Messages should be visible for Pro users even with 0 unread.
+
+* * * * *
+
+### **4️⃣ APPLY MINIMAL FIX**
+
+Constraints (MANDATORY):
+
+-   ❌ Do NOT change chat send logic
+
+-   ❌ Do NOT change database schema
+
+-   ❌ Do NOT add notifications
+
+-   ❌ Do NOT refactor dashboard
+
+-   ❌ Do NOT touch Stripe/billing
+
+You MAY:
+
+-   Fix unread aggregation logic
+
+-   Fix which partnership ID is used
+
+-   Fix message_reads initialization
+
+-   Fix Messages tab gating condition
+
+The fix should touch **no more than 2--3 files**.
+
+* * * * *
+
+**📤 REQUIRED OUTPUT**
+----------------------
+
+When done, respond with:
+
+1.  **Root cause** (1--2 sentences)
+
+2.  **Which file(s)** were incorrect
+
+3.  **What logic was wrong**
+
+4.  **What was changed**
+
+End with:
+
+> **"Pro recipients now see unnts and can access Messages 
+correctly."**
+
+* * * * *
+
+**🧠 WHY THIS IS THE LAST REAL BUG**
+------------------------------------
+
+This is a **read-path consistency issue**, not a system flaw.
+
+You already have:
+
+-   Messages persisted
+
+-   Chat UI working
+
+-   Role gating mostly correct
+
+This fix aligns: 
