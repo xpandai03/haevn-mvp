@@ -73,8 +73,8 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
                 icon={<MessageSquare className="h-5 w-5" />}
                 label="Messages"
                 sublabel="Chat with connections"
-                href="/messages"
-                onClick={() => router.push('/messages')}
+                href="/chat"
+                onClick={() => router.push('/chat')}
               />
             ) : (
               <NavItem

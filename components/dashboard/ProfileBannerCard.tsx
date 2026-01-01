@@ -78,7 +78,7 @@ export function ProfileBannerCard({
             {membershipTier === 'plus' ? (
               /* Pro users: New Messages */
               <Link
-                href="/messages"
+                href="/chat"
                 className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
               >
                 <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
