@@ -64,7 +64,7 @@ export async function getDashboardStats() {
 }
 
 /**
- * Get user membership tier
+ * Get user membership tier from their partnership (not profiles table)
  */
 export async function getUserMembershipTier(): Promise<'free' | 'plus'> {
   const supabase = await createClient()
@@ -76,13 +76,18 @@ export async function getUserMembershipTier(): Promise<'free' | 'plus'> {
   }
 
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('membership_tier')
+    // Get membership tier from partnership, not profiles
+    const { data: membership } = await supabase
+      .from('partnership_members')
+      .select('partnership:partnerships(membership_tier)')
       .eq('user_id', user.id)
+      .order('role', { ascending: false }) // Prefer owner role
+      .limit(1)
       .single()
 
-    return profile?.membership_tier === 'plus' ? 'plus' : 'free'
+    const tier = (membership?.partnership as any)?.membership_tier
+    // Treat any non-free tier (plus, pro, select) as 'plus'
+    return tier && tier !== 'free' ? 'plus' : 'free'
   } catch (error) {
     console.error('[getUserMembershipTier] Error:', error)
     return 'free'
