@@ -242,6 +242,116 @@ export interface ChatMessage {
 }
 
 /**
+ * Get messages for a handshake using admin client.
+ * Bypasses RLS to ensure messages can be read regardless of client auth state.
+ */
+export async function getMessagesForHandshake(
+  handshakeId: string
+): Promise<ChatMessage[]> {
+  try {
+    // Get current user from server-side auth
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      console.error('[getMessagesForHandshake] Not authenticated')
+      return []
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Get user's partnership(s)
+    const { data: memberships, error: memberError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+
+    if (memberError || !memberships || memberships.length === 0) {
+      console.error('[getMessagesForHandshake] No partnerships found:', memberError)
+      return []
+    }
+
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+
+    // Verify user is part of this handshake
+    const { data: handshake, error: handshakeError } = await adminClient
+      .from('handshakes')
+      .select('id, a_partnership, b_partnership, state')
+      .eq('id', handshakeId)
+      .single()
+
+    if (handshakeError || !handshake) {
+      console.error('[getMessagesForHandshake] Handshake not found:', handshakeError)
+      return []
+    }
+
+    // Check if any of user's partnerships is part of this handshake
+    const userPartnershipInHandshake = userPartnershipIds.find(
+      pid => pid === handshake.a_partnership || pid === handshake.b_partnership
+    )
+
+    if (!userPartnershipInHandshake) {
+      console.error('[getMessagesForHandshake] User not part of handshake')
+      return []
+    }
+
+    if (handshake.state !== 'matched') {
+      console.error('[getMessagesForHandshake] Handshake not matched')
+      return []
+    }
+
+    // Fetch messages using admin client
+    const { data: messages, error: messagesError } = await adminClient
+      .from('messages')
+      .select(`
+        id,
+        handshake_id,
+        sender_partnership,
+        content,
+        created_at
+      `)
+      .eq('handshake_id', handshakeId)
+      .order('created_at', { ascending: true })
+
+    if (messagesError) {
+      console.error('[getMessagesForHandshake] Messages fetch error:', messagesError)
+      return []
+    }
+
+    if (!messages || messages.length === 0) {
+      return []
+    }
+
+    // Get partnership display names for all unique senders
+    const senderIds = [...new Set(messages.map(m => m.sender_partnership))]
+    const { data: partnerships } = await adminClient
+      .from('partnerships')
+      .select('id, display_name')
+      .in('id', senderIds)
+
+    const partnershipNames = new Map<string, string>()
+    partnerships?.forEach(p => {
+      partnershipNames.set(p.id, p.display_name || 'Unknown')
+    })
+
+    // Map to ChatMessage format
+    return messages.map(msg => ({
+      id: msg.id,
+      handshake_id: msg.handshake_id,
+      sender_user: '', // Not stored in schema
+      sender_name: partnershipNames.get(msg.sender_partnership) || 'Unknown',
+      sender_partnership_id: msg.sender_partnership,
+      body: msg.content,
+      created_at: msg.created_at,
+      is_own_message: msg.sender_partnership === userPartnershipInHandshake
+    }))
+  } catch (error) {
+    console.error('[getMessagesForHandshake] Error:', error)
+    return []
+  }
+}
+
+/**
  * Send a message in a connection chat using admin client.
  * Bypasses RLS to ensure message inserts work regardless of partnership_members setup.
  */

@@ -6,8 +6,8 @@ import { ArrowLeft, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
-import { getConnectionById, sendMessageAction, type ConnectionResult, type ChatMessage } from '@/lib/actions/connections'
-import { getHandshakeMessages, subscribeToMessages, markMessagesAsRead } from '@/lib/services/chat'
+import { getConnectionById, sendMessageAction, getMessagesForHandshake, type ConnectionResult, type ChatMessage } from '@/lib/actions/connections'
+import { subscribeToMessages, markMessagesAsRead } from '@/lib/services/chat'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -57,8 +57,8 @@ export default function ChatWithConnectionPage() {
 
         setConnection(connectionData)
 
-        // Load messages using the handshake ID
-        const msgs = await getHandshakeMessages(connectionData.handshakeId, user.id)
+        // Load messages using server action (admin client to bypass RLS)
+        const msgs = await getMessagesForHandshake(connectionData.handshakeId)
         setMessages(msgs)
 
         // Mark messages as read
