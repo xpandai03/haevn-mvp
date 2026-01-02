@@ -43,6 +43,154 @@ export async function getConnectionById(
   return getConnectionDetails(connectionId)
 }
 
+// =============================================================================
+// CONVERSATION LIST (for /chat page)
+// =============================================================================
+
+export interface ConversationItem {
+  handshakeId: string
+  partnershipId: string
+  displayName: string
+  city: string | null
+  photoUrl: string | null
+  lastMessage: {
+    body: string
+    createdAt: string
+    isOwn: boolean
+  } | null
+  unreadCount: number
+  matchedAt: string | null
+}
+
+/**
+ * Get all conversations (matched handshakes) for the current user.
+ * Uses admin client to bypass RLS issues.
+ */
+export async function getMyConversations(): Promise<ConversationItem[]> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      console.error('[getMyConversations] Not authenticated')
+      return []
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Get user's partnership(s)
+    const { data: memberships, error: memberError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+
+    if (memberError || !memberships || memberships.length === 0) {
+      console.error('[getMyConversations] No partnerships found')
+      return []
+    }
+
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+
+    // Build OR condition for all user's partnerships
+    const orConditions = userPartnershipIds
+      .map(pid => `a_partnership.eq.${pid},b_partnership.eq.${pid}`)
+      .join(',')
+
+    // Get all matched handshakes with partnership info and messages
+    const { data: handshakes, error: handshakeError } = await adminClient
+      .from('handshakes')
+      .select(`
+        id,
+        a_partnership,
+        b_partnership,
+        matched_at,
+        partnership_a:a_partnership(id, display_name, city),
+        partnership_b:b_partnership(id, display_name, city),
+        messages(
+          id,
+          content,
+          sender_partnership,
+          created_at
+        )
+      `)
+      .or(orConditions)
+      .eq('state', 'matched')
+      .order('matched_at', { ascending: false })
+
+    if (handshakeError || !handshakes) {
+      console.error('[getMyConversations] Fetch error:', handshakeError)
+      return []
+    }
+
+    // Get unread counts
+    const unreadCounts = await getUnreadCountsForUser(user.id)
+
+    // Get photos for all "other" partnerships
+    const conversations: ConversationItem[] = []
+
+    for (const handshake of handshakes) {
+      // Determine which partnership is "other"
+      const userPartnershipInHandshake = userPartnershipIds.find(
+        pid => pid === handshake.a_partnership || pid === handshake.b_partnership
+      )
+
+      if (!userPartnershipInHandshake) continue
+
+      const isUserA = handshake.a_partnership === userPartnershipInHandshake
+      const otherPartnership = isUserA
+        ? (handshake.partnership_b as any)
+        : (handshake.partnership_a as any)
+
+      if (!otherPartnership) continue
+
+      // Get photo for other partnership
+      const { data: photoData } = await adminClient
+        .from('partnership_photos')
+        .select('storage_path')
+        .eq('partnership_id', otherPartnership.id)
+        .eq('is_primary', true)
+        .eq('photo_type', 'public')
+        .maybeSingle()
+
+      let photoUrl: string | null = null
+      if (photoData?.storage_path) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('partnership-photos')
+          .getPublicUrl(photoData.storage_path)
+        photoUrl = publicUrl
+      }
+
+      // Get last message
+      const messages = (handshake.messages as any[]) || []
+      const sortedMessages = messages.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      const lastMessage = sortedMessages[0]
+
+      conversations.push({
+        handshakeId: handshake.id,
+        partnershipId: otherPartnership.id,
+        displayName: otherPartnership.display_name || 'User',
+        city: otherPartnership.city,
+        photoUrl,
+        lastMessage: lastMessage ? {
+          body: lastMessage.content,
+          createdAt: lastMessage.created_at,
+          isOwn: lastMessage.sender_partnership === userPartnershipInHandshake
+        } : null,
+        unreadCount: unreadCounts.byHandshake[handshake.id] || 0,
+        matchedAt: handshake.matched_at
+      })
+    }
+
+    return conversations
+  } catch (error) {
+    console.error('[getMyConversations] Error:', error)
+    return []
+  }
+}
+
 /**
  * Internal helper to get unread counts for a specific user.
  * Uses admin client to bypass RLS issues with messages table.
