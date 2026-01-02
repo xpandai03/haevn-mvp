@@ -90,8 +90,16 @@ export default function ProfileViewPage() {
       router.push('/onboarding/membership')
       return
     }
-    // Navigate to messages with this partnership
-    router.push(`/messages?partner=${partnershipId}`)
+    // Navigate to chat - use handshakeId if connected, otherwise go to chat list
+    if (profile?.handshakeId) {
+      router.push(`/chat/${profile.handshakeId}`)
+    } else {
+      toast({
+        title: 'Not Connected',
+        description: 'You need to connect with this profile first',
+        variant: 'destructive'
+      })
+    }
   }
 
   const handleNudge = async () => {

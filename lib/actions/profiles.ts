@@ -6,6 +6,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface SurveyDisplayData {
   goals?: Record<string, any>
@@ -31,6 +32,8 @@ export interface ProfileData {
   compatibilityPercentage?: number
   topFactor?: string
   surveyData?: SurveyDisplayData
+  handshakeId?: string // If user is connected to this partnership
+  isConnected: boolean
 }
 
 /**
@@ -45,13 +48,16 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
     throw new Error('Not authenticated')
   }
 
+  // Use admin client to bypass RLS for reading other users' profiles
+  const adminClient = createAdminClient()
+
   try {
     console.log('[getProfileData] Fetching partnership:', partnershipId)
 
-    // Get partnership basic info
-    const { data: partnership, error: partnershipError } = await supabase
+    // Get partnership basic info (using admin client to bypass RLS)
+    const { data: partnership, error: partnershipError } = await adminClient
       .from('partnerships')
-      .select('id, display_name, city')
+      .select('id, display_name, city, membership_tier')
       .eq('id', partnershipId)
       .single()
 
@@ -60,21 +66,11 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
       return null
     }
 
-    // Get membership tier from first user in partnership
-    const { data: partnershipMember } = await supabase
-      .from('partnership_members')
-      .select(`
-        user_id,
-        user:profiles(membership_tier)
-      `)
-      .eq('partnership_id', partnershipId)
-      .limit(1)
-      .single()
+    // Membership tier is now directly on partnerships table
+    const membershipTier = partnership.membership_tier && partnership.membership_tier !== 'free' ? 'plus' : 'free'
 
-    const membershipTier = (partnershipMember?.user as any)?.membership_tier === 'plus' ? 'plus' : 'free'
-
-    // Get all photos for this partnership
-    const { data: photosData } = await supabase
+    // Get all photos for this partnership (using admin client)
+    const { data: photosData } = await adminClient
       .from('partnership_photos')
       .select('storage_path, is_primary')
       .eq('partnership_id', partnershipId)
@@ -91,33 +87,55 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
           .storage
           .from('partnership-photos')
           .getPublicUrl(photo.storage_path)
-        
+
         if (photo.is_primary) {
           primaryPhoto = publicUrl
         }
-        
+
         return publicUrl
       })
     }
 
-    // Get survey responses for this partnership's users
-    const { data: partnershipMembers } = await supabase
-      .from('partnership_members')
-      .select('user_id')
+    // Get survey responses for this partnership (using admin client)
+    const { data: surveyResponse } = await adminClient
+      .from('survey_responses')
+      .select('answers_json')
       .eq('partnership_id', partnershipId)
+      .single()
 
     let surveyData: SurveyDisplayData | undefined
+    if (surveyResponse?.answers_json) {
+      surveyData = categorizeSurveyData(surveyResponse.answers_json as Record<string, any>)
+    }
 
-    if (partnershipMembers && partnershipMembers.length > 0) {
-      // Get first user's survey responses
-      const { data: surveyResponse } = await supabase
-        .from('user_survey_responses')
-        .select('answers_json')
-        .eq('user_id', partnershipMembers[0].user_id)
+    // Check if current user is connected to this partnership
+    // First get current user's partnership
+    const { data: currentUserMembership } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+
+    let handshakeId: string | undefined
+    let isConnected = false
+
+    if (currentUserMembership) {
+      const currentPartnershipId = currentUserMembership.partnership_id
+
+      // Check for a matched handshake between current user's partnership and viewed partnership
+      const { data: handshake } = await adminClient
+        .from('handshakes')
+        .select('id')
+        .eq('state', 'matched')
+        .eq('a_consent', true)
+        .eq('b_consent', true)
+        .or(`and(a_partnership.eq.${currentPartnershipId},b_partnership.eq.${partnershipId}),and(a_partnership.eq.${partnershipId},b_partnership.eq.${currentPartnershipId})`)
         .single()
 
-      if (surveyResponse?.answers_json) {
-        surveyData = categorizeSurveyData(surveyResponse.answers_json)
+      if (handshake) {
+        handshakeId = handshake.id
+        isConnected = true
       }
     }
 
@@ -134,7 +152,9 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
       photos,
       compatibilityPercentage,
       topFactor,
-      surveyData
+      surveyData,
+      handshakeId,
+      isConnected
     }
 
   } catch (error) {
