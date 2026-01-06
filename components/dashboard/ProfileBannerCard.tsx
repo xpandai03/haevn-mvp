@@ -61,7 +61,7 @@ export function ProfileBannerCard({
 
           {/* Stats Row - Labels ABOVE numbers */}
           {/* Free users: 3 columns (Matches, Nudges, Profile Views) */}
-          {/* Pro users: 3 columns (Matches, New Messages, Connections) */}
+          {/* Pro users: 3 columns (Matches, Messages, Connections) */}
           <div className="grid grid-cols-3 gap-4">
             <Link
               href="/matches"
@@ -76,13 +76,13 @@ export function ProfileBannerCard({
             </Link>
 
             {membershipTier === 'plus' ? (
-              /* Pro users: New Messages */
+              /* Pro users: Messages */
               <Link
                 href="/chat"
                 className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
               >
                 <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
-                  New Messages
+                  Messages
                 </p>
                 <p className="text-3xl font-bold text-white">
                   {stats.messages}
