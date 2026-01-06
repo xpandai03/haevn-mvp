@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import {
   calculateCompatibility,
   normalizeAnswers,
@@ -96,7 +97,7 @@ export interface ConnectionPhoto {
 // =============================================================================
 
 /**
- * Get current user's partnership ID
+ * Get current user's partnership ID using canonical selectBestPartnership
  */
 async function getCurrentPartnershipId(): Promise<string> {
   const supabase = await createClient()
@@ -107,18 +108,15 @@ async function getCurrentPartnershipId(): Promise<string> {
   }
 
   const adminClient = await createAdminClient()
-  const { data: memberships, error } = await adminClient
-    .from('partnership_members')
-    .select('partnership_id, role')
-    .eq('user_id', user.id)
-    .order('role', { ascending: false })
 
-  if (error || !memberships || memberships.length === 0) {
+  // Use canonical selectBestPartnership for consistency across all flows
+  const selected = await selectBestPartnership(adminClient, user.id)
+
+  if (!selected) {
     throw new Error('No partnership found for user')
   }
 
-  const primaryMembership = memberships.find(m => m.role === 'owner') || memberships[0]
-  return primaryMembership.partnership_id
+  return selected.partnership_id
 }
 
 /**

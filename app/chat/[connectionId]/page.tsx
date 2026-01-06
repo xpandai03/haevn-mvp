@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
-import { getConnectionById, sendMessageAction, getMessagesForHandshake, type ConnectionResult, type ChatMessage } from '@/lib/actions/connections'
+import { getConnectionById, sendMessageAction, getMessagesForHandshake, getMyPartnershipIdForHandshake, type ConnectionResult, type ChatMessage } from '@/lib/actions/connections'
 import { subscribeToMessages, markMessagesAsRead } from '@/lib/services/chat'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
@@ -26,6 +26,7 @@ export default function ChatWithConnectionPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [myPartnershipId, setMyPartnershipId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Load connection details and messages
@@ -57,6 +58,10 @@ export default function ChatWithConnectionPage() {
 
         setConnection(connectionData)
 
+        // Get current user's partnership ID for this handshake (for real-time comparison)
+        const partnershipId = await getMyPartnershipIdForHandshake(connectionData.handshakeId)
+        setMyPartnershipId(partnershipId)
+
         // Load messages using server action (admin client to bypass RLS)
         const msgs = await getMessagesForHandshake(connectionData.handshakeId)
         setMessages(msgs)
@@ -77,10 +82,11 @@ export default function ChatWithConnectionPage() {
 
   // Subscribe to new messages
   useEffect(() => {
-    if (!user || !connection) return
+    if (!user || !connection || !myPartnershipId) return
 
     const unsubscribe = subscribeToMessages(connection.handshakeId, (newMsg) => {
-      newMsg.is_own_message = newMsg.sender_user === user.id
+      // Use partnership ID comparison (not user.id) since schema uses sender_partnership
+      newMsg.is_own_message = newMsg.sender_partnership_id === myPartnershipId
       setMessages(prev => [...prev, newMsg])
 
       // Mark as read
@@ -88,7 +94,7 @@ export default function ChatWithConnectionPage() {
     })
 
     return () => unsubscribe()
-  }, [connection, user])
+  }, [connection, user, myPartnershipId])
 
   // Scroll to bottom when messages change
   useEffect(() => {

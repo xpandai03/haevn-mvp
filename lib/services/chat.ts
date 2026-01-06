@@ -47,20 +47,25 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
   const supabase = createClient()
 
   try {
-    // First get user's partnership
-    const { data: membership } = await supabase
+    // Get ALL user's partnerships (user may have multiple)
+    const { data: memberships, error: memberError } = await supabase
       .from('partnership_members')
       .select('partnership_id')
       .eq('user_id', userId)
-      .single()
 
-    if (!membership) {
+    if (memberError || !memberships || memberships.length === 0) {
+      console.log('[getUserHandshakes] No partnerships found for user')
       return []
     }
 
-    const userPartnershipId = membership.partnership_id
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
 
-    // Get all MATCHED handshakes involving this partnership (chat only unlocks after match)
+    // Build OR condition for all user's partnerships
+    const orConditions = userPartnershipIds
+      .map(pid => `a_partnership.eq.${pid},b_partnership.eq.${pid}`)
+      .join(',')
+
+    // Get all MATCHED handshakes involving any of user's partnerships
     // NOTE: messages schema uses sender_partnership + content (not sender_user + body)
     const { data: handshakes, error } = await supabase
       .from('handshakes')
@@ -89,7 +94,7 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
           granted
         )
       `)
-      .or(`a_partnership.eq.${userPartnershipId},b_partnership.eq.${userPartnershipId}`)
+      .or(orConditions)
       .eq('state', 'matched')
       .order('matched_at', { ascending: false })
 
@@ -100,6 +105,13 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
 
     // Process handshakes to add last message and calculate unread count
     const processedHandshakes = await Promise.all(handshakes?.map(async handshake => {
+      // Find which of user's partnerships is in THIS handshake
+      const aPartnership = handshake.a_partnership as any
+      const bPartnership = handshake.b_partnership as any
+      const userPartnershipInHandshake = userPartnershipIds.find(
+        pid => pid === aPartnership?.id || pid === bPartnership?.id
+      )
+
       const messages = handshake.messages as any[]
       const lastMessage = messages && messages.length > 0
         ? messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
@@ -111,14 +123,14 @@ export async function getUserHandshakes(userId: string): Promise<HandshakeWithPa
         .select('last_read_at')
         .eq('handshake_id', handshake.id)
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
-      // Count unread messages (using sender_partnership instead of sender_user)
+      // Count unread messages (from OTHER partnership, not user's)
       let unreadCount = 0
-      if (messages && messages.length > 0) {
+      if (messages && messages.length > 0 && userPartnershipInHandshake) {
         const lastReadAt = readStatus?.last_read_at ? new Date(readStatus.last_read_at) : new Date(0)
         unreadCount = messages.filter(msg =>
-          msg.sender_partnership !== userPartnershipId &&
+          msg.sender_partnership !== userPartnershipInHandshake &&
           new Date(msg.created_at) > lastReadAt
         ).length
       }

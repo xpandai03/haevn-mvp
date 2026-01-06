@@ -611,3 +611,54 @@ export async function sendMessageAction(
     return { error: 'Failed to send message' }
   }
 }
+
+/**
+ * Get the current user's partnership ID for a specific handshake.
+ * Used for real-time message comparison (determining which messages are "own").
+ */
+export async function getMyPartnershipIdForHandshake(
+  handshakeId: string
+): Promise<string | null> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return null
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Get handshake
+    const { data: handshake } = await adminClient
+      .from('handshakes')
+      .select('a_partnership, b_partnership')
+      .eq('id', handshakeId)
+      .single()
+
+    if (!handshake) {
+      return null
+    }
+
+    // Get user's partnerships
+    const { data: memberships } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+
+    if (!memberships || memberships.length === 0) {
+      return null
+    }
+
+    // Find which of user's partnerships is in this handshake
+    const userPartnershipIds = memberships.map(m => m.partnership_id)
+    const myPartnershipId = userPartnershipIds.find(
+      pid => pid === handshake.a_partnership || pid === handshake.b_partnership
+    )
+
+    return myPartnershipId || null
+  } catch (error) {
+    console.error('[getMyPartnershipIdForHandshake] Error:', error)
+    return null
+  }
+}
