@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Calendar, Users, Shield } from 'lucide-react'
+import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import FullPageLoader from '@/components/ui/full-page-loader'
+import { checkAdminAccess } from '@/lib/actions/adminAccess'
 
 export default function AccountDetailsPage() {
   const { user, loading } = useAuth()
@@ -17,6 +18,7 @@ export default function AccountDetailsPage() {
     createdAt: '',
     userId: ''
   })
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,6 +33,9 @@ export default function AccountDetailsPage() {
         }) : '',
         userId: user.id
       })
+
+      // Check admin access (server-side check)
+      checkAdminAccess().then(setIsAdmin)
     }
   }, [user, loading, router])
 
@@ -178,6 +183,42 @@ export default function AccountDetailsPage() {
             </div>
           </div>
         </div>
+
+        {/* Internal Tools - Only visible for admin users */}
+        {isAdmin && (
+          <Card className="rounded-2xl border-purple-200 bg-purple-50/50 shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base text-purple-900">Internal Tools</CardTitle>
+                <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-purple-200 text-purple-800 rounded-full">
+                  Admin
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div
+                className="flex items-center justify-between p-3 bg-white rounded-xl cursor-pointer hover:bg-purple-50 transition-colors"
+                onClick={() => router.push('/admin/matching')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Wrench className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-900 font-medium">Matching Engine</p>
+                    <p className="text-xs text-gray-500">Debug matches, scores, and social state</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-full px-4"
+                >
+                  Open
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )
