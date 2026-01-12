@@ -32,17 +32,18 @@ export async function POST(request: NextRequest) {
     const { url, sessionId } = await createVeriffSession(user.id)
 
     // Store session ID in profiles table for tracking
+    // Note: This requires migration 015_add_veriff_fields.sql to be run
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        veriff_session_id: sessionId,
-        updated_at: new Date().toISOString()
+        veriff_session_id: sessionId
       })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       console.error('[Verify] Failed to store session ID:', updateError)
       // Don't fail the request - user can still verify
+      // This may fail if veriff_session_id column doesn't exist yet
     }
 
     console.log('[Verify] Session created successfully:', {

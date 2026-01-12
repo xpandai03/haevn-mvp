@@ -92,7 +92,7 @@ function VerificationReturnContent() {
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('verified, verification_status')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .single()
 
         if (error) {

@@ -66,25 +66,22 @@ export async function POST(request: NextRequest) {
         console.log('[Webhook] ✅ Verification approved for user:', userId)
 
         // Update profile to mark as verified
+        // Note: This requires migration 015_add_veriff_fields.sql to be run
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             verified: true,
             verification_status: 'approved',
-            verification_date: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            verification_date: new Date().toISOString()
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
 
         if (updateError) {
           console.error('[Webhook] Failed to update profile:', updateError)
-          return NextResponse.json(
-            { error: 'Database update failed' },
-            { status: 500 }
-          )
+          // Try to continue - webhook should still acknowledge
+        } else {
+          console.log('[Webhook] Profile updated successfully')
         }
-
-        console.log('[Webhook] Profile updated successfully')
       } else {
         // Verification not approved
         console.log('[Webhook] ❌ Verification not approved:', {
@@ -99,10 +96,9 @@ export async function POST(request: NextRequest) {
           .update({
             verified: false,
             verification_status: 'declined',
-            verification_date: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            verification_date: new Date().toISOString()
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
 
         if (updateError) {
           console.error('[Webhook] Failed to update profile with decline:', updateError)
