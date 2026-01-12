@@ -102,7 +102,8 @@ export async function getMyPartnershipProfile(): Promise<{ data: PartnershipProf
 }
 
 /**
- * Simplified partnership getter that uses database function
+ * Get current user's partnership ID via partnership_members table
+ * This is a read-only lookup - does NOT create partnerships
  */
 export async function getCurrentPartnershipId(): Promise<{ id: string | null, error: string | null }> {
   const supabase = await createClient()
@@ -116,50 +117,27 @@ export async function getCurrentPartnershipId(): Promise<{ id: string | null, er
       return { id: null, error: 'Not authenticated' }
     }
 
-    // Use the database function to get or create partnership
-    const { data, error } = await supabase
-      .rpc('get_or_create_partnership', { p_user_id: user.id })
-      .single()
+    // Use admin client to bypass RLS and query partnership_members
+    const adminClient = await createAdminClient()
 
-    if (error) {
-      console.error('[getCurrentPartnershipId] Database function error:', error)
+    const { data: membership, error: memberError } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-      // Fallback: Try to get existing partnership
-      const { data: partnership } = await supabase
-        .from('partnerships')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle()
-
-      if (partnership) {
-        return { id: partnership.id, error: null }
-      }
-
-      // Last resort: Create manually
-      const { data: newPartnership, error: createError } = await supabase
-        .from('partnerships')
-        .insert({
-          owner_id: user.id,
-          city: 'New York',
-          membership_tier: 'free'
-        })
-        .select('id')
-        .single()
-
-      if (createError || !newPartnership) {
-        console.error('[getCurrentPartnershipId] Failed to create partnership:', createError)
-        return { id: null, error: 'Failed to create partnership' }
-      }
-
-      return { id: newPartnership.id, error: null }
+    if (memberError) {
+      console.error('[getCurrentPartnershipId] Query error:', memberError)
+      return { id: null, error: 'Failed to lookup partnership' }
     }
 
-    if (data?.partnership_id) {
-      console.log('[getCurrentPartnershipId] Success:', data.partnership_id)
-      return { id: data.partnership_id, error: null }
+    if (!membership) {
+      console.log('[getCurrentPartnershipId] No partnership membership found for user:', user.id)
+      return { id: null, error: 'No partnership found' }
     }
 
-    return { id: null, error: 'No partnership found' }
+    console.log('[getCurrentPartnershipId] Success:', membership.partnership_id)
+    return { id: membership.partnership_id, error: null }
   } catch (error) {
     console.error('[getCurrentPartnershipId] Unexpected error:', error)
     return { id: null, error: 'An unexpected error occurred' }
