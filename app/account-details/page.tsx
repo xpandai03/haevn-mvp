@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera } from 'lucide-react'
+import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
@@ -10,6 +10,8 @@ import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import { checkAdminAccess } from '@/lib/actions/adminAccess'
 import { PhotoManagerModal } from '@/components/dashboard/PhotoManagerModal'
+import { ProfilePreviewModal } from '@/components/dashboard/ProfilePreviewModal'
+import { getCurrentPartnershipId } from '@/lib/actions/partnership-simple'
 
 export default function AccountDetailsPage() {
   const { user, loading } = useAuth()
@@ -21,6 +23,8 @@ export default function AccountDetailsPage() {
   })
   const [isAdmin, setIsAdmin] = useState(false)
   const [photoModalOpen, setPhotoModalOpen] = useState(false)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [partnershipId, setPartnershipId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,6 +42,11 @@ export default function AccountDetailsPage() {
 
       // Check admin access (server-side check)
       checkAdminAccess().then(setIsAdmin)
+
+      // Fetch partnership ID for photo modal
+      getCurrentPartnershipId().then(({ id }) => {
+        if (id) setPartnershipId(id)
+      })
     }
   }, [user, loading, router])
 
@@ -121,23 +130,45 @@ export default function AccountDetailsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base text-haevn-navy">Match Profile</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {/* View Profile */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-haevn-teal/10 rounded-lg">
-                  <Camera className="h-4 w-4 text-haevn-teal" />
+                  <Eye className="h-4 w-4 text-haevn-teal" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-900 font-medium">Profile Photos</p>
-                  <p className="text-xs text-gray-500">Manage photos shown to connections</p>
+                  <p className="text-sm text-gray-900 font-medium">View Match Profile</p>
+                  <p className="text-xs text-gray-500">See how connections view you</p>
                 </div>
               </div>
               <Button
                 size="sm"
                 className="bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full px-4"
+                onClick={() => setPreviewModalOpen(true)}
+              >
+                View
+              </Button>
+            </div>
+
+            {/* Manage Photos */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Camera className="h-4 w-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-900 font-medium">Profile Photos</p>
+                  <p className="text-xs text-gray-500">Upload and manage your photos</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full px-4 border-gray-300"
                 onClick={() => setPhotoModalOpen(true)}
               >
-                Manage
+                Photos
               </Button>
             </div>
           </CardContent>
@@ -227,6 +258,13 @@ export default function AccountDetailsPage() {
       <PhotoManagerModal
         open={photoModalOpen}
         onOpenChange={setPhotoModalOpen}
+        partnershipId={partnershipId || undefined}
+      />
+
+      {/* Profile Preview Modal */}
+      <ProfilePreviewModal
+        open={previewModalOpen}
+        onOpenChange={setPreviewModalOpen}
       />
     </div>
   )
