@@ -54,6 +54,9 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
       .eq('user_id', user.id)
       .single()
 
+    // Get name from profile table OR auth user metadata (set during signup)
+    const userName = profile?.full_name || user.user_metadata?.full_name || 'User'
+
     // 2. Get user's partnership membership (use deterministic selection for multiple)
     const membership = await selectBestPartnership(adminClient, user.id)
 
@@ -73,10 +76,10 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
           id: user.id,
           email: user.email || ''
         },
-        profile: profile ? {
-          fullName: profile.full_name || 'User',
+        profile: {
+          fullName: userName,
           photoUrl: undefined
-        } : null,
+        },
         partnership: null,
         partners: [],
         pendingInvites: [],
@@ -207,7 +210,7 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
         email: user.email || ''
       },
       profile: {
-        fullName: profile?.full_name || 'User',
+        fullName: userName,
         photoUrl
       },
       partnership: partnership ? {
