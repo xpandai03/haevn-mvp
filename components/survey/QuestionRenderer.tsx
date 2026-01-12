@@ -5,13 +5,13 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
-import { Info } from 'lucide-react'
+import { Info, X } from 'lucide-react'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { SurveyQuestion } from '@/lib/survey/questions'
 
 interface QuestionRendererProps {
@@ -54,40 +54,59 @@ export function QuestionRenderer({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [canAdvance, onEnterPress])
 
-  const renderTooltip = () => {
-    const tooltipText = question.helperText || question.tooltip
-    if (!tooltipText) return null
+  const renderInfoButton = () => {
+    const infoText = question.helperText || question.tooltip
+    if (!infoText) return null
 
     return (
-      <TooltipProvider>
-        <Tooltip open={showInfoPopover} onOpenChange={setShowInfoPopover}>
-          <TooltipTrigger asChild>
-            <button
-              className="flex-shrink-0 p-1.5 text-haevn-teal hover:opacity-80 rounded-full transition-opacity"
-              aria-label="More information"
-            >
-              <Info className="w-5 h-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            align="start"
-            className="max-w-xs p-4 bg-white border-haevn-teal"
-          >
-            <p
-              className="text-sm text-haevn-charcoal leading-relaxed"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 300,
-                lineHeight: '120%',
-                textAlign: 'left'
-              }}
-            >
-              {tooltipText}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <>
+        <button
+          onClick={() => setShowInfoPopover(true)}
+          className="flex-shrink-0 p-1.5 text-haevn-teal hover:opacity-80 rounded-full transition-opacity"
+          aria-label="More information"
+          type="button"
+        >
+          <Info className="w-5 h-5" />
+        </button>
+
+        <Dialog open={showInfoPopover} onOpenChange={setShowInfoPopover}>
+          <DialogContent className="max-w-sm mx-4 rounded-2xl p-0 overflow-hidden">
+            <div className="p-5">
+              <DialogHeader className="mb-3">
+                <DialogTitle
+                  className="text-lg text-haevn-navy"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 600
+                  }}
+                >
+                  About this question
+                </DialogTitle>
+              </DialogHeader>
+              <p
+                className="text-sm text-haevn-charcoal leading-relaxed"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 400,
+                  lineHeight: '150%'
+                }}
+              >
+                {infoText}
+              </p>
+              <button
+                onClick={() => setShowInfoPopover(false)}
+                className="w-full mt-5 py-3 bg-haevn-teal text-white rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 
@@ -107,7 +126,7 @@ export function QuestionRenderer({
         >
           {question.label}
         </h3>
-        {renderTooltip()}
+        {renderInfoButton()}
       </div>
 
       {/* SELECT - Single choice with cards */}
