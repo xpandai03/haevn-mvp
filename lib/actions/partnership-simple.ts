@@ -43,15 +43,12 @@ export async function getMyPartnershipProfile(): Promise<{ data: PartnershipProf
 
     const adminClient = await createAdminClient()
 
-    // Get user's partnership membership
-    const { data: membership, error: memberError } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Use canonical selectBestPartnership (same as Dashboard)
+    const { selectBestPartnership } = await import('@/lib/partnership/selectPartnership')
+    const membership = await selectBestPartnership(adminClient, user.id)
 
-    if (memberError || !membership) {
-      console.error('[getMyPartnershipProfile] No partnership found')
+    if (!membership) {
+      console.error('[getMyPartnershipProfile] No partnership found for user:', user.id)
       return { data: null, error: 'No partnership found' }
     }
 
@@ -102,7 +99,7 @@ export async function getMyPartnershipProfile(): Promise<{ data: PartnershipProf
 }
 
 /**
- * Get current user's partnership ID via partnership_members table
+ * Get current user's partnership ID using canonical selectBestPartnership
  * This is a read-only lookup - does NOT create partnerships
  */
 export async function getCurrentPartnershipId(): Promise<{ id: string | null, error: string | null }> {
@@ -117,22 +114,15 @@ export async function getCurrentPartnershipId(): Promise<{ id: string | null, er
       return { id: null, error: 'Not authenticated' }
     }
 
-    // Use admin client to bypass RLS and query partnership_members
+    // Use admin client with canonical selectBestPartnership (same as Dashboard)
     const adminClient = await createAdminClient()
 
-    const { data: membership, error: memberError } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (memberError) {
-      console.error('[getCurrentPartnershipId] Query error:', memberError)
-      return { id: null, error: 'Failed to lookup partnership' }
-    }
+    // Import selectBestPartnership dynamically to avoid circular dependency
+    const { selectBestPartnership } = await import('@/lib/partnership/selectPartnership')
+    const membership = await selectBestPartnership(adminClient, user.id)
 
     if (!membership) {
-      console.log('[getCurrentPartnershipId] No partnership membership found for user:', user.id)
+      console.log('[getCurrentPartnershipId] No partnership found for user:', user.id)
       return { id: null, error: 'No partnership found' }
     }
 

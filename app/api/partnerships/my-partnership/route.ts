@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 
 /**
  * GET /api/partnerships/my-partnership
@@ -14,15 +16,13 @@ import { createClient } from '@/lib/supabase/server'
  * }
  *
  * Security: Requires valid session (authenticated user only)
- *
- * This replaces client-side calls to:
- * supabase.from('partnership_members').select('*').eq('user_id', userId)
+ * Uses admin client to bypass RLS (same pattern as Dashboard)
  */
 export async function GET(request: Request) {
   try {
     console.log('[API /my-partnership] Getting user partnership data')
 
-    // Create server client (uses SSR cookies)
+    // Create server client for authentication
     const supabase = await createClient()
 
     // Get current user (validates with Supabase Auth server, not cached)
@@ -38,20 +38,9 @@ export async function GET(request: Request) {
 
     console.log('[API /my-partnership] User ID:', user.id)
 
-    // Query partnership_members with server client
-    const { data: membership, error: membershipError } = await supabase
-      .from('partnership_members')
-      .select('partnership_id, role, joined_at, survey_reviewed')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (membershipError) {
-      console.error('[API /my-partnership] Query error:', membershipError)
-      return NextResponse.json(
-        { error: membershipError.message },
-        { status: 500 }
-      )
-    }
+    // Use admin client with canonical selectBestPartnership (same as Dashboard)
+    const adminClient = await createAdminClient()
+    const membership = await selectBestPartnership(adminClient, user.id)
 
     if (!membership) {
       console.log('[API /my-partnership] No partnership found for user')
