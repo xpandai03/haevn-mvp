@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench } from 'lucide-react'
+import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
 import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import { checkAdminAccess } from '@/lib/actions/adminAccess'
+import { PhotoManagerModal } from '@/components/dashboard/PhotoManagerModal'
 
 export default function AccountDetailsPage() {
   const { user, loading } = useAuth()
@@ -19,6 +20,7 @@ export default function AccountDetailsPage() {
     userId: ''
   })
   const [isAdmin, setIsAdmin] = useState(false)
+  const [photoModalOpen, setPhotoModalOpen] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -123,19 +125,19 @@ export default function AccountDetailsPage() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-haevn-teal/10 rounded-lg">
-                  <Users className="h-4 w-4 text-haevn-teal" />
+                  <Camera className="h-4 w-4 text-haevn-teal" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-900 font-medium">Your Connection Profile</p>
-                  <p className="text-xs text-gray-500">Photos, bio, and what connections see</p>
+                  <p className="text-sm text-gray-900 font-medium">Profile Photos</p>
+                  <p className="text-xs text-gray-500">Manage photos shown to connections</p>
                 </div>
               </div>
               <Button
                 size="sm"
                 className="bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full px-4"
-                onClick={() => router.push('/profile/edit')}
+                onClick={() => setPhotoModalOpen(true)}
               >
-                Edit
+                Manage
               </Button>
             </div>
           </CardContent>
@@ -220,6 +222,12 @@ export default function AccountDetailsPage() {
           </Card>
         )}
       </main>
+
+      {/* Photo Manager Modal */}
+      <PhotoManagerModal
+        open={photoModalOpen}
+        onOpenChange={setPhotoModalOpen}
+      />
     </div>
   )
 }

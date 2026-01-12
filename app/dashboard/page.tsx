@@ -67,6 +67,7 @@ export default async function DashboardPage() {
           membershipTier={partnership?.tier}
           stats={stats}
           showCompleteProfileCTA={partnership?.profileState !== 'live'}
+          partnershipId={partnership?.id}
         />
 
         {/* Matches Section */}

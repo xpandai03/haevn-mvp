@@ -15,6 +15,7 @@ interface DashboardClientProps {
     connections: number
   }
   showCompleteProfileCTA?: boolean
+  partnershipId?: string
 }
 
 export function DashboardClient({
@@ -22,7 +23,8 @@ export function DashboardClient({
   profile,
   membershipTier,
   stats,
-  showCompleteProfileCTA = false
+  showCompleteProfileCTA = false,
+  partnershipId
 }: DashboardClientProps) {
   const [photoModalOpen, setPhotoModalOpen] = useState(false)
   // Use prop directly, with local override only when photo is updated via modal
@@ -62,6 +64,7 @@ export function DashboardClient({
         open={photoModalOpen}
         onOpenChange={setPhotoModalOpen}
         onPhotoUpdated={handlePhotoUpdated}
+        partnershipId={partnershipId}
       />
     </>
   )

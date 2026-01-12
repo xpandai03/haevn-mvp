@@ -21,25 +21,34 @@ interface PhotoManagerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onPhotoUpdated?: (newPrimaryUrl: string) => void
+  partnershipId?: string // Optional: if provided, skip API call
 }
 
 export function PhotoManagerModal({
   open,
   onOpenChange,
-  onPhotoUpdated
+  onPhotoUpdated,
+  partnershipId: propPartnershipId
 }: PhotoManagerModalProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [photos, setPhotos] = useState<Photo[]>([])
-  const [partnershipId, setPartnershipId] = useState<string | null>(null)
+  const [partnershipId, setPartnershipId] = useState<string | null>(propPartnershipId || null)
+
+  // Sync partnershipId state if prop changes
+  useEffect(() => {
+    if (propPartnershipId) {
+      setPartnershipId(propPartnershipId)
+    }
+  }, [propPartnershipId])
 
   useEffect(() => {
     if (open) {
       loadPhotos()
     }
-  }, [open, user])
+  }, [open, user, propPartnershipId])
 
   async function loadPhotos() {
     if (!user) return
@@ -48,34 +57,40 @@ export function PhotoManagerModal({
     const supabase = createClient()
 
     try {
-      // Get partnership ID via API route (server-side)
-      const response = await fetch('/api/partnerships/my-partnership', {
-        credentials: 'include'
-      })
+      let currentPartnershipId = propPartnershipId || partnershipId
 
-      if (!response.ok) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load partnership data',
-          variant: 'destructive'
+      // Only fetch from API if we don't have a partnershipId
+      if (!currentPartnershipId) {
+        const response = await fetch('/api/partnerships/my-partnership', {
+          credentials: 'include'
         })
-        return
+
+        if (!response.ok) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load partnership data',
+            variant: 'destructive'
+          })
+          setLoading(false)
+          return
+        }
+
+        const { partnership } = await response.json()
+
+        if (!partnership) {
+          setLoading(false)
+          return
+        }
+
+        currentPartnershipId = partnership.partnershipId
+        setPartnershipId(currentPartnershipId)
       }
-
-      const { partnership } = await response.json()
-
-      if (!partnership) {
-        setLoading(false)
-        return
-      }
-
-      setPartnershipId(partnership.partnershipId)
 
       // Get photos - order by is_primary first, then order_index
       const { data: photoData } = await supabase
         .from('partnership_photos')
         .select('*')
-        .eq('partnership_id', partnership.partnershipId)
+        .eq('partnership_id', currentPartnershipId)
         .order('is_primary', { ascending: false })
         .order('order_index', { ascending: true })
 

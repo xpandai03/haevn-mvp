@@ -25,24 +25,24 @@ export async function GET(request: Request) {
     // Create server client (uses SSR cookies)
     const supabase = await createClient()
 
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Get current user (validates with Supabase Auth server, not cached)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    if (sessionError || !session) {
-      console.error('[API /my-partnership] No session found:', sessionError?.message)
+    if (userError || !user) {
+      console.error('[API /my-partnership] No user found:', userError?.message)
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log('[API /my-partnership] User ID:', session.user.id)
+    console.log('[API /my-partnership] User ID:', user.id)
 
     // Query partnership_members with server client
     const { data: membership, error: membershipError } = await supabase
       .from('partnership_members')
       .select('partnership_id, role, joined_at, survey_reviewed')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .maybeSingle()
 
     if (membershipError) {
