@@ -1,13 +1,14 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Camera, ArrowRight } from 'lucide-react'
 
-export function CompleteProfileCTA() {
-  const router = useRouter()
+interface CompleteProfileCTAProps {
+  onAddPhotosClick: () => void
+}
 
+export function CompleteProfileCTA({ onAddPhotosClick }: CompleteProfileCTAProps) {
   return (
     <Card className="rounded-3xl border-haevn-teal/30 bg-haevn-teal/5">
       <CardHeader className="pb-2">
@@ -29,7 +30,7 @@ export function CompleteProfileCTA() {
           Add a profile photo to complete your profile and start connecting.
         </p>
         <Button
-          onClick={() => router.push('/profile/edit')}
+          onClick={onAddPhotosClick}
           className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
           size="lg"
           style={{

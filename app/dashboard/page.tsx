@@ -9,7 +9,6 @@ import { MatchesSection } from '@/components/dashboard/MatchesSection'
 import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
-import { CompleteProfileCTA } from '@/components/dashboard/CompleteProfileCTA'
 import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getUnreadCounts } from '@/lib/actions/connections'
 
@@ -61,16 +60,14 @@ export default async function DashboardPage() {
 
       {/* Main Content - Compact mobile-first layout */}
       <main className="max-w-md mx-auto px-4 py-3 space-y-4">
-        {/* Profile Banner Card with Photo Modal */}
+        {/* Profile Banner Card with Photo Modal and CTA */}
         <DashboardClient
           user={user}
           profile={profile}
           membershipTier={partnership?.tier}
           stats={stats}
+          showCompleteProfileCTA={partnership?.profileState !== 'live'}
         />
-
-        {/* Complete Profile CTA - shown when profile is not live */}
-        {partnership?.profileState !== 'live' && <CompleteProfileCTA />}
 
         {/* Matches Section */}
         <MatchesSection

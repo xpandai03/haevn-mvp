@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { ProfileBannerCard } from './ProfileBannerCard'
-import { ProfilePhotoModal } from './ProfilePhotoModal'
+import { PhotoManagerModal } from './PhotoManagerModal'
+import { CompleteProfileCTA } from './CompleteProfileCTA'
 
 interface DashboardClientProps {
   user: { id: string; email: string }
@@ -13,13 +14,15 @@ interface DashboardClientProps {
     messages: number
     connections: number
   }
+  showCompleteProfileCTA?: boolean
 }
 
 export function DashboardClient({
   user,
   profile,
   membershipTier,
-  stats
+  stats,
+  showCompleteProfileCTA = false
 }: DashboardClientProps) {
   const [photoModalOpen, setPhotoModalOpen] = useState(false)
   // Use prop directly, with local override only when photo is updated via modal
@@ -34,7 +37,11 @@ export function DashboardClient({
   const currentPhotoUrl = localPhotoOverride || profile?.photoUrl || null
 
   const handlePhotoUpdated = (newUrl: string) => {
-    setLocalPhotoOverride(newUrl)
+    setLocalPhotoOverride(newUrl || null)
+  }
+
+  const openPhotoManager = () => {
+    setPhotoModalOpen(true)
   }
 
   return (
@@ -44,13 +51,16 @@ export function DashboardClient({
         profile={{ ...profile, fullName: profile?.fullName || 'User', photoUrl: currentPhotoUrl || undefined }}
         membershipTier={membershipTier}
         stats={stats}
-        onAvatarClick={() => setPhotoModalOpen(true)}
+        onAvatarClick={openPhotoManager}
       />
 
-      <ProfilePhotoModal
+      {showCompleteProfileCTA && (
+        <CompleteProfileCTA onAddPhotosClick={openPhotoManager} />
+      )}
+
+      <PhotoManagerModal
         open={photoModalOpen}
         onOpenChange={setPhotoModalOpen}
-        currentPhotoUrl={currentPhotoUrl}
         onPhotoUpdated={handlePhotoUpdated}
       />
     </>
