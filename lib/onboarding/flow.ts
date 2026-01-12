@@ -27,24 +27,24 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 3,
-    path: '/onboarding/welcome',
-    title: 'Welcome to HAEVN',
-    description: 'Learn what makes HAEVN different',
-    required: true
-  },
-  {
-    id: 4,
     path: '/onboarding/identity',
     title: 'Your Identity',
     description: 'Tell us who you are and how you connect',
     required: true
   },
   {
-    id: 5,
+    id: 4,
     path: '/onboarding/verification',
     title: 'Verification',
     description: 'Keep HAEVN safe and real',
-    required: false // Can be skipped in Phase 1
+    required: false // Can be skipped (beta feature)
+  },
+  {
+    id: 5,
+    path: '/onboarding/verification-complete',
+    title: 'Verification Complete',
+    description: 'Thanks for verifying',
+    required: false // Only shown if verification completed
   },
   {
     id: 6,
@@ -87,8 +87,8 @@ export interface OnboardingState {
   currentStep: number
   completedSteps: number[]
   expectationsViewed: boolean
-  welcomeViewed: boolean
   identityCompleted: boolean
+  verificationCompleted: boolean
   verificationSkipped: boolean
   surveyIntroViewed: boolean
   surveyCompleted: boolean
@@ -119,8 +119,8 @@ export class OnboardingFlowController {
         currentStep: 1,
         completedSteps: [],
         expectationsViewed: false,
-        welcomeViewed: false,
         identityCompleted: false,
+        verificationCompleted: false,
         verificationSkipped: false,
         surveyIntroViewed: false,
         surveyCompleted: false,
@@ -178,13 +178,13 @@ export class OnboardingFlowController {
           updates.expectationsViewed = true
           break
         case 3:
-          updates.welcomeViewed = true
-          break
-        case 4:
           updates.identityCompleted = true
           break
-        case 5:
+        case 4:
           updates.verificationSkipped = true // If they complete or skip
+          break
+        case 5:
+          updates.verificationCompleted = true
           break
         case 6:
           updates.surveyIntroViewed = true

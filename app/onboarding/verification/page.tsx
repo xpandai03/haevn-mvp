@@ -80,7 +80,7 @@ export default function VerificationPage() {
       await flowController.updateOnboardingState(user.id, {
         verificationSkipped: true
       })
-      await flowController.markStepComplete(user.id, 5)
+      await flowController.markStepComplete(user.id, 4)
 
       // Navigate to next step
       router.push('/onboarding/survey-intro')

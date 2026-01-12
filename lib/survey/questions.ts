@@ -223,7 +223,7 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q6c_couple_connection',
         csvId: 'Q6c',
-        label: 'How do you connect as a couple?',
+        label: "If you're a couple, how do you want to connect?",
         type: 'select',
         options: [
           'Together only',
@@ -238,11 +238,11 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q6d_couple_permissions',
         csvId: 'Q6d',
-        label: 'Tell us more about your couple structure',
+        label: 'What boundaries or permissions apply to you as a couple?',
         type: 'textarea',
         placeholder: 'Describe your agreements...',
         required: false,
-        helperText: 'Help people understand how you connect. For example: do you date together? separately? both? with veto power? without? Are there people each of you date independently?',
+        helperText: 'Briefly describe any agreements new partner(s) should know.',
         displayLogic: "Show if Q6c='Custom / differs by partner'"
       },
       {
@@ -409,10 +409,26 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q13a_languages',
         label: 'Which languages do you speak comfortably?',
-        type: 'text',
-        placeholder: 'e.g., English, Spanish, ASL',
+        type: 'multiselect',
+        options: [
+          'English',
+          'Spanish',
+          'French',
+          'German',
+          'Italian',
+          'Portuguese',
+          'Mandarin',
+          'Cantonese',
+          'Japanese',
+          'Korean',
+          'Arabic',
+          'Hindi',
+          'Russian',
+          'ASL (American Sign Language)',
+          'Other'
+        ],
         required: false,
-        helperText: 'List all that feel natural for you.'
+        helperText: 'Select all languages you speak comfortably.'
       },
       {
         id: 'q14a_cultural_alignment',
@@ -467,16 +483,15 @@ export const surveySections: SurveySection[] = [
         label: 'How do you like to meet for the first time?',
         type: 'select',
         options: [
-          'Walk or coffee',
-          'Drinks',
-          'Dinner',
-          'An activity or event',
-          'Video call first',
-          'Group setting',
-          "I'm flexible"
+          'Walk or coffee — Keep it light and easy',
+          'Drinks — Relaxed, with room for conversation',
+          'Dinner — I like to take my time',
+          'An activity or event — Less pressure, more fun',
+          'Video call first — I want to feel safe before meeting',
+          "I'm flexible — Let's decide together"
         ],
         required: true,
-        helperText: 'Coffee, video call, group event, etc.'
+        helperText: 'How do you prefer to meet someone new for the first time?'
       },
       // Q17, Q17a, Q17b - Hidden for MVP (NOT MVP per Conditional Branching CSV)
       // {
@@ -521,14 +536,14 @@ export const surveySections: SurveySection[] = [
           'Sober',
           'Social drinker',
           'Regular user',
-          'Cannabis user',
-          '420 friendly',
+          'Cannabis friendly',
+          'Psychedelics friendly',
           'Sober curious',
-          'In recovery',
-          'Prefer not to say'
+          'Prefer not to say',
+          'Other'
         ],
         required: true,
-        helperText: 'Social drinker, sober, cannabis-friendly, etc.'
+        helperText: 'Select all that apply.'
       },
       {
         id: 'q19a_max_distance',
@@ -619,19 +634,14 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q21_platform_use',
-        label: 'How do you see yourself using HAEVN? (select all)',
-        type: 'multiselect',
+        label: 'How do you see yourself using HAEVN?',
+        type: 'select',
         options: [
-          'Dating',
-          'Learning',
-          'Events',
-          'Community',
-          'Support',
-          'Exploration',
-          'Not sure yet'
+          "I'm ready to connect — show me people who match my pace",
+          "I'm still exploring — let me browse and learn first"
         ],
         required: true,
-        helperText: 'Dating, learning, events, community, etc.'
+        helperText: 'This helps us understand your pace and show you content that feels right.'
       },
       {
         id: 'q22_spirituality_sexuality',
@@ -690,15 +700,17 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q25_chemistry_vs_emotion',
-        label: 'How important is sexual chemistry compared to emotional connection?',
+        label: 'How do you tend to prioritize sexual chemistry and emotional connection?',
         type: 'select',
         options: [
-          'Sexual chemistry matters most',
-          'Both are equally important',
-          'Emotional connection matters most'
+          "Sexual chemistry matters most — if there's no spark, I can't go further",
+          'Sexual chemistry is important — but emotional connection helps it grow',
+          'Both are equally important — I need balance',
+          'Emotional connection comes first — physical follows naturally',
+          'Emotional connection matters most — sex is secondary or optional'
         ],
         required: true,
-        helperText: 'Slider or scale works well here.'
+        helperText: 'How do you balance the physical and emotional sides of connection?'
       },
       {
         id: 'q25a_frequency',
@@ -772,11 +784,11 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q28_hard_boundaries',
-        label: 'What are your absolute boundaries?',
+        label: 'Are there any clear limits or things that are always off-limits for you?',
         type: 'textarea',
-        placeholder: 'List any activities you never want to engage in...',
+        placeholder: 'Share anything that is always a no for you...',
         required: false,
-        helperText: 'Activities you never want to engage in.'
+        helperText: 'Optional. Share anything you want potential partners to know upfront.'
       },
       {
         id: 'q29_maybe_boundaries',
@@ -818,12 +830,10 @@ export const surveySections: SurveySection[] = [
         options: [
           'Yes, with the right person',
           'Maybe, needs discussion',
-          'No',
-          'Already fluid bonded',
-          'Not sure what this means'
+          'No'
         ],
         required: false,
-        helperText: 'Only answer if you know the term, info bubble explains risk and trust factors.'
+        helperText: 'Fluid bonding means having sex without barriers like condoms. This typically involves a high level of trust and health transparency.'
       },
       {
         id: 'q31_health_testing',
@@ -858,38 +868,18 @@ export const surveySections: SurveySection[] = [
       {
         id: 'q33_kinks',
         csvId: 'Q33',
-        label: 'Which kinks or fetishes interest you?',
-        type: 'multiselect',
+        label: 'How would you describe your interest in kink?',
+        type: 'select',
         options: [
-          'Bondage',
-          'Discipline',
-          'Dominance/submission',
-          'Sadism/masochism',
-          'Role play',
-          'Voyeurism',
-          'Exhibitionism',
-          'Impact play',
-          'Sensory play',
-          'Primal play',
-          'Age play',
-          'Pet play',
-          'Rope play',
-          'Wax play',
-          'Temperature play',
-          'Orgasm control',
-          'Edging',
-          'Praise kink',
-          'Degradation',
-          'Humiliation',
-          'Cuckolding/hotwifing',
-          'Feet',
-          'Latex/leather',
-          'None',
-          'Prefer not to say',
-          'Still exploring'
+          "I'm curious about kink but new to it",
+          'I enjoy some light exploration (e.g., playful restraint, role play)',
+          "I'm into BDSM and/or power dynamics",
+          "I have specific fetishes or kinks I'd like to explore",
+          "I'm not into kink and prefer conventional intimacy",
+          'Prefer not to say'
         ],
         required: false,
-        helperText: 'Select any that apply.'
+        helperText: 'Select the option that best describes where you are with kink.'
       },
       {
         id: 'q33a_experience_level',

@@ -43,6 +43,15 @@ function SignupStep1Form() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      {/* Progress indicator */}
+      <header className="pt-6 px-6 flex justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-1 rounded-full bg-haevn-teal" />
+          <div className="w-8 h-1 rounded-full bg-gray-200" />
+          <div className="w-8 h-1 rounded-full bg-gray-200" />
+        </div>
+      </header>
+
       {/* Main content - centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
@@ -52,10 +61,10 @@ function SignupStep1Form() {
               className="text-haevn-navy"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 700,
-                fontSize: '32px',
+                fontWeight: 500,
+                fontSize: '28px',
                 lineHeight: '120%',
-                letterSpacing: '-0.015em'
+                letterSpacing: '-0.01em'
               }}
             >
               What should we call you?

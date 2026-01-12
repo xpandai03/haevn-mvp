@@ -104,11 +104,14 @@ function VerificationReturnContent() {
 
         if (profile.verified === true) {
           // Verification approved!
-          setStatus('approved')
           localStorage.removeItem('veriff_session_id')
 
-          // Mark onboarding step as complete
-          await flowController.markStepComplete(user.id, 5)
+          // Mark verification step as complete (step 4)
+          await flowController.markStepComplete(user.id, 4)
+
+          // Redirect to verification-complete page
+          router.push('/onboarding/verification-complete')
+          return
         } else if (profile.verification_status === 'declined') {
           // Verification declined
           setStatus('declined')
@@ -142,9 +145,10 @@ function VerificationReturnContent() {
     if (!user) return
 
     try {
-      // Mark step as complete (even if verification pending)
+      // Mark verification step complete and verification-complete step
+      await flowController.markStepComplete(user.id, 4)
       await flowController.markStepComplete(user.id, 5)
-      router.push('/onboarding/expectations')
+      router.push('/onboarding/survey-intro')
     } catch (error) {
       console.error('[Return] Error continuing:', error)
       toast({
@@ -160,7 +164,7 @@ function VerificationReturnContent() {
   }
 
   return (
-    <OnboardingLayout currentStep={5}>
+    <OnboardingLayout currentStep={4}>
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader className="text-center">

@@ -360,9 +360,22 @@ export default function SurveyPage() {
       // We'll let the useEffect handle repositioning
     }
 
-    // Check if this completes a section
+    // Note: Section completion check moved to handleNext to only trigger on Continue click
+    // This fixes the bug where popup appeared while typing in the last question
+
+    // Trigger auto-save with current question index
+    saveAnswers(newAnswers, currentQuestionIndex, completedSections)
+  }
+
+  // Navigation
+  const handleNext = async () => {
+    console.log('[Survey] handleNext called')
+    console.log('[Survey] Current index:', currentQuestionIndex, '/', activeQuestions.length - 1)
+    console.log('[Survey] Current question:', currentQuestion?.id)
+
+    // Check if this completes a section (only on Continue click, not on typing)
     if (currentSection && !completedSections.includes(currentSection.id)) {
-      const sectionIsComplete = isSectionComplete(currentSection.id, newAnswers)
+      const sectionIsComplete = isSectionComplete(currentSection.id, answers)
 
       if (sectionIsComplete) {
         // Mark section as complete
@@ -385,20 +398,19 @@ export default function SurveyPage() {
         }, 1600) // Match SectionComplete duration
 
         // Save with completed sections
-        saveAnswers(newAnswers, currentQuestionIndex, newCompletedSections)
+        saveAnswers(answers, currentQuestionIndex, newCompletedSections)
+
+        // Still advance to next question after showing celebration
+        if (currentQuestionIndex < activeQuestions.length - 1) {
+          setTimeout(() => {
+            const newIndex = currentQuestionIndex + 1
+            setCurrentQuestionIndex(newIndex)
+            saveAnswers(answers, newIndex, newCompletedSections)
+          }, 1700) // Slight delay after section complete animation
+        }
         return
       }
     }
-
-    // Trigger auto-save with current question index
-    saveAnswers(newAnswers, currentQuestionIndex, completedSections)
-  }
-
-  // Navigation
-  const handleNext = async () => {
-    console.log('[Survey] handleNext called')
-    console.log('[Survey] Current index:', currentQuestionIndex, '/', activeQuestions.length - 1)
-    console.log('[Survey] Current question:', currentQuestion?.id)
 
     if (currentQuestionIndex < activeQuestions.length - 1) {
       const newIndex = currentQuestionIndex + 1

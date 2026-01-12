@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { Clock, Save, Shield } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import Image from 'next/image'
 
 export default function ExpectationsPage() {
   const router = useRouter()
@@ -47,15 +46,11 @@ export default function ExpectationsPage() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-6">
-          {/* HAEVN Icon */}
+          {/* Waving hand icon */}
           <div className="flex justify-center mb-4">
-            <Image
-              src="/images/haevn-logo-with-icon.png"
-              alt="HAEVN"
-              width={60}
-              height={60}
-              className="object-contain"
-            />
+            <span className="text-5xl" role="img" aria-label="Waving hand">
+              👋
+            </span>
           </div>
 
           <h1
@@ -202,10 +197,6 @@ export default function ExpectationsPage() {
             </Button>
           </div>
         </div>
-        {/* DEBUG: Build ID - remove after debugging */}
-        <p className="text-xs text-gray-300 mt-4 text-center">
-          Build: ef9c026-{new Date().toISOString().slice(0, 16)}
-        </p>
       </div>
     </div>
   )

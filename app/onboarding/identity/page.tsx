@@ -117,9 +117,9 @@ export default function IdentityPage() {
       console.log('[Identity] ✅ Identity saved successfully:', data.action)
       console.log('[Identity] Partnership ID:', data.partnershipId)
 
-      // Mark step as complete
-      await flowController.markStepComplete(user.id, 4)
-      console.log('[Identity] Step 4 marked complete')
+      // Mark step as complete (identity is now step 3)
+      await flowController.markStepComplete(user.id, 3)
+      console.log('[Identity] Step 3 marked complete')
 
       // Navigate to relationship orientation page
       router.push('/onboarding/relationship-orientation')
@@ -149,7 +149,7 @@ export default function IdentityPage() {
               letterSpacing: '-0.015em'
             }}
           >
-            Who are you on HAEVN?
+            How would you like to show up here?
           </h1>
           <p
             className="text-haevn-charcoal text-lg"

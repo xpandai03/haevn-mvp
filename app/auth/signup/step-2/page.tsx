@@ -88,20 +88,29 @@ export default function SignupStep2() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      {/* Back button */}
+      {/* Header with progress and back button */}
       <header className="pt-6 px-6">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-haevn-charcoal hover:text-haevn-navy transition-colors"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 500,
-            fontSize: '14px'
-          }}
-        >
-          <ChevronLeft className="w-5 h-5" />
-          Back
-        </button>
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-haevn-charcoal hover:text-haevn-navy transition-colors"
+            style={{
+              fontFamily: 'Roboto, Helvetica, sans-serif',
+              fontWeight: 500,
+              fontSize: '14px'
+            }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Back
+          </button>
+          {/* Progress indicator */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-1 rounded-full bg-haevn-teal" />
+            <div className="w-8 h-1 rounded-full bg-haevn-teal" />
+            <div className="w-8 h-1 rounded-full bg-gray-200" />
+          </div>
+          <div className="w-16" /> {/* Spacer for balance */}
+        </div>
       </header>
 
       {/* Main content - centered */}
@@ -113,10 +122,10 @@ export default function SignupStep2() {
               className="text-haevn-navy"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 700,
-                fontSize: '32px',
+                fontWeight: 500,
+                fontSize: '28px',
                 lineHeight: '120%',
-                letterSpacing: '-0.015em'
+                letterSpacing: '-0.01em'
               }}
             >
               Set up your account
