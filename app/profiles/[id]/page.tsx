@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getPartnershipProfileById, type PartnershipProfileData } from '@/lib/actions/partnership-simple'
@@ -10,10 +10,9 @@ import { sendNudge } from '@/lib/actions/nudges'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { ProfileContent } from '@/components/profiles/ProfileContent'
-import { createClient } from '@/lib/supabase/client'
 
 /**
- * Connected Profile View
+ * Profile View
  *
  * CRITICAL: This page uses the EXACT same data contract and rendering component
  * as ProfilePreviewModal. When User A views User B, they see the same profile
@@ -24,20 +23,29 @@ import { createClient } from '@/lib/supabase/client'
  *
  * This is identical to:
  * - getMyPartnershipProfile() → PartnershipProfileData → ProfileContent
+ *
+ * CONNECTION HANDLING:
+ * - If handshakeId is passed via URL params (from Connections list), messaging is allowed
+ * - The handshakeId URL param is the auth signal for connected profiles
+ * - No redundant client-side handshake queries needed
  */
-export default function ConnectedProfileView() {
+export default function ProfileViewPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const partnershipId = params.id as string
+
+  // Get handshakeId from URL params - this is passed from Connections list
+  // If present, the user is viewing a connected profile and messaging is allowed
+  const handshakeId = searchParams.get('handshakeId')
 
   const [profile, setProfile] = useState<PartnershipProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
   const [nudging, setNudging] = useState(false)
-  const [handshakeId, setHandshakeId] = useState<string | null>(null)
 
   // Load profile data using the SAME data contract as ProfilePreviewModal
   useEffect(() => {
@@ -61,30 +69,9 @@ export default function ConnectedProfileView() {
         setProfile(profileResult.data)
         setMembershipTier(tierData)
 
-        // Check for handshake (connection) with this profile
-        const supabase = createClient()
-        const { data: currentUserMembership } = await supabase
-          .from('partnership_members')
-          .select('partnership_id')
-          .eq('user_id', user.id)
-          .single()
-
-        if (currentUserMembership) {
-          const { data: handshake } = await supabase
-            .from('handshakes')
-            .select('id')
-            .eq('state', 'matched')
-            .or(`and(a_partnership.eq.${currentUserMembership.partnership_id},b_partnership.eq.${partnershipId}),and(a_partnership.eq.${partnershipId},b_partnership.eq.${currentUserMembership.partnership_id})`)
-            .single()
-
-          if (handshake) {
-            setHandshakeId(handshake.id)
-          }
-        }
-
-        console.log('[ConnectedProfileView] Loaded profile:', profileResult.data.display_name)
+        console.log('[ProfileView] Loaded profile:', profileResult.data.display_name, 'handshakeId:', handshakeId)
       } catch (err: any) {
-        console.error('[ConnectedProfileView] Error:', err)
+        console.error('[ProfileView] Error:', err)
         setError(err.message || 'Failed to load profile')
       } finally {
         setLoading(false)
@@ -92,7 +79,7 @@ export default function ConnectedProfileView() {
     }
 
     loadProfile()
-  }, [partnershipId, user, authLoading])
+  }, [partnershipId, user, authLoading, handshakeId])
 
   const handleBack = () => {
     router.back()

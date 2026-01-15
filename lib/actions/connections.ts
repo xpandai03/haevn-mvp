@@ -385,6 +385,7 @@ export interface ChatMessage {
   sender_name?: string
   sender_partnership_id?: string
   body: string
+  image_url?: string  // Optional image URL for image messages
   created_at: string
   is_own_message?: boolean
 }
@@ -456,6 +457,7 @@ export async function getMessagesForHandshake(
         handshake_id,
         sender_partnership,
         content,
+        image_url,
         created_at
       `)
       .eq('handshake_id', handshakeId)
@@ -490,6 +492,7 @@ export async function getMessagesForHandshake(
       sender_name: partnershipNames.get(msg.sender_partnership) || 'Unknown',
       sender_partnership_id: msg.sender_partnership,
       body: msg.content,
+      image_url: msg.image_url || undefined,
       created_at: msg.created_at,
       is_own_message: msg.sender_partnership === userPartnershipInHandshake
     }))
@@ -505,7 +508,8 @@ export async function getMessagesForHandshake(
  */
 export async function sendMessageAction(
   handshakeId: string,
-  body: string
+  body: string,
+  imageUrl?: string  // Optional image URL for image messages
 ): Promise<{ message?: ChatMessage; error?: string }> {
   try {
     // Get current user from server-side auth
@@ -518,8 +522,8 @@ export async function sendMessageAction(
 
     const userId = user.id
 
-    // Validate message
-    if (!body.trim()) {
+    // Validate message - either text or image required
+    if (!body.trim() && !imageUrl) {
       return { error: 'Message cannot be empty' }
     }
 
@@ -576,7 +580,8 @@ export async function sendMessageAction(
       .insert({
         handshake_id: handshakeId,
         sender_partnership: userPartnershipId,
-        content: body.trim()
+        content: body.trim(),
+        image_url: imageUrl || null
       })
       .select()
       .single()
@@ -601,6 +606,7 @@ export async function sendMessageAction(
       sender_name: profile?.full_name || 'Unknown',
       sender_partnership_id: newMessage.sender_partnership,
       body: newMessage.content, // Map content -> body
+      image_url: newMessage.image_url || undefined,
       created_at: newMessage.created_at,
       is_own_message: true
     }

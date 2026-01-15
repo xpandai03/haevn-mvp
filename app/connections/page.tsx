@@ -41,8 +41,9 @@ export default function ConnectionsPage() {
     loadConnections()
   }, [user])
 
-  const handleViewConnection = (connectionId: string) => {
-    router.push(`/connections/${connectionId}`)
+  const handleViewConnection = (connection: ConnectionResult) => {
+    // Navigate to unified profile view with handshakeId for messaging
+    router.push(`/profiles/${connection.partnership.id}?handshakeId=${connection.handshakeId}`)
   }
 
   if (authLoading || loading) {
@@ -132,7 +133,7 @@ export default function ConnectionsPage() {
               <ConnectionCard
                 key={connection.handshakeId}
                 connection={connection}
-                onClick={() => handleViewConnection(connection.partnership.id)}
+                onClick={() => handleViewConnection(connection)}
               />
             ))}
           </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Send } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
@@ -12,6 +12,8 @@ import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format, isToday, isYesterday } from 'date-fns'
+import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 export default function ChatWithConnectionPage() {
   const router = useRouter()
@@ -25,9 +27,11 @@ export default function ChatWithConnectionPage() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [myPartnershipId, setMyPartnershipId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load connection details and messages
   useEffect(() => {
@@ -123,6 +127,95 @@ export default function ChatWithConnectionPage() {
     setSending(false)
   }
 
+  // Handle image upload and send
+  const handleImageSelect = async (file: File) => {
+    if (!user || !connection) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please select an image file',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Image must be less than 5MB',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setUploading(true)
+
+    try {
+      const supabase = createClient()
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${connection.handshakeId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+      // Upload to chat-media bucket
+      const { error: uploadError } = await supabase.storage
+        .from('chat-media')
+        .upload(fileName, file)
+
+      if (uploadError) {
+        console.error('[Chat] Upload failed:', uploadError)
+        toast({
+          title: 'Upload failed',
+          description: 'Could not upload image. Please try again.',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(fileName)
+
+      // Send as image message
+      const result = await sendMessageAction(connection.handshakeId, '', publicUrl)
+
+      if (result.error) {
+        console.error('[Chat] Send image failed:', result.error)
+        toast({
+          title: 'Failed to send',
+          description: result.error,
+          variant: 'destructive'
+        })
+      } else if (result.message) {
+        setMessages(prev => [...prev, result.message!])
+      }
+    } catch (err) {
+      console.error('[Chat] Image upload error:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to upload image',
+        variant: 'destructive'
+      })
+    } finally {
+      setUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Navigate to profile from chat header
+  const handleViewProfile = () => {
+    if (!connection) return
+    // Navigate to unified profile view with handshakeId for messaging
+    router.push(`/profiles/${connection.partnership.id}?handshakeId=${connection.handshakeId}`)
+  }
+
   const formatMessageTime = (dateStr: string) => {
     const date = new Date(dateStr)
     if (isToday(date)) return format(date, 'h:mm a')
@@ -173,7 +266,7 @@ export default function ChatWithConnectionPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
+      {/* Header - clickable to view profile */}
       <header className="bg-haevn-teal h-14 flex items-center justify-between px-4 flex-shrink-0">
         <button
           onClick={() => router.back()}
@@ -181,7 +274,11 @@ export default function ChatWithConnectionPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-3">
+        {/* Clickable profile section */}
+        <button
+          onClick={handleViewProfile}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <Avatar className="w-8 h-8 border-2 border-white/50">
             {partnership.photo_url ? (
               <AvatarImage src={partnership.photo_url} alt={partnership.display_name || 'Connection'} />
@@ -197,7 +294,7 @@ export default function ChatWithConnectionPage() {
           >
             {partnership.display_name || 'Anonymous'}
           </span>
-        </div>
+        </button>
         <div className="w-5" /> {/* Spacer for centering */}
       </header>
 
@@ -217,6 +314,8 @@ export default function ChatWithConnectionPage() {
           <div className="space-y-3">
             {messages.map((message) => {
               const isOwn = message.is_own_message
+              const hasImage = !!message.image_url
+              const hasText = !!message.body
 
               return (
                 <div
@@ -224,15 +323,34 @@ export default function ChatWithConnectionPage() {
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                    className={`max-w-[75%] rounded-2xl ${
+                      hasImage && !hasText ? 'p-1' : 'px-4 py-2.5'
+                    } ${
                       isOwn
                         ? 'bg-haevn-teal text-white rounded-br-md'
                         : 'bg-white border border-gray-200 text-haevn-charcoal rounded-bl-md'
                     }`}
                   >
-                    <p className="text-sm break-words">{message.body}</p>
+                    {/* Image message */}
+                    {hasImage && (
+                      <div className={hasText ? 'mb-2' : ''}>
+                        <Image
+                          src={message.image_url!}
+                          alt="Shared image"
+                          width={300}
+                          height={200}
+                          className="rounded-xl max-w-full h-auto object-cover"
+                          style={{ maxHeight: '300px' }}
+                        />
+                      </div>
+                    )}
+                    {/* Text content */}
+                    {hasText && (
+                      <p className="text-sm break-words">{message.body}</p>
+                    )}
+                    {/* Timestamp */}
                     <p
-                      className={`text-xs mt-1 ${
+                      className={`text-xs mt-1 ${hasImage && !hasText ? 'px-3 pb-2' : ''} ${
                         isOwn ? 'text-white/70' : 'text-gray-400'
                       }`}
                     >
@@ -256,17 +374,43 @@ export default function ChatWithConnectionPage() {
           }}
           className="flex items-center gap-2"
         >
+          {/* Image picker button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            className="text-haevn-charcoal hover:text-haevn-teal h-10 w-10"
+          >
+            {uploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ImagePlus className="h-5 w-5" />
+            )}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleImageSelect(file)
+            }}
+          />
+
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            disabled={sending}
+            disabled={sending || uploading}
             maxLength={2000}
             className="flex-1 rounded-full border-gray-300 focus:border-haevn-teal focus:ring-haevn-teal"
           />
           <Button
             type="submit"
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || uploading}
             className="rounded-full bg-haevn-teal hover:bg-haevn-teal/90 h-10 w-10 p-0"
           >
             {sending ? (
