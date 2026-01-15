@@ -2,56 +2,89 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { getProfileData, ProfileData } from '@/lib/actions/profiles'
+import { getPartnershipProfileById, type PartnershipProfileData } from '@/lib/actions/partnership-simple'
 import { useAuth } from '@/lib/auth/context'
-import { SurveyDataDisplay } from '@/components/profiles/SurveyDataDisplay'
 import { sendNudge } from '@/lib/actions/nudges'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
+import { ProfileContent } from '@/components/profiles/ProfileContent'
+import { createClient } from '@/lib/supabase/client'
 
-type TabKey = 'about' | 'compatibility' | 'photos'
-
-export default function ProfileViewPage() {
+/**
+ * Connected Profile View
+ *
+ * CRITICAL: This page uses the EXACT same data contract and rendering component
+ * as ProfilePreviewModal. When User A views User B, they see the same profile
+ * that User B sees in "View Match Profile".
+ *
+ * Data flow:
+ * - getPartnershipProfileById() → PartnershipProfileData → ProfileContent
+ *
+ * This is identical to:
+ * - getMyPartnershipProfile() → PartnershipProfileData → ProfileContent
+ */
+export default function ConnectedProfileView() {
   const router = useRouter()
   const params = useParams()
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const partnershipId = params.id as string
 
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [activeTab, setActiveTab] = useState<TabKey>('about')
+  const [profile, setProfile] = useState<PartnershipProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [photoIndex, setPhotoIndex] = useState(0)
   const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
   const [nudging, setNudging] = useState(false)
+  const [handshakeId, setHandshakeId] = useState<string | null>(null)
 
-  // Load profile data
+  // Load profile data using the SAME data contract as ProfilePreviewModal
   useEffect(() => {
     async function loadProfile() {
       if (authLoading || !user) return
 
       try {
         setLoading(true)
-        const [profileData, tierData] = await Promise.all([
-          getProfileData(partnershipId),
+
+        // Load profile and membership tier in parallel
+        const [profileResult, tierData] = await Promise.all([
+          getPartnershipProfileById(partnershipId),
           getUserMembershipTier()
         ])
 
-        if (!profileData) {
-          setError('Profile not found')
+        if (profileResult.error || !profileResult.data) {
+          setError(profileResult.error || 'Profile not found')
           return
         }
 
-        setProfile(profileData)
+        setProfile(profileResult.data)
         setMembershipTier(tierData)
-        console.log('[ProfileView] Loaded profile:', profileData.displayName)
+
+        // Check for handshake (connection) with this profile
+        const supabase = createClient()
+        const { data: currentUserMembership } = await supabase
+          .from('partnership_members')
+          .select('partnership_id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (currentUserMembership) {
+          const { data: handshake } = await supabase
+            .from('handshakes')
+            .select('id')
+            .eq('state', 'matched')
+            .or(`and(a_partnership.eq.${currentUserMembership.partnership_id},b_partnership.eq.${partnershipId}),and(a_partnership.eq.${partnershipId},b_partnership.eq.${currentUserMembership.partnership_id})`)
+            .single()
+
+          if (handshake) {
+            setHandshakeId(handshake.id)
+          }
+        }
+
+        console.log('[ConnectedProfileView] Loaded profile:', profileResult.data.display_name)
       } catch (err: any) {
-        console.error('[ProfileView] Error:', err)
+        console.error('[ConnectedProfileView] Error:', err)
         setError(err.message || 'Failed to load profile')
       } finally {
         setLoading(false)
@@ -65,22 +98,8 @@ export default function ProfileViewPage() {
     router.back()
   }
 
-  // Navigate photo carousel
-  const handleNextPhoto = () => {
-    if (profile && profile.photos.length > 0) {
-      setPhotoIndex((prev) => (prev + 1) % profile.photos.length)
-    }
-  }
-
-  const handlePrevPhoto = () => {
-    if (profile && profile.photos.length > 0) {
-      setPhotoIndex((prev) => (prev - 1 + profile.photos.length) % profile.photos.length)
-    }
-  }
-
   // Action handlers
   const handleMessage = () => {
-    // Check membership before allowing message
     if (membershipTier !== 'plus') {
       toast({
         title: 'HAEVN+ Required',
@@ -90,9 +109,9 @@ export default function ProfileViewPage() {
       router.push('/onboarding/membership')
       return
     }
-    // Navigate to chat - use handshakeId if connected, otherwise go to chat list
-    if (profile?.handshakeId) {
-      router.push(`/chat/${profile.handshakeId}`)
+
+    if (handshakeId) {
+      router.push(`/chat/${handshakeId}`)
     } else {
       toast({
         title: 'Not Connected',
@@ -105,7 +124,6 @@ export default function ProfileViewPage() {
   const handleNudge = async () => {
     if (!user || !profile) return
 
-    // Check membership
     if (membershipTier !== 'plus') {
       toast({
         title: 'HAEVN+ Required',
@@ -118,14 +136,12 @@ export default function ProfileViewPage() {
 
     try {
       setNudging(true)
-      // Need to get the recipient user ID from the partnership
-      // For now, this is a simplified version
-      const result = await sendNudge(profile.partnershipId)
+      const result = await sendNudge(partnershipId)
 
       if (result.success) {
         toast({
           title: 'Nudge Sent!',
-          description: `You nudged ${profile.displayName}`
+          description: `You nudged ${profile.display_name}`
         })
       } else {
         toast({
@@ -146,7 +162,6 @@ export default function ProfileViewPage() {
   }
 
   const handleBlock = () => {
-    // TODO: Implement block functionality
     toast({
       title: 'Block Feature',
       description: 'Block functionality coming soon'
@@ -154,7 +169,6 @@ export default function ProfileViewPage() {
   }
 
   const handleReport = () => {
-    // TODO: Implement report functionality
     toast({
       title: 'Report Feature',
       description: 'Report functionality coming soon'
@@ -188,7 +202,7 @@ export default function ProfileViewPage() {
     )
   }
 
-  // Free user gating - show upgrade prompt instead of full profile
+  // Free user gating
   if (membershipTier !== 'plus') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
@@ -226,7 +240,7 @@ export default function ProfileViewPage() {
     <div className="min-h-screen bg-haevn-lightgray">
       {/* Header */}
       <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-md mx-auto flex items-center">
           <Button
             variant="ghost"
             size="sm"
@@ -235,254 +249,52 @@ export default function ProfileViewPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-haevn-charcoal hover:text-haevn-teal"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </Button>
+          <span className="ml-3 font-medium text-haevn-navy">
+            {profile.display_name || 'Profile'}
+          </span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Profile Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm mb-6">
-          {/* Photo Section */}
-          <div className="mb-6">
-            {profile.photos.length > 0 ? (
-              <div className="relative">
-                <div className="aspect-square rounded-2xl overflow-hidden bg-haevn-gray-100">
-                  <img
-                    src={profile.photos[photoIndex]}
-                    alt={profile.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {profile.photos.length > 1 && (
-                  <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={handlePrevPhoto}
-                      className="rounded-full h-8 w-8 p-0"
-                    >
-                      ←
-                    </Button>
-                    <div className="flex gap-1">
-                      {profile.photos.map((_, idx) => (
-                        <div
-                          key={idx}
-                          className={'h-2 w-2 rounded-full transition-colors ' + (
-                            idx === photoIndex ? 'bg-haevn-teal' : 'bg-white/50'
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={handleNextPhoto}
-                      className="rounded-full h-8 w-8 p-0"
-                    >
-                      →
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="aspect-square rounded-2xl overflow-hidden bg-haevn-gray-100 flex items-center justify-center">
-                <Avatar className="h-32 w-32">
-                  <AvatarFallback className="text-4xl bg-haevn-gray-200 text-haevn-charcoal">
-                    {profile.displayName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            )}
-          </div>
-
-          {/* Basic Info */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h1
-                className="text-3xl font-bold text-haevn-navy"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 700,
-                  letterSpacing: '-0.015em'
-                }}
-              >
-                {profile.displayName}
-              </h1>
-              <Badge variant={profile.membershipTier === 'plus' ? 'default' : 'secondary'}>
-                {profile.membershipTier === 'plus' ? 'HAEVN+' : 'Free'}
-              </Badge>
-            </div>
-
-            {profile.city && (
-              <p className="text-haevn-charcoal/60">
-                📍 {profile.city}
-                {profile.distance && ` • ${ profile.distance} miles away`}
-              </p>
-            )}
-
-            {profile.compatibilityPercentage !== undefined && (
-              <div className="bg-haevn-teal/10 rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-haevn-teal">Compatibility</span>
-                  <span className="text-2xl font-bold text-haevn-teal">
-                    {profile.compatibilityPercentage}%
-                  </span>
-                </div>
-                {profile.topFactor && (
-                  <p className="text-sm text-haevn-charcoal/80">
-                    Top factor: {profile.topFactor}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {profile.bio && (
-              <p
-                className="text-haevn-charcoal leading-relaxed"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 300
-                }}
-              >
-                {profile.bio}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-3xl shadow-sm mb-6 overflow-hidden">
-          <div className="border-b border-haevn-gray-200">
-            <div className="flex">
-              {(['about', 'compatibility', 'photos'] as TabKey[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={'flex-1 px-4 py-3 text-sm font-medium transition-colors ' + (
-                    activeTab === tab
-                      ? 'text-haevn-teal border-b-2 border-haevn-teal'
-                      : 'text-haevn-charcoal/60 hover:text-haevn-charcoal'
-                  )}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-6">
-            {activeTab === 'about' && (
-              <div className="space-y-6">
-                {profile.surveyData ? (
-                  <>
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="goals" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="boundaries" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="communication" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="energy" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="interests" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="bodyType" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="loveLanguages" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="kinks" />
-                    <SurveyDataDisplay surveyData={profile.surveyData} category="preferences" />
-                  </>
-                ) : (
-                  <p className="text-haevn-charcoal/60 text-center py-8">
-                    No survey data available yet
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'compatibility' && (
-              <div className="space-y-4">
-                {profile.compatibilityPercentage ? (
-                  <div className="text-center">
-                    <div className="text-6xl font-bold text-haevn-teal mb-4">
-                      {profile.compatibilityPercentage}%
-                    </div>
-                    <p className="text-haevn-charcoal text-lg mb-6">
-                      {profile.topFactor}
-                    </p>
-                    <p className="text-haevn-charcoal/60">
-                      Detailed compatibility breakdown coming soon
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-haevn-charcoal/60 text-center py-8">
-                    Compatibility data not available
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'photos' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {profile.photos.length > 0 ? (
-                  profile.photos.map((photo, idx) => (
-                    <div
-                      key={idx}
-                      className="aspect-square rounded-xl overflow-hidden bg-haevn-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => setPhotoIndex(idx)}
-                    >
-                      <img
-                        src={photo}
-                        alt={'Photo ' + (idx + 1)}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <p className="col-span-full text-haevn-charcoal/60 text-center py-8">
-                    No photos available
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Main Content - Uses shared ProfileContent component */}
+      <main className="max-w-md mx-auto">
+        {/* Profile Content - EXACT same component as ProfilePreviewModal */}
+        <ProfileContent profile={profile} isOwnProfile={false} />
 
         {/* Action Buttons */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              className="bg-haevn-teal hover:opacity-90 text-white"
-              onClick={handleMessage}
-            >
-              Message
-            </Button>
-            <Button
-              variant="outline"
-              className="text-haevn-charcoal"
-              onClick={handleNudge}
-              disabled={nudging}
-            >
-              {nudging ? 'Sending...' : 'Nudge'}
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <Button
-              variant="outline"
-              className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
-              onClick={handleBlock}
-            >
-              Block
-            </Button>
-            <Button
-              variant="outline"
-              className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
-              onClick={handleReport}
-            >
-              Report
-            </Button>
+        <div className="px-4 pb-6">
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                className="bg-haevn-teal hover:opacity-90 text-white"
+                onClick={handleMessage}
+              >
+                Message
+              </Button>
+              <Button
+                variant="outline"
+                className="text-haevn-charcoal"
+                onClick={handleNudge}
+                disabled={nudging}
+              >
+                {nudging ? 'Sending...' : 'Nudge'}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <Button
+                variant="outline"
+                className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
+                onClick={handleBlock}
+              >
+                Block
+              </Button>
+              <Button
+                variant="outline"
+                className="text-haevn-charcoal hover:text-red-600 hover:border-red-600"
+                onClick={handleReport}
+              >
+                Report
+              </Button>
+            </div>
           </div>
         </div>
       </main>

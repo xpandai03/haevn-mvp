@@ -99,6 +99,70 @@ export async function getMyPartnershipProfile(): Promise<{ data: PartnershipProf
 }
 
 /**
+ * Get any partnership's profile data (for viewing connected profiles)
+ * This uses the SAME data contract as getMyPartnershipProfile
+ */
+export async function getPartnershipProfileById(partnershipId: string): Promise<{ data: PartnershipProfileData | null, error: string | null }> {
+  const supabase = await createClient()
+
+  try {
+    // Verify user is authenticated
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      console.error('[getPartnershipProfileById] No authenticated user')
+      return { data: null, error: 'Not authenticated' }
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Get full partnership data (same fields as getMyPartnershipProfile)
+    const { data: partnership, error: partnershipError } = await adminClient
+      .from('partnerships')
+      .select(`
+        id,
+        display_name,
+        short_bio,
+        long_bio,
+        intentions,
+        lifestyle_tags,
+        structure,
+        orientation,
+        profile_type,
+        city,
+        age
+      `)
+      .eq('id', partnershipId)
+      .single()
+
+    if (partnershipError || !partnership) {
+      console.error('[getPartnershipProfileById] Failed to get partnership:', partnershipError)
+      return { data: null, error: 'Partnership not found' }
+    }
+
+    // Get photos (same query as getMyPartnershipProfile)
+    const { data: photos } = await adminClient
+      .from('partnership_photos')
+      .select('id, photo_url, photo_type, is_primary')
+      .eq('partnership_id', partnershipId)
+      .eq('photo_type', 'public')
+      .order('is_primary', { ascending: false })
+      .order('order_index', { ascending: true })
+
+    return {
+      data: {
+        ...partnership,
+        photos: photos || []
+      },
+      error: null
+    }
+  } catch (error) {
+    console.error('[getPartnershipProfileById] Unexpected error:', error)
+    return { data: null, error: 'An unexpected error occurred' }
+  }
+}
+
+/**
  * Get current user's partnership ID using canonical selectBestPartnership
  * This is a read-only lookup - does NOT create partnerships
  */
