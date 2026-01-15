@@ -8,6 +8,7 @@ import { getPartnershipProfileById, type PartnershipProfileData } from '@/lib/ac
 import { useAuth } from '@/lib/auth/context'
 import { sendNudge } from '@/lib/actions/nudges'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { getHandshakeIdForPartnerships, getMyPartnershipId } from '@/lib/actions/connections'
 import { useToast } from '@/hooks/use-toast'
 import { ProfileContent } from '@/components/profiles/ProfileContent'
 
@@ -26,8 +27,8 @@ import { ProfileContent } from '@/components/profiles/ProfileContent'
  *
  * CONNECTION HANDLING:
  * - If handshakeId is passed via URL params (from Connections list), messaging is allowed
- * - The handshakeId URL param is the auth signal for connected profiles
- * - No redundant client-side handshake queries needed
+ * - FALLBACK: If no URL param, we check for connection server-side via getHandshakeIdForPartnerships()
+ * - This ensures Message button works from ANY entry point (direct URL, Connections list, chat header, etc.)
  */
 export default function ProfileViewPage() {
   const router = useRouter()
@@ -46,6 +47,8 @@ export default function ProfileViewPage() {
   const [error, setError] = useState<string | null>(null)
   const [membershipTier, setMembershipTier] = useState<'free' | 'plus'>('free')
   const [nudging, setNudging] = useState(false)
+  const [viewerPartnershipId, setViewerPartnershipId] = useState<string | null>(null)
+  const [resolvingHandshake, setResolvingHandshake] = useState(false)
 
   // Load profile data using the SAME data contract as ProfilePreviewModal
   useEffect(() => {
@@ -55,11 +58,14 @@ export default function ProfileViewPage() {
       try {
         setLoading(true)
 
-        // Load profile and membership tier in parallel
-        const [profileResult, tierData] = await Promise.all([
+        // Load profile, membership tier, and viewer's partnership ID in parallel
+        const [profileResult, tierData, myPartnershipId] = await Promise.all([
           getPartnershipProfileById(partnershipId),
-          getUserMembershipTier()
+          getUserMembershipTier(),
+          getMyPartnershipId()
         ])
+
+        setViewerPartnershipId(myPartnershipId)
 
         if (profileResult.error || !profileResult.data) {
           setError(profileResult.error || 'Profile not found')
@@ -86,7 +92,7 @@ export default function ProfileViewPage() {
   }
 
   // Action handlers
-  const handleMessage = () => {
+  const handleMessage = async () => {
     if (membershipTier !== 'plus') {
       toast({
         title: 'HAEVN+ Required',
@@ -97,8 +103,26 @@ export default function ProfileViewPage() {
       return
     }
 
-    if (handshakeId) {
-      router.push(`/chat/${handshakeId}`)
+    // Try URL param first (fast path from Connections list)
+    let resolvedHandshakeId = handshakeId
+
+    // Fallback: server-side lookup if URL param missing
+    if (!resolvedHandshakeId && viewerPartnershipId && partnershipId) {
+      setResolvingHandshake(true)
+      try {
+        resolvedHandshakeId = await getHandshakeIdForPartnerships(
+          viewerPartnershipId,
+          partnershipId
+        )
+      } catch (error) {
+        console.error('[ProfileView] Failed to resolve handshake:', error)
+      } finally {
+        setResolvingHandshake(false)
+      }
+    }
+
+    if (resolvedHandshakeId) {
+      router.push(`/chat/${resolvedHandshakeId}`)
     } else {
       toast({
         title: 'Not Connected',
@@ -254,8 +278,9 @@ export default function ProfileViewPage() {
               <Button
                 className="bg-haevn-teal hover:opacity-90 text-white"
                 onClick={handleMessage}
+                disabled={resolvingHandshake}
               >
-                Message
+                {resolvingHandshake ? 'Loading...' : 'Message'}
               </Button>
               <Button
                 variant="outline"

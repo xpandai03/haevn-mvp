@@ -43,6 +43,79 @@ export async function getConnectionById(
   return getConnectionDetails(connectionId)
 }
 
+/**
+ * Look up handshake ID for two partnerships.
+ * Used when handshakeId is not available via URL params but connection exists.
+ *
+ * @param aPartnershipId - First partnership ID
+ * @param bPartnershipId - Second partnership ID
+ * @returns Handshake ID if connection exists, null otherwise
+ */
+export async function getHandshakeIdForPartnerships(
+  aPartnershipId: string,
+  bPartnershipId: string
+): Promise<string | null> {
+  try {
+    const adminClient = await createAdminClient()
+
+    // Symmetric lookup - handshakes can be stored in either direction
+    const { data, error } = await adminClient
+      .from('handshakes')
+      .select('id')
+      .eq('state', 'matched')
+      .eq('a_consent', true)
+      .eq('b_consent', true)
+      .or(
+        `and(a_partnership.eq.${aPartnershipId},b_partnership.eq.${bPartnershipId}),and(a_partnership.eq.${bPartnershipId},b_partnership.eq.${aPartnershipId})`
+      )
+      .maybeSingle()
+
+    if (error) {
+      console.error('[getHandshakeIdForPartnerships] Error:', error)
+      return null
+    }
+
+    return data?.id ?? null
+  } catch (error) {
+    console.error('[getHandshakeIdForPartnerships] Unexpected error:', error)
+    return null
+  }
+}
+
+/**
+ * Get the current user's partnership ID.
+ * Uses the same selection logic as dashboard/profile pages.
+ *
+ * @returns Partnership ID or null if not found
+ */
+export async function getMyPartnershipId(): Promise<string | null> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      console.error('[getMyPartnershipId] No authenticated user')
+      return null
+    }
+
+    const adminClient = await createAdminClient()
+
+    // Use canonical selectBestPartnership (same as Dashboard)
+    const { selectBestPartnership } = await import('@/lib/partnership/selectPartnership')
+    const membership = await selectBestPartnership(adminClient, user.id)
+
+    if (!membership) {
+      console.error('[getMyPartnershipId] No partnership found for user:', user.id)
+      return null
+    }
+
+    return membership.partnership_id
+  } catch (error) {
+    console.error('[getMyPartnershipId] Error:', error)
+    return null
+  }
+}
+
 // =============================================================================
 // CONVERSATION LIST (for /chat page)
 // =============================================================================
