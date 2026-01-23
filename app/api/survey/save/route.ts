@@ -300,6 +300,26 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .update({ survey_complete: true })
         .eq('user_id', user.id)
+
+      // Trigger match calculation (async, don't block response)
+      console.log('[API /survey/save] 🎯 Survey 100% complete - triggering match calculation')
+      const { computeMatchesForPartnership } = await import('@/lib/services/computeMatches')
+      computeMatchesForPartnership(partnershipId)
+        .then((result) => {
+          if (result.success) {
+            console.log(
+              `[API /survey/save] ✅ Match calculation complete: ${result.matchesComputed} matches computed for partnership ${partnershipId}`
+            )
+          } else {
+            console.error(
+              `[API /survey/save] ⚠️ Match calculation failed: ${result.error || 'Unknown error'}`
+            )
+          }
+        })
+        .catch((err) => {
+          console.error('[API /survey/save] ❌ Match calculation error:', err)
+          // Don't fail the survey save if match calculation fails
+        })
     }
 
     console.log('[API /survey/save] Saved successfully:', {

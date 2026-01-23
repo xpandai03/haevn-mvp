@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { PartnershipLookup } from './PartnershipLookup'
 import { PartnershipCard } from './PartnershipCard'
 import { MatchesList } from './MatchesList'
+import { useToast } from '@/hooks/use-toast'
+import { Loader2 } from 'lucide-react'
 
 interface MatchingControlCenterProps {
   userEmail: string
@@ -44,6 +47,8 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
   const [matches, setMatches] = useState<ComputedMatchData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recomputing, setRecomputing] = useState(false)
+  const { toast } = useToast()
 
   const handlePartnershipSelect = (partnership: PartnershipData, computedMatches: ComputedMatchData[]) => {
     setSelectedPartnership(partnership)
@@ -63,8 +68,71 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
     setError(null)
   }
 
+  const handleRecomputeAll = async () => {
+    if (!confirm('This will recompute matches for ALL partnerships. This may take several minutes. Continue?')) {
+      return
+    }
+
+    setRecomputing(true)
+    try {
+      const response = await fetch('/api/admin/recompute-matches', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: 'Matches Recalculated',
+          description: `Computed ${data.result.computed} matches for ${data.result.total} partnerships. ${data.result.errors} errors.`,
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to recompute matches',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to recompute matches',
+        variant: 'destructive',
+      })
+    } finally {
+      setRecomputing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Admin Actions */}
+      <Card className="border-purple-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-purple-900">Admin Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={handleRecomputeAll}
+            disabled={recomputing}
+            variant="outline"
+            className="w-full"
+          >
+            {recomputing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Recomputing All Matches...
+              </>
+            ) : (
+              'Recompute All Matches'
+            )}
+          </Button>
+          <p className="text-xs text-gray-500 mt-2">
+            Recalculates matches for all partnerships with completed surveys. This may take several minutes.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Lookup Panel */}
       <Card className="border-purple-200">
         <CardHeader className="pb-3">
