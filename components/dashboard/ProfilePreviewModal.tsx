@@ -83,7 +83,7 @@ export function ProfilePreviewModal({
             <p className="text-gray-600">Unable to load profile preview</p>
           </div>
         ) : (
-          <div className="max-h-[calc(90vh-100px)]">
+          <div className="max-h-[calc(90vh-100px)] overflow-y-auto">
             <ProfileContent profile={profile} isOwnProfile={true} />
           </div>
         )}
