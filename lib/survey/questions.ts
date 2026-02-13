@@ -601,7 +601,7 @@ export const surveySections: SurveySection[] = [
         label: 'How important is privacy/discretion?',
         type: 'slider',
         required: true,
-        helperText: 'Some folks need full discretion. Others are open. Neither is wrong—we just want to match you with people on the same page.',
+        helperText: 'Everyone handles openness differently, some keep things private, others are comfortable being seen. This helps us connect you with people who value the same level of privacy you do.',
         min: 1,
         max: 10,
         step: 1
