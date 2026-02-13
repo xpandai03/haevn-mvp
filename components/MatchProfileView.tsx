@@ -78,12 +78,12 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass }: Ma
   const sections = breakdown?.raw_sections || breakdown?.sections || {}
   const getPercentage = (key: string): number => {
     const data = sections[key]
-    if (!data) return Math.floor(Math.random() * 30) + 70 // Demo fallback 70-100%
+    if (!data) return 0
     if (typeof data === 'number') return Math.round(data)
     if (data?.contribution && data?.weight) {
       return Math.round((data.contribution / data.weight) * 100)
     }
-    return data?.score || Math.floor(Math.random() * 30) + 70
+    return data?.score ?? 0
   }
 
   return (

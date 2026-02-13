@@ -337,6 +337,8 @@ export async function computeMatchesForPartnership(
           continue
         }
 
+        console.log(`[computeMatches] ✅ Match: ${candidate.display_name} — score=${result.overallScore}, tier=${result.tier}, categories=${JSON.stringify(result.categories.map(c => ({ cat: c.category, score: c.score })))}`)
+
         const now = new Date().toISOString()
 
         // Collect both directions for batch upsert
