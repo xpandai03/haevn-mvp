@@ -17,11 +17,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   calculateCompatibility,
   normalizeAnswers,
+  validateNormalizedAnswers,
   type RawAnswers,
   type CompatibilityTier,
 } from '@/lib/matching'
 
-const ENGINE_VERSION = '5cat-v1'
+const ENGINE_VERSION = '5cat-v2'
 
 // =============================================================================
 // TYPES
@@ -104,13 +105,7 @@ export async function computeMatchesForPartnership(
   })
 
   try {
-    console.log(`[computeMatches] Starting match calculation for partnership: ${partnershipId}`)
-
-    // DIAGNOSTIC: Verify the key mapping is loaded
-    const { getInternalToCsvIdMap } = await import('@/lib/survey/questions')
-    const keyMap = getInternalToCsvIdMap()
-    const mapEntries = Object.entries(keyMap)
-    console.log(`[computeMatches] 🗺️ Key map has ${mapEntries.length} entries. Sample:`, mapEntries.slice(0, 5))
+    console.log(`[computeMatches] Starting match calculation for partnership: ${partnershipId} (engine=${ENGINE_VERSION})`)
 
     // =========================================================================
     // 1. Fetch current partnership
@@ -173,28 +168,18 @@ export async function computeMatchesForPartnership(
     const currentAnswers = currentCompletedSurvey.answers_json as RawAnswers
     const currentIsCouple = currentPartnership.profile_type === 'couple'
 
-    // DIAGNOSTIC: Log raw answer keys before normalization
+    // Log raw answer keys for traceability
     const rawKeys = Object.keys(currentAnswers)
-    console.log(`[computeMatches] 🔑 RAW answer keys (${rawKeys.length}):`, rawKeys.slice(0, 15))
-    console.log(`[computeMatches] 🔑 RAW sample values:`, {
-      q9_intentions: currentAnswers['q9_intentions'],
-      Q9: currentAnswers['Q9'],
-      q6_relationship_styles: currentAnswers['q6_relationship_styles'],
-      Q6: currentAnswers['Q6'],
-    })
+    console.log(`[computeMatches] RAW keys (${rawKeys.length}): ${rawKeys.slice(0, 10).join(', ')}`)
 
     const normalizedCurrentAnswers = normalizeAnswers(currentAnswers)
 
-    // DIAGNOSTIC: Log normalized answer keys after normalization
-    const normalizedKeys = Object.keys(normalizedCurrentAnswers)
-    console.log(`[computeMatches] 🔑 NORMALIZED answer keys (${normalizedKeys.length}):`, normalizedKeys.slice(0, 15))
-    console.log(`[computeMatches] 🔑 NORMALIZED sample values:`, {
-      Q9: (normalizedCurrentAnswers as any).Q9,
-      Q6: (normalizedCurrentAnswers as any).Q6,
-      Q10: (normalizedCurrentAnswers as any).Q10,
-      Q10a: (normalizedCurrentAnswers as any).Q10a,
-      Q20: (normalizedCurrentAnswers as any).Q20,
-    })
+    // Validate normalization worked — this is the critical checkpoint
+    const currentValidation = validateNormalizedAnswers(normalizedCurrentAnswers, partnershipId)
+    console.log(`[computeMatches] VALIDATION current:`, JSON.stringify(currentValidation))
+    if (currentValidation.missingCritical.length > 0) {
+      console.warn(`[computeMatches] ⚠️ Current partnership missing critical keys: ${currentValidation.missingCritical.join(', ')}`)
+    }
 
     // =========================================================================
     // 3. Fetch ALL candidate partnerships (live, with display_name)
@@ -333,10 +318,10 @@ export async function computeMatchesForPartnership(
         const matchIsCouple = candidate.profile_type === 'couple'
         const normalizedMatchAnswers = normalizeAnswers(completedAnswers)
 
-        // DIAGNOSTIC: Log first candidate's normalized answer sample
+        // Validate first candidate's normalization for diagnostics
         if (candidatesEvaluated <= 1) {
-          const matchNormKeys = Object.keys(normalizedMatchAnswers)
-          console.log(`[computeMatches] 🔑 CANDIDATE ${candidate.display_name} normalized keys (${matchNormKeys.length}):`, matchNormKeys.slice(0, 15))
+          const matchValidation = validateNormalizedAnswers(normalizedMatchAnswers, candidate.display_name || candidate.id)
+          console.log(`[computeMatches] VALIDATION candidate:`, JSON.stringify(matchValidation))
         }
 
         // Calculate compatibility using the 5-category engine
@@ -355,20 +340,18 @@ export async function computeMatchesForPartnership(
           },
         })
 
-        // DIAGNOSTIC: Log full scoring result for first candidate
+        // Log full result for first candidate (always) — critical for debugging
         if (candidatesEvaluated <= 1) {
-          console.log(`[computeMatches] 📊 FULL RESULT for ${candidate.display_name}:`, JSON.stringify({
+          console.log(`[computeMatches] FULL RESULT ${candidate.display_name}:`, JSON.stringify({
             overallScore: result.overallScore,
             tier: result.tier,
             constraints: result.constraints,
-            lifestyleIncluded: result.lifestyleIncluded,
-            normalizedWeights: result.normalizedWeights,
             categories: result.categories.map(c => ({
               cat: c.category,
               score: c.score,
               included: c.included,
-              coverage: c.coverage,
-              subScores: c.subScores.map(s => ({ key: s.key, score: s.score, matched: s.matched })),
+              matchedSubs: c.subScores.filter(s => s.matched).length,
+              totalSubs: c.subScores.length,
             })),
           }))
         }

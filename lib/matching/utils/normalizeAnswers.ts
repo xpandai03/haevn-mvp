@@ -3,44 +3,124 @@
  *
  * Converts raw survey answers (from answers_json) to normalized
  * NormalizedAnswers format with consistent types.
+ *
+ * Uses a HARDCODED key alias map so key resolution never depends
+ * on runtime imports from the survey module. This is bulletproof
+ * in serverless environments (Vercel).
  */
 
 import type { RawAnswers, NormalizedAnswers } from '../types'
 import { MULTI_SELECT_QUESTIONS } from '../constants/questionMappings'
-import { getInternalToCsvIdMap } from '@/lib/survey/questions'
 
-// Build mapping once at module load: internal IDs → CSV IDs
-// e.g. { 'q9_intentions': 'Q9', 'q10a_emotional_availability': 'Q10a', ... }
-let _internalToCsvMap: Record<string, string> | null = null
-function getKeyMap(): Record<string, string> {
-  if (!_internalToCsvMap) {
-    _internalToCsvMap = getInternalToCsvIdMap()
-  }
-  return _internalToCsvMap
+// =============================================================================
+// HARDCODED KEY ALIAS MAP
+// =============================================================================
+// Maps every known internal survey question ID to its canonical CSV ID.
+// This is the SINGLE SOURCE OF TRUTH for key resolution in the matching engine.
+// DO NOT import from @/lib/survey/questions — that dependency is fragile at runtime.
+
+const INTERNAL_TO_CSV: Record<string, string> = {
+  'q1_age': 'Q1',
+  'q2_gender_identity': 'Q2',
+  'q2a_pronouns': 'Q2a',
+  'q3_sexual_orientation': 'Q3',
+  'q3a_fidelity': 'Q3a',
+  'q3b_kinsey_scale': 'Q3b',
+  'q3c_partner_kinsey_preference': 'Q3c',
+  'q4_relationship_status': 'Q4',
+  'q6_relationship_styles': 'Q6',
+  'q6a_connection_type': 'Q6a',
+  'q6b_who_to_meet': 'Q6b',
+  'q6c_couple_connection': 'Q6c',
+  'q6d_couple_permissions': 'Q6d',
+  'q7_emotional_exclusivity': 'Q7',
+  'q8_sexual_exclusivity': 'Q8',
+  'q9_intentions': 'Q9',
+  'q9a_sex_or_more': 'Q9a',
+  'q9b_dating_readiness': 'Q9b',
+  'q10_attachment_style': 'Q10',
+  'q10a_emotional_availability': 'Q10a',
+  'q11_love_languages': 'Q11',
+  'q12_conflict_resolution': 'Q12',
+  'q12a_messaging_pace': 'Q12a',
+  'q13_lifestyle_alignment': 'Q13',
+  'q13a_languages': 'Q13a',
+  'q14a_cultural_alignment': 'Q14a',
+  'q14b_cultural_identity': 'Q14b',
+  'q15_time_availability': 'Q15',
+  'q16_typical_availability': 'Q16',
+  'q16a_first_meet_preference': 'Q16a',
+  'q18_substances': 'Q18',
+  'q19a_max_distance': 'Q19a',
+  'q19b_distance_priority': 'Q19b',
+  'q19c_mobility': 'Q19c',
+  'q20_discretion': 'Q20',
+  'q20a_photo_sharing': 'Q20a',
+  'q20b_how_out': 'Q20b',
+  'q21_platform_use': 'Q21',
+  'q22_spirituality_sexuality': 'Q22',
+  'q23_erotic_styles': 'Q23',
+  'q24_experiences': 'Q24',
+  'q25_chemistry_vs_emotion': 'Q25',
+  'q25a_frequency': 'Q25a',
+  'q26_roles': 'Q26',
+  'q27_body_type_self': 'Q27',
+  'q27_body_type_preferences': 'Q27b',
+  'q28_hard_boundaries': 'Q28',
+  'q29_maybe_boundaries': 'Q29',
+  'q30_safer_sex': 'Q30',
+  'q30a_fluid_bonding': 'Q30a',
+  'q31_health_testing': 'Q31',
+  'q32_looking_for': 'Q32',
+  'q33_kinks': 'Q33',
+  'q33a_experience_level': 'Q33a',
+  'q34_exploration': 'Q34',
+  'q34a_variety': 'Q34a',
+  'q35_agreements': 'Q35',
+  'q35a_structure': 'Q35a',
+  'q36_social_energy': 'Q36',
+  'q36a_outgoing': 'Q36a',
+  'q37_empathy': 'Q37',
+  'q37a_harmony': 'Q37a',
+  'q38_jealousy': 'Q38',
+  'q38a_emotional_reactive': 'Q38a',
+}
+
+// Build a case-insensitive lookup at module load.
+// Maps ANY key variant (internal ID, CSV ID, lowercase) → canonical CSV key.
+const KEY_RESOLVER = new Map<string, string>()
+
+// Add internal → CSV mappings (case-insensitive)
+for (const [internal, csv] of Object.entries(INTERNAL_TO_CSV)) {
+  KEY_RESOLVER.set(internal.toLowerCase(), csv)
+}
+
+// Add CSV keys as identity mappings (case-insensitive)
+// e.g., 'q9' → 'Q9', 'q10a' → 'Q10a'
+for (const csv of new Set(Object.values(INTERNAL_TO_CSV))) {
+  KEY_RESOLVER.set(csv.toLowerCase(), csv)
 }
 
 /**
- * Convert raw answers from internal key format (q9_intentions) to
- * CSV key format (Q9) that the matching engine expects.
- * Keys already in CSV format are passed through unchanged.
+ * Resolve any raw answer key to its canonical CSV key.
+ * Handles: internal IDs, CSV IDs, case variations.
+ * Falls back to the original key if no mapping found.
  */
-function convertToCsvKeys(raw: RawAnswers): RawAnswers {
-  const keyMap = getKeyMap()
-  const converted: RawAnswers = {}
-
-  for (const [key, value] of Object.entries(raw)) {
-    const csvKey = keyMap[key] || key // Use CSV key if mapped, otherwise keep original
-    converted[csvKey] = value
-  }
-
-  return converted
+export function resolveToCanonicalKey(rawKey: string): string {
+  return KEY_RESOLVER.get(rawKey.toLowerCase()) || rawKey
 }
+
+// =============================================================================
+// MAIN NORMALIZATION
+// =============================================================================
 
 /**
  * Normalize raw survey answers to consistent typed format.
  *
  * Handles:
  * - Converting internal question IDs to CSV IDs (q9_intentions → Q9)
+ *   via hardcoded alias map (no runtime dependency on survey module)
+ * - Case-insensitive key resolution
  * - Converting single values to arrays for multi-select questions
  * - Converting arrays to single values for single-select questions
  * - Handling null/undefined values
@@ -52,33 +132,59 @@ function convertToCsvKeys(raw: RawAnswers): RawAnswers {
 export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
   const normalized: NormalizedAnswers = {}
 
-  // Convert internal IDs (q9_intentions) to CSV IDs (Q9) first
-  const csvKeyed = convertToCsvKeys(raw)
-
-  // Iterate through all known questions and normalize
-  for (const [key, value] of Object.entries(csvKeyed)) {
+  for (const [rawKey, value] of Object.entries(raw)) {
     if (value === null || value === undefined) {
       continue
     }
 
-    const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(key as any)
+    // Resolve to canonical CSV key using hardcoded alias map
+    const csvKey = resolveToCanonicalKey(rawKey)
+
+    const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(csvKey as any)
 
     if (isMultiSelect) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (normalized as any)[key] = normalizeToArray(value)
+      (normalized as any)[csvKey] = normalizeToArray(value)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (normalized as any)[key] = normalizeToSingle(value)
+      (normalized as any)[csvKey] = normalizeToSingle(value)
     }
   }
 
-  // Handle special case: Q13a_required flag
-  if (csvKeyed.Q13a_required !== undefined) {
-    normalized.Q13a_required = Boolean(csvKeyed.Q13a_required)
+  // Handle special case: Q13a_required flag (check all key variants)
+  const reqVal = raw['Q13a_required'] ?? raw['q13a_required']
+  if (reqVal !== undefined && reqVal !== null) {
+    normalized.Q13a_required = Boolean(reqVal)
   }
 
   return normalized
 }
+
+/**
+ * Validate that normalized answers contain expected scoring keys.
+ * Returns a diagnostic object for logging.
+ */
+export function validateNormalizedAnswers(
+  answers: NormalizedAnswers,
+  label: string
+): { label: string; keyCount: number; hasQ9: boolean; hasQ6: boolean; hasQ10: boolean; hasQ10a: boolean; hasQ20: boolean; missingCritical: string[] } {
+  const keys = Object.keys(answers)
+  const criticalKeys = ['Q9', 'Q6', 'Q10', 'Q10a', 'Q20', 'Q3', 'Q23', 'Q26'] as const
+  const missingCritical = criticalKeys.filter(k => (answers as any)[k] === undefined)
+
+  return {
+    label,
+    keyCount: keys.length,
+    hasQ9: (answers as any).Q9 !== undefined,
+    hasQ6: (answers as any).Q6 !== undefined,
+    hasQ10: (answers as any).Q10 !== undefined,
+    hasQ10a: (answers as any).Q10a !== undefined,
+    hasQ20: (answers as any).Q20 !== undefined,
+    missingCritical,
+  }
+}
+
+// =============================================================================
+// VALUE NORMALIZERS
+// =============================================================================
 
 /**
  * Convert a value to an array format.
@@ -118,6 +224,10 @@ function normalizeToSingle(value: unknown): string | undefined {
   }
   return undefined
 }
+
+// =============================================================================
+// ANSWER ACCESS HELPERS
+// =============================================================================
 
 /**
  * Check if a normalized answer has a value (not empty).

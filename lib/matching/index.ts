@@ -64,7 +64,7 @@ export type {
 } from './types'
 
 // Utility exports
-export { normalizeAnswers, hasAnswer, asArray, asSingle } from './utils/normalizeAnswers'
+export { normalizeAnswers, validateNormalizedAnswers, resolveToCanonicalKey, hasAnswer, asArray, asSingle } from './utils/normalizeAnswers'
 export { checkConstraints } from './utils/constraints'
 export {
   jaccardSimilarity,

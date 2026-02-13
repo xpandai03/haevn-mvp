@@ -51,6 +51,18 @@ export function calculateCompatibility(input: CompatibilityInput): Compatibility
   const userAnswers = partnerA.answers
   const matchAnswers = partnerB.answers
 
+  // VALIDATION: Detect missing critical keys and log structured warning
+  const userKeyCount = Object.keys(userAnswers).length
+  const matchKeyCount = Object.keys(matchAnswers).length
+  if (userKeyCount === 0 || matchKeyCount === 0) {
+    console.error(`[calculateCompatibility] ⚠️ EMPTY ANSWERS DETECTED`, {
+      partnerA_id: partnerA.partnershipId,
+      partnerA_keys: userKeyCount,
+      partnerB_id: partnerB.partnershipId,
+      partnerB_keys: matchKeyCount,
+    })
+  }
+
   // Step 2: Check global constraints first
   const constraints = checkConstraints(
     userAnswers,
@@ -96,6 +108,24 @@ export function calculateCompatibility(input: CompatibilityInput): Compatibility
 
   // Step 6: Compute final score
   const overallScore = computeFinalScore(categories, normalizedWeights)
+
+  // VALIDATION: Log warning if score is 0 with non-empty answers
+  if (overallScore === 0 && userKeyCount > 0 && matchKeyCount > 0) {
+    const matchedSubScoreCounts = categories.map(c => ({
+      cat: c.category,
+      score: c.score,
+      included: c.included,
+      matchedSubs: c.subScores.filter(s => s.matched).length,
+      totalSubs: c.subScores.length,
+    }))
+    console.warn(`[calculateCompatibility] ⚠️ SCORE=0 with data present`, {
+      partnerA_id: partnerA.partnershipId,
+      partnerA_keys: userKeyCount,
+      partnerB_id: partnerB.partnershipId,
+      partnerB_keys: matchKeyCount,
+      categories: matchedSubScoreCounts,
+    })
+  }
 
   // Step 7: Determine tier
   const tier = getTierFromScore(overallScore)
