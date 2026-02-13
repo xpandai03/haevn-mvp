@@ -52,13 +52,25 @@ export async function getComputedMatchesForPartnership(
       return { matches: [], error: error.message }
     }
 
-    // Log final result (no filtering in this function)
-    console.log('[MATCH_DEBUG_FINAL]', {
-      partnershipId,
-      finalCount: matches?.length || 0,
+    // Deduplicate bidirectional rows — each match pair has 2 rows (A→B and B→A)
+    // Keep one row per unique "other" partnership
+    const seen = new Set<string>()
+    const deduplicated = (matches || []).filter(m => {
+      const otherId = m.partnership_a === partnershipId
+        ? m.partnership_b
+        : m.partnership_a
+      if (seen.has(otherId)) return false
+      seen.add(otherId)
+      return true
     })
 
-    return { matches: matches || [], error: null }
+    console.log('[MATCH_DEBUG_FINAL]', {
+      partnershipId,
+      rawCount: matches?.length || 0,
+      deduplicatedCount: deduplicated.length,
+    })
+
+    return { matches: deduplicated, error: null }
   } catch (err: any) {
     console.error('[getComputedMatches] Error:', err)
     return { matches: [], error: err.message }
