@@ -42,12 +42,29 @@ export interface ComputedMatchData {
   }
 }
 
+interface RecomputeDetail {
+  partnershipId: string
+  displayName?: string | null
+  success: boolean
+  matchesComputed: number
+  candidatesEvaluated?: number
+  error?: string
+}
+
+interface RecomputeResult {
+  total: number
+  computed: number
+  errors: number
+  details: RecomputeDetail[]
+}
+
 export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps) {
   const [selectedPartnership, setSelectedPartnership] = useState<PartnershipData | null>(null)
   const [matches, setMatches] = useState<ComputedMatchData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [recomputing, setRecomputing] = useState(false)
+  const [recomputeResult, setRecomputeResult] = useState<RecomputeResult | null>(null)
   const { toast } = useToast()
 
   const handlePartnershipSelect = (partnership: PartnershipData, computedMatches: ComputedMatchData[]) => {
@@ -74,6 +91,7 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
     }
 
     setRecomputing(true)
+    setRecomputeResult(null)
     try {
       const response = await fetch('/api/admin/recompute-matches', {
         method: 'POST',
@@ -82,6 +100,7 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
       const data = await response.json()
 
       if (data.success) {
+        setRecomputeResult(data.result)
         toast({
           title: 'Matches Recalculated',
           description: `Computed ${data.result.computed} matches for ${data.result.total} partnerships. ${data.result.errors} errors.`,
@@ -130,6 +149,45 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
           <p className="text-xs text-gray-500 mt-2">
             Recalculates matches for all partnerships with completed surveys. This may take several minutes.
           </p>
+
+          {recomputeResult && (
+            <div className="mt-4 border rounded-lg overflow-hidden">
+              <div className={`px-3 py-2 text-sm font-medium ${
+                recomputeResult.computed > 0
+                  ? 'bg-green-50 text-green-800 border-b border-green-200'
+                  : 'bg-amber-50 text-amber-800 border-b border-amber-200'
+              }`}>
+                {recomputeResult.total} partnerships evaluated | {recomputeResult.computed} matches computed | {recomputeResult.errors} errors
+              </div>
+              <div className="divide-y text-xs">
+                {recomputeResult.details.map((d) => (
+                  <div key={d.partnershipId} className={`px-3 py-2 flex items-start gap-2 ${
+                    d.error ? 'bg-red-50' : d.matchesComputed > 0 ? 'bg-green-50' : 'bg-gray-50'
+                  }`}>
+                    <span className="shrink-0 mt-0.5">
+                      {d.error ? '!' : d.matchesComputed > 0 ? '+' : '-'}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="font-medium text-gray-800">{d.displayName || 'Unknown'}</span>
+                      <span className="font-mono text-gray-400 ml-1">({d.partnershipId.slice(0, 8)})</span>
+                      {typeof d.candidatesEvaluated === 'number' && (
+                        <span className="text-gray-500 ml-2">{d.candidatesEvaluated} evaluated</span>
+                      )}
+                      {d.matchesComputed > 0 && (
+                        <span className="text-green-700 ml-1">{d.matchesComputed} matches</span>
+                      )}
+                      {d.error && (
+                        <div className="text-red-700 mt-0.5 break-all">{d.error}</div>
+                      )}
+                      {!d.error && d.matchesComputed === 0 && !d.candidatesEvaluated && (
+                        <span className="text-gray-500 ml-2">0 matches (no error reported)</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -44,8 +44,10 @@ export interface RecomputeAllResult {
   errors: number
   details: Array<{
     partnershipId: string
+    displayName: string | null
     success: boolean
     matchesComputed: number
+    candidatesEvaluated: number
     error?: string
   }>
 }
@@ -85,7 +87,7 @@ export async function computeMatchesForPartnership(
   partnershipId: string,
   runId: string | null = null
 ): Promise<ComputeMatchesResult> {
-  console.log(`[computeMatches] *** ENTERED computeMatchesForPartnership id=${partnershipId} engine=${ENGINE_VERSION} ***`)
+  console.log(`[computeMatches] BUILD_MARKER=2026-02-13T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
 
   const adminClient = createAdminClient()
   let matchesComputed = 0
@@ -391,7 +393,8 @@ export async function computeMatchesForPartnership(
       }
     }
 
-    console.log(`[computeMatches] DONE ${currentPartnership.display_name}: ${matchesComputed} matches, ${candidatesEvaluated} evaluated, ${noSurvey} no-survey, ${constraintsFailed} constraints-failed, ${errors} errors`)
+    const summary = `${candidatesEvaluated} evaluated, ${noSurvey} no-survey, ${constraintsFailed} constraints-failed, ${errors} errors`
+    console.log(`[computeMatches] DONE ${currentPartnership.display_name}: ${matchesComputed} matches, ${summary}`)
 
     await updateRunStatus(adminClient, runId, {
       status: errors > 0 && matchesComputed === 0 ? 'error' : 'success',
@@ -401,7 +404,14 @@ export async function computeMatchesForPartnership(
       error_message: errors > 0 ? `${errors} scoring errors` : null,
     })
 
-    return { success: true, matchesComputed, candidatesEvaluated, errors }
+    // Include diagnostic summary when 0 matches so admin UI can show why
+    const errorMsg = matchesComputed === 0 && candidatesEvaluated > 0
+      ? `0 matches: ${summary}`
+      : errors > 0
+        ? `${errors} scoring errors`
+        : undefined
+
+    return { success: true, matchesComputed, candidatesEvaluated, errors, error: errorMsg }
   } catch (error: any) {
     console.error(`[computeMatches] Fatal error for partnership ${partnershipId}:`, error)
     await updateRunStatus(adminClient, runId, {
@@ -423,6 +433,7 @@ export async function computeMatchesForPartnership(
  * Recompute matches for all live partnerships.
  */
 export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
+  console.log(`[recomputeAllMatches] BUILD_MARKER=2026-02-13T1 engine=${ENGINE_VERSION}`)
   const adminClient = createAdminClient()
   const details: RecomputeAllResult['details'] = []
 
@@ -459,8 +470,10 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
 
       details.push({
         partnershipId: partnership.id,
+        displayName: partnership.display_name,
         success: result.success,
         matchesComputed: result.matchesComputed,
+        candidatesEvaluated: result.candidatesEvaluated,
         error: result.error,
       })
     }

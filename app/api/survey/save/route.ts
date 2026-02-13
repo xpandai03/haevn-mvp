@@ -320,21 +320,41 @@ export async function POST(request: NextRequest) {
         console.warn('[API /survey/save] Could not insert match_compute_runs row:', runErr?.message)
       }
 
-      // Fire-and-forget: trigger async match computation (non-blocking)
-      import('@/lib/services/computeMatches')
-        .then(({ computeMatchesForPartnership }) =>
-          computeMatchesForPartnership(partnershipId, matchRunId)
-        )
-        .then((result) => {
-          if (result.success) {
-            console.log(`[API /survey/save] ✅ Async match complete: ${result.matchesComputed} matches for ${partnershipId}`)
-          } else {
-            console.error(`[API /survey/save] ⚠️ Async match failed: ${result.error}`)
-          }
-        })
-        .catch((err) => {
-          console.error('[API /survey/save] ❌ Async match error:', err)
-        })
+      // Await match computation — include result in response for observability
+      let matchResult: { computed: boolean; matchesFound: number; error?: string } = {
+        computed: false,
+        matchesFound: 0,
+      }
+      try {
+        const { computeMatchesForPartnership } = await import('@/lib/services/computeMatches')
+        const result = await computeMatchesForPartnership(partnershipId, matchRunId)
+        matchResult = {
+          computed: result.success,
+          matchesFound: result.matchesComputed,
+          error: result.error,
+        }
+        if (result.success) {
+          console.log(`[API /survey/save] Match compute done: ${result.matchesComputed} matches for ${partnershipId}`)
+        } else {
+          console.error(`[API /survey/save] Match compute failed: ${result.error}`)
+        }
+      } catch (matchErr: any) {
+        console.error('[API /survey/save] Match compute error:', matchErr)
+        matchResult = { computed: false, matchesFound: 0, error: matchErr?.message || 'Unknown error' }
+      }
+
+      console.log('[API /survey/save] Saved successfully:', {
+        partnershipId,
+        userId: user.id,
+        completionPct,
+        currentStep: currentQuestionIndex
+      })
+
+      return NextResponse.json({
+        success: true,
+        error: null,
+        matchResult,
+      })
     }
 
     console.log('[API /survey/save] Saved successfully:', {

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`[API /admin/recompute-matches] Admin ${user.email} triggered recompute`)
+    console.log(`[API /admin/recompute-matches] BUILD_MARKER=2026-02-13T1 engine=5cat-v3 Admin ${user.email} triggered recompute`)
 
     // Trigger recomputation (this may take a while)
     const result = await recomputeAllMatches()
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         total: result.total,
         computed: result.computed,
         errors: result.errors,
-        details: result.details.slice(0, 10), // Return first 10 for preview
+        details: result.details, // Full per-partnership breakdown
       },
     })
   } catch (error: any) {
