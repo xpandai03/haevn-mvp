@@ -69,7 +69,7 @@ export default async function DashboardPage() {
           profile={profile}
           membershipTier={partnership?.tier}
           stats={stats}
-          showCompleteProfileCTA={partnership?.profileState !== 'live'}
+          showCompleteProfileCTA={partnership?.profileState !== 'live' && !profile?.photoUrl}
           partnershipId={partnership?.id}
         />
 
@@ -77,6 +77,7 @@ export default async function DashboardPage() {
         <MatchesSection
           totalMatches={stats.matches}
           currentIndex={1}
+          membershipTier={partnership?.tier}
         />
 
 

@@ -9,6 +9,7 @@ import { MatchProfileView } from '@/components/MatchProfileView'
 interface MatchesSectionProps {
   totalMatches: number
   currentIndex?: number
+  membershipTier?: 'free' | 'plus'
 }
 
 /** Adapt a ComputedMatchCard to the shape MatchProfileView expects */
@@ -32,12 +33,14 @@ function toProfileViewMatch(match: ComputedMatchCard) {
 
 export function MatchesSection({
   totalMatches,
-  currentIndex = 1
+  currentIndex = 1,
+  membershipTier = 'free'
 }: MatchesSectionProps) {
   const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMatch, setSelectedMatch] = useState<ComputedMatchCard | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Fetch matches from computed_matches table
   useEffect(() => {
@@ -60,6 +63,12 @@ export function MatchesSection({
   }
 
   const handleConnect = async (partnershipId: string) => {
+    // Free users cannot send connection requests — show upgrade modal
+    if (membershipTier === 'free') {
+      setShowUpgradeModal(true)
+      return
+    }
+
     try {
       const { canSend, reason } = await canSendHandshake(partnershipId)
       if (!canSend) {
@@ -189,6 +198,32 @@ export function MatchesSection({
         onConnect={handleConnect}
         onPass={handlePass}
       />
+
+      {/* Upgrade Modal for Free Users */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-6 mx-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Upgrade to Connect
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Sending connection requests is a premium feature. Upgrade your membership to start connecting with your matches.
+            </p>
+            <button
+              className="w-full h-11 bg-[#1B9A9A] hover:bg-[#178787] text-white font-semibold rounded-full mb-3 transition-colors"
+              onClick={() => setShowUpgradeModal(false)}
+            >
+              Upgrade Now
+            </button>
+            <button
+              className="w-full h-11 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
+              onClick={() => setShowUpgradeModal(false)}
+            >
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
