@@ -18,6 +18,7 @@ import {
   calculateCompatibility,
   normalizeAnswers,
   validateNormalizedAnswers,
+  resolveToCanonicalKey,
   type RawAnswers,
   type CompatibilityTier,
 } from '@/lib/matching'
@@ -167,17 +168,104 @@ export async function computeMatchesForPartnership(
     const currentAnswers = currentCompletedSurvey.answers_json as RawAnswers
     const currentIsCouple = currentPartnership.profile_type === 'couple'
 
-    // STEP 1: Log raw keys
+    // =========================================================================
+    // KEY MISMATCH DIAGNOSTIC — exact comparison of DB keys vs alias map
+    // =========================================================================
     const rawKeys = Object.keys(currentAnswers)
-    console.log(`[computeMatches] RAW answer keys (${rawKeys.length}): ${rawKeys.join(', ')}`)
 
+    // 1. Print first 20 raw keys from DB
+    console.log(`[KEY-DIAG] ===== RAW DB KEYS (first 20 of ${rawKeys.length}) =====`)
+    for (let i = 0; i < Math.min(20, rawKeys.length); i++) {
+      const k = rawKeys[i]
+      const resolved = resolveToCanonicalKey(k)
+      const mapped = resolved !== k
+      console.log(`[KEY-DIAG]   [${i}] "${k}" → resolved="${resolved}" mapped=${mapped}`)
+    }
+
+    // 2. Print all keys in INTERNAL_TO_CSV alias map
+    const ALIAS_MAP_KEYS = [
+      'q1_age','q2_gender_identity','q2a_pronouns','q3_sexual_orientation',
+      'q3a_fidelity','q3b_kinsey_scale','q3c_partner_kinsey_preference',
+      'q4_relationship_status','q6_relationship_styles','q6a_connection_type',
+      'q6b_who_to_meet','q6c_couple_connection','q6d_couple_permissions',
+      'q7_emotional_exclusivity','q8_sexual_exclusivity','q9_intentions',
+      'q9a_sex_or_more','q9b_dating_readiness','q10_attachment_style',
+      'q10a_emotional_availability','q11_love_languages','q12_conflict_resolution',
+      'q12a_messaging_pace','q13_lifestyle_alignment','q13a_languages',
+      'q14a_cultural_alignment','q14b_cultural_identity','q15_time_availability',
+      'q16_typical_availability','q16a_first_meet_preference','q18_substances',
+      'q19a_max_distance','q19b_distance_priority','q19c_mobility',
+      'q20_discretion','q20a_photo_sharing','q20b_how_out','q21_platform_use',
+      'q22_spirituality_sexuality','q23_erotic_styles','q24_experiences',
+      'q25_chemistry_vs_emotion','q25a_frequency','q26_roles',
+      'q27_body_type_self','q27_body_type_preferences','q28_hard_boundaries',
+      'q29_maybe_boundaries','q30_safer_sex','q30a_fluid_bonding',
+      'q31_health_testing','q32_looking_for','q33_kinks','q33a_experience_level',
+      'q34_exploration','q34a_variety','q35_agreements','q35a_structure',
+      'q36_social_energy','q36a_outgoing','q37_empathy','q37a_harmony',
+      'q38_jealousy','q38a_emotional_reactive',
+    ]
+    console.log(`[KEY-DIAG] ===== ALIAS MAP has ${ALIAS_MAP_KEYS.length} internal keys =====`)
+
+    // 3. Compare: DB keys NOT in alias map
+    const aliasSet = new Set(ALIAS_MAP_KEYS.map(k => k.toLowerCase()))
+    // Also add CSV keys (Q1, Q2, etc.) as recognized
+    const CSV_KEYS = [
+      'Q1','Q2','Q2a','Q3','Q3a','Q3b','Q3c','Q4','Q6','Q6a','Q6b','Q6c','Q6d',
+      'Q7','Q8','Q9','Q9a','Q9b','Q10','Q10a','Q11','Q12','Q12a','Q13','Q13a',
+      'Q14a','Q14b','Q15','Q16','Q16a','Q18','Q19a','Q19b','Q19c','Q20','Q20a',
+      'Q20b','Q21','Q22','Q23','Q24','Q25','Q25a','Q26','Q27','Q27b','Q28','Q29',
+      'Q30','Q30a','Q31','Q32','Q33','Q33a','Q34','Q34a','Q35','Q35a','Q36','Q36a',
+      'Q37','Q37a','Q38','Q38a',
+    ]
+    const csvSet = new Set(CSV_KEYS.map(k => k.toLowerCase()))
+    const allRecognized = new Set([...aliasSet, ...csvSet])
+
+    const dbKeysNotInMap: string[] = []
+    const dbKeysInMap: string[] = []
+    for (const k of rawKeys) {
+      if (allRecognized.has(k.toLowerCase())) {
+        dbKeysInMap.push(k)
+      } else {
+        dbKeysNotInMap.push(k)
+      }
+    }
+
+    // 4. Compare: alias map keys NOT in DB
+    const rawKeySetLower = new Set(rawKeys.map(k => k.toLowerCase()))
+    const aliasKeysNotInDb = ALIAS_MAP_KEYS.filter(k => !rawKeySetLower.has(k.toLowerCase()))
+
+    console.log(`[KEY-DIAG] ===== COMPARISON RESULTS =====`)
+    console.log(`[KEY-DIAG] DB keys recognized by alias map: ${dbKeysInMap.length}/${rawKeys.length}`)
+    console.log(`[KEY-DIAG] DB keys NOT in alias map (${dbKeysNotInMap.length}): ${dbKeysNotInMap.join(', ') || '(none)'}`)
+    console.log(`[KEY-DIAG] Alias map keys NOT in DB (${aliasKeysNotInDb.length}): ${aliasKeysNotInDb.join(', ') || '(none)'}`)
+
+    // 5. Log the raw value types for first 5 keys (to check if answers_json is actually populated)
+    console.log(`[KEY-DIAG] ===== SAMPLE VALUES (first 5) =====`)
+    for (let i = 0; i < Math.min(5, rawKeys.length); i++) {
+      const k = rawKeys[i]
+      const v = (currentAnswers as any)[k]
+      console.log(`[KEY-DIAG]   "${k}": type=${typeof v} isArray=${Array.isArray(v)} value=${JSON.stringify(v)?.slice(0, 100)}`)
+    }
+
+    // 6. Now normalize and check the result
     const normalizedCurrentAnswers = normalizeAnswers(currentAnswers)
-
-    // STEP 1: Validate normalization
-    const currentValidation = validateNormalizedAnswers(normalizedCurrentAnswers, 'CURRENT')
-    console.log(`[computeMatches] NORMALIZED CURRENT:`, JSON.stringify(currentValidation))
     const normalizedKeys = Object.keys(normalizedCurrentAnswers)
-    console.log(`[computeMatches] NORMALIZED keys (${normalizedKeys.length}): ${normalizedKeys.join(', ')}`)
+
+    console.log(`[KEY-DIAG] ===== POST-NORMALIZATION =====`)
+    console.log(`[KEY-DIAG] Input keys: ${rawKeys.length} → Output keys: ${normalizedKeys.length}`)
+    console.log(`[KEY-DIAG] Normalized keys: ${normalizedKeys.join(', ')}`)
+
+    // Check critical scoring keys
+    const criticalForScoring = ['Q9','Q6','Q3','Q10','Q10a','Q20','Q23','Q26','Q28','Q30']
+    const presentCritical = criticalForScoring.filter(k => (normalizedCurrentAnswers as any)[k] !== undefined)
+    const missingCritical = criticalForScoring.filter(k => (normalizedCurrentAnswers as any)[k] === undefined)
+    console.log(`[KEY-DIAG] Critical scoring keys present (${presentCritical.length}/${criticalForScoring.length}): ${presentCritical.join(', ')}`)
+    console.log(`[KEY-DIAG] Critical scoring keys MISSING (${missingCritical.length}): ${missingCritical.join(', ') || '(none)'}`)
+
+    // Validate normalization
+    const currentValidation = validateNormalizedAnswers(normalizedCurrentAnswers, 'CURRENT')
+    console.log(`[KEY-DIAG] Validation:`, JSON.stringify(currentValidation))
 
     // =========================================================================
     // 3. Fetch ALL candidate partnerships (live, with display_name)
