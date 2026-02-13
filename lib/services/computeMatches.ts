@@ -248,24 +248,38 @@ export async function computeMatchesForPartnership(
       console.log(`[KEY-DIAG]   "${k}": type=${typeof v} isArray=${Array.isArray(v)} value=${JSON.stringify(v)?.slice(0, 100)}`)
     }
 
-    // 6. Now normalize and check the result
+    // 6. Normalize and verify the EXACT object that calculateCompatibility will receive
     const normalizedCurrentAnswers = normalizeAnswers(currentAnswers)
+
+    // =========================================================================
+    // NORMALIZED-KEYS DIAGNOSTIC — prove what the object actually contains
+    // =========================================================================
     const normalizedKeys = Object.keys(normalizedCurrentAnswers)
+    console.log(`[NORMALIZED-KEYS] CURRENT Object.keys (${normalizedKeys.length}):`, JSON.stringify(normalizedKeys))
+    console.log(`[NORMALIZED-KEYS] First 20:`, JSON.stringify(normalizedKeys.slice(0, 20)))
 
-    console.log(`[KEY-DIAG] ===== POST-NORMALIZATION =====`)
-    console.log(`[KEY-DIAG] Input keys: ${rawKeys.length} → Output keys: ${normalizedKeys.length}`)
-    console.log(`[KEY-DIAG] Normalized keys: ${normalizedKeys.join(', ')}`)
+    // Direct property access — exact string literals the scorers use
+    console.log(`[CHECK-Q9] normalizedCurrentAnswers["Q9"] =`, JSON.stringify((normalizedCurrentAnswers as any)["Q9"]))
+    console.log(`[CHECK-Q10a] normalizedCurrentAnswers["Q10a"] =`, JSON.stringify((normalizedCurrentAnswers as any)["Q10a"]))
+    console.log(`[CHECK-Q6] normalizedCurrentAnswers["Q6"] =`, JSON.stringify((normalizedCurrentAnswers as any)["Q6"]))
+    console.log(`[CHECK-Q3] normalizedCurrentAnswers["Q3"] =`, JSON.stringify((normalizedCurrentAnswers as any)["Q3"]))
+    console.log(`[CHECK-Q20] normalizedCurrentAnswers["Q20"] =`, JSON.stringify((normalizedCurrentAnswers as any)["Q20"]))
 
-    // Check critical scoring keys
-    const criticalForScoring = ['Q9','Q6','Q3','Q10','Q10a','Q20','Q23','Q26','Q28','Q30']
-    const presentCritical = criticalForScoring.filter(k => (normalizedCurrentAnswers as any)[k] !== undefined)
-    const missingCritical = criticalForScoring.filter(k => (normalizedCurrentAnswers as any)[k] === undefined)
-    console.log(`[KEY-DIAG] Critical scoring keys present (${presentCritical.length}/${criticalForScoring.length}): ${presentCritical.join(', ')}`)
-    console.log(`[KEY-DIAG] Critical scoring keys MISSING (${missingCritical.length}): ${missingCritical.join(', ') || '(none)'}`)
+    // Now check if the OLD internal keys are still present (they should NOT be)
+    console.log(`[CHECK-q9_intentions] normalizedCurrentAnswers["q9_intentions"] =`, JSON.stringify((normalizedCurrentAnswers as any)["q9_intentions"]))
+    console.log(`[CHECK-q10a_emotional_availability] normalizedCurrentAnswers["q10a_emotional_availability"] =`, JSON.stringify((normalizedCurrentAnswers as any)["q10a_emotional_availability"]))
+    console.log(`[CHECK-q6_relationship_styles] normalizedCurrentAnswers["q6_relationship_styles"] =`, JSON.stringify((normalizedCurrentAnswers as any)["q6_relationship_styles"]))
 
-    // Validate normalization
+    // Types and shapes for critical keys
+    const CRITICAL_KEYS = ['Q9','Q6','Q3','Q10','Q10a','Q20','Q23','Q26','Q28','Q30'] as const
+    console.log(`[NORMALIZED-KEYS] === CRITICAL KEY PRESENCE + TYPE ===`)
+    for (const k of CRITICAL_KEYS) {
+      const v = (normalizedCurrentAnswers as any)[k]
+      console.log(`[NORMALIZED-KEYS]   ${k}: exists=${v !== undefined}, type=${typeof v}, isArray=${Array.isArray(v)}, value=${JSON.stringify(v)?.slice(0, 120)}`)
+    }
+
     const currentValidation = validateNormalizedAnswers(normalizedCurrentAnswers, 'CURRENT')
-    console.log(`[KEY-DIAG] Validation:`, JSON.stringify(currentValidation))
+    console.log(`[NORMALIZED-KEYS] Validation:`, JSON.stringify(currentValidation))
 
     // =========================================================================
     // 3. Fetch ALL candidate partnerships (live, with display_name)
@@ -426,21 +440,31 @@ export async function computeMatchesForPartnership(
 
         const normalizedMatchAnswers = normalizeAnswers(completedAnswers)
 
-        // STEP 1: Validate candidate normalization
-        const matchValidation = validateNormalizedAnswers(normalizedMatchAnswers, candidate.display_name || candidate.id)
-        console.log(`[computeMatches]   Candidate NORMALIZED:`, JSON.stringify(matchValidation))
-
-        // =====================================================================
-        // VALUE SHAPE DIAGNOSTIC — log exact value + type for critical keys
-        // before they reach the scoring engine
-        // =====================================================================
-        const DIAG_KEYS = ['Q9', 'Q6', 'Q3', 'Q10', 'Q10a', 'Q20', 'Q23', 'Q26', 'Q28', 'Q30', 'Q7', 'Q8', 'Q11', 'Q25'] as const
+        // =================================================================
+        // CANDIDATE NORMALIZED-KEYS DIAGNOSTIC (first 2 candidates only)
+        // =================================================================
         if (candidatesEvaluated <= 2) {
-          console.log(`[VALUE-DIAG] ===== CURRENT vs CANDIDATE ${candidate.display_name} =====`)
-          for (const k of DIAG_KEYS) {
-            const curVal = (normalizedCurrentAnswers as any)[k]
-            const canVal = (normalizedMatchAnswers as any)[k]
-            console.log(`[VALUE-DIAG]   ${k}: current=${JSON.stringify(curVal)} (type=${typeof curVal}, isArray=${Array.isArray(curVal)}) | candidate=${JSON.stringify(canVal)} (type=${typeof canVal}, isArray=${Array.isArray(canVal)})`)
+          const candNormKeys = Object.keys(normalizedMatchAnswers)
+          console.log(`[NORMALIZED-KEYS] CANDIDATE "${candidate.display_name}" Object.keys (${candNormKeys.length}):`, JSON.stringify(candNormKeys))
+          console.log(`[NORMALIZED-KEYS] CANDIDATE First 20:`, JSON.stringify(candNormKeys.slice(0, 20)))
+
+          // Direct property access — same string literals the scorers use
+          console.log(`[CHECK-Q9] candidate["Q9"] =`, JSON.stringify((normalizedMatchAnswers as any)["Q9"]))
+          console.log(`[CHECK-Q10a] candidate["Q10a"] =`, JSON.stringify((normalizedMatchAnswers as any)["Q10a"]))
+          console.log(`[CHECK-Q6] candidate["Q6"] =`, JSON.stringify((normalizedMatchAnswers as any)["Q6"]))
+          console.log(`[CHECK-Q3] candidate["Q3"] =`, JSON.stringify((normalizedMatchAnswers as any)["Q3"]))
+          console.log(`[CHECK-Q20] candidate["Q20"] =`, JSON.stringify((normalizedMatchAnswers as any)["Q20"]))
+
+          // Check if OLD internal keys leaked through
+          console.log(`[CHECK-q9_intentions] candidate["q9_intentions"] =`, JSON.stringify((normalizedMatchAnswers as any)["q9_intentions"]))
+          console.log(`[CHECK-q10a_emotional_availability] candidate["q10a_emotional_availability"] =`, JSON.stringify((normalizedMatchAnswers as any)["q10a_emotional_availability"]))
+
+          // Types and shapes for critical keys
+          const CAND_CRITICAL = ['Q9','Q6','Q3','Q10','Q10a','Q20','Q23','Q26','Q28','Q30'] as const
+          console.log(`[NORMALIZED-KEYS] === CANDIDATE CRITICAL KEY PRESENCE + TYPE ===`)
+          for (const k of CAND_CRITICAL) {
+            const v = (normalizedMatchAnswers as any)[k]
+            console.log(`[NORMALIZED-KEYS]   ${k}: exists=${v !== undefined}, type=${typeof v}, isArray=${Array.isArray(v)}, value=${JSON.stringify(v)?.slice(0, 120)}`)
           }
         }
 
