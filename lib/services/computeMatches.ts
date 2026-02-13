@@ -85,6 +85,8 @@ export async function computeMatchesForPartnership(
   partnershipId: string,
   runId: string | null = null
 ): Promise<ComputeMatchesResult> {
+  console.log(`[computeMatches] *** ENTERED computeMatchesForPartnership id=${partnershipId} engine=${ENGINE_VERSION} ***`)
+
   const adminClient = createAdminClient()
   let matchesComputed = 0
   let candidatesEvaluated = 0
@@ -96,7 +98,7 @@ export async function computeMatchesForPartnership(
   })
 
   try {
-    console.log(`[computeMatches] START partnership=${partnershipId} engine=${ENGINE_VERSION}`)
+    console.log(`[computeMatches] START partnership=${partnershipId}`)
 
     // =========================================================================
     // 1. Fetch current partnership
@@ -437,12 +439,21 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
     }
 
     console.log(`[recomputeAllMatches] Starting: ${allPartnerships.length} live partnerships`)
+    for (const p of allPartnerships) {
+      console.log(`[recomputeAllMatches]   queued: ${p.display_name} (${p.id})`)
+    }
 
     let totalComputed = 0
     let totalErrors = 0
 
-    for (const partnership of allPartnerships) {
+    for (let i = 0; i < allPartnerships.length; i++) {
+      const partnership = allPartnerships[i]
+      console.log(`[recomputeAllMatches] >>> LOOP ${i + 1}/${allPartnerships.length}: ${partnership.display_name} (${partnership.id})`)
+
       const result = await computeMatchesForPartnership(partnership.id)
+
+      console.log(`[recomputeAllMatches] <<< LOOP ${i + 1} result: success=${result.success} matches=${result.matchesComputed} evaluated=${result.candidatesEvaluated} errors=${result.errors} error=${result.error || 'none'}`)
+
       totalComputed += result.matchesComputed
       totalErrors += result.errors
 
