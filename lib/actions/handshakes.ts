@@ -12,7 +12,7 @@ export interface HandshakeData {
   a_consent: boolean
   b_consent: boolean
   match_score: number | null
-  state: 'viewed' | 'matched' | 'dismissed'
+  state: 'pending' | 'viewed' | 'matched' | 'dismissed'
   triggered_at: string
   matched_at: string | null
   partnership_a?: any
@@ -105,24 +105,20 @@ export async function sendHandshakeRequest(
       return { success: false, error: reason }
     }
 
-    // Ensure consistent ordering (lower UUID first)
-    const [a_partnership, b_partnership] =
-      currentPartnershipId < toPartnershipId
-        ? [currentPartnershipId, toPartnershipId]
-        : [toPartnershipId, currentPartnershipId]
+    // Initiator is always a_partnership, target is always b_partnership
+    const a_partnership = currentPartnershipId
+    const b_partnership = toPartnershipId
 
-    const isInitiator = currentPartnershipId === a_partnership
-
-    // Insert handshake
+    // Insert handshake — initiator consents, receiver has not yet
     const { data: handshake, error: insertError } = await adminClient
       .from('handshakes')
       .insert({
         a_partnership,
         b_partnership,
-        a_consent: isInitiator,
-        b_consent: !isInitiator,
+        a_consent: true,
+        b_consent: false,
         match_score: matchScore || null,
-        state: 'viewed',
+        state: 'pending',
         triggered_at: new Date().toISOString()
       })
       .select()
