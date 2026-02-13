@@ -42,6 +42,14 @@ export interface ComputedMatchData {
   }
 }
 
+interface PairDiag {
+  candidate: string
+  score: number
+  tier: string
+  outcome: string
+  reason?: string
+}
+
 interface RecomputeDetail {
   partnershipId: string
   displayName?: string | null
@@ -49,6 +57,8 @@ interface RecomputeDetail {
   matchesComputed: number
   candidatesEvaluated?: number
   error?: string
+  pairDiagnostics?: PairDiag[]
+  upsertError?: string
 }
 
 interface RecomputeResult {
@@ -161,28 +171,45 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
               </div>
               <div className="divide-y text-xs">
                 {recomputeResult.details.map((d) => (
-                  <div key={d.partnershipId} className={`px-3 py-2 flex items-start gap-2 ${
-                    d.error ? 'bg-red-50' : d.matchesComputed > 0 ? 'bg-green-50' : 'bg-gray-50'
+                  <div key={d.partnershipId} className={`px-3 py-2 ${
+                    d.upsertError ? 'bg-red-50' : d.matchesComputed > 0 ? 'bg-green-50' : 'bg-gray-50'
                   }`}>
-                    <span className="shrink-0 mt-0.5">
-                      {d.error ? '!' : d.matchesComputed > 0 ? '+' : '-'}
-                    </span>
-                    <div className="min-w-0">
-                      <span className="font-medium text-gray-800">{d.displayName || 'Unknown'}</span>
-                      <span className="font-mono text-gray-400 ml-1">({d.partnershipId.slice(0, 8)})</span>
-                      {typeof d.candidatesEvaluated === 'number' && (
-                        <span className="text-gray-500 ml-2">{d.candidatesEvaluated} evaluated</span>
-                      )}
-                      {d.matchesComputed > 0 && (
-                        <span className="text-green-700 ml-1">{d.matchesComputed} matches</span>
-                      )}
-                      {d.error && (
-                        <div className="text-red-700 mt-0.5 break-all">{d.error}</div>
-                      )}
-                      {!d.error && d.matchesComputed === 0 && !d.candidatesEvaluated && (
-                        <span className="text-gray-500 ml-2">0 matches (no error reported)</span>
-                      )}
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0 mt-0.5 font-mono">
+                        {d.upsertError ? '!!' : d.matchesComputed > 0 ? '+' : '-'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-gray-800">{d.displayName || 'Unknown'}</span>
+                        <span className="font-mono text-gray-400 ml-1">({d.partnershipId.slice(0, 8)})</span>
+                        {typeof d.candidatesEvaluated === 'number' && (
+                          <span className="text-gray-500 ml-2">{d.candidatesEvaluated} evaluated</span>
+                        )}
+                        {d.matchesComputed > 0 && (
+                          <span className="text-green-700 ml-1">{d.matchesComputed} stored</span>
+                        )}
+                        {d.error && (
+                          <div className="text-red-700 mt-0.5 break-all">{d.error}</div>
+                        )}
+                        {d.upsertError && (
+                          <div className="text-red-800 mt-0.5 font-medium">UPSERT FAILED: {d.upsertError}</div>
+                        )}
+                      </div>
                     </div>
+                    {/* Per-pair breakdown */}
+                    {d.pairDiagnostics && d.pairDiagnostics.length > 0 && (
+                      <div className="mt-1.5 ml-5 space-y-0.5">
+                        {d.pairDiagnostics.map((p, i) => (
+                          <div key={i} className={`font-mono px-2 py-0.5 rounded ${
+                            p.outcome === 'stored' ? 'bg-green-100 text-green-800' :
+                            p.outcome === 'scoring-error' ? 'bg-red-100 text-red-800' :
+                            p.outcome === 'constraint-failed' ? 'bg-amber-100 text-amber-800' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            vs {p.candidate}: {p.score}% {p.tier} [{p.outcome}]{p.reason ? ` — ${p.reason}` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

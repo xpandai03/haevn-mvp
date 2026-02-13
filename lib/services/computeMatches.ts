@@ -30,12 +30,22 @@ const ENGINE_VERSION = '5cat-v3'
 // TYPES
 // =============================================================================
 
+export interface PairDiagnostic {
+  candidate: string
+  score: number
+  tier: string
+  outcome: 'stored' | 'constraint-failed' | 'no-survey' | 'no-members' | 'handshake' | 'scoring-error'
+  reason?: string
+}
+
 export interface ComputeMatchesResult {
   success: boolean
   matchesComputed: number
   candidatesEvaluated: number
   errors: number
   error?: string
+  pairDiagnostics?: PairDiagnostic[]
+  upsertError?: string
 }
 
 export interface RecomputeAllResult {
@@ -49,6 +59,8 @@ export interface RecomputeAllResult {
     matchesComputed: number
     candidatesEvaluated: number
     error?: string
+    pairDiagnostics?: PairDiagnostic[]
+    upsertError?: string
   }>
 }
 
@@ -266,6 +278,7 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     let noSurvey = 0
     let constraintsFailed = 0
+    const pairDiagnostics: PairDiagnostic[] = []
     const matchRows: Array<{
       partnership_a: string
       partnership_b: string
@@ -279,9 +292,11 @@ export async function computeMatchesForPartnership(
     for (const candidate of allPartnerships) {
       candidatesEvaluated++
 
+      const name = candidate.display_name || candidate.id.slice(0, 8)
+
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
-        console.log(`[PAIR-SKIP] ${candidate.display_name}: handshake exists`)
+        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'handshake' })
         continue
       }
 
@@ -289,7 +304,7 @@ export async function computeMatchesForPartnership(
       const memberIds = membersByPartnership.get(candidate.id)
       if (!memberIds || memberIds.length === 0) {
         noSurvey++
-        console.log(`[PAIR-SKIP] ${candidate.display_name}: no members`)
+        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'no-members' })
         continue
       }
 
@@ -304,18 +319,13 @@ export async function computeMatchesForPartnership(
 
       if (!candidateRawAnswers) {
         noSurvey++
-        console.log(`[PAIR-SKIP] ${candidate.display_name}: no completed survey (members=${memberIds.length})`)
+        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'no-survey', reason: `members=${memberIds.length}` })
         continue
       }
 
       try {
         const matchIsCouple = candidate.profile_type === 'couple'
 
-        // =====================================================================
-        // UNIFIED SCORING CALL — identical pipeline to Connections view
-        // calculateCompatibilityFromRaw does: normalizeAnswers() → calculateCompatibility()
-        // Raw DB answers go in, CompatibilityResult comes out. No intermediate steps.
-        // =====================================================================
         const result = calculateCompatibilityFromRaw(
           currentRawAnswers,
           candidateRawAnswers,
@@ -323,26 +333,18 @@ export async function computeMatchesForPartnership(
           matchIsCouple
         )
 
-        // DIAGNOSTIC: Log every scored pair BEFORE any filtering
-        console.log(`[PAIR-RESULT]`, JSON.stringify({
-          current: currentPartnership.display_name,
-          candidate: candidate.display_name,
-          overallScore: result.overallScore,
-          tier: result.tier,
-          constraints: result.constraints,
-          breakdown: result.categories?.map(c => ({
-            category: c.category,
-            score: c.score,
-            included: c.included,
-            matchedSubs: c.subScores.filter(s => s.matched).length,
-            totalSubs: c.subScores.length,
-          })),
-        }))
+        console.log(`[PAIR-RESULT] ${currentPartnership.display_name} vs ${name}: score=${result.overallScore} tier=${result.tier} constraints=${result.constraints.passed}`)
 
         // Skip if constraints failed
         if (!result.constraints.passed) {
           constraintsFailed++
-          console.log(`[PAIR-SKIP] ${candidate.display_name}: constraint failed — ${result.constraints.blockedBy}: ${result.constraints.reason}`)
+          pairDiagnostics.push({
+            candidate: name,
+            score: result.overallScore,
+            tier: result.tier,
+            outcome: 'constraint-failed',
+            reason: `${result.constraints.blockedBy}: ${result.constraints.reason}`,
+          })
           continue
         }
 
@@ -368,32 +370,44 @@ export async function computeMatchesForPartnership(
         })
 
         matchesComputed++
+        pairDiagnostics.push({
+          candidate: name,
+          score: result.overallScore,
+          tier: result.tier,
+          outcome: 'stored',
+        })
 
       } catch (matchError: any) {
         errors++
-        console.error(
-          `[computeMatches] Error scoring ${candidate.id}:`,
-          matchError?.message || matchError
-        )
+        pairDiagnostics.push({
+          candidate: name,
+          score: 0,
+          tier: '-',
+          outcome: 'scoring-error',
+          reason: matchError?.message || String(matchError),
+        })
       }
     }
 
     // =========================================================================
     // 8. Batch upsert all match rows
     // =========================================================================
+    let upsertErrorMsg: string | undefined
     if (matchRows.length > 0) {
+      console.log(`[computeMatches] Upserting ${matchRows.length} rows (${matchesComputed} pairs)`)
       const { error: upsertError } = await adminClient
         .from('computed_matches')
         .upsert(matchRows, { onConflict: 'partnership_a,partnership_b' })
 
       if (upsertError) {
-        console.error(`[computeMatches] Batch upsert FAILED:`, upsertError)
+        upsertErrorMsg = upsertError.message || JSON.stringify(upsertError)
+        console.error(`[computeMatches] Batch upsert FAILED:`, upsertErrorMsg)
         errors += matchRows.length / 2
         matchesComputed = 0
       }
     }
 
-    const summary = `${candidatesEvaluated} evaluated, ${noSurvey} no-survey, ${constraintsFailed} constraints-failed, ${errors} errors`
+    const summary = `${candidatesEvaluated} evaluated, ${noSurvey} no-survey, ${constraintsFailed} constraints-failed, ${matchRows.length} rows built, ${errors} errors`
     console.log(`[computeMatches] DONE ${currentPartnership.display_name}: ${matchesComputed} matches, ${summary}`)
 
     await updateRunStatus(adminClient, runId, {
@@ -404,14 +418,21 @@ export async function computeMatchesForPartnership(
       error_message: errors > 0 ? `${errors} scoring errors` : null,
     })
 
-    // Include diagnostic summary when 0 matches so admin UI can show why
     const errorMsg = matchesComputed === 0 && candidatesEvaluated > 0
-      ? `0 matches: ${summary}`
+      ? `0 matches: ${summary}${upsertErrorMsg ? ` | UPSERT: ${upsertErrorMsg}` : ''}`
       : errors > 0
         ? `${errors} scoring errors`
         : undefined
 
-    return { success: true, matchesComputed, candidatesEvaluated, errors, error: errorMsg }
+    return {
+      success: true,
+      matchesComputed,
+      candidatesEvaluated,
+      errors,
+      error: errorMsg,
+      pairDiagnostics,
+      upsertError: upsertErrorMsg,
+    }
   } catch (error: any) {
     console.error(`[computeMatches] Fatal error for partnership ${partnershipId}:`, error)
     await updateRunStatus(adminClient, runId, {
@@ -475,6 +496,8 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
         matchesComputed: result.matchesComputed,
         candidatesEvaluated: result.candidatesEvaluated,
         error: result.error,
+        pairDiagnostics: result.pairDiagnostics,
+        upsertError: result.upsertError,
       })
     }
 
