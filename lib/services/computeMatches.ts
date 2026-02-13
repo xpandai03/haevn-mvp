@@ -430,6 +430,20 @@ export async function computeMatchesForPartnership(
         const matchValidation = validateNormalizedAnswers(normalizedMatchAnswers, candidate.display_name || candidate.id)
         console.log(`[computeMatches]   Candidate NORMALIZED:`, JSON.stringify(matchValidation))
 
+        // =====================================================================
+        // VALUE SHAPE DIAGNOSTIC — log exact value + type for critical keys
+        // before they reach the scoring engine
+        // =====================================================================
+        const DIAG_KEYS = ['Q9', 'Q6', 'Q3', 'Q10', 'Q10a', 'Q20', 'Q23', 'Q26', 'Q28', 'Q30', 'Q7', 'Q8', 'Q11', 'Q25'] as const
+        if (candidatesEvaluated <= 2) {
+          console.log(`[VALUE-DIAG] ===== CURRENT vs CANDIDATE ${candidate.display_name} =====`)
+          for (const k of DIAG_KEYS) {
+            const curVal = (normalizedCurrentAnswers as any)[k]
+            const canVal = (normalizedMatchAnswers as any)[k]
+            console.log(`[VALUE-DIAG]   ${k}: current=${JSON.stringify(curVal)} (type=${typeof curVal}, isArray=${Array.isArray(curVal)}) | candidate=${JSON.stringify(canVal)} (type=${typeof canVal}, isArray=${Array.isArray(canVal)})`)
+          }
+        }
+
         // Calculate compatibility using the 5-category engine
         const result = calculateCompatibility({
           partnerA: {

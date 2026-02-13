@@ -301,6 +301,10 @@ export function getBothAnswers<T extends string | string[] | boolean | undefined
   return { user: userVal, match: matchVal }
 }
 
+// DIAGNOSTIC COUNTER — only log first N calls to avoid log flood
+let _diagLogCount = 0
+const DIAG_LOG_LIMIT = 60 // Log first 60 calls (covers ~2 candidate pairs × all keys)
+
 /**
  * Safely get an array answer, returning empty array if not present.
  */
@@ -309,7 +313,13 @@ export function getArrayAnswer(
   key: keyof NormalizedAnswers
 ): string[] {
   const val = answers[key]
-  return asArray(val as string | string[] | undefined)
+  const result = asArray(val as string | string[] | undefined)
+  // DIAGNOSTIC: log what goes in and what comes out
+  if (_diagLogCount < DIAG_LOG_LIMIT) {
+    _diagLogCount++
+    console.log(`[getArrayAnswer] key="${String(key)}" rawVal=${JSON.stringify(val)} (type=${typeof val}, isArray=${Array.isArray(val)}) → result=${JSON.stringify(result)} (len=${result.length})`)
+  }
+  return result
 }
 
 /**
@@ -320,5 +330,11 @@ export function getStringAnswer(
   key: keyof NormalizedAnswers
 ): string | undefined {
   const val = answers[key]
-  return asSingle(val as string | string[] | undefined)
+  const result = asSingle(val as string | string[] | undefined)
+  // DIAGNOSTIC: log what goes in and what comes out
+  if (_diagLogCount < DIAG_LOG_LIMIT) {
+    _diagLogCount++
+    console.log(`[getStringAnswer] key="${String(key)}" rawVal=${JSON.stringify(val)} (type=${typeof val}, isArray=${Array.isArray(val)}) → result=${JSON.stringify(result)}`)
+  }
+  return result
 }

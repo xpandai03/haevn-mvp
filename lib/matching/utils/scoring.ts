@@ -163,8 +163,24 @@ export function proximityScore(
  * @param subScores - Array of sub-scores with weights
  * @returns Weighted average score (0-100)
  */
+// DIAGNOSTIC COUNTER
+let _waDiagCount = 0
+
 export function weightedAverage(subScores: SubScore[]): number {
   const matchedScores = subScores.filter(s => s.matched)
+  const unmatchedScores = subScores.filter(s => !s.matched)
+
+  // DIAGNOSTIC: log what gets filtered in/out (first 10 calls = 10 categories across ~2 pairs)
+  if (_waDiagCount < 10) {
+    _waDiagCount++
+    console.log(`[weightedAverage] total=${subScores.length} matched=${matchedScores.length} unmatched=${unmatchedScores.length}`)
+    for (const s of unmatchedScores) {
+      console.log(`[weightedAverage]   DROPPED: key=${s.key} score=${s.score} weight=${s.weight} reason=${s.reason || '-'}`)
+    }
+    for (const s of matchedScores) {
+      console.log(`[weightedAverage]   KEPT: key=${s.key} score=${s.score} weight=${s.weight}`)
+    }
+  }
 
   if (matchedScores.length === 0) return 0
 
