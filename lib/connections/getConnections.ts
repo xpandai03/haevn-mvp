@@ -9,8 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import {
-  calculateCompatibility,
-  normalizeAnswers,
+  calculateCompatibilityFromRaw,
   type RawAnswers,
   type CompatibilityTier,
   type CategoryScore,
@@ -255,21 +254,14 @@ async function calculateConnectionCompatibility(
   const currentIsCouple = currentProfileType === 'couple'
   const otherIsCouple = otherProfileType === 'couple'
 
-  // Calculate compatibility using NEW engine
-  const result = calculateCompatibility({
-    partnerA: {
-      partnershipId: currentPartnershipId,
-      userId: '',
-      answers: normalizeAnswers(currentAnswers),
-      isCouple: currentIsCouple,
-    },
-    partnerB: {
-      partnershipId: otherPartnershipId,
-      userId: '',
-      answers: normalizeAnswers(otherAnswers),
-      isCouple: otherIsCouple,
-    },
-  })
+  // Calculate compatibility using unified pipeline
+  // calculateCompatibilityFromRaw handles normalization internally
+  const result = calculateCompatibilityFromRaw(
+    currentAnswers,
+    otherAnswers,
+    currentIsCouple,
+    otherIsCouple
+  )
 
   return {
     overallScore: result.overallScore,
