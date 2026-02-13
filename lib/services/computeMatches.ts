@@ -109,6 +109,7 @@ export async function computeMatchesForPartnership(
 
     if (currentError || !currentPartnership) {
       const errMsg = `Partnership not found: ${currentError?.message || 'Unknown error'}`
+      console.log(`[computeMatches] EARLY-EXIT: ${errMsg}`)
       await updateRunStatus(adminClient, runId, {
         status: 'error',
         finished_at: new Date().toISOString(),
@@ -126,7 +127,8 @@ export async function computeMatchesForPartnership(
       .eq('partnership_id', partnershipId)
 
     if (!currentMembers || currentMembers.length === 0) {
-      const errMsg = 'Partnership has no members'
+      const errMsg = `Partnership has no members (id=${partnershipId})`
+      console.log(`[computeMatches] EARLY-EXIT: ${errMsg}`)
       await updateRunStatus(adminClient, runId, {
         status: 'error',
         finished_at: new Date().toISOString(),
@@ -141,12 +143,20 @@ export async function computeMatchesForPartnership(
       .select('user_id, answers_json, completion_pct')
       .in('user_id', currentMemberIds)
 
+    console.log(`[computeMatches] Survey lookup: members=${currentMemberIds.length} surveys=${currentSurveys?.length ?? 0} completed=${currentSurveys?.filter(s => s.completion_pct >= 100 && s.answers_json).length ?? 0}`)
+
     const currentCompletedSurvey = currentSurveys?.find(
       s => s.completion_pct >= 100 && s.answers_json
     )
 
     if (!currentCompletedSurvey?.answers_json) {
-      const errMsg = 'Partnership has no completed survey'
+      const errMsg = `Partnership has no completed survey (id=${partnershipId}, members=${currentMemberIds.length}, surveys=${currentSurveys?.length ?? 0})`
+      console.log(`[computeMatches] EARLY-EXIT: ${errMsg}`)
+      if (currentSurveys) {
+        for (const s of currentSurveys) {
+          console.log(`[computeMatches]   survey: user=${s.user_id} completion=${s.completion_pct}% hasAnswers=${!!s.answers_json}`)
+        }
+      }
       await updateRunStatus(adminClient, runId, {
         status: 'error',
         finished_at: new Date().toISOString(),
