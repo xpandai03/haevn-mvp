@@ -114,7 +114,7 @@ export function MatchesSection({
           Matches ({currentIndex} of {displayCount})
         </h3>
         <Link
-          href="/matches"
+          href="/dashboard/matches"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
           View All
@@ -160,7 +160,7 @@ export function MatchesSection({
               Array.from({ length: Math.min(totalMatches, 5) }).map((_, i) => (
                 <Link
                   key={i}
-                  href="/matches"
+                  href="/dashboard/matches"
                   className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
                 >
                   <span className="text-xs text-gray-400">Match {i + 1}</span>

@@ -14,6 +14,15 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  async redirects() {
+    return [
+      {
+        source: '/matches',
+        destination: '/dashboard/matches',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig
