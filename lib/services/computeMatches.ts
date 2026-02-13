@@ -267,6 +267,7 @@ export async function computeMatchesForPartnership(
 
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
+        console.log(`[PAIR-SKIP] ${candidate.display_name}: handshake exists`)
         continue
       }
 
@@ -274,6 +275,7 @@ export async function computeMatchesForPartnership(
       const memberIds = membersByPartnership.get(candidate.id)
       if (!memberIds || memberIds.length === 0) {
         noSurvey++
+        console.log(`[PAIR-SKIP] ${candidate.display_name}: no members`)
         continue
       }
 
@@ -288,6 +290,7 @@ export async function computeMatchesForPartnership(
 
       if (!candidateRawAnswers) {
         noSurvey++
+        console.log(`[PAIR-SKIP] ${candidate.display_name}: no completed survey (members=${memberIds.length})`)
         continue
       }
 
@@ -306,9 +309,26 @@ export async function computeMatchesForPartnership(
           matchIsCouple
         )
 
+        // DIAGNOSTIC: Log every scored pair BEFORE any filtering
+        console.log(`[PAIR-RESULT]`, JSON.stringify({
+          current: currentPartnership.display_name,
+          candidate: candidate.display_name,
+          overallScore: result.overallScore,
+          tier: result.tier,
+          constraints: result.constraints,
+          breakdown: result.categories?.map(c => ({
+            category: c.category,
+            score: c.score,
+            included: c.included,
+            matchedSubs: c.subScores.filter(s => s.matched).length,
+            totalSubs: c.subScores.length,
+          })),
+        }))
+
         // Skip if constraints failed
         if (!result.constraints.passed) {
           constraintsFailed++
+          console.log(`[PAIR-SKIP] ${candidate.display_name}: constraint failed — ${result.constraints.blockedBy}: ${result.constraints.reason}`)
           continue
         }
 
