@@ -7,11 +7,40 @@
 
 import type { RawAnswers, NormalizedAnswers } from '../types'
 import { MULTI_SELECT_QUESTIONS } from '../constants/questionMappings'
+import { getInternalToCsvIdMap } from '@/lib/survey/questions'
+
+// Build mapping once at module load: internal IDs → CSV IDs
+// e.g. { 'q9_intentions': 'Q9', 'q10a_emotional_availability': 'Q10a', ... }
+let _internalToCsvMap: Record<string, string> | null = null
+function getKeyMap(): Record<string, string> {
+  if (!_internalToCsvMap) {
+    _internalToCsvMap = getInternalToCsvIdMap()
+  }
+  return _internalToCsvMap
+}
+
+/**
+ * Convert raw answers from internal key format (q9_intentions) to
+ * CSV key format (Q9) that the matching engine expects.
+ * Keys already in CSV format are passed through unchanged.
+ */
+function convertToCsvKeys(raw: RawAnswers): RawAnswers {
+  const keyMap = getKeyMap()
+  const converted: RawAnswers = {}
+
+  for (const [key, value] of Object.entries(raw)) {
+    const csvKey = keyMap[key] || key // Use CSV key if mapped, otherwise keep original
+    converted[csvKey] = value
+  }
+
+  return converted
+}
 
 /**
  * Normalize raw survey answers to consistent typed format.
  *
  * Handles:
+ * - Converting internal question IDs to CSV IDs (q9_intentions → Q9)
  * - Converting single values to arrays for multi-select questions
  * - Converting arrays to single values for single-select questions
  * - Handling null/undefined values
@@ -23,8 +52,11 @@ import { MULTI_SELECT_QUESTIONS } from '../constants/questionMappings'
 export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
   const normalized: NormalizedAnswers = {}
 
+  // Convert internal IDs (q9_intentions) to CSV IDs (Q9) first
+  const csvKeyed = convertToCsvKeys(raw)
+
   // Iterate through all known questions and normalize
-  for (const [key, value] of Object.entries(raw)) {
+  for (const [key, value] of Object.entries(csvKeyed)) {
     if (value === null || value === undefined) {
       continue
     }
@@ -32,19 +64,17 @@ export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
     const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(key as any)
 
     if (isMultiSelect) {
-      // Ensure array format for multi-select questions
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (normalized as any)[key] = normalizeToArray(value)
     } else {
-      // Ensure single value format for single-select questions
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (normalized as any)[key] = normalizeToSingle(value)
     }
   }
 
   // Handle special case: Q13a_required flag
-  if (raw.Q13a_required !== undefined) {
-    normalized.Q13a_required = Boolean(raw.Q13a_required)
+  if (csvKeyed.Q13a_required !== undefined) {
+    normalized.Q13a_required = Boolean(csvKeyed.Q13a_required)
   }
 
   return normalized

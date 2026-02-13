@@ -273,6 +273,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q9_intentions',
+        csvId: 'Q9',
         label: 'What are you looking for? (select all)',
         type: 'multiselect',
         options: [
@@ -289,6 +290,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q9a_sex_or_more',
+        csvId: 'Q9a',
         label: 'Are you seeking only sexual connection, or more?',
         type: 'select',
         options: [
@@ -304,6 +306,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q9b_dating_readiness',
+        csvId: 'Q9b',
         label: 'How ready are you to meet someone?',
         type: 'select',
         options: [
@@ -338,6 +341,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q10a_emotional_availability',
+        csvId: 'Q10a',
         label: 'How emotionally available are you right now?',
         type: 'slider',
         required: true,
@@ -348,6 +352,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q11_love_languages',
+        csvId: 'Q11',
         label: 'What are your love languages?',
         type: 'multiselect',
         options: [
@@ -378,6 +383,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q12a_messaging_pace',
+        csvId: 'Q12a',
         label: 'What messaging pace feels right?',
         type: 'select',
         options: [
@@ -400,6 +406,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q13_lifestyle_alignment',
+        csvId: 'Q13',
         label: 'How important is lifestyle alignment?',
         type: 'slider',
         required: true,
@@ -410,6 +417,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q13a_languages',
+        csvId: 'Q13a',
         label: 'Which languages do you speak comfortably?',
         type: 'multiselect',
         options: [
@@ -434,6 +442,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q14a_cultural_alignment',
+        csvId: 'Q14a',
         label: 'How important is shared cultural or worldview alignment?',
         type: 'slider',
         required: false,
@@ -444,6 +453,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q14b_cultural_identity',
+        csvId: 'Q14b',
         label: 'How do you describe your cultural or political identity?',
         type: 'textarea',
         placeholder: 'Share your perspective...',
@@ -452,6 +462,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q15_time_availability',
+        csvId: 'Q15',
         label: 'How much time can you realistically give new relationships?',
         type: 'select',
         options: [
@@ -467,6 +478,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q16_typical_availability',
+        csvId: 'Q16',
         label: 'When are you usually available to connect?',
         type: 'multiselect',
         options: [
@@ -482,6 +494,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q16a_first_meet_preference',
+        csvId: 'Q16a',
         label: 'How do you like to meet for the first time?',
         type: 'select',
         options: [
@@ -532,6 +545,7 @@ export const surveySections: SurveySection[] = [
       // },
       {
         id: 'q18_substances',
+        csvId: 'Q18',
         label: 'How do you relate to alcohol or other substances?',
         type: 'multiselect',
         options: [
@@ -549,6 +563,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q19a_max_distance',
+        csvId: 'Q19a',
         label: "What's the farthest distance you'd consider for connection?",
         type: 'select',
         options: [
@@ -564,6 +579,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q19b_distance_priority',
+        csvId: 'Q19b',
         label: 'Should distance affect matching priority?',
         type: 'select',
         options: [
@@ -577,6 +593,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q19c_mobility',
+        csvId: 'Q19c',
         label: 'How mobile are you?',
         type: 'select',
         options: [
@@ -598,6 +615,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q20_discretion',
+        csvId: 'Q20',
         label: 'How important is privacy/discretion?',
         type: 'slider',
         required: true,
@@ -608,6 +626,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q20a_photo_sharing',
+        csvId: 'Q20a',
         label: 'Are you comfortable sharing photos early on?',
         type: 'select',
         options: [
@@ -622,6 +641,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q20b_how_out',
+        csvId: 'Q20b',
         label: 'How public are you about your relationship style or erotic life?',
         type: 'select',
         options: [
@@ -636,6 +656,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q21_platform_use',
+        csvId: 'Q21',
         label: 'How do you see yourself using HAEVN?',
         type: 'select',
         options: [
@@ -647,6 +668,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q22_spirituality_sexuality',
+        csvId: 'Q22',
         label: 'Do you connect intimacy or sexuality with spirituality or personal growth?',
         type: 'select',
         options: [
@@ -668,6 +690,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q23_erotic_styles',
+        csvId: 'Q23',
         label: 'Which erotic styles resonate with you?',
         type: 'multiselect',
         options: [
@@ -686,6 +709,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q24_experiences',
+        csvId: 'Q24',
         label: 'Which experiences interest you?',
         type: 'multiselect',
         options: [
@@ -702,6 +726,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q25_chemistry_vs_emotion',
+        csvId: 'Q25',
         label: 'How do you tend to prioritize sexual chemistry and emotional connection?',
         type: 'select',
         options: [
@@ -716,6 +741,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q25a_frequency',
+        csvId: 'Q25a',
         label: 'Ideally, how often do you want erotic/sexual connection?',
         type: 'select',
         options: [
@@ -733,6 +759,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q26_roles',
+        csvId: 'Q26',
         label: 'Which sexual or relational roles interest you?',
         type: 'multiselect',
         options: [
@@ -751,6 +778,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q27_body_type_self',
+        csvId: 'Q27',
         label: 'How would you describe your body type?',
         type: 'select',
         options: [
@@ -768,6 +796,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q27_body_type_preferences',
+        csvId: 'Q27b',
         label: 'Do you have any body or physical preferences? (Select all that apply)',
         type: 'multiselect',
         options: [
@@ -786,6 +815,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q28_hard_boundaries',
+        csvId: 'Q28',
         label: 'Are there any clear limits or things that are always off-limits for you?',
         type: 'textarea',
         placeholder: 'Share anything that is always a no for you...',
@@ -794,6 +824,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q29_maybe_boundaries',
+        csvId: 'Q29',
         label: 'What activities intrigue you but need discussion first?',
         type: 'multiselect',
         options: [
@@ -811,6 +842,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q30_safer_sex',
+        csvId: 'Q30',
         label: 'What are your safer-sex preferences?',
         type: 'multiselect',
         options: [
@@ -827,6 +859,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q30a_fluid_bonding',
+        csvId: 'Q30a',
         label: 'Would you consider fluid bonding (sex without barriers)?',
         type: 'select',
         options: [
@@ -839,6 +872,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q31_health_testing',
+        csvId: 'Q31',
         label: 'How do you handle sexual health and testing?',
         type: 'select',
         options: [
@@ -861,6 +895,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q32_looking_for',
+        csvId: 'Q32',
         label: "Tell us about yourself and what you're looking for",
         type: 'textarea',
         placeholder: 'Share your authentic desires and intentions...',
@@ -908,6 +943,7 @@ export const surveySections: SurveySection[] = [
     questions: [
       {
         id: 'q34_exploration',
+        csvId: 'Q34',
         label: 'I enjoy exploring new erotic or relational experiences.',
         type: 'slider',
         required: true,
@@ -918,6 +954,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q34a_variety',
+        csvId: 'Q34a',
         label: "I'm drawn to variety and creativity in intimacy.",
         type: 'slider',
         required: true,
@@ -928,6 +965,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q35_agreements',
+        csvId: 'Q35',
         label: 'I value clear agreements and follow through on commitments.',
         type: 'slider',
         required: true,
@@ -938,6 +976,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q35a_structure',
+        csvId: 'Q35a',
         label: 'I like erotic and relational experiences to have some structure.',
         type: 'slider',
         required: true,
@@ -948,6 +987,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q36_social_energy',
+        csvId: 'Q36',
         label: 'I gain energy from social or erotic spaces.',
         type: 'slider',
         required: true,
@@ -958,6 +998,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q36a_outgoing',
+        csvId: 'Q36a',
         label: "In new situations, I'm usually outgoing and expressive.",
         type: 'slider',
         required: true,
@@ -968,6 +1009,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q37_empathy',
+        csvId: 'Q37',
         label: "I'm empathetic and attuned to my partner's needs.",
         type: 'slider',
         required: true,
@@ -978,6 +1020,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q37a_harmony',
+        csvId: 'Q37a',
         label: 'I like finding harmony and avoiding unnecessary conflict.',
         type: 'slider',
         required: true,
@@ -988,6 +1031,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q38_jealousy',
+        csvId: 'Q38',
         label: 'I sometimes struggle with jealousy or insecurity in relationships.',
         type: 'slider',
         required: false,
@@ -998,6 +1042,7 @@ export const surveySections: SurveySection[] = [
       },
       {
         id: 'q38a_emotional_reactive',
+        csvId: 'Q38a',
         label: 'I can be emotionally reactive in intimate or erotic situations.',
         type: 'slider',
         required: false,
@@ -1068,6 +1113,24 @@ function buildCsvAnswerMap(answers: Record<string, any>): Record<string, any> {
   })
 
   return csvAnswers
+}
+
+/**
+ * Build a static mapping from internal question IDs to CSV IDs.
+ * Used by the matching engine to convert stored survey answers
+ * (keyed by internal IDs like 'q9_intentions') to the format
+ * the engine expects (like 'Q9').
+ */
+export function getInternalToCsvIdMap(): Record<string, string> {
+  const map: Record<string, string> = {}
+  surveySections.forEach(section => {
+    section.questions.forEach(question => {
+      if (question.csvId) {
+        map[question.id] = question.csvId
+      }
+    })
+  })
+  return map
 }
 
 /**
