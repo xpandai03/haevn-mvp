@@ -4,28 +4,43 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ProfileCard, ProfileCardData } from '@/components/dashboard/ProfileCard'
-import { getMatches, MatchResult } from '@/lib/actions/matching'
+import { ProfileCard } from '@/components/dashboard/ProfileCard'
+import { getComputedMatchCards, type ComputedMatchCard } from '@/lib/actions/computedMatchCards'
 import { useAuth } from '@/lib/auth/context'
 import FullPageLoader from '@/components/ui/full-page-loader'
+
+/** Derive a "top factor" label from the highest-scoring category */
+function getTopFactor(breakdown: Record<string, { score: number }>): string {
+  const labels: Record<string, string> = {
+    goals_expectations: 'Goals & Expectations',
+    structure_fit: 'Structure Fit',
+    boundaries_comfort: 'Boundaries & Comfort',
+    sexual_energy: 'Sexual Energy',
+    openness_curiosity: 'Lifestyle Alignment',
+  }
+  const entries = Object.entries(breakdown)
+  if (entries.length === 0) return 'Compatible match'
+  const [bestKey] = entries.reduce((a, b) => (b[1].score > a[1].score ? b : a), entries[0])
+  return `Top factor: ${labels[bestKey] || bestKey}`
+}
 
 export default function MatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const [matches, setMatches] = useState<MatchResult[]>([])
+  const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load matches
+  // Load matches from computed_matches table
   useEffect(() => {
     async function loadMatches() {
       if (authLoading || !user) return
 
       try {
         setLoading(true)
-        const matchData = await getMatches('Bronze')
+        const matchData = await getComputedMatchCards('Bronze')
         setMatches(matchData)
-        console.log('[Matches] Loaded', matchData.length, 'matches')
+        console.log('[Matches] Loaded', matchData.length, 'computed matches')
       } catch (err: any) {
         console.error('[Matches] Error:', err)
         setError(err.message || 'Failed to load matches')
@@ -156,15 +171,15 @@ export default function MatchesPage() {
           // Matches List
           <div className="space-y-4">
             {matches.map((match) => (
-              <div key={match.partnership_id} className="w-full">
+              <div key={match.partnership.id} className="w-full">
                 <ProfileCard
                   profile={{
-                    id: match.partnership_id,
-                    photo: undefined, // TODO: Get from match data
-                    username: match.display_name || 'User',
-                    city: match.city,
-                    compatibilityPercentage: match.score?.compatibilityPercentage || 0,
-                    topFactor: match.score?.topFactor || 'Compatible match'
+                    id: match.partnership.id,
+                    photo: match.partnership.photo_url || undefined,
+                    username: match.partnership.display_name || 'User',
+                    city: match.partnership.city,
+                    compatibilityPercentage: match.score,
+                    topFactor: getTopFactor(match.breakdown)
                   }}
                   variant="match"
                   onClick={handleProfileClick}

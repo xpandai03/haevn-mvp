@@ -301,24 +301,39 @@ export async function POST(request: NextRequest) {
         .update({ survey_complete: true })
         .eq('user_id', user.id)
 
-      // Trigger match calculation (async, don't block response)
-      console.log('[API /survey/save] 🎯 Survey 100% complete - triggering match calculation')
-      const { computeMatchesForPartnership } = await import('@/lib/services/computeMatches')
-      computeMatchesForPartnership(partnershipId)
+      // Insert a match_compute_runs tracking row, then trigger async computation
+      console.log('[API /survey/save] 🎯 Survey 100% complete - queuing match calculation')
+      let matchRunId: string | null = null
+      try {
+        const { data: runRow } = await adminClient
+          .from('match_compute_runs')
+          .insert({
+            partnership_id: partnershipId,
+            trigger: 'survey_complete',
+            status: 'queued',
+          })
+          .select('id')
+          .single()
+        matchRunId = runRow?.id || null
+      } catch (runErr: any) {
+        // Table may not exist yet — log but don't block survey save
+        console.warn('[API /survey/save] Could not insert match_compute_runs row:', runErr?.message)
+      }
+
+      // Fire-and-forget: trigger async match computation (non-blocking)
+      import('@/lib/services/computeMatches')
+        .then(({ computeMatchesForPartnership }) =>
+          computeMatchesForPartnership(partnershipId, matchRunId)
+        )
         .then((result) => {
           if (result.success) {
-            console.log(
-              `[API /survey/save] ✅ Match calculation complete: ${result.matchesComputed} matches computed for partnership ${partnershipId}`
-            )
+            console.log(`[API /survey/save] ✅ Async match complete: ${result.matchesComputed} matches for ${partnershipId}`)
           } else {
-            console.error(
-              `[API /survey/save] ⚠️ Match calculation failed: ${result.error || 'Unknown error'}`
-            )
+            console.error(`[API /survey/save] ⚠️ Async match failed: ${result.error}`)
           }
         })
         .catch((err) => {
-          console.error('[API /survey/save] ❌ Match calculation error:', err)
-          // Don't fail the survey save if match calculation fails
+          console.error('[API /survey/save] ❌ Async match error:', err)
         })
     }
 

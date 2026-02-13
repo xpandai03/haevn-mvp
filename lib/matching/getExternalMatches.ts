@@ -251,12 +251,13 @@ export async function getExternalMatches(
   const excludedIds = await getExcludedPartnershipIds(adminClient, currentPartnershipId)
   excludedIds.add(currentPartnershipId) // Also exclude self
 
-  // 5. Fetch potential matches (same city/MSA, with display_name)
+  // 5. Fetch potential matches (live, with display_name)
   const { data: potentialMatches, error: matchesError } = await adminClient
     .from('partnerships')
     .select('id, display_name, short_bio, identity, profile_type, city, msa, age, membership_tier')
     .not('display_name', 'is', null)
     .neq('id', currentPartnershipId)
+    .eq('profile_state', 'live')
 
   if (matchesError || !potentialMatches) {
     console.error('[getExternalMatches] Failed to fetch potential matches:', matchesError)
@@ -264,6 +265,8 @@ export async function getExternalMatches(
   }
 
   // 6. Filter by location (same city or MSA) and exclusions
+  // Location enforcement: only same city or same MSA matches are shown.
+  // If neither party has location data, they are excluded.
   const locationFilteredMatches = potentialMatches.filter(p => {
     // Exclude already-interacted partnerships
     if (excludedIds.has(p.id)) return false
@@ -278,9 +281,7 @@ export async function getExternalMatches(
       return true
     }
 
-    // For now, also include matches without location restriction for testing
-    // TODO: Remove this fallback in production
-    return true
+    return false
   })
 
   // 7. Score each potential match

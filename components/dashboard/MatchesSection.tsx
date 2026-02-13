@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getMatches, MatchResult } from '@/lib/actions/matching'
+import { getComputedMatchCards, type ComputedMatchCard } from '@/lib/actions/computedMatchCards'
 import { canSendHandshake, sendHandshakeRequest } from '@/lib/actions/handshakes'
 import { MatchProfileView } from '@/components/MatchProfileView'
 
@@ -11,21 +11,40 @@ interface MatchesSectionProps {
   currentIndex?: number
 }
 
+/** Adapt a ComputedMatchCard to the shape MatchProfileView expects */
+function toProfileViewMatch(match: ComputedMatchCard) {
+  return {
+    partnership: {
+      id: match.partnership.id,
+      display_name: match.partnership.display_name,
+      short_bio: match.partnership.short_bio,
+      identity: match.partnership.identity,
+      city: match.partnership.city,
+      age: match.partnership.age,
+      discretion_level: 'standard',
+      photo_url: match.partnership.photo_url,
+    },
+    score: match.score,
+    tier: match.tier,
+    breakdown: { sections: match.breakdown },
+  }
+}
+
 export function MatchesSection({
   totalMatches,
   currentIndex = 1
 }: MatchesSectionProps) {
-  const [matches, setMatches] = useState<MatchResult[]>([])
+  const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null)
+  const [selectedMatch, setSelectedMatch] = useState<ComputedMatchCard | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
-  // Fetch matches on mount
+  // Fetch matches from computed_matches table
   useEffect(() => {
     async function fetchMatches() {
       try {
-        const data = await getMatches('Bronze')
-        setMatches(data.slice(0, 5)) // Only show first 5 on dashboard
+        const data = await getComputedMatchCards('Bronze', 5)
+        setMatches(data)
       } catch (err) {
         console.error('Failed to fetch matches:', err)
       } finally {
@@ -35,7 +54,7 @@ export function MatchesSection({
     fetchMatches()
   }, [])
 
-  const handleCardClick = (match: MatchResult) => {
+  const handleCardClick = (match: ComputedMatchCard) => {
     setSelectedMatch(match)
     setProfileOpen(true)
   }
@@ -63,7 +82,6 @@ export function MatchesSection({
 
   const handlePass = () => {
     setProfileOpen(false)
-    // Could track passed matches here if needed
   }
 
   // Get initials from name
@@ -165,7 +183,7 @@ export function MatchesSection({
 
       {/* Match Profile View - Full Screen */}
       <MatchProfileView
-        match={selectedMatch}
+        match={selectedMatch ? toProfileViewMatch(selectedMatch) : null}
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         onConnect={handleConnect}
