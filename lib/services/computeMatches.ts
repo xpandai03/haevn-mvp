@@ -106,6 +106,12 @@ export async function computeMatchesForPartnership(
   try {
     console.log(`[computeMatches] Starting match calculation for partnership: ${partnershipId}`)
 
+    // DIAGNOSTIC: Verify the key mapping is loaded
+    const { getInternalToCsvIdMap } = await import('@/lib/survey/questions')
+    const keyMap = getInternalToCsvIdMap()
+    const mapEntries = Object.entries(keyMap)
+    console.log(`[computeMatches] 🗺️ Key map has ${mapEntries.length} entries. Sample:`, mapEntries.slice(0, 5))
+
     // =========================================================================
     // 1. Fetch current partnership
     // =========================================================================
@@ -166,7 +172,29 @@ export async function computeMatchesForPartnership(
 
     const currentAnswers = currentCompletedSurvey.answers_json as RawAnswers
     const currentIsCouple = currentPartnership.profile_type === 'couple'
+
+    // DIAGNOSTIC: Log raw answer keys before normalization
+    const rawKeys = Object.keys(currentAnswers)
+    console.log(`[computeMatches] 🔑 RAW answer keys (${rawKeys.length}):`, rawKeys.slice(0, 15))
+    console.log(`[computeMatches] 🔑 RAW sample values:`, {
+      q9_intentions: currentAnswers['q9_intentions'],
+      Q9: currentAnswers['Q9'],
+      q6_relationship_styles: currentAnswers['q6_relationship_styles'],
+      Q6: currentAnswers['Q6'],
+    })
+
     const normalizedCurrentAnswers = normalizeAnswers(currentAnswers)
+
+    // DIAGNOSTIC: Log normalized answer keys after normalization
+    const normalizedKeys = Object.keys(normalizedCurrentAnswers)
+    console.log(`[computeMatches] 🔑 NORMALIZED answer keys (${normalizedKeys.length}):`, normalizedKeys.slice(0, 15))
+    console.log(`[computeMatches] 🔑 NORMALIZED sample values:`, {
+      Q9: (normalizedCurrentAnswers as any).Q9,
+      Q6: (normalizedCurrentAnswers as any).Q6,
+      Q10: (normalizedCurrentAnswers as any).Q10,
+      Q10a: (normalizedCurrentAnswers as any).Q10a,
+      Q20: (normalizedCurrentAnswers as any).Q20,
+    })
 
     // =========================================================================
     // 3. Fetch ALL candidate partnerships (live, with display_name)
@@ -305,6 +333,12 @@ export async function computeMatchesForPartnership(
         const matchIsCouple = candidate.profile_type === 'couple'
         const normalizedMatchAnswers = normalizeAnswers(completedAnswers)
 
+        // DIAGNOSTIC: Log first candidate's normalized answer sample
+        if (candidatesEvaluated <= 1) {
+          const matchNormKeys = Object.keys(normalizedMatchAnswers)
+          console.log(`[computeMatches] 🔑 CANDIDATE ${candidate.display_name} normalized keys (${matchNormKeys.length}):`, matchNormKeys.slice(0, 15))
+        }
+
         // Calculate compatibility using the 5-category engine
         const result = calculateCompatibility({
           partnerA: {
@@ -320,6 +354,24 @@ export async function computeMatchesForPartnership(
             isCouple: matchIsCouple,
           },
         })
+
+        // DIAGNOSTIC: Log full scoring result for first candidate
+        if (candidatesEvaluated <= 1) {
+          console.log(`[computeMatches] 📊 FULL RESULT for ${candidate.display_name}:`, JSON.stringify({
+            overallScore: result.overallScore,
+            tier: result.tier,
+            constraints: result.constraints,
+            lifestyleIncluded: result.lifestyleIncluded,
+            normalizedWeights: result.normalizedWeights,
+            categories: result.categories.map(c => ({
+              cat: c.category,
+              score: c.score,
+              included: c.included,
+              coverage: c.coverage,
+              subScores: c.subScores.map(s => ({ key: s.key, score: s.score, matched: s.matched })),
+            })),
+          }))
+        }
 
         // Skip if constraints failed
         if (!result.constraints.passed) {
