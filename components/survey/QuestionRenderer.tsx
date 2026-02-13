@@ -129,6 +129,20 @@ export function QuestionRenderer({
         {renderInfoButton()}
       </div>
 
+      {/* Subtext guidance below question */}
+      {question.subtext && (
+        <p
+          className="text-sm sm:text-base text-haevn-charcoal/70 leading-relaxed whitespace-pre-line -mt-1"
+          style={{
+            fontFamily: 'Roboto, Helvetica, sans-serif',
+            fontWeight: 400,
+            lineHeight: '160%'
+          }}
+        >
+          {question.subtext}
+        </p>
+      )}
+
       {/* SELECT - Single choice with cards */}
       {question.type === 'select' && question.options && (
         <div className="space-y-3">

@@ -14,6 +14,7 @@ export interface SurveyQuestion {
   displayCondition?: DisplayCondition | null // Parsed Display Logic condition
   tooltip?: string
   helperText?: string
+  subtext?: string
   min?: number
   max?: number
   step?: number
@@ -107,7 +108,8 @@ export const surveySections: SurveySection[] = [
         type: 'textarea',
         placeholder: 'Share your thoughts on commitment...',
         required: false,
-        helperText: "Everyone defines commitment differently. There's no right answer — just yours."
+        helperText: "Everyone defines commitment differently. There's no right answer — just yours.",
+        subtext: "Examples might include:\n• Complete monogamy (emotional and sexual exclusivity)\n• Emotional monogamy but sexual openness\n• Full openness with transparency and honesty\n• Commitment defined by shared values, not exclusivity\n\nHow do you define it for yourself?"
         // displayLogic removed - always shown per Rick's guidance (branching starts in Relationship Preferences)
       },
       {
