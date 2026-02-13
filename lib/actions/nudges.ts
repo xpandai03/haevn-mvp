@@ -11,6 +11,7 @@
 'use server'
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface Nudge {
   id: string // Nudge ID
@@ -292,11 +293,13 @@ export async function getSentNudges(): Promise<Nudge[]> {
 }
 
 /**
- * Send a nudge to another user
+ * Send a nudge to another partnership
  * Requires HAEVN+ membership
+ * @param targetPartnershipId - The partnership ID of the target (NOT auth user_id)
  */
-export async function sendNudge(recipientUserId: string): Promise<{ success: boolean; error?: string }> {
+export async function sendNudge(targetPartnershipId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -305,19 +308,35 @@ export async function sendNudge(recipientUserId: string): Promise<{ success: boo
   }
 
   try {
-    // Check if sender has HAEVN+ membership
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('membership_tier')
+    // Check if sender has HAEVN+ membership (via partnership_members → partnerships)
+    const { data: membership } = await adminClient
+      .from('partnership_members')
+      .select('partnership:partnerships(membership_tier)')
       .eq('user_id', user.id)
+      .order('role', { ascending: false })
+      .limit(1)
       .single()
 
-    if (profile?.membership_tier !== 'plus') {
+    const senderTier = (membership?.partnership as any)?.membership_tier
+    if (!senderTier || senderTier === 'free') {
       return { success: false, error: 'HAEVN+ membership required to send nudges' }
     }
 
+    // Resolve target partnership_id → owner user_id for the nudges FK
+    const { data: targetPartnership } = await adminClient
+      .from('partnerships')
+      .select('owner_id')
+      .eq('id', targetPartnershipId)
+      .single()
+
+    if (!targetPartnership?.owner_id) {
+      return { success: false, error: 'Target partnership not found' }
+    }
+
+    const recipientUserId = targetPartnership.owner_id
+
     // Check if nudge already exists
-    const { data: existingNudge } = await supabase
+    const { data: existingNudge } = await adminClient
       .from('nudges')
       .select('id')
       .eq('sender_id', user.id)
@@ -329,7 +348,7 @@ export async function sendNudge(recipientUserId: string): Promise<{ success: boo
     }
 
     // Create nudge
-    const { error: insertError } = await supabase
+    const { error: insertError } = await adminClient
       .from('nudges')
       .insert({
         sender_id: user.id,
@@ -341,7 +360,7 @@ export async function sendNudge(recipientUserId: string): Promise<{ success: boo
       return { success: false, error: 'Failed to send nudge' }
     }
 
-    console.log('[sendNudge] ✅ Nudge sent to user:', recipientUserId)
+    console.log('[sendNudge] Nudge sent to partnership:', targetPartnershipId, 'user:', recipientUserId)
     return { success: true }
 
   } catch (error) {

@@ -16,6 +16,7 @@ export interface ComputedMatchCard {
     city: string
     age: number
     photo_url?: string
+    membership_tier: 'free' | 'plus'
   }
   score: number
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
@@ -151,7 +152,7 @@ export async function getComputedMatchCards(
   const partnerIds = filteredMatches.map(m => m.otherPartnerId)
   const { data: partnerships } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, city, age')
+    .select('id, display_name, short_bio, identity, city, age, membership_tier')
     .in('id', partnerIds)
 
   const partnershipMap = new Map(
@@ -186,6 +187,9 @@ export async function getComputedMatchCards(
     const partner = partnershipMap.get(match.otherPartnerId)
     if (!partner) continue // Partner no longer exists or not live
 
+    const tier = partner.membership_tier
+    const normalizedTier: 'free' | 'plus' = (tier && tier !== 'free') ? 'plus' : 'free'
+
     results.push({
       partnership: {
         id: partner.id,
@@ -195,6 +199,7 @@ export async function getComputedMatchCards(
         city: partner.city || 'Unknown',
         age: partner.age || 0,
         photo_url: photoMap.get(partner.id),
+        membership_tier: normalizedTier,
       },
       score: match.score,
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',

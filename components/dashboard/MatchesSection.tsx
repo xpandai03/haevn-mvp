@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getComputedMatchCards, type ComputedMatchCard } from '@/lib/actions/computedMatchCards'
 import { canSendHandshake, sendHandshakeRequest } from '@/lib/actions/handshakes'
+import { sendNudge } from '@/lib/actions/nudges'
 import { MatchProfileView } from '@/components/MatchProfileView'
+import { useToast } from '@/hooks/use-toast'
 
 interface MatchesSectionProps {
   totalMatches: number
@@ -36,11 +38,13 @@ export function MatchesSection({
   currentIndex = 1,
   membershipTier = 'free'
 }: MatchesSectionProps) {
+  const { toast } = useToast()
   const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMatch, setSelectedMatch] = useState<ComputedMatchCard | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [actionStates, setActionStates] = useState<Record<string, 'pending' | 'nudged'>>({})
 
   // Fetch matches from computed_matches table
   useEffect(() => {
@@ -69,23 +73,45 @@ export function MatchesSection({
       return
     }
 
-    try {
-      const { canSend, reason } = await canSendHandshake(partnershipId)
-      if (!canSend) {
-        alert(reason || 'Cannot send connection request')
-        return
-      }
+    // Determine target's membership tier from selectedMatch
+    const targetTier = selectedMatch?.partnership.membership_tier ?? 'free'
 
-      const result = await sendHandshakeRequest(partnershipId, '')
-      if (result.success) {
-        alert('Connection request sent!')
-        setProfileOpen(false)
-      } else {
-        alert(result.error || 'Failed to send request')
+    if (targetTier === 'plus') {
+      // PLUS → PLUS: send handshake
+      try {
+        const { canSend, reason } = await canSendHandshake(partnershipId)
+        if (!canSend) {
+          toast({ title: 'Cannot Connect', description: reason || 'Cannot send connection request', variant: 'destructive' })
+          return
+        }
+
+        const result = await sendHandshakeRequest(partnershipId, '')
+        if (result.success) {
+          toast({ title: 'Request Sent', description: 'Connection request sent' })
+          setActionStates(prev => ({ ...prev, [partnershipId]: 'pending' }))
+          setProfileOpen(false)
+        } else {
+          toast({ title: 'Error', description: result.error || 'Failed to send request', variant: 'destructive' })
+        }
+      } catch (err) {
+        console.error('Error sending handshake:', err)
+        toast({ title: 'Error', description: 'Failed to send connection request', variant: 'destructive' })
       }
-    } catch (err) {
-      console.error('Error sending handshake:', err)
-      alert('Failed to send connection request')
+    } else {
+      // PLUS → FREE: send nudge
+      try {
+        const result = await sendNudge(partnershipId)
+        if (result.success) {
+          toast({ title: 'Nudge Sent', description: 'They\'ll be notified of your interest' })
+          setActionStates(prev => ({ ...prev, [partnershipId]: 'nudged' }))
+          setProfileOpen(false)
+        } else {
+          toast({ title: 'Error', description: result.error || 'Failed to send nudge', variant: 'destructive' })
+        }
+      } catch (err) {
+        console.error('Error sending nudge:', err)
+        toast({ title: 'Error', description: 'Failed to send nudge', variant: 'destructive' })
+      }
     }
   }
 
@@ -135,26 +161,38 @@ export function MatchesSection({
               ))
             ) : matches.length > 0 ? (
               // Real match cards
-              matches.map((match) => (
-                <button
-                  key={match.partnership.id}
-                  onClick={() => handleCardClick(match)}
-                  className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
-                >
-                  {/* Avatar with initials */}
-                  <div className="w-14 h-14 rounded-full bg-[#0F2A4A] flex items-center justify-center text-white text-lg font-bold">
-                    {getInitials(match.partnership.display_name)}
-                  </div>
-                  {/* Name */}
-                  <span className="text-xs font-medium text-gray-700 text-center px-2 truncate w-full">
-                    {match.partnership.display_name || 'Anonymous'}
-                  </span>
-                  {/* Match percentage */}
-                  <span className="text-xs text-[#1B9A9A] font-semibold">
-                    {match.score}% match
-                  </span>
-                </button>
-              ))
+              matches.map((match) => {
+                const actionState = actionStates[match.partnership.id]
+                return (
+                  <button
+                    key={match.partnership.id}
+                    onClick={() => handleCardClick(match)}
+                    className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 hover:shadow-md hover:border-gray-200 transition-all cursor-pointer relative"
+                  >
+                    {actionState && (
+                      <span className={`absolute top-1.5 right-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                        actionState === 'pending'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-teal-100 text-teal-700'
+                      }`}>
+                        {actionState === 'pending' ? 'Pending' : 'Nudged'}
+                      </span>
+                    )}
+                    {/* Avatar with initials */}
+                    <div className="w-14 h-14 rounded-full bg-[#0F2A4A] flex items-center justify-center text-white text-lg font-bold">
+                      {getInitials(match.partnership.display_name)}
+                    </div>
+                    {/* Name */}
+                    <span className="text-xs font-medium text-gray-700 text-center px-2 truncate w-full">
+                      {match.partnership.display_name || 'Anonymous'}
+                    </span>
+                    {/* Match percentage */}
+                    <span className="text-xs text-[#1B9A9A] font-semibold">
+                      {match.score}% match
+                    </span>
+                  </button>
+                )
+              })
             ) : totalMatches > 0 ? (
               // Placeholder cards if no real matches loaded yet
               Array.from({ length: Math.min(totalMatches, 5) }).map((_, i) => (
@@ -197,6 +235,7 @@ export function MatchesSection({
         onClose={() => setProfileOpen(false)}
         onConnect={handleConnect}
         onPass={handlePass}
+        targetMembershipTier={selectedMatch?.partnership.membership_tier}
       />
 
       {/* Upgrade Modal for Free Users */}

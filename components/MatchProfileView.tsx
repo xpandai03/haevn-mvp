@@ -23,6 +23,7 @@ interface MatchProfileViewProps {
   onClose: () => void
   onConnect?: (partnershipId: string) => void
   onPass?: (partnershipId: string) => void
+  targetMembershipTier?: 'free' | 'plus'
 }
 
 const TIER_LABELS = {
@@ -61,7 +62,7 @@ const CATEGORIES = [
   },
 ]
 
-export function MatchProfileView({ match, open, onClose, onConnect, onPass }: MatchProfileViewProps) {
+export function MatchProfileView({ match, open, onClose, onConnect, onPass, targetMembershipTier }: MatchProfileViewProps) {
   if (!match || !open) return null
 
   const { partnership, score, tier, breakdown } = match
@@ -202,7 +203,7 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass }: Ma
               if (onConnect) onConnect(partnership.id)
             }}
           >
-            CONNECT
+            {targetMembershipTier === 'free' ? 'NUDGE' : 'CONNECT'}
           </Button>
         </div>
       </div>
