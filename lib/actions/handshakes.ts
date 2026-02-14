@@ -340,6 +340,107 @@ export async function getIncomingHandshakeCount(): Promise<number> {
 }
 
 /**
+ * Incoming request card data for UI display
+ */
+export interface IncomingRequestCard {
+  handshakeId: string
+  partnershipId: string
+  displayName: string
+  city: string | null
+  age: number | null
+  identity: string | null
+  photoUrl: string | null
+  matchScore: number | null
+  shortBio: string | null
+  requestedAt: string
+}
+
+/**
+ * Get incoming handshake requests with enriched data for UI cards
+ */
+export async function getIncomingRequestCards(): Promise<IncomingRequestCard[]> {
+  try {
+    const supabase = await createClient()
+    const adminClient = createAdminClient()
+    const currentPartnershipId = await getCurrentPartnershipId()
+
+    const { data: handshakes, error } = await adminClient
+      .from('handshakes')
+      .select(`
+        id,
+        a_partnership,
+        b_partnership,
+        a_consent,
+        b_consent,
+        match_score,
+        triggered_at,
+        partnership_a:a_partnership(id, display_name, short_bio, city, age, identity),
+        partnership_b:b_partnership(id, display_name, short_bio, city, age, identity)
+      `)
+      .or(`and(a_partnership.eq.${currentPartnershipId},a_consent.eq.false),and(b_partnership.eq.${currentPartnershipId},b_consent.eq.false)`)
+      .neq('state', 'dismissed')
+      .order('triggered_at', { ascending: false })
+
+    if (error) {
+      console.error('[getIncomingRequestCards] Error:', error)
+      return []
+    }
+
+    if (!handshakes || handshakes.length === 0) {
+      return []
+    }
+
+    const requestCards: IncomingRequestCard[] = []
+
+    for (const handshake of handshakes) {
+      // Determine which side is the sender (the one who HAS consented)
+      const isCurrentA = handshake.a_partnership === currentPartnershipId
+      const senderPartnership = isCurrentA
+        ? (handshake.partnership_b as any)
+        : (handshake.partnership_a as any)
+
+      if (!senderPartnership) continue
+
+      // Get photo for the sender partnership
+      const { data: photoData } = await adminClient
+        .from('partnership_photos')
+        .select('storage_path')
+        .eq('partnership_id', senderPartnership.id)
+        .eq('is_primary', true)
+        .eq('photo_type', 'public')
+        .maybeSingle()
+
+      let photoUrl: string | null = null
+      if (photoData?.storage_path) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('partnership-photos')
+          .getPublicUrl(photoData.storage_path)
+        photoUrl = publicUrl
+      }
+
+      requestCards.push({
+        handshakeId: handshake.id,
+        partnershipId: senderPartnership.id,
+        displayName: senderPartnership.display_name || 'User',
+        city: senderPartnership.city,
+        age: senderPartnership.age,
+        identity: senderPartnership.identity,
+        photoUrl,
+        matchScore: handshake.match_score,
+        shortBio: senderPartnership.short_bio,
+        requestedAt: handshake.triggered_at,
+      })
+    }
+
+    return requestCards
+  } catch (error: any) {
+    console.error('[getIncomingRequestCards] Error:', error)
+    return []
+  }
+}
+
+/**
  * Connection card data for UI display
  */
 export interface ConnectionCardData {
