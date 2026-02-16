@@ -216,6 +216,19 @@ export default function LoginPage() {
                 minLength={6}
                 className="border-haevn-navy rounded-xl"
               />
+              <div className="mt-2 text-right">
+                <Link
+                  href="/auth/reset-password"
+                  className="text-haevn-teal hover:underline font-medium"
+                  style={{
+                    fontFamily: 'Roboto, Helvetica, sans-serif',
+                    fontWeight: 400,
+                    fontSize: '13px'
+                  }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             {error && (
