@@ -60,6 +60,7 @@ export default function ZipCodePage() {
 
       if (!data.valid) {
         setValidationError(data.message || "We're currently available only in the Austin Metro Area.")
+        window.open('https://www.haevn.co/waitlist', '_blank')
       } else {
         setValidationError(null)
         console.log('ZIP validated:', data)

@@ -39,6 +39,7 @@ export default function SignupStep3() {
       } else {
         setDetectedCity(null)
         setError('Sorry, HAEVN is not available in this area yet.')
+        window.open('https://www.haevn.co/waitlist', '_blank')
       }
     } else {
       setDetectedCity(null)
