@@ -39,22 +39,6 @@ export default function SignupStep2() {
     router.push('/auth/signup/step-1')
   }
 
-  /** Return a user-friendly string no matter what the error shape is. */
-  const friendlyError = (err: any, fallback: string): string => {
-    const msg: string = err?.message || String(err || '')
-    // Never surface raw technical / JSON-parse errors to the user
-    if (
-      msg.includes('Unexpected end of JSON') ||
-      msg.includes('SyntaxError') ||
-      msg.includes('Failed to fetch') ||
-      msg.includes('NetworkError') ||
-      msg.includes('Load failed')
-    ) {
-      return fallback
-    }
-    return msg || fallback
-  }
-
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -69,28 +53,41 @@ export default function SignupStep2() {
     setIsLoading(true)
 
     try {
-      // Create Supabase account
-      const { error: signUpError } = await signUp(email, password, {
-        full_name: firstName
+      // Step A: Create user via server-side admin API (bypasses GoTrue edge cases)
+      console.log('[Signup] Creating account via server-side API for:', email)
+      const apiResponse = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, metadata: { full_name: firstName } })
       })
 
-      if (signUpError) {
-        setError(friendlyError(
-          signUpError,
-          'Signup failed. Please try again or use a different email.'
-        ))
+      const apiText = await apiResponse.text()
+      console.log('[Signup] Server response status:', apiResponse.status, 'body:', apiText)
+
+      let apiResult: any
+      try {
+        apiResult = JSON.parse(apiText)
+      } catch {
+        setError(`Server error (HTTP ${apiResponse.status}). Please try again.`)
         setIsLoading(false)
         return
       }
 
-      // Auto-login after signup
+      if (!apiResponse.ok || !apiResult.success) {
+        setError(apiResult.error || `Signup failed (${apiResult.code || 'unknown'}). Please try again.`)
+        setIsLoading(false)
+        return
+      }
+
+      console.log('[Signup] Account created via API! User:', apiResult.userId)
+
+      // Step B: Sign in with the newly created account
+      console.log('[Signup] Signing in...')
       const { error: signInError } = await signIn(email, password)
 
       if (signInError) {
-        setError(friendlyError(
-          signInError,
-          'Account created but auto-login failed. Please try signing in manually.'
-        ))
+        console.error('[Signup] Sign-in failed after account creation:', signInError)
+        setError(signInError?.message || 'Account created but login failed. Please try signing in from the login page.')
         setIsLoading(false)
         return
       }
@@ -102,7 +99,7 @@ export default function SignupStep2() {
       router.push('/auth/signup/step-3')
     } catch (err: any) {
       console.error('[Signup] Unexpected error:', err)
-      setError(friendlyError(err, 'Something went wrong. Please try again.'))
+      setError(err?.message || 'Something went wrong. Please try again.')
       setIsLoading(false)
     }
   }
