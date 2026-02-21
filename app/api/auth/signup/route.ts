@@ -4,148 +4,215 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 /**
  * POST /api/auth/signup
  *
- * Server-side signup using the Supabase service-role client (same one
- * used by /api/dev/seed and /api/health/supabase).
+ * Robust server-side signup that handles GoTrue returning empty/malformed
+ * responses. Strategy:
  *
- * Flow:
- * 1. Try auth.admin.createUser() directly
- * 2. If user already exists → delete remnant, retry
- * 3. Always return JSON
+ * 1. Try admin createUser (fast path, works when GoTrue is healthy)
+ * 2. If that fails, call GoTrue /signup directly via fetch (safe parsing)
+ * 3. Verify the user was actually created by attempting signIn
+ * 4. If signIn works → user exists, return success
+ * 5. If nothing works → return combined diagnostics
  */
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+/** Safe fetch + JSON parse helper — never throws on bad responses. */
+async function safeFetch(
+  url: string,
+  opts: RequestInit
+): Promise<{ status: number; data: any; raw: string; ok: boolean }> {
+  try {
+    const res = await fetch(url, opts)
+    const raw = await res.text()
+    let data: any = null
+    try {
+      data = raw ? JSON.parse(raw) : null
+    } catch {
+      // non-JSON response — keep data as null
+    }
+    return { status: res.status, data, raw: raw.slice(0, 500), ok: res.ok }
+  } catch (e: any) {
+    return { status: 0, data: null, raw: e?.message || 'fetch failed', ok: false }
+  }
+}
+
 export async function POST(request: Request) {
+  console.log('SIGNUP_BUILD_MARKER=2026-02-21T2')
+
   let step = 'init'
+  const diagnostics: string[] = []
+
   try {
     step = 'parse_body'
     const body = await request.json()
     const { email, password, metadata } = body
 
     if (!email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Email and password are required.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Email and password are required.' }, { status: 400 })
     }
     if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 6 characters.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Password must be at least 6 characters.' }, { status: 400 })
     }
 
-    // Use the same service-role client that works in seed/health routes
-    step = 'create_client'
-    const supabase = await createServiceRoleClient()
+    console.log(`[Signup] Starting signup for: ${email}`)
+    console.log(`[Signup] ENV check: URL=${!!SUPABASE_URL} ANON=${!!ANON_KEY} SRK=${!!SERVICE_ROLE_KEY}`)
 
-    // Step 1: Try to create the user directly via admin API
-    step = 'create_user'
-    console.log('[API Signup] Creating user via admin API:', email)
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: metadata || {}
-    })
-
-    // Happy path — user created successfully
-    if (!createError && newUser?.user) {
-      console.log('[API Signup] User created:', newUser.user.id)
-      return NextResponse.json({
-        success: true,
-        userId: newUser.user.id,
-        email: newUser.user.email
+    // ── Attempt 1: Admin API via service-role client ──────────────
+    step = 'admin_create'
+    try {
+      const supabase = await createServiceRoleClient()
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: metadata || {}
       })
+
+      if (!error && data?.user) {
+        console.log(`[Signup] Admin API succeeded: ${data.user.id}`)
+        return NextResponse.json({ success: true, userId: data.user.id, email: data.user.email, method: 'admin' })
+      }
+
+      const msg = error?.message || 'no user returned'
+      console.log(`[Signup] Admin API failed: ${msg}`)
+      diagnostics.push(`admin_create: ${msg}`)
+    } catch (e: any) {
+      console.log(`[Signup] Admin API threw: ${e?.message}`)
+      diagnostics.push(`admin_create_throw: ${e?.message}`)
     }
 
-    // If the error is NOT "already exists", return it
-    const errMsg = (createError?.message || '').toLowerCase()
-    console.error('[API Signup] createUser error:', createError?.message, 'status:', createError?.status)
-
-    const isAlreadyExists =
-      errMsg.includes('already') ||
-      errMsg.includes('exists') ||
-      errMsg.includes('registered') ||
-      errMsg.includes('duplicate') ||
-      createError?.status === 422
-
-    if (!isAlreadyExists) {
-      return NextResponse.json(
-        { success: false, error: `Account creation failed: ${createError?.message || 'Unknown error'}`, code: 'create_failed', step },
-        { status: 500 }
-      )
-    }
-
-    // Step 2: User already exists — find them
-    step = 'find_existing'
-    console.log('[API Signup] User may already exist. Listing users to find:', email)
-    const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
+    // ── Attempt 2: Direct GoTrue /signup (with anon key) ─────────
+    step = 'gotrue_signup'
+    console.log(`[Signup] Trying direct GoTrue signup...`)
+    const signupResult = await safeFetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        data: metadata || {},
+        gotrue_meta_security: { captcha_token: '' }
+      })
     })
 
-    if (listError) {
-      console.error('[API Signup] listUsers error:', listError.message)
-      return NextResponse.json(
-        { success: false, error: `Cannot look up existing account: ${listError.message}`, code: 'list_failed', step },
-        { status: 500 }
-      )
+    console.log(`[Signup] GoTrue signup response: status=${signupResult.status} ok=${signupResult.ok} raw=${signupResult.raw.slice(0, 200)}`)
+    diagnostics.push(`gotrue_signup: status=${signupResult.status} body=${signupResult.raw.slice(0, 100)}`)
+
+    // If GoTrue returned a clear success with user data
+    if (signupResult.ok && signupResult.data?.id) {
+      console.log(`[Signup] GoTrue signup succeeded: ${signupResult.data.id}`)
+      return NextResponse.json({ success: true, userId: signupResult.data.id, email, method: 'gotrue_signup' })
     }
 
-    const existingUser = listData?.users?.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    )
-
-    if (!existingUser) {
-      console.error('[API Signup] User "already exists" but not found in listUsers')
-      return NextResponse.json(
-        { success: false, error: 'Account conflict — user reported as existing but not found. Please contact support.', code: 'ghost_user', step },
-        { status: 409 }
-      )
+    // If GoTrue returned a clear "already registered" error
+    if (signupResult.data?.msg?.toLowerCase().includes('already') ||
+        signupResult.data?.error_description?.toLowerCase().includes('already')) {
+      return NextResponse.json({
+        success: false,
+        error: 'An account with this email already exists. Please use the login page or reset your password.',
+        code: 'account_exists'
+      }, { status: 409 })
     }
 
-    // Step 3: Delete the remnant user
-    step = 'delete_remnant'
-    console.log('[API Signup] Deleting remnant user:', existingUser.id, 'identities:', existingUser.identities?.length)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(existingUser.id)
+    // ── Attempt 3: Verify if user was created despite broken response ──
+    // GoTrue may have created the user but returned empty/broken body.
+    // Check by trying to sign in with the password.
+    step = 'verify_signin'
+    console.log(`[Signup] Verifying if user was created by attempting signIn...`)
 
-    if (deleteError) {
-      console.error('[API Signup] deleteUser error:', deleteError.message)
-      return NextResponse.json(
-        { success: false, error: `Could not remove old account: ${deleteError.message}`, code: 'delete_failed', step },
-        { status: 500 }
-      )
-    }
+    // Small delay to let GoTrue finish any async work
+    await new Promise(r => setTimeout(r, 1500))
 
-    console.log('[API Signup] Remnant deleted. Waiting 1s...')
-    await new Promise((r) => setTimeout(r, 1000))
-
-    // Step 4: Retry user creation
-    step = 'retry_create'
-    console.log('[API Signup] Retrying createUser for:', email)
-    const { data: retryUser, error: retryError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: metadata || {}
+    const signInResult = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`
+      },
+      body: JSON.stringify({ email, password })
     })
 
-    if (retryError || !retryUser?.user) {
-      console.error('[API Signup] Retry createUser error:', retryError?.message)
-      return NextResponse.json(
-        { success: false, error: `Account creation failed after cleanup: ${retryError?.message || 'Unknown error'}`, code: 'retry_failed', step },
-        { status: 500 }
-      )
+    console.log(`[Signup] SignIn verify: status=${signInResult.status} ok=${signInResult.ok} has_token=${!!signInResult.data?.access_token}`)
+    diagnostics.push(`verify_signin: status=${signInResult.status}`)
+
+    if (signInResult.ok && signInResult.data?.access_token) {
+      // User exists and password works — signup DID succeed
+      const userId = signInResult.data.user?.id
+      console.log(`[Signup] User verified via signIn! id=${userId}`)
+      return NextResponse.json({ success: true, userId, email, method: 'verified_via_signin' })
     }
 
-    console.log('[API Signup] User created on retry:', retryUser.user.id)
+    // ── Attempt 4: Try GoTrue signup with service-role key ───────
+    step = 'gotrue_signup_srk'
+    console.log(`[Signup] Trying GoTrue signup with service-role key...`)
+    const srkSignupResult = await safeFetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        data: metadata || {}
+      })
+    })
+
+    console.log(`[Signup] SRK signup response: status=${srkSignupResult.status} ok=${srkSignupResult.ok} raw=${srkSignupResult.raw.slice(0, 200)}`)
+    diagnostics.push(`gotrue_signup_srk: status=${srkSignupResult.status} body=${srkSignupResult.raw.slice(0, 100)}`)
+
+    if (srkSignupResult.ok && srkSignupResult.data?.id) {
+      console.log(`[Signup] SRK signup succeeded: ${srkSignupResult.data.id}`)
+      return NextResponse.json({ success: true, userId: srkSignupResult.data.id, email, method: 'gotrue_signup_srk' })
+    }
+
+    // After SRK attempt, verify again
+    step = 'verify_signin_2'
+    await new Promise(r => setTimeout(r, 1500))
+
+    const signIn2 = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`
+      },
+      body: JSON.stringify({ email, password })
+    })
+
+    console.log(`[Signup] SignIn verify 2: status=${signIn2.status} has_token=${!!signIn2.data?.access_token}`)
+    diagnostics.push(`verify_signin_2: status=${signIn2.status}`)
+
+    if (signIn2.ok && signIn2.data?.access_token) {
+      const userId = signIn2.data.user?.id
+      console.log(`[Signup] User verified via signIn (round 2)! id=${userId}`)
+      return NextResponse.json({ success: true, userId, email, method: 'verified_via_signin_2' })
+    }
+
+    // ── All attempts failed — return diagnostics ─────────────────
+    step = 'all_failed'
+    console.error(`[Signup] All signup methods failed for: ${email}`)
+    console.error(`[Signup] Diagnostics:`, diagnostics)
+
     return NextResponse.json({
-      success: true,
-      userId: retryUser.user.id,
-      email: retryUser.user.email
-    })
+      success: false,
+      error: 'Signup could not be completed. The auth service may be temporarily unavailable.',
+      code: 'all_methods_failed',
+      diagnostics
+    }, { status: 502 })
+
   } catch (error: any) {
-    console.error('[API Signup] Unexpected error at step:', step, error?.message)
+    console.error(`[Signup] Unexpected error at step "${step}":`, error?.message)
     return NextResponse.json(
-      { success: false, error: `Server error at "${step}": ${error?.message || 'unknown'}`, code: 'server_error', step },
+      { success: false, error: `Server error at "${step}": ${error?.message || 'unknown'}`, step, diagnostics },
       { status: 500 }
     )
   }
