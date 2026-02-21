@@ -122,6 +122,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session, supabase])
 
+  /**
+   * Server-side signup fallback.
+   * Called when the client-side Supabase SDK fails (e.g. GoTrue returns
+   * an empty body for previously-deleted users). Uses the admin API on
+   * the backend to clean up remnants and create the user.
+   */
+  const serverSideSignUp = async (email: string, password: string, metadata?: any) => {
+    console.log('[Auth] 🔄 Attempting server-side signup fallback for:', email)
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, metadata })
+      })
+
+      const text = await response.text()
+      if (!text) {
+        return { data: null, error: { message: 'Server returned empty response during fallback signup.', code: 'empty_response' } }
+      }
+
+      let result: any
+      try { result = JSON.parse(text) } catch {
+        return { data: null, error: { message: 'Server returned invalid response during fallback signup.', code: 'parse_error' } }
+      }
+
+      if (!response.ok || !result.success) {
+        return { data: null, error: { message: result.error || 'Fallback signup failed.', code: result.code || 'fallback_failed' } }
+      }
+
+      console.log('[Auth] ✅ Server-side signup succeeded! User:', result.userId)
+      return { data: result, error: null }
+    } catch (err: any) {
+      console.error('[Auth] Server-side signup failed:', err)
+      return { data: null, error: { message: 'Could not reach the signup server. Please check your connection and try again.', code: 'network_error' } }
+    }
+  }
+
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
       console.log('[Auth] 🆕 Starting signup for:', email)
@@ -145,14 +182,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // when the email already exists (anti-enumeration behavior).
       // In this case no new account is created and there is no session.
       if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
-        console.warn('[Auth] ⚠️ Fake signup detected — email likely already registered')
-        return {
-          data: null,
-          error: {
-            message: 'An account with this email may already exist. Please try signing in, or use a different email.',
-            code: 'email_exists'
-          }
-        }
+        console.warn('[Auth] ⚠️ Fake signup detected — falling back to server-side signup')
+        return serverSideSignUp(email, password, metadata)
       }
 
       console.log('[Auth] ✅ Signup successful!')
@@ -164,23 +195,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('[Auth] Signup error:', error)
 
-      // Translate technical errors (e.g. JSON parse failures from the
-      // Supabase SDK receiving an empty/malformed GoTrue response) into
-      // user-friendly messages so the UI never shows raw SyntaxErrors.
+      // On JSON/network errors from the SDK, fall back to server-side signup
+      // which uses the admin API and bypasses GoTrue edge cases.
       const msg = error?.message || String(error)
       if (
         msg.includes('Unexpected end of JSON') ||
         msg.includes('SyntaxError') ||
-        msg.includes('JSON')
+        msg.includes('JSON') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError')
       ) {
-        return {
-          data: null,
-          error: {
-            message: 'Signup failed — the server returned an unexpected response. Please try again in a moment. If the problem persists, this email may already be registered.',
-            code: 'server_error',
-            _raw: msg
-          }
-        }
+        console.log('[Auth] 🔄 Client SDK failed with:', msg, '— trying server-side fallback')
+        return serverSideSignUp(email, password, metadata)
       }
 
       return { data: null, error }
