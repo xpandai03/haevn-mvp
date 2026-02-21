@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { ShieldCheck, Camera, CreditCard } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -52,7 +53,10 @@ export default function VerificationPage() {
         throw new Error('Failed to start verification')
       }
 
-      const data = await response.json()
+      const { data, parseError } = await safeResponseJson(response)
+      if (parseError || !data) {
+        throw new Error('Verification service returned an invalid response. Please try again.')
+      }
 
       console.log('[Verification] Session created:', data.sessionId)
 

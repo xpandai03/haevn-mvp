@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/lib/auth/context'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 
 interface MSAValidationResponse {
   valid: boolean
@@ -54,7 +55,10 @@ export default function ZipCodePage() {
 
     try {
       const response = await fetch(`/api/msa-check?zip=${zip}`)
-      const data: MSAValidationResponse = await response.json()
+      const { data, parseError } = await safeResponseJson<MSAValidationResponse>(response)
+      if (parseError || !data) {
+        throw new Error('ZIP code validation returned an invalid response.')
+      }
 
       setMsaData(data)
 

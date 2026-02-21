@@ -141,14 +141,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error
       }
 
+      // Detect "fake signup" — Supabase returns a user with empty identities
+      // when the email already exists (anti-enumeration behavior).
+      // In this case no new account is created and there is no session.
+      if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+        console.warn('[Auth] ⚠️ Fake signup detected — email likely already registered')
+        return {
+          data: null,
+          error: {
+            message: 'An account with this email may already exist. Please try signing in, or use a different email.',
+            code: 'email_exists'
+          }
+        }
+      }
+
       console.log('[Auth] ✅ Signup successful!')
       console.log('[Auth] New user ID:', data.user?.id)
       console.log('[Auth] New user email:', data.user?.email)
       console.log('[Auth] Session created:', !!data.session)
 
       return { data, error: null }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Auth] Signup error:', error)
+
+      // Translate technical errors (e.g. JSON parse failures from the
+      // Supabase SDK receiving an empty/malformed GoTrue response) into
+      // user-friendly messages so the UI never shows raw SyntaxErrors.
+      const msg = error?.message || String(error)
+      if (
+        msg.includes('Unexpected end of JSON') ||
+        msg.includes('SyntaxError') ||
+        msg.includes('JSON')
+      ) {
+        return {
+          data: null,
+          error: {
+            message: 'Signup failed — the server returned an unexpected response. Please try again in a moment. If the problem persists, this email may already be registered.',
+            code: 'server_error',
+            _raw: msg
+          }
+        }
+      }
+
       return { data: null, error }
     }
   }
@@ -174,8 +208,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[Auth] Session created:', !!data.session)
 
       return { data, error: null }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Auth] Sign in error:', error)
+
+      const msg = error?.message || String(error)
+      if (
+        msg.includes('Unexpected end of JSON') ||
+        msg.includes('SyntaxError') ||
+        msg.includes('JSON')
+      ) {
+        return {
+          data: null,
+          error: {
+            message: 'Sign-in failed — the server returned an unexpected response. Please try again.',
+            code: 'server_error',
+            _raw: msg
+          }
+        }
+      }
+
       return { data: null, error }
     }
   }

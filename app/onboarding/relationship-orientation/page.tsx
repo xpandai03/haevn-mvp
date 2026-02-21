@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 
 type RelationshipOrientation = 'monogamous' | 'open' | 'polyamorous' | 'exploring' | 'other'
 
@@ -41,7 +42,10 @@ export default function RelationshipOrientationPage() {
         })
       })
 
-      const data = await response.json()
+      const { data, parseError } = await safeResponseJson(response)
+      if (parseError || !data) {
+        throw new Error('Failed to save — server returned an invalid response.')
+      }
 
       if (!response.ok || !data.success) {
         console.error('[RelationshipOrientation] API error:', data.error)

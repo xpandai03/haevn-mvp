@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { User, Users as UsersIcon, UserPlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
 type ProfileType = 'solo' | 'couple' | 'pod'
@@ -107,7 +108,12 @@ export default function IdentityPage() {
         })
       })
 
-      const data = await response.json()
+      const { data, parseError } = await safeResponseJson(response)
+
+      if (parseError || !data) {
+        console.error('[Identity] JSON parse error:', parseError)
+        throw new Error('Failed to save identity data — server returned an invalid response.')
+      }
 
       if (!response.ok || !data.success) {
         console.error('[Identity] API error:', data.error)

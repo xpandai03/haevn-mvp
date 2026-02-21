@@ -39,6 +39,22 @@ export default function SignupStep2() {
     router.push('/auth/signup/step-1')
   }
 
+  /** Return a user-friendly string no matter what the error shape is. */
+  const friendlyError = (err: any, fallback: string): string => {
+    const msg: string = err?.message || String(err || '')
+    // Never surface raw technical / JSON-parse errors to the user
+    if (
+      msg.includes('Unexpected end of JSON') ||
+      msg.includes('SyntaxError') ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('NetworkError') ||
+      msg.includes('Load failed')
+    ) {
+      return fallback
+    }
+    return msg || fallback
+  }
+
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -59,7 +75,10 @@ export default function SignupStep2() {
       })
 
       if (signUpError) {
-        setError(signUpError.message)
+        setError(friendlyError(
+          signUpError,
+          'Signup failed. Please try again or use a different email.'
+        ))
         setIsLoading(false)
         return
       }
@@ -68,7 +87,10 @@ export default function SignupStep2() {
       const { error: signInError } = await signIn(email, password)
 
       if (signInError) {
-        setError('Account created but login failed. Please try signing in.')
+        setError(friendlyError(
+          signInError,
+          'Account created but auto-login failed. Please try signing in manually.'
+        ))
         setIsLoading(false)
         return
       }
@@ -78,8 +100,9 @@ export default function SignupStep2() {
 
       // Navigate to step 3
       router.push('/auth/signup/step-3')
-    } catch (err) {
-      setError('Something went wrong. Please try again.')
+    } catch (err: any) {
+      console.error('[Signup] Unexpected error:', err)
+      setError(friendlyError(err, 'Something went wrong. Please try again.'))
       setIsLoading(false)
     }
   }

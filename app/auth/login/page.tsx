@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 import { Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -68,7 +69,12 @@ export default function LoginPage() {
           return
         }
 
-        const data = await response.json()
+        const { data, parseError } = await safeResponseJson(response)
+        if (parseError || !data) {
+          console.error('[Login] Failed to parse resume-step response:', parseError)
+          window.location.href = '/dashboard'
+          return
+        }
         console.log('[Login] ===== RESUME PATH DETERMINED =====')
         console.log('[Login] Status:', data.status)
         console.log('[Login] Resume path returned:', data.resumePath)
@@ -96,7 +102,9 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('[Login] ❌ Login error:', err)
       console.error('[Login] Error details:', err)
-      setError(err.message || 'Invalid email or password')
+      const msg = err?.message || ''
+      const isTechnical = msg.includes('Unexpected end of JSON') || msg.includes('SyntaxError') || msg.includes('Failed to fetch')
+      setError(isTechnical ? 'Login failed. Please check your credentials and try again.' : (msg || 'Invalid email or password'))
       setLoading(false)
     }
   }

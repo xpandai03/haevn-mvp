@@ -24,6 +24,7 @@ import {
 } from '@/lib/survey/questions'
 import { AlertCircle, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { safeResponseJson } from '@/lib/utils'
 import FullPageLoader from '@/components/ui/full-page-loader'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -175,7 +176,11 @@ export default function SurveyPage() {
           credentials: 'include', // Include cookies
         })
 
-        const { data: surveyData, error: surveyError, code } = await response.json()
+        const { data: parsed, parseError } = await safeResponseJson(response)
+        if (parseError) {
+          console.error('[Survey] Failed to parse survey/load response:', parseError)
+        }
+        const { data: surveyData, error: surveyError, code } = parsed || {}
 
         if (surveyError || !response.ok) {
           console.error('Survey load error:', surveyError)
@@ -276,7 +281,11 @@ export default function SurveyPage() {
           })
         })
 
-        const { success, error, code } = await response.json()
+        const { data: saveResult, parseError: saveParseError } = await safeResponseJson(response)
+        if (saveParseError) {
+          console.error('[Survey] Failed to parse survey/save response:', saveParseError)
+        }
+        const { success, error, code } = saveResult || {}
 
         if (!success || error || !response.ok) {
           // Handle specific error codes
@@ -475,7 +484,11 @@ export default function SurveyPage() {
         })
       })
 
-      const { success, error } = await response.json()
+      const { data: exitResult, parseError: exitParseError } = await safeResponseJson(response)
+      if (exitParseError) {
+        console.error('[Survey] Failed to parse save-and-exit response:', exitParseError)
+      }
+      const { success, error } = exitResult || {}
 
       if (!success || error || !response.ok) {
         throw new Error(error || 'Failed to save')
