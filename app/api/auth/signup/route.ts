@@ -4,42 +4,69 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 /**
  * POST /api/auth/signup
  *
- * Robust server-side signup that handles GoTrue returning empty/malformed
- * responses. Strategy:
- *
- * 1. Try admin createUser (fast path, works when GoTrue is healthy)
- * 2. If that fails, call GoTrue /signup directly via fetch (safe parsing)
- * 3. Verify the user was actually created by attempting signIn
- * 4. If signIn works → user exists, return success
- * 5. If nothing works → return combined diagnostics
+ * Fully instrumented signup route.
+ * Logs every outbound request URL, method, headers, and response details.
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-/** Safe fetch + JSON parse helper — never throws on bad responses. */
-async function safeFetch(
+/** Instrumented fetch — logs exact request + response details, never throws. */
+async function instrumentedFetch(
+  label: string,
   url: string,
   opts: RequestInit
-): Promise<{ status: number; data: any; raw: string; ok: boolean }> {
+): Promise<{ status: number; data: any; raw: string; ok: boolean; redirected: boolean; finalUrl: string; log: string }> {
+  const log: string[] = []
+  log.push(`[${label}] >>> ${opts.method || 'GET'} ${url}`)
+  log.push(`[${label}] headers: ${JSON.stringify({
+    'Content-Type': (opts.headers as any)?.['Content-Type'],
+    'apikey': (opts.headers as any)?.['apikey'] ? `${String((opts.headers as any)['apikey']).slice(0, 10)}...` : 'MISSING',
+    'Authorization': (opts.headers as any)?.['Authorization'] ? `${String((opts.headers as any)['Authorization']).slice(0, 20)}...` : 'MISSING',
+  })}`)
+
   try {
-    const res = await fetch(url, opts)
+    // Use redirect: 'manual' to detect if GoTrue is redirecting (which
+    // would cause POST→GET conversion and result in 405)
+    const res = await fetch(url, { ...opts, redirect: 'manual' })
     const raw = await res.text()
+
+    log.push(`[${label}] <<< HTTP ${res.status} ${res.statusText}`)
+    log.push(`[${label}] response content-type: ${res.headers.get('content-type')}`)
+    log.push(`[${label}] response location: ${res.headers.get('location') || 'none'}`)
+    log.push(`[${label}] response body (first 300): ${raw.slice(0, 300)}`)
+
     let data: any = null
-    try {
-      data = raw ? JSON.parse(raw) : null
-    } catch {
-      // non-JSON response — keep data as null
+    try { data = raw ? JSON.parse(raw) : null } catch { /* non-JSON */ }
+
+    const logStr = log.join('\n')
+    console.log(logStr)
+
+    // If we got a redirect, follow it manually with POST preserved
+    if ([301, 302, 303, 307, 308].includes(res.status)) {
+      const location = res.headers.get('location')
+      if (location) {
+        const redirectUrl = location.startsWith('http') ? location : new URL(location, url).toString()
+        log.push(`[${label}] FOLLOWING REDIRECT → ${redirectUrl} (preserving POST)`)
+        console.log(`[${label}] FOLLOWING REDIRECT → ${redirectUrl}`)
+        const redirectRes = await fetch(redirectUrl, opts)
+        const redirectRaw = await redirectRes.text()
+        log.push(`[${label}] redirect response: HTTP ${redirectRes.status} body=${redirectRaw.slice(0, 200)}`)
+        console.log(`[${label}] redirect response: HTTP ${redirectRes.status}`)
+        let redirectData: any = null
+        try { redirectData = redirectRaw ? JSON.parse(redirectRaw) : null } catch { /* non-JSON */ }
+        return { status: redirectRes.status, data: redirectData, raw: redirectRaw.slice(0, 500), ok: redirectRes.ok, redirected: true, finalUrl: redirectUrl, log: log.join('\n') }
+      }
     }
-    return { status: res.status, data, raw: raw.slice(0, 500), ok: res.ok }
+
+    return { status: res.status, data, raw: raw.slice(0, 500), ok: res.ok, redirected: false, finalUrl: url, log: logStr }
   } catch (e: any) {
-    return { status: 0, data: null, raw: e?.message || 'fetch failed', ok: false }
+    const errMsg = `fetch error: ${e?.message}`
+    log.push(`[${label}] !!! ${errMsg}`)
+    console.error(log.join('\n'))
+    return { status: 0, data: null, raw: errMsg, ok: false, redirected: false, finalUrl: url, log: log.join('\n') }
   }
 }
 
 export async function POST(request: Request) {
-  console.log('SIGNUP_BUILD_MARKER=2026-02-21T2')
+  console.log('SIGNUP_BUILD_MARKER=2026-02-21T3')
 
   let step = 'init'
   const diagnostics: string[] = []
@@ -56,161 +83,167 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Password must be at least 6 characters.' }, { status: 400 })
     }
 
-    console.log(`[Signup] Starting signup for: ${email}`)
-    console.log(`[Signup] ENV check: URL=${!!SUPABASE_URL} ANON=${!!ANON_KEY} SRK=${!!SERVICE_ROLE_KEY}`)
+    // ── Environment variable diagnostics ──────────────────────────
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '')
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
+    const envInfo = {
+      supabaseUrl_set: !!supabaseUrl,
+      supabaseUrl_value: supabaseUrl ? `${supabaseUrl.slice(0, 40)}...` : 'EMPTY',
+      supabaseUrl_length: supabaseUrl.length,
+      anonKey_set: !!anonKey,
+      anonKey_prefix: anonKey.slice(0, 10),
+      serviceRoleKey_set: !!serviceRoleKey,
+      serviceRoleKey_prefix: serviceRoleKey.slice(0, 10),
+    }
+    console.log('[Signup] ENV:', JSON.stringify(envInfo))
+    diagnostics.push(`env: ${JSON.stringify(envInfo)}`)
+
+    if (!supabaseUrl) {
+      return NextResponse.json({
+        success: false,
+        error: 'NEXT_PUBLIC_SUPABASE_URL is not set on the server.',
+        diagnostics
+      }, { status: 500 })
+    }
+    if (!anonKey) {
+      return NextResponse.json({
+        success: false,
+        error: 'NEXT_PUBLIC_SUPABASE_ANON_KEY is not set on the server.',
+        diagnostics
+      }, { status: 500 })
+    }
 
     // ── Attempt 1: Admin API via service-role client ──────────────
     step = 'admin_create'
-    try {
-      const supabase = await createServiceRoleClient()
-      const { data, error } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: metadata || {}
-      })
+    if (serviceRoleKey) {
+      try {
+        const supabase = await createServiceRoleClient()
+        const { data, error } = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: metadata || {}
+        })
 
-      if (!error && data?.user) {
-        console.log(`[Signup] Admin API succeeded: ${data.user.id}`)
-        return NextResponse.json({ success: true, userId: data.user.id, email: data.user.email, method: 'admin' })
+        if (!error && data?.user) {
+          console.log(`[Signup] Admin API succeeded: ${data.user.id}`)
+          return NextResponse.json({ success: true, userId: data.user.id, email: data.user.email, method: 'admin' })
+        }
+
+        const msg = error?.message || 'no user returned'
+        console.log(`[Signup] Admin API failed: ${msg}`)
+        diagnostics.push(`admin_create: ${msg}`)
+      } catch (e: any) {
+        console.log(`[Signup] Admin API threw: ${e?.message}`)
+        diagnostics.push(`admin_create_throw: ${e?.message}`)
       }
-
-      const msg = error?.message || 'no user returned'
-      console.log(`[Signup] Admin API failed: ${msg}`)
-      diagnostics.push(`admin_create: ${msg}`)
-    } catch (e: any) {
-      console.log(`[Signup] Admin API threw: ${e?.message}`)
-      diagnostics.push(`admin_create_throw: ${e?.message}`)
+    } else {
+      diagnostics.push('admin_create: skipped (no SERVICE_ROLE_KEY)')
     }
 
-    // ── Attempt 2: Direct GoTrue /signup (with anon key) ─────────
+    // ── Attempt 2: Direct GoTrue POST /auth/v1/signup ────────────
     step = 'gotrue_signup'
-    console.log(`[Signup] Trying direct GoTrue signup...`)
-    const signupResult = await safeFetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    const signupUrl = `${supabaseUrl}/auth/v1/signup`
+    const signupResult = await instrumentedFetch('gotrue_signup', signupUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': ANON_KEY,
-        'Authorization': `Bearer ${ANON_KEY}`
+        'apikey': anonKey,
+        'Authorization': `Bearer ${anonKey}`
       },
-      body: JSON.stringify({
-        email,
-        password,
-        data: metadata || {},
-        gotrue_meta_security: { captcha_token: '' }
-      })
+      body: JSON.stringify({ email, password, data: metadata || {} })
     })
+    diagnostics.push(`gotrue_signup: url=${signupUrl} status=${signupResult.status} redirected=${signupResult.redirected} body=${signupResult.raw.slice(0, 80)}`)
 
-    console.log(`[Signup] GoTrue signup response: status=${signupResult.status} ok=${signupResult.ok} raw=${signupResult.raw.slice(0, 200)}`)
-    diagnostics.push(`gotrue_signup: status=${signupResult.status} body=${signupResult.raw.slice(0, 100)}`)
-
-    // If GoTrue returned a clear success with user data
     if (signupResult.ok && signupResult.data?.id) {
-      console.log(`[Signup] GoTrue signup succeeded: ${signupResult.data.id}`)
       return NextResponse.json({ success: true, userId: signupResult.data.id, email, method: 'gotrue_signup' })
     }
 
-    // If GoTrue returned a clear "already registered" error
-    if (signupResult.data?.msg?.toLowerCase().includes('already') ||
-        signupResult.data?.error_description?.toLowerCase().includes('already')) {
+    // Check for "already registered" from GoTrue
+    const signupMsg = (signupResult.data?.msg || signupResult.data?.error_description || signupResult.data?.message || '').toLowerCase()
+    if (signupMsg.includes('already') || signupMsg.includes('registered') || signupMsg.includes('exists')) {
       return NextResponse.json({
         success: false,
-        error: 'An account with this email already exists. Please use the login page or reset your password.',
-        code: 'account_exists'
+        error: 'An account with this email already exists. Please sign in or reset your password.',
+        code: 'account_exists',
+        diagnostics
       }, { status: 409 })
     }
 
-    // ── Attempt 3: Verify if user was created despite broken response ──
-    // GoTrue may have created the user but returned empty/broken body.
-    // Check by trying to sign in with the password.
+    // ── Attempt 3: Verify via POST /auth/v1/token?grant_type=password ──
     step = 'verify_signin'
-    console.log(`[Signup] Verifying if user was created by attempting signIn...`)
+    await new Promise(r => setTimeout(r, 1000))
 
-    // Small delay to let GoTrue finish any async work
-    await new Promise(r => setTimeout(r, 1500))
-
-    const signInResult = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    const tokenUrl = `${supabaseUrl}/auth/v1/token?grant_type=password`
+    const signInResult = await instrumentedFetch('verify_signin', tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': ANON_KEY,
-        'Authorization': `Bearer ${ANON_KEY}`
+        'apikey': anonKey,
+        'Authorization': `Bearer ${anonKey}`
       },
       body: JSON.stringify({ email, password })
     })
-
-    console.log(`[Signup] SignIn verify: status=${signInResult.status} ok=${signInResult.ok} has_token=${!!signInResult.data?.access_token}`)
-    diagnostics.push(`verify_signin: status=${signInResult.status}`)
+    diagnostics.push(`verify_signin: url=${tokenUrl} status=${signInResult.status} redirected=${signInResult.redirected} has_token=${!!signInResult.data?.access_token}`)
 
     if (signInResult.ok && signInResult.data?.access_token) {
-      // User exists and password works — signup DID succeed
       const userId = signInResult.data.user?.id
       console.log(`[Signup] User verified via signIn! id=${userId}`)
       return NextResponse.json({ success: true, userId, email, method: 'verified_via_signin' })
     }
 
-    // ── Attempt 4: Try GoTrue signup with service-role key ───────
-    step = 'gotrue_signup_srk'
-    console.log(`[Signup] Trying GoTrue signup with service-role key...`)
-    const srkSignupResult = await safeFetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        data: metadata || {}
+    // ── Attempt 4: GoTrue signup with service-role key ───────────
+    if (serviceRoleKey) {
+      step = 'gotrue_signup_srk'
+      const srkResult = await instrumentedFetch('gotrue_signup_srk', signupUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceRoleKey,
+          'Authorization': `Bearer ${serviceRoleKey}`
+        },
+        body: JSON.stringify({ email, password, data: metadata || {} })
       })
-    })
+      diagnostics.push(`gotrue_signup_srk: status=${srkResult.status} redirected=${srkResult.redirected} body=${srkResult.raw.slice(0, 80)}`)
 
-    console.log(`[Signup] SRK signup response: status=${srkSignupResult.status} ok=${srkSignupResult.ok} raw=${srkSignupResult.raw.slice(0, 200)}`)
-    diagnostics.push(`gotrue_signup_srk: status=${srkSignupResult.status} body=${srkSignupResult.raw.slice(0, 100)}`)
+      if (srkResult.ok && srkResult.data?.id) {
+        return NextResponse.json({ success: true, userId: srkResult.data.id, email, method: 'gotrue_signup_srk' })
+      }
 
-    if (srkSignupResult.ok && srkSignupResult.data?.id) {
-      console.log(`[Signup] SRK signup succeeded: ${srkSignupResult.data.id}`)
-      return NextResponse.json({ success: true, userId: srkSignupResult.data.id, email, method: 'gotrue_signup_srk' })
+      // Second signIn verification after SRK attempt
+      step = 'verify_signin_2'
+      await new Promise(r => setTimeout(r, 1000))
+      const signIn2 = await instrumentedFetch('verify_signin_2', tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`
+        },
+        body: JSON.stringify({ email, password })
+      })
+      diagnostics.push(`verify_signin_2: status=${signIn2.status} has_token=${!!signIn2.data?.access_token}`)
+
+      if (signIn2.ok && signIn2.data?.access_token) {
+        const userId = signIn2.data.user?.id
+        return NextResponse.json({ success: true, userId, email, method: 'verified_via_signin_2' })
+      }
     }
 
-    // After SRK attempt, verify again
-    step = 'verify_signin_2'
-    await new Promise(r => setTimeout(r, 1500))
-
-    const signIn2 = await safeFetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': ANON_KEY,
-        'Authorization': `Bearer ${ANON_KEY}`
-      },
-      body: JSON.stringify({ email, password })
-    })
-
-    console.log(`[Signup] SignIn verify 2: status=${signIn2.status} has_token=${!!signIn2.data?.access_token}`)
-    diagnostics.push(`verify_signin_2: status=${signIn2.status}`)
-
-    if (signIn2.ok && signIn2.data?.access_token) {
-      const userId = signIn2.data.user?.id
-      console.log(`[Signup] User verified via signIn (round 2)! id=${userId}`)
-      return NextResponse.json({ success: true, userId, email, method: 'verified_via_signin_2' })
-    }
-
-    // ── All attempts failed — return diagnostics ─────────────────
-    step = 'all_failed'
-    console.error(`[Signup] All signup methods failed for: ${email}`)
-    console.error(`[Signup] Diagnostics:`, diagnostics)
+    // ── All attempts failed ──────────────────────────────────────
+    console.error('[Signup] ALL METHODS FAILED. Diagnostics:', JSON.stringify(diagnostics, null, 2))
 
     return NextResponse.json({
       success: false,
-      error: 'Signup could not be completed. The auth service may be temporarily unavailable.',
+      error: 'Signup could not be completed. See diagnostics for details.',
       code: 'all_methods_failed',
       diagnostics
     }, { status: 502 })
 
   } catch (error: any) {
-    console.error(`[Signup] Unexpected error at step "${step}":`, error?.message)
+    console.error(`[Signup] Unexpected error at "${step}":`, error?.message)
     return NextResponse.json(
       { success: false, error: `Server error at "${step}": ${error?.message || 'unknown'}`, step, diagnostics },
       { status: 500 }
