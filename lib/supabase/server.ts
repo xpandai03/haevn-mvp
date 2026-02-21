@@ -1,6 +1,26 @@
 import type { Database } from '@/lib/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+// Known Supabase project URL — hardcoded fallback because NEXT_PUBLIC_SUPABASE_URL
+// may be unavailable or misconfigured in Vercel serverless runtime.
+const KNOWN_SUPABASE_URL = 'https://sdepasybfkmxcswaxnsz.supabase.co'
+
+function getSupabaseUrl(): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
+  ].filter(Boolean).map(u => u!.replace(/\/+$/, ''))
+
+  for (const url of candidates) {
+    if (url.includes('supabase.co') || url.includes('supabase.in')) {
+      return url
+    }
+  }
+
+  console.warn('[Supabase Server] No valid Supabase URL in env vars, using hardcoded fallback')
+  return KNOWN_SUPABASE_URL
+}
+
 // Lazy imports to avoid build-time SSR mismatch errors
 // This prevents "You're importing a component that needs next/headers" error
 let createServerClientFn: any
@@ -22,7 +42,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookiesFn()
 
   return createServerClientFn<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
@@ -66,7 +86,7 @@ export async function createServiceRoleClient(): Promise<SupabaseClient<Database
   }
 
   return createServerClientFn<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
