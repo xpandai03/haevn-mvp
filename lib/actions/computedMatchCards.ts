@@ -100,9 +100,11 @@ export async function getComputedMatchCards(
   const currentPartnershipId = await getCurrentPartnershipId()
 
   // 1. Fetch computed matches for this partnership (bidirectional)
+  //    Filter by release_at (Match Monday) and expires_at (90-day expiry)
+  const now = new Date().toISOString()
   const { data: matches, error: matchError } = await adminClient
     .from('computed_matches')
-    .select('partnership_a, partnership_b, score, tier, breakdown')
+    .select('partnership_a, partnership_b, score, tier, breakdown, release_at, expires_at')
     .or(`partnership_a.eq.${currentPartnershipId},partnership_b.eq.${currentPartnershipId}`)
     .order('score', { ascending: false })
     .limit(limit * 2) // Fetch extra since we have bidirectional rows
@@ -112,8 +114,23 @@ export async function getComputedMatchCards(
     return []
   }
 
+  // 1b. Fetch dismissed handshakes for exclusion (Item 4: permanent dismissal)
+  const { data: dismissedHandshakes } = await adminClient
+    .from('handshakes')
+    .select('a_partnership, b_partnership')
+    .or(`a_partnership.eq.${currentPartnershipId},b_partnership.eq.${currentPartnershipId}`)
+    .eq('state', 'dismissed')
+
+  const dismissedIds = new Set<string>()
+  if (dismissedHandshakes) {
+    for (const h of dismissedHandshakes) {
+      if (h.a_partnership !== currentPartnershipId) dismissedIds.add(h.a_partnership)
+      if (h.b_partnership !== currentPartnershipId) dismissedIds.add(h.b_partnership)
+    }
+  }
+
   // 2. Deduplicate — keep only rows where we can identify the "other" partnership
-  //    and filter by minimum tier
+  //    and filter by minimum tier, release_at, expires_at, and dismissed status
   const tierOrder = ['Platinum', 'Gold', 'Silver', 'Bronze'] as const
   const minTierIndex = tierOrder.indexOf(minTier)
   const seenPartnerIds = new Set<string>()
@@ -133,6 +150,15 @@ export async function getComputedMatchCards(
     // Deduplicate
     if (seenPartnerIds.has(otherId)) continue
     seenPartnerIds.add(otherId)
+
+    // Filter out dismissed matches
+    if (dismissedIds.has(otherId)) continue
+
+    // Filter by release_at (Match Monday) — only show if released or no release_at set
+    if (m.release_at && m.release_at > now) continue
+
+    // Filter by expires_at (90-day expiry) — only show if not expired or no expires_at set
+    if (m.expires_at && m.expires_at <= now) continue
 
     // Filter by tier
     const resultTierIndex = tierOrder.indexOf(m.tier as any)

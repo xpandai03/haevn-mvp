@@ -19,12 +19,14 @@ import {
   hasOverlap,
   jaccardSimilarity,
   tierProximityScore,
+  proximityScore,
   weightedAverage,
   calculateCoverage,
 } from '../utils/scoring'
 import {
   getArrayAnswer,
   getStringAnswer,
+  asSingle,
 } from '../utils/normalizeAnswers'
 
 // =============================================================================
@@ -62,16 +64,6 @@ const KINK_EXPERIENCE_TIERS = [
   'advanced', 'expert',
 ] as const
 
-/**
- * Exploration openness tiers (Q34)
- */
-const EXPLORATION_TIERS = [
-  'not_open', 'very_hesitant',
-  'somewhat_hesitant', 'neutral',
-  'somewhat_open', 'open',
-  'very_open', 'extremely_open',
-] as const
-
 // =============================================================================
 // MAIN CHEMISTRY SCORER
 // =============================================================================
@@ -92,6 +84,8 @@ export function scoreChemistry(
     scoreRolesKinks(userAnswers, matchAnswers),
     scoreFrequency(userAnswers, matchAnswers),
     scoreBoundaries(userAnswers, matchAnswers),
+    scorePhysicalPreferences(userAnswers, matchAnswers),
+    scoreExploration(userAnswers, matchAnswers),
   ]
 
   const score = weightedAverage(subScores)
@@ -420,5 +414,129 @@ function scoreBoundaries(
       : finalScore >= 40
         ? 'Some boundary understanding'
         : 'Different boundary approaches',
+  }
+}
+
+/**
+ * Score Physical Preferences sub-component (10%)
+ * Q27: Self body type, Q27b: Preferred body types in partner
+ * Cross-check: A's self-type against B's preferences, and vice versa.
+ */
+function scorePhysicalPreferences(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  // Q27 is multi-select but represents self body type — take first as primary
+  const userSelfType = asSingle(userAnswers.Q27 as string | string[] | undefined)
+  const matchSelfType = asSingle(matchAnswers.Q27 as string | string[] | undefined)
+  const userPreferences = getArrayAnswer(userAnswers, 'Q27b')
+  const matchPreferences = getArrayAnswer(matchAnswers, 'Q27b')
+
+  // Need at least one direction of self-type + preferences to score
+  const hasData =
+    (userSelfType && matchPreferences.length > 0) ||
+    (matchSelfType && userPreferences.length > 0)
+
+  if (!hasData) {
+    return {
+      key: 'physicalPreferences',
+      score: 0,
+      weight: CHEMISTRY_WEIGHTS.physicalPreferences,
+      matched: false,
+      reason: 'Physical preferences not specified',
+    }
+  }
+
+  // Check if A's self-type is in B's preferences (case-insensitive)
+  const userInMatchPrefs = userSelfType && matchPreferences.length > 0
+    ? matchPreferences.some(p => p.toLowerCase().trim() === userSelfType.toLowerCase().trim())
+    : false
+
+  // Check if B's self-type is in A's preferences
+  const matchInUserPrefs = matchSelfType && userPreferences.length > 0
+    ? userPreferences.some(p => p.toLowerCase().trim() === matchSelfType.toLowerCase().trim())
+    : false
+
+  let score: number
+  if (userInMatchPrefs && matchInUserPrefs) {
+    score = 100
+  } else if (userInMatchPrefs || matchInUserPrefs) {
+    score = 60
+  } else {
+    score = 20
+  }
+
+  return {
+    key: 'physicalPreferences',
+    score,
+    weight: CHEMISTRY_WEIGHTS.physicalPreferences,
+    matched: true,
+    reason: score >= 80
+      ? 'Mutual physical preference match'
+      : score >= 50
+        ? 'Partial physical preference match'
+        : 'Different physical preferences',
+  }
+}
+
+/**
+ * Score Exploration sub-component (10%)
+ * Q34: Exploration openness (slider 1-10), Q34a: Variety desire (slider 1-10)
+ * Uses numeric proximity scoring instead of categorical tiers.
+ */
+function scoreExploration(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userExploration = getStringAnswer(userAnswers, 'Q34')
+  const matchExploration = getStringAnswer(matchAnswers, 'Q34')
+  const userVariety = getStringAnswer(userAnswers, 'Q34a')
+  const matchVariety = getStringAnswer(matchAnswers, 'Q34a')
+
+  let totalScore = 0
+  let components = 0
+
+  // Score Q34 exploration openness (numeric 1-10)
+  if (userExploration && matchExploration) {
+    const userVal = parseFloat(userExploration)
+    const matchVal = parseFloat(matchExploration)
+    if (!isNaN(userVal) && !isNaN(matchVal)) {
+      totalScore += proximityScore(userVal, matchVal, 5)
+      components++
+    }
+  }
+
+  // Score Q34a variety desire (numeric 1-10)
+  if (userVariety && matchVariety) {
+    const userVal = parseFloat(userVariety)
+    const matchVal = parseFloat(matchVariety)
+    if (!isNaN(userVal) && !isNaN(matchVal)) {
+      totalScore += proximityScore(userVal, matchVal, 5)
+      components++
+    }
+  }
+
+  if (components === 0) {
+    return {
+      key: 'exploration',
+      score: 0,
+      weight: CHEMISTRY_WEIGHTS.exploration,
+      matched: false,
+      reason: 'Exploration preferences not specified',
+    }
+  }
+
+  const finalScore = Math.round(totalScore / components)
+
+  return {
+    key: 'exploration',
+    score: finalScore,
+    weight: CHEMISTRY_WEIGHTS.exploration,
+    matched: true,
+    reason: finalScore >= 70
+      ? 'Well-aligned exploration desires'
+      : finalScore >= 40
+        ? 'Compatible exploration levels'
+        : 'Different exploration preferences',
   }
 }

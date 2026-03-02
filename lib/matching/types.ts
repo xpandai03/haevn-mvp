@@ -112,8 +112,10 @@ export interface NormalizedAnswers {
   Q25?: string
   /** Q25a: Preferred frequency (single) */
   Q25a?: string
-  /** Q27: Physical/body preferences (multi-select) */
+  /** Q27: Self body type (single/multi-select) */
   Q27?: string[]
+  /** Q27b: Preferred body types in partner (multi-select) */
+  Q27b?: string[]
   /** Q33: Kinks/fetishes (multi-select) */
   Q33?: string[]
   /** Q33a: Kink experience level (single) */

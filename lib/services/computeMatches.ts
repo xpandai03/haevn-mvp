@@ -24,7 +24,22 @@ import {
   type CompatibilityTier,
 } from '@/lib/matching'
 
-const ENGINE_VERSION = '5cat-v3'
+const ENGINE_VERSION = '5cat-v4'
+const MIN_SCORE_THRESHOLD = 80
+
+/**
+ * Get the next Monday at 00:00 UTC for Match Monday batching.
+ * Matches computed before Monday are held invisible until then.
+ */
+function getNextMonday(): string {
+  const now = new Date()
+  const day = now.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : (8 - day)
+  const nextMonday = new Date(now)
+  nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday)
+  nextMonday.setUTCHours(0, 0, 0, 0)
+  return nextMonday.toISOString()
+}
 
 // =============================================================================
 // TYPES
@@ -34,7 +49,7 @@ export interface PairDiagnostic {
   candidate: string
   score: number
   tier: string
-  outcome: 'stored' | 'constraint-failed' | 'no-survey' | 'no-members' | 'handshake' | 'scoring-error'
+  outcome: 'stored' | 'constraint-failed' | 'below-threshold' | 'no-survey' | 'no-members' | 'handshake' | 'scoring-error'
   reason?: string
 }
 
@@ -99,7 +114,7 @@ export async function computeMatchesForPartnership(
   partnershipId: string,
   runId: string | null = null
 ): Promise<ComputeMatchesResult> {
-  console.log(`[computeMatches] BUILD_MARKER=2026-02-13T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
+  console.log(`[computeMatches] BUILD_MARKER=2026-03-02T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
 
   const adminClient = createAdminClient()
   let matchesComputed = 0
@@ -287,6 +302,8 @@ export async function computeMatchesForPartnership(
       breakdown: any
       computed_at: string
       engine_version: string
+      release_at: string
+      expires_at: string
     }> = []
 
     for (const candidate of allPartnerships) {
@@ -348,8 +365,22 @@ export async function computeMatchesForPartnership(
           continue
         }
 
+        // Skip if below minimum score threshold
+        if (result.overallScore < MIN_SCORE_THRESHOLD) {
+          pairDiagnostics.push({
+            candidate: name,
+            score: result.overallScore,
+            tier: result.tier,
+            outcome: 'below-threshold',
+            reason: `Score ${result.overallScore} < ${MIN_SCORE_THRESHOLD}`,
+          })
+          continue
+        }
+
         // Store match (both directions)
         const now = new Date().toISOString()
+        const releaseAt = getNextMonday()
+        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
         matchRows.push({
           partnership_a: partnershipId,
           partnership_b: candidate.id,
@@ -358,6 +389,8 @@ export async function computeMatchesForPartnership(
           breakdown: result.categories,
           computed_at: now,
           engine_version: ENGINE_VERSION,
+          release_at: releaseAt,
+          expires_at: expiresAt,
         })
         matchRows.push({
           partnership_a: candidate.id,
@@ -367,6 +400,8 @@ export async function computeMatchesForPartnership(
           breakdown: result.categories,
           computed_at: now,
           engine_version: ENGINE_VERSION,
+          release_at: releaseAt,
+          expires_at: expiresAt,
         })
 
         matchesComputed++
@@ -454,7 +489,7 @@ export async function computeMatchesForPartnership(
  * Recompute matches for all live partnerships.
  */
 export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
-  console.log(`[recomputeAllMatches] BUILD_MARKER=2026-02-13T1 engine=${ENGINE_VERSION}`)
+  console.log(`[recomputeAllMatches] BUILD_MARKER=2026-03-02T1 engine=${ENGINE_VERSION}`)
   const adminClient = createAdminClient()
   const details: RecomputeAllResult['details'] = []
 

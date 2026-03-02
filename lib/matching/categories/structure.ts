@@ -27,6 +27,7 @@ import {
 import {
   getArrayAnswer,
   getStringAnswer,
+  hasAnswer,
 } from '../utils/normalizeAnswers'
 
 // =============================================================================
@@ -92,6 +93,7 @@ export function scoreStructure(
     scoreBoundaries(userAnswers, matchAnswers),
     scoreSaferSex(userAnswers, matchAnswers),
     scoreRoles(userAnswers, matchAnswers),
+    scoreFidelity(userAnswers, matchAnswers),
   ]
 
   const score = weightedAverage(subScores)
@@ -499,5 +501,44 @@ function scoreRoles(
       : score >= 50
         ? 'Compatible roles'
         : 'Same role preferences (may need discussion)',
+  }
+}
+
+/**
+ * Score Fidelity sub-component (10%)
+ * Q3a: Fidelity/commitment philosophy (free-form text)
+ * Binary presence match — semantic analysis deferred to Phase 2.
+ */
+function scoreFidelity(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userFidelity = getStringAnswer(userAnswers, 'Q3a')
+  const matchFidelity = getStringAnswer(matchAnswers, 'Q3a')
+
+  const userAnswered = hasAnswer(userFidelity)
+  const matchAnswered = hasAnswer(matchFidelity)
+
+  if (!userAnswered && !matchAnswered) {
+    return {
+      key: 'fidelity',
+      score: 0,
+      weight: STRUCTURE_WEIGHTS.fidelity,
+      matched: false,
+      reason: 'Fidelity philosophy not specified',
+    }
+  }
+
+  // Both answered → both considered fidelity important enough to define it
+  const score = userAnswered && matchAnswered ? 70 : 30
+
+  return {
+    key: 'fidelity',
+    score,
+    weight: STRUCTURE_WEIGHTS.fidelity,
+    matched: true,
+    reason: score >= 70
+      ? 'Both defined fidelity philosophy'
+      : 'Only one defined fidelity philosophy',
   }
 }

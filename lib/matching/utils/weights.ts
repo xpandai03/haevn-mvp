@@ -54,13 +54,15 @@ export const STRUCTURE_WEIGHTS = {
   /** Q3, Q3b, Q3c: Orientation and Kinsey-scale proximity */
   orientation: 25,
   /** Q4, Q6b: Relationship status and who they want to meet */
-  status: 25,
+  status: 20,
   /** Q6c, Q6d, Q28: Couple rules and hard boundaries */
-  boundaries: 25,
+  boundaries: 20,
   /** Q30, Q30a, Q31: Safer-sex and health practices */
   saferSex: 15,
   /** Q26: Relational/sexual roles */
   roles: 10,
+  /** Q3a: Fidelity/commitment philosophy */
+  fidelity: 10,
 } as const
 
 // =============================================================================
@@ -84,13 +86,17 @@ export const CONNECTION_WEIGHTS = {
 
 export const CHEMISTRY_WEIGHTS = {
   /** Q23, Q24, Q25: Erotic styles, experiences, chemistry importance */
-  eroticProfile: 35,
+  eroticProfile: 30,
   /** Q26, Q33, Q33a: Roles, kinks, kink experience */
-  rolesKinks: 35,
+  rolesKinks: 30,
   /** Q25a: Frequency preference */
-  frequency: 20,
+  frequency: 10,
   /** Q28, Q29: Boundaries and discussion items */
   boundaries: 10,
+  /** Q27, Q27b: Body type self vs preferences cross-check */
+  physicalPreferences: 10,
+  /** Q34, Q34a: Exploration openness and variety desire */
+  exploration: 10,
 } as const
 
 // =============================================================================
@@ -151,9 +157,9 @@ export const LIFESTYLE_COVERAGE_THRESHOLD = 0.4 // 40%
  * Score thresholds for compatibility tiers.
  */
 export const TIER_THRESHOLDS = {
-  platinum: 85,
-  gold: 70,
-  silver: 55,
+  platinum: 80,
+  gold: 60,
+  silver: 40,
   bronze: 0, // anything below silver
 } as const
 

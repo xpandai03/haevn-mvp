@@ -338,7 +338,7 @@ export const MULTI_SELECT_QUESTIONS = [
   'Q9', 'Q9a', 'Q6', 'Q6b', 'Q16', 'Q21',     // Intent
   'Q3c', 'Q30a', 'Q26', 'Q28',                 // Structure
   'Q11',                                        // Connection
-  'Q23', 'Q24', 'Q27', 'Q33', 'Q29',           // Chemistry
+  'Q23', 'Q24', 'Q27', 'Q27b', 'Q33', 'Q29',   // Chemistry
   'Q13a', 'Q17a',                              // Lifestyle
 ] as const
 
