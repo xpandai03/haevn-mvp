@@ -9,7 +9,7 @@ import { MatchProfileView } from '@/components/MatchProfileView'
 import { useToast } from '@/hooks/use-toast'
 
 interface MatchesSectionProps {
-  totalMatches: number
+  totalMatches?: number
   currentIndex?: number
   membershipTier?: 'free' | 'plus'
 }
@@ -34,8 +34,6 @@ function toProfileViewMatch(match: ComputedMatchCard) {
 }
 
 export function MatchesSection({
-  totalMatches,
-  currentIndex = 1,
   membershipTier = 'free'
 }: MatchesSectionProps) {
   const { toast } = useToast()
@@ -130,14 +128,16 @@ export function MatchesSection({
       .slice(0, 2)
   }
 
-  const displayCount = matches.length > 0 ? matches.length : totalMatches
-
   return (
     <section className="space-y-2">
       {/* Section Header */}
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-medium text-gray-900">
-          Matches ({currentIndex} of {displayCount})
+          {!loading && matches.length === 0
+            ? 'Matches'
+            : loading
+              ? 'Matches'
+              : `Matches (${matches.length})`}
         </h3>
         <Link
           href="/dashboard/matches"
@@ -193,30 +193,20 @@ export function MatchesSection({
                   </button>
                 )
               })
-            ) : totalMatches > 0 ? (
-              // Placeholder cards if no real matches loaded yet
-              Array.from({ length: Math.min(totalMatches, 5) }).map((_, i) => (
-                <Link
-                  key={i}
-                  href="/dashboard/matches"
-                  className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-center hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
-                >
-                  <span className="text-xs text-gray-400">Match {i + 1}</span>
-                </Link>
-              ))
             ) : (
               // Empty state
               <div className="w-full py-8 text-center">
-                <p className="text-sm text-gray-400">No matches yet</p>
+                <p className="text-sm text-gray-500">No matches yet</p>
+                <p className="text-xs text-gray-400 mt-1">New matches are released every Monday</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Scroll indicator dots */}
-        {displayCount > 0 && (
+        {/* Scroll indicator dots — only when more than 1 match */}
+        {matches.length > 1 && (
           <div className="flex justify-center gap-1 mt-2">
-            {Array.from({ length: Math.min(displayCount, 5) }).map((_, i) => (
+            {Array.from({ length: Math.min(matches.length, 5) }).map((_, i) => (
               <div
                 key={i}
                 className={`w-1.5 h-1.5 rounded-full ${
