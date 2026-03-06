@@ -155,6 +155,10 @@ export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
     normalized.Q13a_required = Boolean(reqVal)
   }
 
+  // Enforce ShowIf conditions — strip answers for questions that should
+  // not have been stored based on the user's own answer profile.
+  enforceShowIf(normalized)
+
   return normalized
 }
 
@@ -321,4 +325,108 @@ export function getStringAnswer(
 ): string | undefined {
   const val = answers[key]
   return asSingle(val as string | string[] | undefined)
+}
+
+// =============================================================================
+// SHOW-IF ENFORCEMENT
+// =============================================================================
+// Strips answers for questions whose ShowIf preconditions are not met.
+// This prevents hidden questions from accidentally influencing scoring.
+
+type ShowIfCondition =
+  | 'IF_COUPLE'
+  | 'IF_LTR_INTENT'
+  | 'IF_KINK_MODE'
+  | 'IF_NON_MONO'
+
+/**
+ * Mapping of questions to their ShowIf precondition.
+ * Questions not listed here are implicitly ALL (always shown).
+ */
+const QUESTION_SHOW_IF: Record<string, ShowIfCondition> = {
+  Q6c: 'IF_COUPLE',
+  Q6d: 'IF_COUPLE',
+  Q7: 'IF_NON_MONO',
+  Q8: 'IF_NON_MONO',
+  Q13: 'IF_LTR_INTENT',
+  Q14a: 'IF_LTR_INTENT',
+  Q14b: 'IF_LTR_INTENT',
+  Q17: 'IF_LTR_INTENT',
+  Q17a: 'IF_LTR_INTENT',
+  Q17b: 'IF_LTR_INTENT',
+  Q33a: 'IF_KINK_MODE',
+}
+
+const COUPLE_STATUSES = [
+  'dating', 'married', 'partnered', 'couple', 'in_a_couple',
+  'in_relationship', 'engaged',
+]
+
+const NON_MONO_STYLES = [
+  'open', 'polyamory', 'polyamorous', 'poly', 'enm',
+  'ethical_non_monogamy', 'non-monogamous', 'non_monogamous',
+  'dont_know_yet', 'exploring', 'relationship_anarchy',
+]
+
+const LTR_INTENTS = [
+  'long_term', 'long-term', 'romantic', 'relationship', 'serious',
+  'marriage', 'partnership', 'committed', 'ltr', 'life_partner',
+]
+
+function isCoupleFromAnswers(answers: NormalizedAnswers): boolean {
+  const q4 = (answers.Q4 || '').toLowerCase().trim()
+  if (!q4) return false
+  return COUPLE_STATUSES.some(s => q4.includes(s))
+}
+
+function hasNonMonoStyle(answers: NormalizedAnswers): boolean {
+  const styles = asArray(answers.Q6).map(v => v.toLowerCase().trim())
+  return styles.some(style =>
+    NON_MONO_STYLES.some(nms => style.includes(nms))
+  )
+}
+
+function hasLtrIntent(answers: NormalizedAnswers): boolean {
+  const intents = asArray(answers.Q9).map(v => v.toLowerCase().trim())
+  return intents.some(intent =>
+    LTR_INTENTS.some(ltr => intent.includes(ltr))
+  )
+}
+
+function hasKinkAnswers(answers: NormalizedAnswers): boolean {
+  return asArray(answers.Q33).length > 0
+}
+
+/**
+ * Determine whether a question should be shown for this user.
+ */
+function shouldShow(questionKey: string, answers: NormalizedAnswers): boolean {
+  const condition = QUESTION_SHOW_IF[questionKey]
+  if (!condition) return true
+
+  switch (condition) {
+    case 'IF_COUPLE':
+      return isCoupleFromAnswers(answers)
+    case 'IF_NON_MONO':
+      return hasNonMonoStyle(answers)
+    case 'IF_LTR_INTENT':
+      return hasLtrIntent(answers)
+    case 'IF_KINK_MODE':
+      return hasKinkAnswers(answers)
+    default:
+      return true
+  }
+}
+
+/**
+ * Enforce ShowIf conditions on normalized answers in-place.
+ * Deletes answers for questions that should not have been presented
+ * given the user's own profile data (Q4, Q6, Q9, Q33).
+ */
+function enforceShowIf(answers: NormalizedAnswers): void {
+  for (const key of Object.keys(answers)) {
+    if (!shouldShow(key, answers)) {
+      delete (answers as Record<string, unknown>)[key]
+    }
+  }
 }

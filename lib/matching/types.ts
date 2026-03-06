@@ -20,6 +20,17 @@ export type RawAnswers = Record<string, string | string[] | number | boolean | n
  */
 export interface NormalizedAnswers {
   // -------------------------------------------------------------------------
+  // BASIC INFO
+  // -------------------------------------------------------------------------
+
+  /** Q1: User's age */
+  Q1?: string
+  /** Q2: Gender identity */
+  Q2?: string
+  /** Q2a: Pronouns */
+  Q2a?: string
+
+  // -------------------------------------------------------------------------
   // INTENT FIT QUESTIONS
   // -------------------------------------------------------------------------
 
@@ -208,7 +219,16 @@ export interface ConstraintResult {
   /** Whether all constraints passed */
   passed: boolean
   /** Which constraint caused the block (if any) */
-  blockedBy?: 'language' | 'boundaries' | 'mutual_interest'
+  blockedBy?:
+    | 'language'
+    | 'boundaries'
+    | 'mutual_interest'
+    | 'core_intent'
+    | 'age_range'
+    | 'distance'
+    | 'couple_permissions'
+    | 'safer_sex'
+    | 'health'
   /** Human-readable reason for the block */
   reason?: string
 }

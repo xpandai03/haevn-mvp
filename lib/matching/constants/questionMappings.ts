@@ -309,6 +309,11 @@ export const LIFESTYLE_QUESTIONS = {
  * These can block a match entirely regardless of category scores.
  */
 export const CONSTRAINT_QUESTIONS = {
+  coreIntent: {
+    questions: ['Q9'],
+    description: 'Core connection intent',
+    logic: 'Must share at least one connection goal, otherwise BLOCK',
+  },
   language: {
     questions: ['Q13a'],
     requiredFlag: 'Q13a_required',
@@ -319,6 +324,31 @@ export const CONSTRAINT_QUESTIONS = {
     questions: ['Q6b'],
     description: 'Who they want to meet',
     logic: 'Must be mutually inclusive (solo↔solo, couple↔couple-friendly)',
+  },
+  couplePermissions: {
+    questions: ['Q6d'],
+    description: 'Couple connection permissions',
+    logic: 'If couple permissions conflict with match type, BLOCK',
+  },
+  ageRange: {
+    questions: ['Q1'],
+    description: 'Age preference range',
+    logic: 'Mutual age range check (partial — awaiting preference fields)',
+  },
+  distance: {
+    questions: ['Q19a'],
+    description: 'Distance cap',
+    logic: 'Must be within both parties max distance (partial — awaiting geolocation)',
+  },
+  saferSex: {
+    questions: ['Q30', 'Q30a'],
+    description: 'Safer-sex compatibility',
+    logic: 'Extreme tier mismatch or practice conflicts, BLOCK',
+  },
+  health: {
+    questions: ['Q31'],
+    description: 'Health/testing compatibility',
+    logic: 'Conflicting testing/disclosure requirements, BLOCK',
   },
   hardBoundaries: {
     questions: ['Q28'],
