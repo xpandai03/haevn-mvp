@@ -45,7 +45,7 @@ export default function IdentityPage() {
         const { data: profile } = await supabase
           .from('profiles')
           .select('city')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .maybeSingle() // Use maybeSingle to avoid errors if no profile
 
         if (profile?.city) {
@@ -123,17 +123,18 @@ export default function IdentityPage() {
       console.log('[Identity] ✅ Identity saved successfully:', data.action)
       console.log('[Identity] Partnership ID:', data.partnershipId)
 
-      // Mark step as complete (identity is now step 3)
-      await flowController.markStepComplete(user.id, 3)
-      console.log('[Identity] Step 3 marked complete')
+      // Mark step as complete (identity is step 4)
+      await flowController.markStepComplete(user.id, 4)
+      console.log('[Identity] Step 4 marked complete')
 
       // Navigate to relationship orientation page
       router.push('/onboarding/relationship-orientation')
     } catch (error) {
       console.error('[Identity] Error saving identity:', error)
+      const errMsg = error instanceof Error ? error.message : 'Unknown error'
       toast({
         title: 'Error',
-        description: 'Failed to save your selection. Please try again.',
+        description: errMsg || 'Failed to save your selection. Please try again.',
         variant: 'destructive'
       })
     } finally {

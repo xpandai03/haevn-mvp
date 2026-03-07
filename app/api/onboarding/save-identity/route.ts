@@ -60,10 +60,13 @@ export async function POST(request: NextRequest) {
       // UPDATE existing partnership
       console.log('[API /onboarding/save-identity] ✍️ Updating existing partnership:', existingPartnership.id)
 
-      // Build update object - only include relationship_orientation if provided
+      // Build update object - only include provided fields
       const updateData: any = {
-        profile_type: profileType,
         updated_at: new Date().toISOString()
+      }
+
+      if (profileType) {
+        updateData.profile_type = profileType
       }
 
       if (relationshipOrientation) {
@@ -107,8 +110,7 @@ export async function POST(request: NextRequest) {
         owner_id: user.id,
         city: city,
         profile_type: profileType,
-        membership_tier: 'free',
-        advocate_mode: false
+        membership_tier: 'free'
       }
 
       if (relationshipOrientation) {
