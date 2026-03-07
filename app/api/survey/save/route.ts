@@ -293,13 +293,20 @@ export async function POST(request: NextRequest) {
         .eq('partnership_id', partnershipId)
     }
 
-    // If 100% complete, update profile using admin client
+    // If 100% complete, update profile and partnership state
     if (completionPct === 100) {
       console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: profiles update (survey_complete)')
       await adminClient
         .from('profiles')
         .update({ survey_complete: true })
         .eq('user_id', user.id)
+
+      // Set partnership profile_state to 'live' so match engine includes it
+      console.log('[API /survey/save] ✍️ Setting partnership profile_state to live')
+      await adminClient
+        .from('partnerships')
+        .update({ profile_state: 'live' })
+        .eq('id', partnershipId)
 
       // Insert a match_compute_runs tracking row, then trigger async computation
       console.log('[API /survey/save] 🎯 Survey 100% complete - queuing match calculation')

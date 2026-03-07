@@ -210,7 +210,6 @@ export async function computeMatchesForPartnership(
       .select('id, profile_type, city, msa, display_name')
       .neq('id', partnershipId)
       .eq('profile_state', 'live')
-      .not('display_name', 'is', null)
 
     if (partnershipsError) {
       const errMsg = `Failed to fetch partnerships: ${partnershipsError.message}`
@@ -498,7 +497,6 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
       .from('partnerships')
       .select('id, display_name')
       .eq('profile_state', 'live')
-      .not('display_name', 'is', null)
 
     if (error || !allPartnerships) {
       console.error('[recomputeAllMatches] Failed to fetch partnerships:', error)

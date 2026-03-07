@@ -304,12 +304,20 @@ export async function saveUserSurveyData(
         .eq('partnership_id', partnershipId)
     }
 
-    // If 100% complete, update profile using admin client
+    // If 100% complete, mark profile and partnership as live
     if (completionPct === 100) {
       await adminClient
         .from('profiles')
         .update({ survey_complete: true })
         .eq('user_id', user.id)
+
+      // Set partnership profile_state to 'live' so match engine includes it
+      await adminClient
+        .from('partnerships')
+        .update({ profile_state: 'live' })
+        .eq('id', partnershipId)
+
+      console.log('[saveUserSurveyData] Partnership set to live:', partnershipId)
     }
 
     console.log('[saveUserSurveyData] Saved successfully:', {
