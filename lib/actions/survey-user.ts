@@ -101,12 +101,12 @@ export async function getUserSurveyData(): Promise<{ data: UserSurveyData | null
     console.log('[getUserSurveyData] ✅ Valid partnershipId:', partnershipId)
     console.log('[getUserSurveyData] ✅ Guard active before user_survey_responses query:', partnershipId)
 
-    // Try to get existing survey data for partnership
-    console.log('[getUserSurveyData] Querying user_survey_responses for partnership_id:', partnershipId)
+    // Get existing survey data by user_id (the PK)
+    console.log('[getUserSurveyData] Querying user_survey_responses for user_id:', user.id)
     const { data, error } = await adminClient
       .from('user_survey_responses')
       .select('answers_json, completion_pct, current_step, completed_sections')
-      .eq('partnership_id', partnershipId)
+      .eq('user_id', user.id)
       .maybeSingle()
 
     if (error && error.code !== 'PGRST116') {
@@ -235,12 +235,12 @@ export async function saveUserSurveyData(
     console.log('[saveUserSurveyData] ✅ Guard active before user_survey_responses query:', partnershipId)
     console.log('[saveUserSurveyData] User role:', membership.role)
 
-    // Get existing answers for this partnership (NOT user)
-    console.log('[saveUserSurveyData] Fetching existing partnership survey...')
+    // Get existing answers for this user
+    console.log('[saveUserSurveyData] Fetching existing user survey...')
     const { data: existing, error: selectError } = await adminClient
       .from('user_survey_responses')
       .select('answers_json')
-      .eq('partnership_id', partnershipId)
+      .eq('user_id', user.id)
       .maybeSingle()
 
     if (selectError) {
@@ -269,19 +269,17 @@ export async function saveUserSurveyData(
     const completionPct = calculateSurveyCompletion(mergedAnswers)
     console.log('[saveUserSurveyData] Completion:', completionPct + '%')
 
-    // Update survey response using admin client with PARTNERSHIP_ID
-    console.log('[saveUserSurveyData] Upserting data for partnership...')
+    // Update survey response using admin client keyed by user_id (the PK)
+    console.log('[saveUserSurveyData] Upserting data for user:', user.id)
     const { error: updateError, data: upsertData } = await adminClient
       .from('user_survey_responses')
       .upsert({
-        partnership_id: partnershipId,  // CHANGED: Use partnership_id instead of user_id
-        user_id: null,  // CHANGED: Explicitly null for partnership surveys
+        user_id: user.id,
+        partnership_id: partnershipId,
         answers_json: mergedAnswers,
         completion_pct: completionPct,
         current_step: currentQuestionIndex,
         completed_sections: completedSections
-      }, {
-        onConflict: 'partnership_id'  // CHANGED: Conflict resolution on partnership_id
       })
       .select()
 
