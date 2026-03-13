@@ -26,6 +26,11 @@ const PIPELINE_STEPS = [
     type: 'process' as const,
   },
   {
+    label: 'Pair Applicability',
+    detail: 'Conditional logic determines which question pairs apply to each user combination',
+    type: 'process' as const,
+  },
+  {
     label: 'Constraint Gates (9)',
     detail: 'Structural, feasibility, and dealbreaker gates filter incompatible pairs',
     type: 'gate' as const,
@@ -63,13 +68,13 @@ const PIPELINE_STEPS = [
 ]
 
 const CONSTRAINT_GATES = [
-  { name: 'Core Intent', questions: 'Q9', rule: 'Must share at least 1 connection goal', category: 'structural' as const },
+  { name: 'Core Intent', questions: 'Q9', rule: 'Users must share the same core intent', category: 'structural' as const },
   { name: 'Language', questions: 'Q13a', rule: 'Block if required flag set and no language overlap', category: 'structural' as const },
   { name: 'Mutual Interest', questions: 'Q6b', rule: 'Solo/couple mutual inclusion required', category: 'structural' as const },
   { name: 'Couple Permissions', questions: 'Q6d', rule: 'Couple connection rules must be compatible', category: 'structural' as const },
   { name: 'Age Range', questions: 'Preferences', rule: 'Mutual age preferences must overlap', category: 'feasibility' as const },
   { name: 'Distance Cap', questions: 'Location', rule: 'Geographic proximity check', category: 'feasibility' as const },
-  { name: 'Safer-sex', questions: 'Q30, Q30a', rule: 'Block if tier gap >= 6 or practice conflicts', category: 'dealbreaker' as const },
+  { name: 'Safer-sex', questions: 'Q30, Q30a', rule: 'Block if safer-sex practices are incompatible', category: 'dealbreaker' as const },
   { name: 'Health', questions: 'Q31', rule: 'Testing/disclosure conflicts block match', category: 'dealbreaker' as const },
   { name: 'Hard Boundaries', questions: 'Q28', rule: "User desires can't conflict with match hard-nos", category: 'dealbreaker' as const },
 ]
@@ -247,11 +252,14 @@ export function MatchingEngineOverview() {
       </CardHeader>
       {expanded && (
         <CardContent className="space-y-2">
+          <p className="text-sm text-gray-600 pb-2">
+            The HAEVN matching engine uses a <span className="font-semibold">Gate &amp; Weight model</span>. Potential matches must first pass structural and dealbreaker gates before compatibility scoring occurs.
+          </p>
           <Section title="Matching Pipeline" defaultOpen>
             <EnginePipeline />
           </Section>
 
-          <Section title="Macro Category Weights" defaultOpen>
+          <Section title="Current Engine Category Weights" defaultOpen>
             <MacroWeightBars />
           </Section>
 
