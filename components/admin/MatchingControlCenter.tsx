@@ -8,6 +8,7 @@ import { PartnershipCard } from './PartnershipCard'
 import { MatchesList } from './MatchesList'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
+import { MatchingEngineOverview } from './MatchingEngineOverview'
 
 interface MatchingControlCenterProps {
   userEmail: string
@@ -277,6 +278,9 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
           <p className="text-sm">This tool shows system-generated matches and their social state</p>
         </div>
       )}
+
+      {/* Engine Documentation */}
+      <MatchingEngineOverview />
     </div>
   )
 }
