@@ -17,7 +17,7 @@ const CATEGORY_WEIGHTS = [
 const PIPELINE_STEPS = [
   {
     label: 'Survey Responses',
-    detail: 'Raw answers_json from user_survey_responses table',
+    detail: 'Raw answers from the survey responses table (JSONB)',
     type: 'input' as const,
   },
   {
@@ -47,7 +47,7 @@ const PIPELINE_STEPS = [
   },
   {
     label: '80% Threshold Filter',
-    detail: 'Only scores >= 80 are stored in computed_matches',
+    detail: 'Only scores >= 80 are stored as eligible matches',
     type: 'gate' as const,
   },
   {
