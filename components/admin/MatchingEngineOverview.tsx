@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChevronDown, ChevronRight, Shield, Target, Zap, Heart, Compass, Coffee, Info } from 'lucide-react'
+import { ChevronDown, ChevronRight, Shield, Target, Zap, Heart, Compass, Coffee, Info, Sparkles } from 'lucide-react'
 
-// ─── Constants (mirroring lib/matching/utils/weights.ts) ───────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────
 
-const CATEGORY_WEIGHTS = [
-  { key: 'intent', label: 'Intent', weight: 30, color: 'bg-purple-500', icon: Target },
-  { key: 'structure', label: 'Structure', weight: 25, color: 'bg-blue-500', icon: Shield },
-  { key: 'connection', label: 'Connection', weight: 20, color: 'bg-green-500', icon: Heart },
-  { key: 'chemistry', label: 'Chemistry', weight: 15, color: 'bg-pink-500', icon: Zap },
-  { key: 'lifestyle', label: 'Lifestyle', weight: 10, color: 'bg-amber-500', icon: Coffee },
+const SPEC_MACRO_WEIGHTS = [
+  { key: 'boundaries_comfort', label: 'Boundaries & Comfort', weight: 35, color: 'bg-purple-500', icon: Shield },
+  { key: 'sexual_energy', label: 'Sexual Energy', weight: 35, color: 'bg-pink-500', icon: Zap },
+  { key: 'openness_curiosity', label: 'Openness & Curiosity', weight: 10, color: 'bg-teal-500', icon: Compass },
+  { key: 'structure_fit', label: 'Structure Fit', weight: 10, color: 'bg-blue-500', icon: Target },
+  { key: 'goals_expectations', label: 'Goals & Expectations', weight: 10, color: 'bg-amber-500', icon: Sparkles },
 ]
 
 const PIPELINE_STEPS = [
@@ -124,25 +124,25 @@ function EnginePipeline() {
 function MacroWeightBars() {
   return (
     <div className="space-y-3">
-      {CATEGORY_WEIGHTS.map(({ key, label, weight, color, icon: Icon }) => (
+      <p className="text-xs text-gray-600">
+        The HAEVN compatibility engine groups questions into five macro dimensions.
+        Each macro is scored from question-level comparisons and then combined using fixed macro weights to produce the final compatibility percentage.
+      </p>
+      {SPEC_MACRO_WEIGHTS.map(({ key, label, weight, color, icon: Icon }) => (
         <div key={key} className="flex items-center gap-3">
-          <div className="flex items-center gap-2 w-28 shrink-0">
+          <div className="flex items-center gap-2 w-44 shrink-0">
             <Icon className="h-4 w-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">{label}</span>
           </div>
           <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
             <div
               className={`h-full rounded-full ${color} transition-all`}
-              style={{ width: `${weight * 3.33}%` }}
+              style={{ width: `${weight * 2.86}%` }}
             />
           </div>
           <span className="text-sm font-mono text-gray-600 w-10 text-right">{weight}%</span>
         </div>
       ))}
-      <p className="text-xs text-gray-500 mt-2 flex items-start gap-1.5">
-        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-        If Lifestyle coverage is below 40%, its weight is redistributed proportionally to the other four categories.
-      </p>
     </div>
   )
 }
@@ -189,11 +189,10 @@ function EngineMetadata() {
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
       {[
         { label: 'Engine Version', value: '5cat-v4' },
-        { label: 'Spec Version', value: 'March 2026' },
+        { label: 'Next Engine Spec', value: 'Gate & Weight Model (March 2026)' },
         { label: 'Categories', value: '5' },
         { label: 'Constraint Gates', value: '9' },
         { label: 'Score Threshold', value: '80%' },
-        { label: 'Tier Model', value: 'Plat / Gold / Silver / Bronze' },
       ].map(({ label, value }) => (
         <div key={label} className="bg-gray-50 rounded-md px-3 py-2 border border-gray-200">
           <div className="text-xs text-gray-500">{label}</div>
@@ -259,7 +258,7 @@ export function MatchingEngineOverview() {
             <EnginePipeline />
           </Section>
 
-          <Section title="Current Engine Category Weights" defaultOpen>
+          <Section title="Compatibility Macro Weights (Spec Model)" defaultOpen>
             <MacroWeightBars />
           </Section>
 
