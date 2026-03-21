@@ -370,6 +370,7 @@ export const MULTI_SELECT_QUESTIONS = [
   'Q11',                                        // Connection
   'Q23', 'Q24', 'Q27', 'Q27b', 'Q33', 'Q29',   // Chemistry
   'Q13a', 'Q17a',                              // Lifestyle
+  'Q_RACE_IDENTITY', 'Q_RACE_PREFERENCE',       // Race
 ] as const
 
 /**

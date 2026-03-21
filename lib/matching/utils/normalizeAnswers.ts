@@ -84,6 +84,16 @@ const INTERNAL_TO_CSV: Record<string, string> = {
   'q37a_harmony': 'Q37a',
   'q38_jealousy': 'Q38',
   'q38a_emotional_reactive': 'Q38a',
+  // Age preference fields
+  'q_age_min': 'Q_AGE_MIN',
+  'q_age_max': 'Q_AGE_MAX',
+  'age_min_preference': 'Q_AGE_MIN',
+  'age_max_preference': 'Q_AGE_MAX',
+  // Race / ethnicity fields
+  'q_race_identity': 'Q_RACE_IDENTITY',
+  'q_race_preference': 'Q_RACE_PREFERENCE',
+  'race_identity': 'Q_RACE_IDENTITY',
+  'race_preference': 'Q_RACE_PREFERENCE',
 }
 
 // Build a case-insensitive lookup at module load.
@@ -134,6 +144,12 @@ export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
 
   for (const [rawKey, value] of Object.entries(raw)) {
     if (value === null || value === undefined) {
+      continue
+    }
+
+    // Pass through partnership metadata fields as-is (numeric, not survey data)
+    if (rawKey === '_latitude' || rawKey === '_longitude') {
+      (normalized as any)[rawKey] = typeof value === 'number' ? value : parseFloat(String(value))
       continue
     }
 

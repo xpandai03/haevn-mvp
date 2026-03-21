@@ -24,7 +24,7 @@ import {
   type CompatibilityTier,
 } from '@/lib/matching'
 
-const ENGINE_VERSION = '5cat-v4'
+const ENGINE_VERSION = '5cat-v5'
 const MIN_SCORE_THRESHOLD = 80
 
 /**
@@ -134,7 +134,7 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     const { data: currentPartnership, error: currentError } = await adminClient
       .from('partnerships')
-      .select('id, profile_type, city, msa, display_name')
+      .select('id, profile_type, city, msa, display_name, latitude, longitude')
       .eq('id', partnershipId)
       .single()
 
@@ -197,7 +197,13 @@ export async function computeMatchesForPartnership(
     }
 
     // Raw answers — passed directly to calculateCompatibilityFromRaw (no pre-normalization)
-    const currentRawAnswers = currentCompletedSurvey.answers_json as RawAnswers
+    // Inject partnership-level location metadata for distance gate
+    const currentRawAnswers: RawAnswers = {
+      ...(currentCompletedSurvey.answers_json as RawAnswers),
+      ...(currentPartnership.latitude != null && currentPartnership.longitude != null
+        ? { _latitude: currentPartnership.latitude, _longitude: currentPartnership.longitude }
+        : {}),
+    }
     const currentIsCouple = currentPartnership.profile_type === 'couple'
 
     console.log(`[computeMatches] Current: ${currentPartnership.display_name} | rawKeys=${Object.keys(currentRawAnswers).length} | isCouple=${currentIsCouple}`)
@@ -207,7 +213,7 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     const { data: allPartnerships, error: partnershipsError } = await adminClient
       .from('partnerships')
-      .select('id, profile_type, city, msa, display_name')
+      .select('id, profile_type, city, msa, display_name, latitude, longitude')
       .neq('id', partnershipId)
       .eq('profile_state', 'live')
 
@@ -342,9 +348,17 @@ export async function computeMatchesForPartnership(
       try {
         const matchIsCouple = candidate.profile_type === 'couple'
 
+        // Inject candidate's location metadata for distance gate
+        const candidateRawWithLocation: RawAnswers = {
+          ...candidateRawAnswers,
+          ...((candidate as any).latitude != null && (candidate as any).longitude != null
+            ? { _latitude: (candidate as any).latitude, _longitude: (candidate as any).longitude }
+            : {}),
+        }
+
         const result = calculateCompatibilityFromRaw(
           currentRawAnswers,
-          candidateRawAnswers,
+          candidateRawWithLocation,
           currentIsCouple,
           matchIsCouple
         )

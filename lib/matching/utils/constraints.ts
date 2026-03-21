@@ -5,15 +5,20 @@
  * regardless of category scores.
  *
  * Constraints (executed in order):
+ *
+ * System gates:
  * 1. Core Intent (Q9) - Must share at least one connection goal
  * 2. Language (Q13a) - If required flag set and no overlap, BLOCK
  * 3. Mutual Interest (Q6b) - Must be mutually inclusive
  * 4. Couple Permissions (Q6d) - Couple connection rules must be compatible
- * 5. Age Range - Mutual age preferences (partial: awaiting preference fields)
- * 6. Distance Cap - Geographic proximity (partial: awaiting distance infra)
- * 7. Safer-Sex (Q30, Q30a) - Extreme tier mismatch or item conflicts, BLOCK
- * 8. Health (Q31) - Testing/disclosure conflicts, BLOCK
- * 9. Hard Boundaries (Q28) - User desires can't conflict with Match nos
+ * 5. Age Range (Q1 + Q_AGE_MIN/MAX) - Mutual age preferences
+ * 6. Distance Cap (_latitude/_longitude + Q19a) - Geographic proximity
+ *
+ * User-defined dealbreakers:
+ * 7. Race (Q_RACE_PREFERENCE vs Q_RACE_IDENTITY) - Variable hard filter
+ * 8. Hard Boundaries (Q28) - User desires can't conflict with Match nos
+ * 9. Safer-Sex (Q30, Q30a) - Extreme tier mismatch or item conflicts, BLOCK
+ * 10. Health (Q31) - Testing/disclosure conflicts, BLOCK
  */
 
 import type { NormalizedAnswers, ConstraintResult } from '../types'
@@ -157,15 +162,13 @@ export function checkConstraints(
   const distanceResult = checkDistanceConstraint(userAnswers, matchAnswers)
   if (!distanceResult.passed) return distanceResult
 
-  // 7. Safer-sex compatibility (Q30, Q30a)
-  const saferSexResult = checkSaferSexConstraint(userAnswers, matchAnswers)
-  if (!saferSexResult.passed) return saferSexResult
+  // --- User-defined dealbreakers ---
 
-  // 8. Health compatibility (Q31)
-  const healthResult = checkHealthConstraint(userAnswers, matchAnswers)
-  if (!healthResult.passed) return healthResult
+  // 7. Race variable gate (hard filter only when user selects specific races without "any")
+  const raceResult = checkRaceConstraint(userAnswers, matchAnswers)
+  if (!raceResult.passed) return raceResult
 
-  // 9. Hard boundaries (Q28) — both directions
+  // 8. Hard boundaries (Q28) — both directions
   const boundariesResult = checkBoundariesConstraint(userAnswers, matchAnswers)
   if (!boundariesResult.passed) return boundariesResult
 
@@ -176,6 +179,14 @@ export function checkConstraints(
       reason: reverseBoundariesResult.reason?.replace('Match', 'User') || 'Boundary conflict',
     }
   }
+
+  // 9. Safer-sex compatibility (Q30, Q30a)
+  const saferSexResult = checkSaferSexConstraint(userAnswers, matchAnswers)
+  if (!saferSexResult.passed) return saferSexResult
+
+  // 10. Health compatibility (Q31)
+  const healthResult = checkHealthConstraint(userAnswers, matchAnswers)
+  if (!healthResult.passed) return healthResult
 
   return { passed: true }
 }
@@ -461,27 +472,77 @@ function checkOneSideCouplePerms(
 // =============================================================================
 
 /**
+ * Parse a user's age from Q1 (birthdate string or numeric age).
+ * Returns NaN if the value is not parseable.
+ */
+function parseAge(q1Value: string | undefined): number {
+  if (!q1Value) return NaN
+
+  // If it looks like a date (contains / or -), calculate age from birthdate
+  if (q1Value.includes('/') || (q1Value.includes('-') && q1Value.length > 4)) {
+    const birthDate = new Date(q1Value)
+    if (isNaN(birthDate.getTime())) return NaN
+    const now = new Date()
+    let age = now.getFullYear() - birthDate.getFullYear()
+    const monthDiff = now.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
+  // Otherwise treat as numeric age
+  const age = parseFloat(q1Value)
+  return isNaN(age) ? NaN : age
+}
+
+/**
  * Check age range constraint.
  *
- * TODO: Age preference fields (age_min, age_max) do not yet exist in
- * the survey schema. This gate is structurally ready and will activate
- * once preference fields are added. Currently passes through.
+ * Mutual hard gate: A's preferred range must include B's age AND
+ * B's preferred range must include A's age.
+ *
+ * If either party has not provided age or preference fields, the gate
+ * passes (missing data = skip, consistent with the rest of the engine).
  */
 export function checkAgeRangeConstraint(
-  _userAnswers: NormalizedAnswers,
-  _matchAnswers: NormalizedAnswers
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
 ): ConstraintResult {
-  // Age values are available via Q1, but min/max preference fields
-  // are not yet part of the survey. When they are added, implement:
-  //
-  //   const userAge = parseFloat(asSingle(userAnswers.Q1 as any) || '')
-  //   const matchAge = parseFloat(asSingle(matchAnswers.Q1 as any) || '')
-  //   const userMin = parseFloat(asSingle(userAnswers.Q1_age_min as any) || '')
-  //   const userMax = parseFloat(asSingle(userAnswers.Q1_age_max as any) || '')
-  //   const matchMin = parseFloat(asSingle(matchAnswers.Q1_age_min as any) || '')
-  //   const matchMax = parseFloat(asSingle(matchAnswers.Q1_age_max as any) || '')
-  //   if (matchAge < userMin || matchAge > userMax) return blocked
-  //   if (userAge < matchMin || userAge > matchMax) return blocked
+  const userAge = parseAge(asSingle(userAnswers.Q1 as string | string[] | undefined))
+  const matchAge = parseAge(asSingle(matchAnswers.Q1 as string | string[] | undefined))
+
+  // If either age is unknown, skip the gate
+  if (isNaN(userAge) || isNaN(matchAge)) {
+    return { passed: true }
+  }
+
+  const userMin = parseFloat(asSingle(userAnswers.Q_AGE_MIN as string | string[] | undefined) || '')
+  const userMax = parseFloat(asSingle(userAnswers.Q_AGE_MAX as string | string[] | undefined) || '')
+  const matchMin = parseFloat(asSingle(matchAnswers.Q_AGE_MIN as string | string[] | undefined) || '')
+  const matchMax = parseFloat(asSingle(matchAnswers.Q_AGE_MAX as string | string[] | undefined) || '')
+
+  // If User has set age preferences, check if Match's age is within range
+  if (!isNaN(userMin) && !isNaN(userMax)) {
+    if (matchAge < userMin || matchAge > userMax) {
+      return {
+        passed: false,
+        blockedBy: 'age_range',
+        reason: `Match age ${matchAge} outside User preferred range ${userMin}–${userMax}`,
+      }
+    }
+  }
+
+  // If Match has set age preferences, check if User's age is within range
+  if (!isNaN(matchMin) && !isNaN(matchMax)) {
+    if (userAge < matchMin || userAge > matchMax) {
+      return {
+        passed: false,
+        blockedBy: 'age_range',
+        reason: `User age ${userAge} outside Match preferred range ${matchMin}–${matchMax}`,
+      }
+    }
+  }
 
   return { passed: true }
 }
@@ -491,25 +552,93 @@ export function checkAgeRangeConstraint(
 // =============================================================================
 
 /**
+ * Parse Q19a distance preference text into a miles number.
+ * Returns Infinity for "Any distance" or unrecognized values.
+ */
+function parseDistancePreference(q19a: string | undefined): number {
+  if (!q19a) return Infinity
+  const val = q19a.toLowerCase().trim()
+
+  if (val.includes('neighborhood')) return 5
+  if (val.includes('10')) return 10
+  if (val.includes('25')) return 25
+  if (val.includes('50')) return 50
+  if (val.includes('100')) return 100
+  if (val.includes('any')) return Infinity
+
+  return Infinity
+}
+
+/**
+ * Haversine distance between two lat/lon points in miles.
+ */
+function haversineDistanceMiles(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const R = 3958.8 // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+/**
  * Check distance constraint.
  *
- * TODO: Distance computation requires geolocation coordinates or geocoding
- * of city/zip from the partnerships table. Survey answers include Q19a
- * (max distance preference) but not actual computed distance between users.
- * This gate will activate once distance infrastructure is connected.
+ * Mutual hard gate: actual distance between users must not exceed
+ * either user's max distance preference (Q19a).
+ *
+ * Requires _latitude and _longitude metadata fields injected from
+ * the partnerships table. If coordinates are missing for either party,
+ * the gate passes (missing data = skip).
  */
 export function checkDistanceConstraint(
-  _userAnswers: NormalizedAnswers,
-  _matchAnswers: NormalizedAnswers
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
 ): ConstraintResult {
-  // When distance infrastructure is available, implement:
-  //
-  //   const userMaxDist = parseDistancePreference(userAnswers.Q19a)
-  //   const matchMaxDist = parseDistancePreference(matchAnswers.Q19a)
-  //   const actualDistance = computeDistance(userLocation, matchLocation)
-  //   if (actualDistance > userMaxDist || actualDistance > matchMaxDist) {
-  //     return { passed: false, blockedBy: 'distance', reason: '...' }
-  //   }
+  const userLat = userAnswers._latitude
+  const userLon = userAnswers._longitude
+  const matchLat = matchAnswers._latitude
+  const matchLon = matchAnswers._longitude
+
+  // If coordinates are missing for either party, skip the gate
+  if (
+    userLat === undefined || userLon === undefined ||
+    matchLat === undefined || matchLon === undefined ||
+    isNaN(userLat) || isNaN(userLon) ||
+    isNaN(matchLat) || isNaN(matchLon)
+  ) {
+    return { passed: true }
+  }
+
+  const actualDistance = haversineDistanceMiles(userLat, userLon, matchLat, matchLon)
+
+  const userMaxDist = parseDistancePreference(
+    asSingle(userAnswers.Q19a as string | string[] | undefined)
+  )
+  const matchMaxDist = parseDistancePreference(
+    asSingle(matchAnswers.Q19a as string | string[] | undefined)
+  )
+
+  if (actualDistance > userMaxDist) {
+    return {
+      passed: false,
+      blockedBy: 'distance',
+      reason: `Distance ${Math.round(actualDistance)} mi exceeds User max ${userMaxDist} mi`,
+    }
+  }
+
+  if (actualDistance > matchMaxDist) {
+    return {
+      passed: false,
+      blockedBy: 'distance',
+      reason: `Distance ${Math.round(actualDistance)} mi exceeds Match max ${matchMaxDist} mi`,
+    }
+  }
 
   return { passed: true }
 }
@@ -616,6 +745,91 @@ export function checkHealthConstraint(
 }
 
 // =============================================================================
+// RACE VARIABLE GATE
+// =============================================================================
+
+/**
+ * Check race variable gate.
+ *
+ * Race is a **variable hard filter** per Rik's clarification:
+ *
+ * - Case A: User selects "any" only → NOT a gate, passes.
+ * - Case B: User selects "any" + specific races → NOT a hard gate.
+ *   The specifics are preferences only (future scoring, not gating).
+ * - Case C: User selects specific races WITHOUT "any" → HARD FILTER.
+ *   Match must have at least one matching race identity.
+ *
+ * Checked bidirectionally: both User→Match and Match→User.
+ *
+ * If either party has not provided race fields, the gate passes
+ * (missing data = skip).
+ */
+export function checkRaceConstraint(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): ConstraintResult {
+  // Check User's preference against Match's identity
+  const userPrefResult = checkOneDirectionRace(
+    asArray(userAnswers.Q_RACE_PREFERENCE),
+    asArray(matchAnswers.Q_RACE_IDENTITY),
+    'User', 'Match'
+  )
+  if (!userPrefResult.passed) return userPrefResult
+
+  // Check Match's preference against User's identity
+  const matchPrefResult = checkOneDirectionRace(
+    asArray(matchAnswers.Q_RACE_PREFERENCE),
+    asArray(userAnswers.Q_RACE_IDENTITY),
+    'Match', 'User'
+  )
+  if (!matchPrefResult.passed) return matchPrefResult
+
+  return { passed: true }
+}
+
+/**
+ * Check one direction of the race gate.
+ * Returns blocked only in Case C (specific races without "any").
+ */
+function checkOneDirectionRace(
+  preferenceList: string[],
+  identityList: string[],
+  prefLabel: string,
+  idLabel: string
+): ConstraintResult {
+  // If no preference set, not a gate
+  if (preferenceList.length === 0) {
+    return { passed: true }
+  }
+
+  // If no identity provided by the other party, skip
+  if (identityList.length === 0) {
+    return { passed: true }
+  }
+
+  const prefNorm = preferenceList.map(p => p.toLowerCase().trim())
+
+  // Case A or B: "any" is present → not a hard gate
+  if (prefNorm.some(p => p === 'any' || p === 'open_to_all' || p === 'no_preference')) {
+    return { passed: true }
+  }
+
+  // Case C: specific races only, no "any" → hard filter
+  const idNorm = identityList.map(i => i.toLowerCase().trim())
+  const hasMatch = prefNorm.some(pref => idNorm.includes(pref))
+
+  if (!hasMatch) {
+    return {
+      passed: false,
+      blockedBy: 'race',
+      reason: `${prefLabel} race preference [${preferenceList.join(', ')}] excludes ${idLabel} [${identityList.join(', ')}]`,
+    }
+  }
+
+  return { passed: true }
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
@@ -633,7 +847,8 @@ export function checkSingleConstraint(
     | 'distance'
     | 'safer_sex'
     | 'health'
-    | 'boundaries',
+    | 'boundaries'
+    | 'race',
   userAnswers: NormalizedAnswers,
   matchAnswers: NormalizedAnswers,
   userIsCouple: boolean = false,
@@ -652,6 +867,8 @@ export function checkSingleConstraint(
       return checkAgeRangeConstraint(userAnswers, matchAnswers)
     case 'distance':
       return checkDistanceConstraint(userAnswers, matchAnswers)
+    case 'race':
+      return checkRaceConstraint(userAnswers, matchAnswers)
     case 'safer_sex':
       return checkSaferSexConstraint(userAnswers, matchAnswers)
     case 'health':
@@ -680,6 +897,7 @@ export function getConstraintSummary(
     couple_permissions: checkCouplePermissionsConstraint(userAnswers, matchAnswers, userIsCouple, matchIsCouple),
     age_range: checkAgeRangeConstraint(userAnswers, matchAnswers),
     distance: checkDistanceConstraint(userAnswers, matchAnswers),
+    race: checkRaceConstraint(userAnswers, matchAnswers),
     safer_sex: checkSaferSexConstraint(userAnswers, matchAnswers),
     health: checkHealthConstraint(userAnswers, matchAnswers),
     boundaries: checkBoundariesConstraint(userAnswers, matchAnswers),

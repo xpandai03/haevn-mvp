@@ -251,14 +251,43 @@ async function calculateConnectionCompatibility(
     return null
   }
 
+  // Inject partnership-level location metadata for distance gate
+  const { data: partnerships } = await adminClient
+    .from('partnerships')
+    .select('id, latitude, longitude')
+    .in('id', [currentPartnershipId, otherPartnershipId])
+
+  const partnershipGeo = new Map<string, { latitude: number | null; longitude: number | null }>()
+  if (partnerships) {
+    for (const p of partnerships) {
+      partnershipGeo.set(p.id, { latitude: p.latitude, longitude: p.longitude })
+    }
+  }
+
+  const currentGeo = partnershipGeo.get(currentPartnershipId)
+  const otherGeo = partnershipGeo.get(otherPartnershipId)
+
+  const currentRawWithGeo: RawAnswers = {
+    ...currentAnswers,
+    ...(currentGeo?.latitude != null && currentGeo?.longitude != null
+      ? { _latitude: currentGeo.latitude, _longitude: currentGeo.longitude }
+      : {}),
+  }
+  const otherRawWithGeo: RawAnswers = {
+    ...otherAnswers,
+    ...(otherGeo?.latitude != null && otherGeo?.longitude != null
+      ? { _latitude: otherGeo.latitude, _longitude: otherGeo.longitude }
+      : {}),
+  }
+
   const currentIsCouple = currentProfileType === 'couple'
   const otherIsCouple = otherProfileType === 'couple'
 
   // Calculate compatibility using unified pipeline
   // calculateCompatibilityFromRaw handles normalization internally
   const result = calculateCompatibilityFromRaw(
-    currentAnswers,
-    otherAnswers,
+    currentRawWithGeo,
+    otherRawWithGeo,
     currentIsCouple,
     otherIsCouple
   )

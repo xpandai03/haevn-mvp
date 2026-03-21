@@ -170,6 +170,33 @@ export interface NormalizedAnswers {
   Q17a?: string[]
   /** Q17b: Pet situation (single) - EXTENDED */
   Q17b?: string
+
+  // -------------------------------------------------------------------------
+  // AGE PREFERENCE FIELDS (for age range gate)
+  // -------------------------------------------------------------------------
+
+  /** Q_AGE_MIN: Minimum preferred age (numeric string) */
+  Q_AGE_MIN?: string
+  /** Q_AGE_MAX: Maximum preferred age (numeric string) */
+  Q_AGE_MAX?: string
+
+  // -------------------------------------------------------------------------
+  // RACE / ETHNICITY FIELDS (for variable race gate)
+  // -------------------------------------------------------------------------
+
+  /** Q_RACE_IDENTITY: User's self-identified race/ethnicity (multi-select) */
+  Q_RACE_IDENTITY?: string[]
+  /** Q_RACE_PREFERENCE: Preferred race/ethnicity of matches (multi-select, may include "any") */
+  Q_RACE_PREFERENCE?: string[]
+
+  // -------------------------------------------------------------------------
+  // PARTNERSHIP METADATA (injected from partnerships table, not survey)
+  // -------------------------------------------------------------------------
+
+  /** Latitude of user's location (injected by compute pipeline) */
+  _latitude?: number
+  /** Longitude of user's location (injected by compute pipeline) */
+  _longitude?: number
 }
 
 // =============================================================================
@@ -229,6 +256,7 @@ export interface ConstraintResult {
     | 'couple_permissions'
     | 'safer_sex'
     | 'health'
+    | 'race'
   /** Human-readable reason for the block */
   reason?: string
 }
