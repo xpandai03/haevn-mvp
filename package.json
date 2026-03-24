@@ -13,6 +13,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@dotlottie/react-player": "^1.6.19",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
