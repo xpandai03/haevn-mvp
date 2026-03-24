@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, MoreVertical, AlertTriangle, User } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, AlertTriangle, User, Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/context'
 import { getMatchDetailsV2, type ExternalMatchResult } from '@/lib/actions/matching'
-import { sendConnectionRequest, passOnMatch, getMatchStatus, type MatchStatus } from '@/lib/actions/matchActions'
+import { sendConnectionRequest, passOnMatch, toggleSaveMatch, getMatchStatus, type MatchStatus } from '@/lib/actions/matchActions'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { sendNudge } from '@/lib/actions/nudges'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -41,6 +41,7 @@ export default function MatchDetailPage() {
   const [viewerTier, setViewerTier] = useState<'free' | 'plus'>('free')
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Load match details
@@ -167,6 +168,41 @@ export default function MatchDetailPage() {
       toast({
         title: 'Error',
         description: err.message || 'Failed to pass on match',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Handle save/unsave action
+  const handleSave = async () => {
+    if (!match) return
+
+    const newSaved = !saved
+    setActionLoading(true)
+    try {
+      const result = await toggleSaveMatch(match.partnership.id, newSaved)
+
+      if (result.success) {
+        setSaved(newSaved)
+        toast({
+          title: newSaved ? 'Match saved' : 'Match unsaved',
+          description: newSaved
+            ? 'This match will stay visible even after expiration.'
+            : 'Normal expiration will apply again.',
+        })
+      } else {
+        toast({
+          title: 'Failed to save',
+          description: result.error || 'Something went wrong',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to save match',
         variant: 'destructive',
       })
     } finally {
@@ -385,6 +421,18 @@ export default function MatchDetailPage() {
               disabled={actionLoading}
             >
               {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'PASS'}
+            </Button>
+            <Button
+              variant="outline"
+              className={`h-12 px-4 text-base font-semibold border-2 rounded-full ${
+                saved
+                  ? 'border-haevn-teal bg-haevn-teal/10 text-haevn-teal'
+                  : 'border-haevn-charcoal/30 text-haevn-charcoal/60 hover:bg-haevn-lightgray'
+              }`}
+              onClick={handleSave}
+              disabled={actionLoading}
+            >
+              <Bookmark className={`h-5 w-5 ${saved ? 'fill-haevn-teal' : ''}`} />
             </Button>
             {/*
               Button logic:

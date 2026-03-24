@@ -152,6 +152,15 @@ export async function passOnMatch(
       return { success: false, error: insertError.message }
     }
 
+    // Clear saved flag if match was saved (dismissed overrides saved)
+    await adminClient
+      .from('computed_matches')
+      .update({ saved: false, saved_at: null })
+      .or(
+        `and(partnership_a.eq.${currentPartnershipId},partnership_b.eq.${matchPartnershipId}),` +
+        `and(partnership_a.eq.${matchPartnershipId},partnership_b.eq.${currentPartnershipId})`
+      )
+
     return { success: true }
   } catch (error: any) {
     console.error('[passOnMatch] Error:', error)
@@ -170,6 +179,64 @@ export async function getMatchStatus(
   matchPartnershipId: string
 ): Promise<MatchStatus> {
   return getMatchStatusV2(matchPartnershipId)
+}
+
+// =============================================================================
+// SAVE FOR LATER
+// =============================================================================
+
+/**
+ * Toggle the saved state of a computed match.
+ *
+ * Saved matches bypass the 90-day expiration window.
+ * A match cannot be saved if it's already dismissed or connected.
+ *
+ * @param matchPartnershipId - The other partnership ID
+ * @param saved - true to save, false to unsave
+ */
+export async function toggleSaveMatch(
+  matchPartnershipId: string,
+  saved: boolean
+): Promise<ActionResult> {
+  try {
+    const adminClient = await createAdminClient()
+    const currentPartnershipId = await getCurrentPartnershipId()
+
+    // Find the computed_match row (bidirectional)
+    const { data: match, error: findError } = await adminClient
+      .from('computed_matches')
+      .select('id')
+      .or(
+        `and(partnership_a.eq.${currentPartnershipId},partnership_b.eq.${matchPartnershipId}),` +
+        `and(partnership_a.eq.${matchPartnershipId},partnership_b.eq.${currentPartnershipId})`
+      )
+      .limit(1)
+      .single()
+
+    if (findError || !match) {
+      return { success: false, error: 'Match not found' }
+    }
+
+    // Update saved state
+    const { error: updateError } = await adminClient
+      .from('computed_matches')
+      .update({
+        saved,
+        saved_at: saved ? new Date().toISOString() : null,
+      })
+      .eq('id', match.id)
+
+    if (updateError) {
+      console.error('[toggleSaveMatch] Update error:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    console.log(`[toggleSaveMatch] Match ${match.id} saved=${saved}`)
+    return { success: true }
+  } catch (error: any) {
+    console.error('[toggleSaveMatch] Error:', error)
+    return { success: false, error: error.message || 'Failed to save match' }
+  }
 }
 
 /**

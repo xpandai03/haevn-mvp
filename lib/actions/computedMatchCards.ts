@@ -12,6 +12,7 @@ export interface ComputedMatchCard {
     id: string
     display_name: string | null
     short_bio: string | null
+    connection_summary?: string | null
     identity: string
     city: string
     age: number
@@ -22,6 +23,8 @@ export interface ComputedMatchCard {
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
   /** Category breakdown keyed by display key (goals_expectations, etc.) */
   breakdown: Record<string, { score: number }>
+  /** Whether this match has been saved for later */
+  saved: boolean
 }
 
 /**
@@ -104,7 +107,7 @@ export async function getComputedMatchCards(
   const now = new Date().toISOString()
   const { data: matches, error: matchError } = await adminClient
     .from('computed_matches')
-    .select('partnership_a, partnership_b, score, tier, breakdown, release_at, expires_at')
+    .select('partnership_a, partnership_b, score, tier, breakdown, release_at, expires_at, saved')
     .or(`partnership_a.eq.${currentPartnershipId},partnership_b.eq.${currentPartnershipId}`)
     .order('score', { ascending: false })
     .limit(limit * 2) // Fetch extra since we have bidirectional rows
@@ -140,6 +143,7 @@ export async function getComputedMatchCards(
     score: number
     tier: string
     breakdown: any
+    saved: boolean
   }> = []
 
   for (const m of matches) {
@@ -157,8 +161,8 @@ export async function getComputedMatchCards(
     // Filter by release_at (Match Monday) — only show if released or no release_at set
     if (m.release_at && m.release_at > now) continue
 
-    // Filter by expires_at (90-day expiry) — only show if not expired or no expires_at set
-    if (m.expires_at && m.expires_at <= now) continue
+    // Filter by expires_at (90-day expiry) — saved matches bypass expiration
+    if (!m.saved && m.expires_at && m.expires_at <= now) continue
 
     // Filter by tier
     const resultTierIndex = tierOrder.indexOf(m.tier as any)
@@ -169,6 +173,7 @@ export async function getComputedMatchCards(
       score: m.score,
       tier: m.tier,
       breakdown: m.breakdown,
+      saved: !!m.saved,
     })
   }
 
@@ -221,6 +226,7 @@ export async function getComputedMatchCards(
         id: partner.id,
         display_name: partner.display_name,
         short_bio: partner.short_bio,
+        connection_summary: (partner as any).connection_summary || null,
         identity: partner.identity || 'Unknown',
         city: partner.city || 'Unknown',
         age: partner.age || 0,
@@ -230,6 +236,7 @@ export async function getComputedMatchCards(
       score: match.score,
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',
       breakdown: parseBreakdown(match.breakdown),
+      saved: match.saved,
     })
   }
 
