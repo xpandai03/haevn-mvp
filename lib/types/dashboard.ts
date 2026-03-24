@@ -75,6 +75,7 @@ export interface DashboardData {
     tier: 'free' | 'plus'
     ownerId: string
     profileState: 'draft' | 'pending' | 'live'
+    haevnInsight: string | null
   } | null
   partners: PartnerInfo[]
   pendingInvites: PendingInviteInfo[]

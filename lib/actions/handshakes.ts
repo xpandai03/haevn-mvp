@@ -243,8 +243,8 @@ export async function getIncomingHandshakes(): Promise<HandshakeData[]> {
       .from('handshakes')
       .select(`
         *,
-        partnership_a:a_partnership(id, display_name, short_bio, city, age, identity),
-        partnership_b:b_partnership(id, display_name, short_bio, city, age, identity)
+        partnership_a:a_partnership(id, display_name, short_bio, connection_summary, city, age, identity),
+        partnership_b:b_partnership(id, display_name, short_bio, connection_summary, city, age, identity)
       `)
       .or(`and(a_partnership.eq.${currentPartnershipId},a_consent.eq.false),and(b_partnership.eq.${currentPartnershipId},b_consent.eq.false)`)
       .neq('state', 'dismissed')
@@ -274,8 +274,8 @@ export async function getOutgoingHandshakes(): Promise<HandshakeData[]> {
       .from('handshakes')
       .select(`
         *,
-        partnership_a:a_partnership(id, display_name, short_bio, city, age, identity),
-        partnership_b:b_partnership(id, display_name, short_bio, city, age, identity)
+        partnership_a:a_partnership(id, display_name, short_bio, connection_summary, city, age, identity),
+        partnership_b:b_partnership(id, display_name, short_bio, connection_summary, city, age, identity)
       `)
       .or(`and(a_partnership.eq.${currentPartnershipId},a_consent.eq.true),and(b_partnership.eq.${currentPartnershipId},b_consent.eq.true)`)
       .neq('state', 'matched')
@@ -374,8 +374,8 @@ export async function getIncomingRequestCards(): Promise<IncomingRequestCard[]> 
         b_consent,
         match_score,
         triggered_at,
-        partnership_a:a_partnership(id, display_name, short_bio, city, age, identity),
-        partnership_b:b_partnership(id, display_name, short_bio, city, age, identity)
+        partnership_a:a_partnership(id, display_name, short_bio, connection_summary, city, age, identity),
+        partnership_b:b_partnership(id, display_name, short_bio, connection_summary, city, age, identity)
       `)
       .or(`and(a_partnership.eq.${currentPartnershipId},a_consent.eq.false),and(b_partnership.eq.${currentPartnershipId},b_consent.eq.false)`)
       .neq('state', 'dismissed')

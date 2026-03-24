@@ -31,6 +31,7 @@ export interface ExternalMatchResult {
     id: string
     display_name: string | null
     short_bio: string | null
+    connection_summary?: string | null
     identity: string
     profile_type: 'solo' | 'couple' | 'pod'
     city: string
@@ -254,7 +255,7 @@ export async function getExternalMatches(
   // 5. Fetch potential matches (live, with display_name)
   const { data: potentialMatches, error: matchesError } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, profile_type, city, msa, age, membership_tier')
+    .select('id, display_name, short_bio, connection_summary, identity, profile_type, city, msa, age, membership_tier')
     .not('display_name', 'is', null)
     .neq('id', currentPartnershipId)
     .eq('profile_state', 'live')
@@ -334,6 +335,7 @@ export async function getExternalMatches(
         id: match.id,
         display_name: match.display_name,
         short_bio: match.short_bio,
+        connection_summary: (match as any).connection_summary || null,
         identity: match.identity || 'Unknown',
         profile_type: (match.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
         city: match.city || 'Unknown',
@@ -387,7 +389,7 @@ export async function getExternalMatchDetails(
   // 3. Get match partnership details
   const { data: matchPartnership } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, profile_type, city, age, membership_tier')
+    .select('id, display_name, short_bio, connection_summary, identity, profile_type, city, age, membership_tier')
     .eq('id', matchPartnershipId)
     .single()
 
@@ -430,6 +432,7 @@ export async function getExternalMatchDetails(
       id: matchPartnership.id,
       display_name: matchPartnership.display_name,
       short_bio: matchPartnership.short_bio,
+      connection_summary: (matchPartnership as any).connection_summary || null,
       identity: matchPartnership.identity || 'Unknown',
       profile_type: (matchPartnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
       city: matchPartnership.city || 'Unknown',

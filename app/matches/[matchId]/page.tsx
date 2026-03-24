@@ -299,20 +299,20 @@ export default function MatchDetailPage() {
           </p>
         </div>
 
-        {/* Their Intent Section */}
-        {partnership.short_bio && (
+        {/* Their Intent Section — prefers AI summary */}
+        {(partnership.connection_summary || partnership.short_bio) && (
           <div className="mb-6">
             <h3
               className="text-sm font-semibold text-haevn-navy mb-2"
               style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
             >
-              Their Intent, In Their Words:
+              {partnership.connection_summary ? 'Connection Summary' : 'Their Intent, In Their Words:'}
             </h3>
             <p
               className="text-sm text-haevn-charcoal leading-relaxed"
               style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
             >
-              {partnership.short_bio}
+              {partnership.connection_summary ?? partnership.short_bio}
             </p>
           </div>
         )}

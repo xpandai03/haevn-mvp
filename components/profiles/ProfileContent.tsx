@@ -141,24 +141,22 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
           )}
         </div>
 
-        {/* About Section */}
-        {(profile.short_bio || profile.long_bio) && (
+        {/* About Section — prefers AI connection_summary over manual short_bio */}
+        {(profile.connection_summary || profile.short_bio || profile.long_bio) && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <h2
               className="text-sm font-semibold text-haevn-navy mb-2"
               style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
             >
-              About
+              {profile.connection_summary ? 'Connection Summary' : 'About'}
             </h2>
-            {profile.short_bio && (
-              <p
-                className="text-sm text-gray-700 leading-relaxed"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
-              >
-                {profile.short_bio}
-              </p>
-            )}
-            {profile.long_bio && (
+            <p
+              className="text-sm text-gray-700 leading-relaxed"
+              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+            >
+              {profile.connection_summary ?? profile.short_bio}
+            </p>
+            {profile.long_bio && !profile.connection_summary && (
               <p
                 className="text-sm text-gray-600 leading-relaxed mt-2"
                 style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}

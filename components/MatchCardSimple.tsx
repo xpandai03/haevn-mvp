@@ -8,6 +8,7 @@ interface MatchCardSimpleProps {
       id: string
       display_name: string | null
       short_bio: string | null
+      connection_summary?: string | null
       identity: string
       city: string
       age: number
@@ -68,10 +69,10 @@ export function MatchCardSimple({ match, onClick }: MatchCardSimpleProps) {
           </div>
         </div>
 
-        {/* Bio */}
-        {partnership.short_bio && (
+        {/* Bio — prefers AI summary */}
+        {(partnership.connection_summary || partnership.short_bio) && (
           <p className="text-body-sm text-haevn-gray-700 mb-4 line-clamp-2">
-            {partnership.short_bio}
+            {partnership.connection_summary ?? partnership.short_bio}
           </p>
         )}
 

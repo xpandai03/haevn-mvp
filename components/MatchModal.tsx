@@ -11,6 +11,7 @@ interface MatchModalProps {
       id: string
       display_name: string | null
       short_bio: string | null
+      connection_summary?: string | null
       identity: string
       city: string
       age: number
@@ -99,11 +100,11 @@ export function MatchModal({ match, open, onClose, onConnect }: MatchModalProps)
           </div>
         </div>
 
-        {/* Bio */}
-        {partnership.short_bio && (
+        {/* Bio — prefers AI summary */}
+        {(partnership.connection_summary || partnership.short_bio) && (
           <div className="mb-6">
-            <h3 className="font-semibold mb-2">About</h3>
-            <p className="text-muted-foreground">{partnership.short_bio}</p>
+            <h3 className="font-semibold mb-2">{partnership.connection_summary ? 'Connection Summary' : 'About'}</h3>
+            <p className="text-muted-foreground">{partnership.connection_summary ?? partnership.short_bio}</p>
           </div>
         )}
 

@@ -29,6 +29,7 @@ export interface ConnectionResult {
     id: string
     display_name: string | null
     short_bio: string | null
+    connection_summary: string | null
     long_bio: string | null
     identity: string
     profile_type: 'solo' | 'couple' | 'pod'
@@ -69,6 +70,7 @@ interface PartnershipRow {
   id: string
   display_name: string | null
   short_bio: string | null
+  connection_summary: string | null
   long_bio: string | null
   identity: string | null
   profile_type: string | null
@@ -337,8 +339,8 @@ export async function getConnectionsWithCompatibility(): Promise<ConnectionResul
       b_partnership,
       match_score,
       matched_at,
-      partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
-      partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
+      partnership_a:a_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+      partnership_b:b_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
     `)
     .or(`a_partnership.eq.${currentPartnershipId},b_partnership.eq.${currentPartnershipId}`)
     .eq('a_consent', true)
@@ -395,6 +397,7 @@ export async function getConnectionsWithCompatibility(): Promise<ConnectionResul
         id: otherPartnership.id,
         display_name: otherPartnership.display_name,
         short_bio: otherPartnership.short_bio,
+        connection_summary: otherPartnership.connection_summary,
         long_bio: otherPartnership.long_bio,
         identity: otherPartnership.identity || 'Unknown',
         profile_type: (otherPartnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',
@@ -452,8 +455,8 @@ export async function getConnectionDetails(
       b_partnership,
       match_score,
       matched_at,
-      partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
-      partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
+      partnership_a:a_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+      partnership_b:b_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
     `)
     .eq('id', connectionId)
     .eq('a_consent', true)
@@ -473,8 +476,8 @@ export async function getConnectionDetails(
         b_partnership,
         match_score,
         matched_at,
-        partnership_a:a_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
-        partnership_b:b_partnership(id, display_name, short_bio, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
+        partnership_a:a_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation),
+        partnership_b:b_partnership(id, display_name, short_bio, connection_summary, long_bio, identity, profile_type, city, age, structure, intentions, lifestyle_tags, orientation)
       `)
       .or(`and(a_partnership.eq.${currentPartnershipId},b_partnership.eq.${connectionId}),and(a_partnership.eq.${connectionId},b_partnership.eq.${currentPartnershipId})`)
       .eq('a_consent', true)
@@ -533,6 +536,7 @@ export async function getConnectionDetails(
       id: otherPartnership.id,
       display_name: otherPartnership.display_name,
       short_bio: otherPartnership.short_bio,
+      connection_summary: otherPartnership.connection_summary,
       long_bio: otherPartnership.long_bio,
       identity: otherPartnership.identity || 'Unknown',
       profile_type: (otherPartnership.profile_type as 'solo' | 'couple' | 'pod') || 'solo',

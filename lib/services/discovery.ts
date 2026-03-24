@@ -8,6 +8,7 @@ export interface DiscoveryProfile {
   id: string
   display_name: string
   short_bio: string
+  connection_summary?: string | null
   city: string
   badges: string[]
   structure: any
@@ -96,6 +97,7 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
         id,
         display_name,
         short_bio,
+        connection_summary,
         city,
         badges,
         structure,
@@ -142,6 +144,7 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
         id: partnership.id,
         display_name: partnership.display_name || 'Partnership',
         short_bio: partnership.short_bio || '',
+        connection_summary: (partnership as any).connection_summary || null,
         city: partnership.city || '',
         badges: partnership.badges as string[] || [],
         structure: partnership.structure || {},

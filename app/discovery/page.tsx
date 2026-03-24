@@ -275,7 +275,7 @@ export default function DiscoveryPage() {
                         )}
                       </CardTitle>
                       <CardDescription>
-                        {profile.short_bio || 'No bio yet'}
+                        {profile.connection_summary ?? profile.short_bio ?? 'No bio yet'}
                       </CardDescription>
                     </div>
                     <div className="text-right">

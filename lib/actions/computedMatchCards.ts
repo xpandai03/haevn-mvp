@@ -178,7 +178,7 @@ export async function getComputedMatchCards(
   const partnerIds = filteredMatches.map(m => m.otherPartnerId)
   const { data: partnerships } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, identity, city, age, membership_tier')
+    .select('id, display_name, short_bio, connection_summary, identity, city, age, membership_tier')
     .in('id', partnerIds)
 
   const partnershipMap = new Map(

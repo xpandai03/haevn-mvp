@@ -308,6 +308,46 @@ export async function POST(request: NextRequest) {
         .update({ profile_state: 'live' })
         .eq('id', partnershipId)
 
+      // Fire-and-forget: generate AI summaries (non-blocking)
+      // This runs async so it never delays the survey save response
+      ;(async () => {
+        try {
+          const { normalizeAnswers } = await import('@/lib/matching/utils/normalizeAnswers')
+          const { buildSummaryInput } = await import('@/lib/ai/buildSummaryInput')
+          const { generateSummaries } = await import('@/lib/ai/generateSummaries')
+          const { data: surveyRow } = await adminClient
+            .from('user_survey_responses')
+            .select('answers_json')
+            .eq('user_id', user.id)
+            .eq('partnership_id', partnershipId)
+            .single()
+          if (!surveyRow?.answers_json) return
+          const { data: pData } = await adminClient
+            .from('partnerships')
+            .select('display_name')
+            .eq('id', partnershipId)
+            .single()
+          const normalized = normalizeAnswers(surveyRow.answers_json as any)
+          const summaryInput = buildSummaryInput({
+            answers: normalized,
+            displayName: pData?.display_name || 'This user',
+          })
+          const result = await generateSummaries(summaryInput)
+          await adminClient
+            .from('partnerships')
+            .update({
+              connection_summary: result.connection_summary,
+              haevn_insight: result.haevn_insight,
+              summaries_version: 'v1',
+              summaries_generated_at: new Date().toISOString(),
+            })
+            .eq('id', partnershipId)
+          console.log('[API /survey/save] ✅ AI summaries generated for', partnershipId)
+        } catch (aiErr: any) {
+          console.error('[API /survey/save] AI summary generation failed (non-blocking):', aiErr?.message)
+        }
+      })()
+
       // Insert a match_compute_runs tracking row, then trigger async computation
       console.log('[API /survey/save] 🎯 Survey 100% complete - queuing match calculation')
       let matchRunId: string | null = null

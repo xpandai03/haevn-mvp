@@ -11,6 +11,7 @@ interface HandshakeMatchCardProps {
       id: string
       display_name: string | null
       short_bio: string | null
+      connection_summary?: string | null
       identity: string
       city: string
       age: number
@@ -76,9 +77,9 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
             <TierBadge tier={tier} />
           </div>
 
-          {/* Bio */}
+          {/* Bio — prefers AI summary */}
           <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
-            {truncateBio(partnership.short_bio)}
+            {truncateBio(partnership.connection_summary ?? partnership.short_bio)}
           </p>
 
           {/* Identity Badge */}

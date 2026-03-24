@@ -75,6 +75,29 @@ export default async function DashboardPage() {
           partnershipId={partnership?.id}
         />
 
+        {/* HAEVN Insight — private to user */}
+        {partnership?.haevnInsight && (
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 rounded-full bg-[#1B9A9A]/10 flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1B9A9A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              </div>
+              <h2
+                className="text-sm font-semibold text-haevn-navy"
+                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              >
+                Your HAEVN Insight
+              </h2>
+            </div>
+            <p
+              className="text-sm text-gray-600 leading-relaxed"
+              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+            >
+              {partnership.haevnInsight}
+            </p>
+          </div>
+        )}
+
         {/* Matches Section */}
         <MatchesSection
           totalMatches={stats.matches}

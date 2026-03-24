@@ -10,6 +10,7 @@ export interface PartnershipProfileData {
   id: string
   display_name: string | null
   short_bio: string | null
+  connection_summary: string | null
   long_bio: string | null
   intentions: string[] | null
   lifestyle_tags: string[] | null
@@ -59,6 +60,7 @@ export async function getMyPartnershipProfile(): Promise<{ data: PartnershipProf
         id,
         display_name,
         short_bio,
+        connection_summary,
         long_bio,
         intentions,
         lifestyle_tags,
@@ -123,6 +125,7 @@ export async function getPartnershipProfileById(partnershipId: string): Promise<
         id,
         display_name,
         short_bio,
+        connection_summary,
         long_bio,
         intentions,
         lifestyle_tags,

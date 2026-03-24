@@ -24,6 +24,7 @@ interface AcceptHandshakeModalProps {
       id: string
       display_name: string | null
       short_bio: string | null
+      connection_summary?: string | null
       city: string
       age: number
       identity: string
@@ -132,11 +133,11 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
             </div>
           </div>
 
-          {/* Bio */}
-          {handshake.partnership.short_bio && (
+          {/* Bio — prefers AI summary */}
+          {(handshake.partnership.connection_summary || handshake.partnership.short_bio) && (
             <div className="p-3 bg-white border border-[#252627]/10 rounded-lg">
               <p className="text-sm text-[#252627]/70 line-clamp-3" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
-                {handshake.partnership.short_bio}
+                {handshake.partnership.connection_summary ?? handshake.partnership.short_bio}
               </p>
             </div>
           )}

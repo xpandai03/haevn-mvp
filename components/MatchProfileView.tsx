@@ -9,6 +9,7 @@ interface MatchProfileViewProps {
       id: string
       display_name: string | null
       short_bio: string | null
+      connection_summary?: string | null
       identity: string
       city: string
       age: number
@@ -152,9 +153,11 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass, targ
 
         {/* Their Intent Section */}
         <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-700 mb-1">Their Intent, In Their Words:</p>
+          <p className="text-xs font-semibold text-gray-700 mb-1">
+            {partnership.connection_summary ? 'Connection Summary' : 'Their Intent, In Their Words:'}
+          </p>
           <p className="text-sm text-gray-600 leading-relaxed">
-            {partnership.short_bio || 'No bio available'}
+            {partnership.connection_summary ?? partnership.short_bio ?? 'No bio available'}
           </p>
         </div>
 

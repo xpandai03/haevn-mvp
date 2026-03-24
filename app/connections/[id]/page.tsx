@@ -121,6 +121,7 @@ export default function ConnectionDetailPage() {
     id: partnership.id,
     display_name: partnership.display_name,
     short_bio: partnership.short_bio,
+    connection_summary: partnership.connection_summary,
     long_bio: partnership.long_bio,
     intentions: partnership.intentions,
     lifestyle_tags: partnership.lifestyle_tags,
