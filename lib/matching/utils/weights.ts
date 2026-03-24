@@ -71,13 +71,17 @@ export const STRUCTURE_WEIGHTS = {
 
 export const CONNECTION_WEIGHTS = {
   /** Q10, Q10a: Attachment style and emotional availability */
-  attachment: 40,
+  attachment: 34,
   /** Q11, Q12, Q12a: Love languages, conflict, messaging */
-  communication: 30,
+  communication: 26,
   /** Q37, Q37a, Q38, Q38a: Empathy, harmony, jealousy, reactivity */
-  emotional: 20,
+  emotional: 17,
   /** Q20, Q20b: Privacy and visibility comfort */
-  privacy: 10,
+  privacy: 9,
+  /** Q_EMOTIONAL_PACE: Pace of emotional intimacy (1-5 distance scoring) */
+  emotionalPace: 6,
+  /** Q_EMOTIONAL_ENGAGEMENT: Emotional engagement bandwidth (1-5 distance scoring) */
+  emotionalEngagement: 8,
 } as const
 
 // =============================================================================
@@ -110,19 +114,21 @@ export const CHEMISTRY_WEIGHTS = {
  */
 export const LIFESTYLE_WEIGHTS = {
   /** Q19a, Q19b, Q19c: Distance and mobility - CORE */
-  distance: { weight: 20, type: 'core' as const },
+  distance: { weight: 19, type: 'core' as const },
   /** Q20: Privacy/discretion - CORE */
-  privacy: { weight: 15, type: 'core' as const },
+  privacy: { weight: 14, type: 'core' as const },
   /** Q36, Q36a: Social energy - CORE */
-  socialEnergy: { weight: 15, type: 'core' as const },
+  socialEnergy: { weight: 14, type: 'core' as const },
   /** Q18: Substance use - CORE */
-  substances: { weight: 10, type: 'core' as const },
+  substances: { weight: 9, type: 'core' as const },
   /** Q13a: Languages - CORE/CONSTRAINT (handled separately) */
-  languages: { weight: 10, type: 'core' as const },
+  languages: { weight: 9, type: 'core' as const },
+  /** Q_INDEPENDENCE_BALANCE: Independence vs integration (1-5 distance scoring) - CORE */
+  independenceBalance: { weight: 6, type: 'core' as const },
   /** Q13: Lifestyle alignment importance - EXTENDED */
   lifestyleImportance: { weight: 5, type: 'extended' as const },
   /** Q14a, Q14b: Cultural/worldview - EXTENDED */
-  cultural: { weight: 10, type: 'extended' as const },
+  cultural: { weight: 9, type: 'extended' as const },
   /** Q17: Children preferences - EXTENDED */
   children: { weight: 5, type: 'extended' as const },
   /** Q17a: Dietary needs - EXTENDED */

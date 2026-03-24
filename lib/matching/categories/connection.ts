@@ -7,10 +7,12 @@
  * Weight: 20% of overall score
  *
  * Sub-components:
- * - Attachment/Availability (40%): Q10, Q10a
- * - Communication/Conflict (30%): Q11, Q12, Q12a
- * - Emotional Patterns (20%): Q37, Q37a, Q38, Q38a
- * - Privacy/Visibility (10%): Q20, Q20b
+ * - Attachment/Availability (34%): Q10, Q10a
+ * - Communication/Conflict (26%): Q11, Q12, Q12a
+ * - Emotional Patterns (17%): Q37, Q37a, Q38, Q38a
+ * - Privacy/Visibility (9%): Q20, Q20b
+ * - Emotional Pace (6%): Q_EMOTIONAL_PACE (1-5 distance scoring)
+ * - Emotional Engagement (8%): Q_EMOTIONAL_ENGAGEMENT (1-5 distance scoring)
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
@@ -22,6 +24,7 @@ import {
   isWithinTiers,
   weightedAverage,
   calculateCoverage,
+  distanceScore,
   ATTACHMENT_TIERS,
   AVAILABILITY_TIERS,
   MESSAGING_PACE_TIERS,
@@ -86,6 +89,8 @@ export function scoreConnection(
     scoreCommunication(userAnswers, matchAnswers),
     scoreEmotional(userAnswers, matchAnswers),
     scorePrivacy(userAnswers, matchAnswers),
+    scoreEmotionalPace(userAnswers, matchAnswers),
+    scoreEmotionalEngagement(userAnswers, matchAnswers),
   ]
 
   const score = weightedAverage(subScores)
@@ -442,5 +447,83 @@ function scorePrivacy(
       : finalScore >= 60
         ? 'Compatible privacy preferences'
         : 'Different privacy levels',
+  }
+}
+
+// =============================================================================
+// NEW EMOTIONAL DIMENSION SCORERS (2026-03)
+// =============================================================================
+
+/**
+ * Score Emotional Pace sub-component (6%)
+ * Q_EMOTIONAL_PACE: How quickly users open up emotionally (1-5 scale)
+ * Distance-based scoring — standard matrix.
+ */
+function scoreEmotionalPace(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userVal = getStringAnswer(userAnswers, 'Q_EMOTIONAL_PACE')
+  const matchVal = getStringAnswer(matchAnswers, 'Q_EMOTIONAL_PACE')
+
+  const score = distanceScore(userVal, matchVal, 'standard')
+
+  if (score === null) {
+    return {
+      key: 'emotionalPace',
+      score: 0,
+      weight: CONNECTION_WEIGHTS.emotionalPace,
+      matched: false,
+      reason: 'Emotional pace not specified',
+    }
+  }
+
+  return {
+    key: 'emotionalPace',
+    score,
+    weight: CONNECTION_WEIGHTS.emotionalPace,
+    matched: true,
+    reason: score >= 85
+      ? 'Very similar emotional pace'
+      : score >= 65
+        ? 'Compatible emotional pace'
+        : 'Different pace of emotional openness',
+  }
+}
+
+/**
+ * Score Emotional Engagement sub-component (8%)
+ * Q_EMOTIONAL_ENGAGEMENT: Preferred emotional depth/bandwidth (1-5 scale)
+ * Distance-based scoring — engagement matrix (steeper penalties).
+ */
+function scoreEmotionalEngagement(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userVal = getStringAnswer(userAnswers, 'Q_EMOTIONAL_ENGAGEMENT')
+  const matchVal = getStringAnswer(matchAnswers, 'Q_EMOTIONAL_ENGAGEMENT')
+
+  const score = distanceScore(userVal, matchVal, 'engagement')
+
+  if (score === null) {
+    return {
+      key: 'emotionalEngagement',
+      score: 0,
+      weight: CONNECTION_WEIGHTS.emotionalEngagement,
+      matched: false,
+      reason: 'Emotional engagement not specified',
+    }
+  }
+
+  return {
+    key: 'emotionalEngagement',
+    score,
+    weight: CONNECTION_WEIGHTS.emotionalEngagement,
+    matched: true,
+    reason: score >= 85
+      ? 'Well-matched emotional engagement'
+      : score >= 60
+        ? 'Compatible emotional bandwidth'
+        : 'Different emotional engagement needs',
   }
 }

@@ -11,11 +11,12 @@
  * category is excluded and weights are renormalized.
  *
  * Sub-components (CORE - asked of everyone):
- * - Distance & Mobility (20%): Q19a, Q19b, Q19c
- * - Privacy/Discretion (15%): Q20
- * - Social Energy (15%): Q36, Q36a
- * - Substances (10%): Q18
- * - Languages (10%): Q13a
+ * - Distance & Mobility (19%): Q19a, Q19b, Q19c
+ * - Privacy/Discretion (14%): Q20
+ * - Social Energy (14%): Q36, Q36a
+ * - Substances (9%): Q18
+ * - Languages (9%): Q13a
+ * - Independence Balance (6%): Q_INDEPENDENCE_BALANCE (1-5 distance scoring)
  *
  * Sub-components (EXTENDED - romantic/long-term intent):
  * - Lifestyle Importance (5%): Q13
@@ -34,6 +35,7 @@ import {
   weightedAverage,
   calculateCoverage,
   binaryMatch,
+  distanceScore,
   PRIVACY_TIERS,
 } from '../utils/scoring'
 import {
@@ -128,6 +130,7 @@ export function scoreLifestyle(
     scoreSocialEnergy(userAnswers, matchAnswers),
     scoreSubstances(userAnswers, matchAnswers),
     scoreLanguages(userAnswers, matchAnswers),
+    scoreIndependenceBalance(userAnswers, matchAnswers),
     // EXTENDED sub-components
     scoreLifestyleImportance(userAnswers, matchAnswers),
     scoreCultural(userAnswers, matchAnswers),
@@ -440,6 +443,43 @@ function scoreLanguages(
     reason: hasSharedLanguage
       ? 'Shared language(s) available'
       : 'No common languages',
+  }
+}
+
+/**
+ * Score Independence Balance sub-component (6%)
+ * Q_INDEPENDENCE_BALANCE: Independence vs shared life preference (1-5 scale)
+ * Distance-based scoring — standard matrix.
+ */
+function scoreIndependenceBalance(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userVal = getStringAnswer(userAnswers, 'Q_INDEPENDENCE_BALANCE')
+  const matchVal = getStringAnswer(matchAnswers, 'Q_INDEPENDENCE_BALANCE')
+
+  const score = distanceScore(userVal, matchVal, 'standard')
+
+  if (score === null) {
+    return {
+      key: 'independenceBalance',
+      score: 0,
+      weight: LIFESTYLE_WEIGHTS.independenceBalance.weight,
+      matched: false,
+      reason: 'Independence preference not specified',
+    }
+  }
+
+  return {
+    key: 'independenceBalance',
+    score,
+    weight: LIFESTYLE_WEIGHTS.independenceBalance.weight,
+    matched: true,
+    reason: score >= 85
+      ? 'Very similar independence preferences'
+      : score >= 65
+        ? 'Compatible independence expectations'
+        : 'Different independence needs',
   }
 }
 

@@ -172,6 +172,17 @@ export interface NormalizedAnswers {
   Q17b?: string
 
   // -------------------------------------------------------------------------
+  // EMOTIONAL / INDEPENDENCE QUESTIONS (new 2026-03)
+  // -------------------------------------------------------------------------
+
+  /** Q_EMOTIONAL_PACE: Pace of emotional intimacy (1-5 scale) */
+  Q_EMOTIONAL_PACE?: string
+  /** Q_EMOTIONAL_ENGAGEMENT: Emotional engagement / bandwidth (1-5 scale) */
+  Q_EMOTIONAL_ENGAGEMENT?: string
+  /** Q_INDEPENDENCE_BALANCE: Independence vs integration preference (1-5 scale) */
+  Q_INDEPENDENCE_BALANCE?: string
+
+  // -------------------------------------------------------------------------
   // AGE PREFERENCE FIELDS (for age range gate)
   // -------------------------------------------------------------------------
 

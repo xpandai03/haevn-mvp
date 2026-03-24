@@ -24,7 +24,7 @@ import {
   type CompatibilityTier,
 } from '@/lib/matching'
 
-const ENGINE_VERSION = '5cat-v5'
+const ENGINE_VERSION = '5cat-v6'
 const MIN_SCORE_THRESHOLD = 80
 
 /**

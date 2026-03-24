@@ -154,6 +154,61 @@ export function proximityScore(
 }
 
 // =============================================================================
+// DISTANCE-BASED SCORING (for 1-5 scale questions)
+// =============================================================================
+
+/**
+ * Standard distance scoring matrix for 1-5 scale questions.
+ * diff 0 → 100, diff 1 → 85, diff 2 → 65, diff 3 → 40, diff 4 → 20
+ */
+const STANDARD_DISTANCE_SCORES: Record<number, number> = {
+  0: 100,
+  1: 85,
+  2: 65,
+  3: 40,
+  4: 20,
+}
+
+/**
+ * Engagement-specific distance scoring matrix.
+ * Steeper penalty for divergence — this dimension is highly predictive.
+ * diff 0 → 100, diff 1 → 85, diff 2 → 60, diff 3 → 35, diff 4 → 15
+ */
+const ENGAGEMENT_DISTANCE_SCORES: Record<number, number> = {
+  0: 100,
+  1: 85,
+  2: 60,
+  3: 35,
+  4: 15,
+}
+
+/**
+ * Compute a distance-based compatibility score for two 1-5 scale answers.
+ *
+ * @param valueA - First user's answer (1-5 as string or number)
+ * @param valueB - Second user's answer (1-5 as string or number)
+ * @param type - Which scoring matrix to use
+ * @returns Score 0-100, or null if either value is invalid
+ */
+export function distanceScore(
+  valueA: string | undefined,
+  valueB: string | undefined,
+  type: 'standard' | 'engagement' = 'standard'
+): number | null {
+  if (!valueA || !valueB) return null
+
+  const a = parseFloat(valueA)
+  const b = parseFloat(valueB)
+
+  if (isNaN(a) || isNaN(b) || a < 1 || a > 5 || b < 1 || b > 5) return null
+
+  const diff = Math.abs(Math.round(a) - Math.round(b))
+  const matrix = type === 'engagement' ? ENGAGEMENT_DISTANCE_SCORES : STANDARD_DISTANCE_SCORES
+
+  return matrix[diff] ?? 0
+}
+
+// =============================================================================
 // WEIGHTED AVERAGING
 // =============================================================================
 

@@ -84,6 +84,13 @@ const INTERNAL_TO_CSV: Record<string, string> = {
   'q37a_harmony': 'Q37a',
   'q38_jealousy': 'Q38',
   'q38a_emotional_reactive': 'Q38a',
+  // Emotional / independence questions (2026-03)
+  'q_emotional_pace': 'Q_EMOTIONAL_PACE',
+  'emotional_pace': 'Q_EMOTIONAL_PACE',
+  'q_emotional_engagement': 'Q_EMOTIONAL_ENGAGEMENT',
+  'emotional_engagement': 'Q_EMOTIONAL_ENGAGEMENT',
+  'q_independence_balance': 'Q_INDEPENDENCE_BALANCE',
+  'independence_balance': 'Q_INDEPENDENCE_BALANCE',
   // Age preference fields
   'q_age_min': 'Q_AGE_MIN',
   'q_age_max': 'Q_AGE_MAX',
