@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { PartnershipLookup } from './PartnershipLookup'
 import { PartnershipCard } from './PartnershipCard'
 import { MatchesList } from './MatchesList'
+import { AISummaryDebug } from './AISummaryDebug'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
@@ -25,6 +26,10 @@ export interface PartnershipData {
   structure: any
   survey_completion: number
   user_email: string | null
+  connection_summary: string | null
+  haevn_insight: string | null
+  summaries_generated_at: string | null
+  summaries_version: string | null
 }
 
 export interface ComputedMatchData {
@@ -76,6 +81,7 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
   const [error, setError] = useState<string | null>(null)
   const [recomputing, setRecomputing] = useState(false)
   const [recomputeResult, setRecomputeResult] = useState<RecomputeResult | null>(null)
+  const [activeTab, setActiveTab] = useState<'matches' | 'ai_summary'>('matches')
   const { toast } = useToast()
 
   const handlePartnershipSelect = (partnership: PartnershipData, computedMatches: ComputedMatchData[]) => {
@@ -250,23 +256,54 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
             <PartnershipCard partnership={selectedPartnership} />
           </div>
 
-          {/* Matches List - Right Column */}
-          <div className="lg:col-span-2">
-            <Card className="border-purple-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg text-purple-900">
-                    Computed Matches ({matches.length})
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <MatchesList
-                  matches={matches}
-                  lookupPartnershipId={selectedPartnership.id}
-                />
-              </CardContent>
-            </Card>
+          {/* Tabbed Content - Right Column */}
+          <div className="lg:col-span-2 space-y-0">
+            {/* Tab Bar */}
+            <div className="flex border-b border-gray-200 mb-4">
+              <button
+                onClick={() => setActiveTab('matches')}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'matches'
+                    ? 'border-purple-600 text-purple-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Matches ({matches.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('ai_summary')}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'ai_summary'
+                    ? 'border-purple-600 text-purple-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                AI Summary
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'matches' && (
+              <Card className="border-purple-200">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg text-purple-900">
+                      Computed Matches ({matches.length})
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <MatchesList
+                    matches={matches}
+                    lookupPartnershipId={selectedPartnership.id}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === 'ai_summary' && (
+              <AISummaryDebug partnership={selectedPartnership} />
+            )}
           </div>
         </div>
       )}

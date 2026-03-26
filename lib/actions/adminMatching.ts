@@ -11,6 +11,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import { normalizeAnswers } from '@/lib/matching/utils/normalizeAnswers'
+import { buildSummaryInput, countPopulatedSummaryFields } from '@/lib/ai/buildSummaryInput'
+import type { SummaryInput } from '@/lib/ai/types'
 
 // Types
 export interface PartnershipData {
@@ -24,6 +27,10 @@ export interface PartnershipData {
   structure: any
   survey_completion: number
   user_email: string | null
+  connection_summary: string | null
+  haevn_insight: string | null
+  summaries_generated_at: string | null
+  summaries_version: string | null
 }
 
 export interface ComputedMatchData {
@@ -136,7 +143,7 @@ async function getPartnershipDetails(partnershipId: string, userEmail: string | 
     // Get partnership data
     const { data: partnership, error: pError } = await adminClient
       .from('partnerships')
-      .select('id, display_name, profile_state, membership_tier, profile_type, city, age, structure')
+      .select('id, display_name, profile_state, membership_tier, profile_type, city, age, structure, connection_summary, haevn_insight, summaries_generated_at, summaries_version')
       .eq('id', partnershipId)
       .single()
 
@@ -184,6 +191,10 @@ async function getPartnershipDetails(partnershipId: string, userEmail: string | 
       structure: partnership.structure,
       survey_completion: surveyCompletion,
       user_email: ownerEmail,
+      connection_summary: partnership.connection_summary || null,
+      haevn_insight: partnership.haevn_insight || null,
+      summaries_generated_at: partnership.summaries_generated_at || null,
+      summaries_version: partnership.summaries_version || null,
     }
 
     // Get computed matches
@@ -335,4 +346,69 @@ async function getSocialState(
   }
 
   return { status: 'not_contacted' }
+}
+
+// =============================================================================
+// AI SUMMARY DEBUG ACTIONS
+// =============================================================================
+
+export interface AdminSummaryInputResult {
+  summaryInput: SummaryInput | null
+  fieldsPopulated: number
+  error?: string
+}
+
+/**
+ * Build the SummaryInput for a partnership so admins can inspect
+ * exactly what the AI mapping layer produces.
+ */
+export async function getAdminSummaryInput(
+  partnershipId: string
+): Promise<AdminSummaryInputResult> {
+  if (!await verifyAdminAccess()) {
+    return { summaryInput: null, fieldsPopulated: 0, error: 'Unauthorized' }
+  }
+
+  const adminClient = await createAdminClient()
+
+  try {
+    const { data: partnership } = await adminClient
+      .from('partnerships')
+      .select('display_name')
+      .eq('id', partnershipId)
+      .single()
+
+    const { data: members } = await adminClient
+      .from('partnership_members')
+      .select('user_id')
+      .eq('partnership_id', partnershipId)
+      .eq('role', 'owner')
+      .limit(1)
+
+    if (!members || members.length === 0) {
+      return { summaryInput: null, fieldsPopulated: 0, error: 'No owner found for partnership' }
+    }
+
+    const { data: survey } = await adminClient
+      .from('user_survey_responses')
+      .select('answers_json')
+      .eq('user_id', members[0].user_id)
+      .single()
+
+    if (!survey?.answers_json) {
+      return { summaryInput: null, fieldsPopulated: 0, error: 'No survey answers found' }
+    }
+
+    const normalized = normalizeAnswers(survey.answers_json as Record<string, any>)
+    const summaryInput = buildSummaryInput({
+      answers: normalized,
+      displayName: partnership?.display_name || 'Unknown',
+    })
+    const fieldsPopulated = countPopulatedSummaryFields(summaryInput)
+
+    return { summaryInput, fieldsPopulated }
+  } catch (err: any) {
+    console.error('[getAdminSummaryInput] Error:', err)
+    return { summaryInput: null, fieldsPopulated: 0, error: err.message || 'Failed to build summary input' }
+  }
 }
