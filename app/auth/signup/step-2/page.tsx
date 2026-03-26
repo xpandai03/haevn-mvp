@@ -23,17 +23,11 @@ export default function SignupStep2() {
   useEffect(() => {
     const storedName = localStorage.getItem('haevn_signup_firstName')
     if (!storedName) {
-      // Redirect back to step 1 if no first name
       router.push('/auth/signup/step-1')
       return
     }
     setFirstName(storedName)
-
-    // Check if user is already logged in
-    if (user) {
-      router.push('/auth/signup/step-3')
-    }
-  }, [user, router])
+  }, [router])
 
   const handleBack = () => {
     router.push('/auth/signup/step-1')

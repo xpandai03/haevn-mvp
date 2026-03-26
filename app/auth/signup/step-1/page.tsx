@@ -6,12 +6,22 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/lib/auth/context'
 import Link from 'next/link'
 
 function SignupStep1Form() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { signOut, user } = useAuth()
   const [firstName, setFirstName] = useState('')
+
+  // Clear any existing session so the signup flow starts fresh.
+  // Without this, a stale session causes step 2 to skip the email form.
+  useEffect(() => {
+    if (user) {
+      signOut()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preserve invite code from URL if present
   useEffect(() => {
