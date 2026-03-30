@@ -573,6 +573,21 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
       totalComputed += result.matchesComputed
       totalErrors += result.errors
 
+      // Resolve pair diagnostic candidate names using the nameMap
+      const resolvedDiagnostics = result.pairDiagnostics?.map(pd => {
+        // pd.candidate is either a display_name or a short ID (8 chars)
+        // If it looks like a short ID, try to resolve it via nameMap
+        if (pd.candidate && pd.candidate.length === 8 && !pd.candidate.includes(' ')) {
+          // Find the full partnership ID that starts with this short ID
+          const fullId = partnershipIds.find(id => id.startsWith(pd.candidate))
+          if (fullId) {
+            const resolved = nameMap.get(fullId)
+            if (resolved) return { ...pd, candidate: resolved }
+          }
+        }
+        return pd
+      })
+
       details.push({
         partnershipId: partnership.id,
         displayName: resolvedName,
@@ -580,7 +595,7 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
         matchesComputed: result.matchesComputed,
         candidatesEvaluated: result.candidatesEvaluated,
         error: result.error,
-        pairDiagnostics: result.pairDiagnostics,
+        pairDiagnostics: resolvedDiagnostics,
         upsertError: result.upsertError,
       })
     }

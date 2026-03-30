@@ -89,7 +89,7 @@ export function MatchesList({ matches, lookupPartnershipId }: MatchesListProps) 
               {/* Partnership Name */}
               <div className="col-span-4">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {match.other_display_name || '(No name)'}
+                  {match.other_display_name || match.other_partnership_id.slice(0, 8)}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {match.other_partnership_id.slice(0, 8)}...

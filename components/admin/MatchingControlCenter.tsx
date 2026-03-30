@@ -187,7 +187,7 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
                         {d.upsertError ? '!!' : d.matchesComputed > 0 ? '+' : '-'}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <span className="font-medium text-gray-800">{d.displayName || 'Unknown'}</span>
+                        <span className="font-medium text-gray-800">{d.displayName || d.partnershipId.slice(0, 8)}</span>
                         <span className="font-mono text-gray-400 ml-1">({d.partnershipId.slice(0, 8)})</span>
                         {typeof d.candidatesEvaluated === 'number' && (
                           <span className="text-gray-500 ml-2">{d.candidatesEvaluated} evaluated</span>
