@@ -59,6 +59,50 @@ async function verifyAdminAccess(): Promise<boolean> {
 }
 
 /**
+ * Resolve a human-readable name for a partnership.
+ * Fallback chain: display_name → profiles.full_name → auth email → null
+ */
+async function resolvePartnershipName(
+  adminClient: ReturnType<typeof createAdminClient>,
+  partnershipId: string,
+  displayName: string | null
+): Promise<string | null> {
+  if (displayName) return displayName
+
+  // Try profiles.full_name via partnership_members
+  const { data: members } = await adminClient
+    .from('partnership_members')
+    .select('user_id')
+    .eq('partnership_id', partnershipId)
+    .limit(2)
+
+  if (!members || members.length === 0) return null
+
+  const userIds = members.map(m => m.user_id)
+  const { data: profiles } = await adminClient
+    .from('profiles')
+    .select('user_id, full_name, email')
+    .in('user_id', userIds)
+
+  if (profiles && profiles.length > 0) {
+    const names = profiles
+      .map(p => p.full_name || p.email || null)
+      .filter((n): n is string => !!n)
+    if (names.length > 0) {
+      return names.length > 1 ? names.join(' & ') : names[0]
+    }
+  }
+
+  // Last resort: try auth.users email
+  try {
+    const { data: authData } = await adminClient.auth.admin.getUserById(userIds[0])
+    if (authData?.user?.email) return authData.user.email
+  } catch { /* ignore */ }
+
+  return null
+}
+
+/**
  * Lookup a partnership by email address
  */
 export async function lookupPartnershipByEmail(email: string): Promise<{
@@ -180,9 +224,12 @@ async function getPartnershipDetails(partnershipId: string, userEmail: string | 
       }
     }
 
+    // Resolve display name with fallback chain
+    const resolvedDisplayName = await resolvePartnershipName(adminClient, partnership.id, partnership.display_name)
+
     const partnershipData: PartnershipData = {
       id: partnership.id,
-      display_name: partnership.display_name,
+      display_name: resolvedDisplayName,
       profile_state: partnership.profile_state,
       membership_tier: partnership.membership_tier,
       profile_type: partnership.profile_type,
@@ -245,17 +292,18 @@ async function getComputedMatches(
     partnerships?.map(p => [p.id, { display_name: p.display_name, membership_tier: p.membership_tier }]) || []
   )
 
-  // Get social state for each match
+  // Get social state for each match, with resolved names
   const matchesWithState = await Promise.all(
     matches.map(async (match) => {
       const otherId = match.partnership_a === partnershipId ? match.partnership_b : match.partnership_a
       const otherInfo = partnershipMap.get(otherId)
       const socialState = await getSocialState(adminClient, partnershipId, otherId)
+      const resolvedName = await resolvePartnershipName(adminClient, otherId, otherInfo?.display_name || null)
 
       return {
         id: match.id,
         other_partnership_id: otherId,
-        other_display_name: otherInfo?.display_name || null,
+        other_display_name: resolvedName,
         other_membership_tier: otherInfo?.membership_tier || null,
         score: match.score,
         tier: match.tier,
@@ -399,10 +447,12 @@ export async function getAdminSummaryInput(
       return { summaryInput: null, fieldsPopulated: 0, error: 'No survey answers found' }
     }
 
+    const resolvedName = await resolvePartnershipName(adminClient, partnershipId, partnership?.display_name || null)
+
     const normalized = normalizeAnswers(survey.answers_json as Record<string, any>)
     const summaryInput = buildSummaryInput({
       answers: normalized,
-      displayName: partnership?.display_name || 'Unknown',
+      displayName: resolvedName || 'Unknown',
     })
     const fieldsPopulated = countPopulatedSummaryFields(summaryInput)
 

@@ -41,7 +41,7 @@ export function PartnershipCard({ partnership }: PartnershipCardProps) {
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Display Name</p>
           <p className="text-lg font-semibold text-gray-900">
-            {partnership.display_name || '(No name set)'}
+            {partnership.display_name || partnership.user_email || '(No name set)'}
           </p>
         </div>
 

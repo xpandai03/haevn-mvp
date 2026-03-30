@@ -517,9 +517,35 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
       return { total: 0, computed: 0, errors: 0, details: [] }
     }
 
+    // Build a name lookup map: partnership_id → resolved name
+    // Fallback chain: display_name → profiles.full_name → email
+    const partnershipIds = allPartnerships.map(p => p.id)
+    const { data: allMembers } = await adminClient
+      .from('partnership_members')
+      .select('partnership_id, user_id')
+      .in('partnership_id', partnershipIds)
+
+    const nameMap = new Map<string, string>()
+    if (allMembers && allMembers.length > 0) {
+      const memberUserIds = allMembers.map(m => m.user_id)
+      const { data: profiles } = await adminClient
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', memberUserIds)
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+      for (const m of allMembers) {
+        if (nameMap.has(m.partnership_id)) continue
+        const profile = profileMap.get(m.user_id)
+        const name = profile?.full_name || profile?.email || null
+        if (name) nameMap.set(m.partnership_id, name)
+      }
+    }
+
     console.log(`[recomputeAllMatches] Starting: ${allPartnerships.length} live partnerships`)
     for (const p of allPartnerships) {
-      console.log(`[recomputeAllMatches]   queued: ${p.display_name} (${p.id})`)
+      const name = p.display_name || nameMap.get(p.id) || null
+      console.log(`[recomputeAllMatches]   queued: ${name} (${p.id})`)
     }
 
     let totalComputed = 0
@@ -527,7 +553,8 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
 
     for (let i = 0; i < allPartnerships.length; i++) {
       const partnership = allPartnerships[i]
-      console.log(`[recomputeAllMatches] >>> LOOP ${i + 1}/${allPartnerships.length}: ${partnership.display_name} (${partnership.id})`)
+      const resolvedName = partnership.display_name || nameMap.get(partnership.id) || null
+      console.log(`[recomputeAllMatches] >>> LOOP ${i + 1}/${allPartnerships.length}: ${resolvedName} (${partnership.id})`)
 
       const result = await computeMatchesForPartnership(partnership.id)
 
@@ -538,7 +565,7 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
 
       details.push({
         partnershipId: partnership.id,
-        displayName: partnership.display_name,
+        displayName: resolvedName,
         success: result.success,
         matchesComputed: result.matchesComputed,
         candidatesEvaluated: result.candidatesEvaluated,
