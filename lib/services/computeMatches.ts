@@ -261,6 +261,45 @@ export async function computeMatchesForPartnership(
     }
 
     // =========================================================================
+    // 4b. Build candidate name map for diagnostics (display_name → full_name → email)
+    // =========================================================================
+    const candidateNameMap = new Map<string, string>()
+    if (allMemberUserIds.length > 0) {
+      const { data: memberProfiles } = await adminClient
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', allMemberUserIds)
+      const profileNameMap = new Map(memberProfiles?.map(p => [p.user_id, p.full_name]) || [])
+
+      // Also fetch auth emails as final fallback
+      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      const authEmailMap = new Map<string, string>()
+      if (authData?.users) {
+        for (const u of authData.users) {
+          if (u.email) authEmailMap.set(u.id, u.email)
+        }
+      }
+
+      // Map partnership_id → best available name
+      for (const [pid, userIds] of membersByPartnership) {
+        // Check display_name first (from allPartnerships)
+        const partnership = allPartnerships.find(p => p.id === pid)
+        if (partnership?.display_name) {
+          candidateNameMap.set(pid, partnership.display_name)
+          continue
+        }
+        // Then profiles.full_name, then auth email
+        for (const uid of userIds) {
+          const name = profileNameMap.get(uid) || authEmailMap.get(uid)
+          if (name) {
+            candidateNameMap.set(pid, name)
+            break
+          }
+        }
+      }
+    }
+
+    // =========================================================================
     // 5. Fetch ALL candidate surveys in one query
     // =========================================================================
     const { data: allSurveys } = await adminClient
@@ -314,7 +353,7 @@ export async function computeMatchesForPartnership(
     for (const candidate of allPartnerships) {
       candidatesEvaluated++
 
-      const name = candidate.display_name || candidate.id.slice(0, 8)
+      const name = candidate.display_name || candidateNameMap.get(candidate.id) || candidate.id.slice(0, 8)
 
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
