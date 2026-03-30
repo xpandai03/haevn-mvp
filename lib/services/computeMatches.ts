@@ -260,15 +260,27 @@ export async function computeMatchesForPartnership(
       }
     }
 
+    // ===== STEP 1: Log raw inputs =====
+    console.log(`[DEBUG-STEP1] candidateIds count: ${candidateIds.length}`)
+    console.log(`[DEBUG-STEP1] allMembers count: ${allMembers?.length ?? 'NULL'}`)
+    console.log(`[DEBUG-STEP1] allMemberUserIds: ${JSON.stringify(allMemberUserIds)}`)
+    console.log(`[DEBUG-STEP1] membersByPartnership keys: ${JSON.stringify([...membersByPartnership.keys()].map(k => k.slice(0, 8)))}`)
+
     // =========================================================================
     // 4b. Build candidate name map for diagnostics (display_name → full_name → email)
     // =========================================================================
     const candidateNameMap = new Map<string, string>()
     if (allMemberUserIds.length > 0) {
-      const { data: memberProfiles } = await adminClient
+      const { data: memberProfiles, error: profilesError } = await adminClient
         .from('profiles')
         .select('user_id, full_name')
         .in('user_id', allMemberUserIds)
+
+      // ===== STEP 2: Log profiles query result =====
+      console.log(`[DEBUG-STEP2] profiles query error: ${JSON.stringify(profilesError)}`)
+      console.log(`[DEBUG-STEP2] profiles result count: ${memberProfiles?.length ?? 'NULL'}`)
+      console.log(`[DEBUG-STEP2] profiles data: ${JSON.stringify(memberProfiles?.map(p => ({ uid: p.user_id.slice(0, 8), name: p.full_name })))}`)
+
       const profileNameMap = new Map(memberProfiles?.map(p => [p.user_id, p.full_name]) || [])
 
       // Also fetch auth emails as final fallback
@@ -280,10 +292,22 @@ export async function computeMatchesForPartnership(
         }
       }
 
+      // ===== STEP 3: Log auth users result =====
+      console.log(`[DEBUG-STEP3] auth users count: ${authData?.users?.length ?? 'NULL'}`)
+      console.log(`[DEBUG-STEP3] authEmailMap size: ${authEmailMap.size}`)
+      console.log(`[DEBUG-STEP3] authEmailMap entries: ${JSON.stringify(Object.fromEntries([...authEmailMap.entries()].map(([k, v]) => [k.slice(0, 8), v])))}`)
+
       // Map partnership_id → best available name
       for (const [pid, userIds] of membersByPartnership) {
         // Check display_name first (from allPartnerships)
         const partnership = allPartnerships.find(p => p.id === pid)
+
+        // ===== STEP 4: Log each mapping attempt =====
+        console.log(`[DEBUG-STEP4] pid=${pid.slice(0, 8)}: display_name=${JSON.stringify(partnership?.display_name)}, userIds=${JSON.stringify(userIds.map(u => u.slice(0, 8)))}`)
+        for (const uid of userIds) {
+          console.log(`[DEBUG-STEP4]   uid=${uid.slice(0, 8)}: profileNameMap.get=${JSON.stringify(profileNameMap.get(uid))}, authEmailMap.get=${JSON.stringify(authEmailMap.get(uid))}`)
+        }
+
         if (partnership?.display_name) {
           candidateNameMap.set(pid, partnership.display_name)
           continue
@@ -297,7 +321,13 @@ export async function computeMatchesForPartnership(
           }
         }
       }
+    } else {
+      console.log(`[DEBUG-STEP1] ⚠️ allMemberUserIds is EMPTY — skipping name resolution entirely`)
     }
+
+    // ===== STEP 5: Final candidateNameMap =====
+    console.log(`[DEBUG-STEP5] candidateNameMap size: ${candidateNameMap.size}`)
+    console.log(`[DEBUG-STEP5] candidateNameMap: ${JSON.stringify(Object.fromEntries([...candidateNameMap.entries()].map(([k, v]) => [k.slice(0, 8), v])))}`)
 
     // =========================================================================
     // 5. Fetch ALL candidate surveys in one query
@@ -354,6 +384,7 @@ export async function computeMatchesForPartnership(
       candidatesEvaluated++
 
       const name = candidate.display_name || candidateNameMap.get(candidate.id) || candidate.id.slice(0, 8)
+      console.log(`[DIAG-NAME] candidate ${candidate.id.slice(0, 8)}: display_name=${JSON.stringify(candidate.display_name)}, candidateNameMap.get=${JSON.stringify(candidateNameMap.get(candidate.id))}, resolved=${JSON.stringify(name)}`)
 
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
@@ -591,6 +622,16 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
       }
     }
 
+    // ===== DIAGNOSTIC LOGS (TEMPORARY) =====
+    console.log(`[DIAG] allPartnerships count: ${allPartnerships.length}`)
+    console.log(`[DIAG] allMembers count: ${allMembers?.length ?? 'null'}`)
+    console.log(`[DIAG] nameMap size: ${nameMap.size}`)
+    console.log(`[DIAG] nameMap entries:`, JSON.stringify(Object.fromEntries(nameMap)))
+    for (const p of allPartnerships) {
+      console.log(`[DIAG] partnership ${p.id.slice(0, 8)}: display_name=${JSON.stringify(p.display_name)}, nameMap.get=${JSON.stringify(nameMap.get(p.id))}`)
+    }
+    // ===== END DIAGNOSTIC LOGS =====
+
     console.log(`[recomputeAllMatches] Starting: ${allPartnerships.length} live partnerships`)
     for (const p of allPartnerships) {
       const name = p.display_name || nameMap.get(p.id) || null
@@ -638,6 +679,10 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
         upsertError: result.upsertError,
       })
     }
+
+    // ===== DIAGNOSTIC LOG (TEMPORARY) =====
+    console.log(`[DIAG-FINAL] details payload:`, JSON.stringify(details.map(d => ({ id: d.partnershipId.slice(0, 8), displayName: d.displayName, pairCount: d.pairDiagnostics?.length }))))
+    // ===== END DIAGNOSTIC LOG =====
 
     console.log(`[recomputeAllMatches] DONE: ${totalComputed} matches across ${allPartnerships.length} partnerships, ${totalErrors} errors`)
 
