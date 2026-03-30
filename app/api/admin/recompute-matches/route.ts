@@ -11,19 +11,21 @@ import { isAdminUser } from '@/lib/admin/allowlist'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
 
 export async function POST(request: NextRequest) {
+  console.log(`🔥 ACTIVE RECOMPUTE PATH — route.ts BUILD=2026-03-30T1`)
   try {
     // Verify admin access
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user?.email || !isAdminUser(user.email)) {
+      console.log(`🔥 RECOMPUTE DENIED — not admin: ${user?.email}`)
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
       )
     }
 
-    console.log(`[API /admin/recompute-matches] BUILD_MARKER=2026-02-13T1 engine=5cat-v3 Admin ${user.email} triggered recompute`)
+    console.log(`🔥 RECOMPUTE AUTHORIZED — admin=${user.email}, calling recomputeAllMatches()`)
 
     // Trigger recomputation (this may take a while)
     const result = await recomputeAllMatches()

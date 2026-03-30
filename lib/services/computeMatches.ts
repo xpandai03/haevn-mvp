@@ -114,6 +114,7 @@ export async function computeMatchesForPartnership(
   partnershipId: string,
   runId: string | null = null
 ): Promise<ComputeMatchesResult> {
+  console.log(`🔥 COMPUTE-FOR-PARTNERSHIP ENTERED — BUILD=2026-03-30T1 id=${partnershipId} engine=${ENGINE_VERSION}`)
   console.log(`[computeMatches] BUILD_MARKER=2026-03-02T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
 
   const adminClient = createAdminClient()
@@ -572,6 +573,7 @@ export async function computeMatchesForPartnership(
  * Recompute matches for all live partnerships.
  */
 export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
+  console.log(`🔥 RECOMPUTE-ALL ENTERED — computeMatches.ts BUILD=2026-03-30T1 engine=${ENGINE_VERSION}`)
   console.log(`[recomputeAllMatches] BUILD_MARKER=2026-03-02T1 engine=${ENGINE_VERSION}`)
   const adminClient = createAdminClient()
   const details: RecomputeAllResult['details'] = []
