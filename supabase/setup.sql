@@ -2,14 +2,15 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create profiles table if not exists
+-- NOTE: Production schema is defined in migrations/001_init.sql
+-- This is a simplified version for initial setup only
 CREATE TABLE IF NOT EXISTS public.profiles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
-  zip_code TEXT,
   city TEXT,
+  msa_status msa_status DEFAULT 'waitlist',
   survey_complete BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Enable RLS on profiles
@@ -26,15 +27,16 @@ CREATE POLICY "Users can insert own profile" ON public.profiles
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Function to handle new user creation
+-- Creates a minimal profile row; city and msa_status are set during onboarding
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (user_id, full_name, zip_code)
+  INSERT INTO public.profiles (user_id, full_name)
   VALUES (
     NEW.id,
-    NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'zip_code'
-  );
+    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+  )
+  ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
