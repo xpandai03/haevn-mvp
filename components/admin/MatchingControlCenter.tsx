@@ -203,6 +203,12 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
                         )}
                       </div>
                     </div>
+                    {/* TEMPORARY: Debug data */}
+                    {(d as any)._debug && (
+                      <div className="mt-1 ml-5 font-mono text-[10px] bg-blue-50 text-blue-800 p-2 rounded border border-blue-200 whitespace-pre-wrap break-all">
+                        🔍 DEBUG: {JSON.stringify((d as any)._debug, null, 2)}
+                      </div>
+                    )}
                     {/* Per-pair breakdown */}
                     {d.pairDiagnostics && d.pairDiagnostics.length > 0 && (
                       <div className="mt-1.5 ml-5 space-y-0.5">

@@ -61,12 +61,14 @@ export interface ComputeMatchesResult {
   error?: string
   pairDiagnostics?: PairDiagnostic[]
   upsertError?: string
+  _debug?: any // TEMPORARY: debug data embedded in response
 }
 
 export interface RecomputeAllResult {
   total: number
   computed: number
   errors: number
+  _debug?: any // TEMPORARY: debug data embedded in response
   details: Array<{
     partnershipId: string
     displayName: string | null
@@ -76,6 +78,7 @@ export interface RecomputeAllResult {
     error?: string
     pairDiagnostics?: PairDiagnostic[]
     upsertError?: string
+    _debug?: any // TEMPORARY: per-partnership debug data
   }>
 }
 
@@ -551,6 +554,14 @@ export async function computeMatchesForPartnership(
       error: errorMsg,
       pairDiagnostics,
       upsertError: upsertErrorMsg,
+      _debug: {
+        build: '2026-03-30T3',
+        candidateNameMapSize: candidateNameMap.size,
+        candidateNameMapEntries: Object.fromEntries([...candidateNameMap.entries()].map(([k, v]) => [k.slice(0, 8), v])),
+        allMembersCount: allMembers?.length ?? 'NULL',
+        allMemberUserIds: allMemberUserIds.map(u => u.slice(0, 8)),
+        membersByPartnershipKeys: [...membersByPartnership.keys()].map(k => k.slice(0, 8)),
+      },
     }
   } catch (error: any) {
     console.error(`[computeMatches] Fatal error for partnership ${partnershipId}:`, error)
@@ -679,6 +690,7 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
         error: result.error,
         pairDiagnostics: resolvedDiagnostics,
         upsertError: result.upsertError,
+        _debug: result._debug,
       })
     }
 
