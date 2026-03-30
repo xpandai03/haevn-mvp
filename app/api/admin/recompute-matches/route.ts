@@ -10,6 +10,16 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdminUser } from '@/lib/admin/allowlist'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
 
+// Temporary GET handler to verify deployment build version (no auth required)
+export async function GET() {
+  return NextResponse.json({
+    build: '2026-03-30T2',
+    commit: 'b32dcce+GET',
+    route: 'app/api/admin/recompute-matches/route.ts',
+    timestamp: new Date().toISOString(),
+  })
+}
+
 export async function POST(request: NextRequest) {
   console.log(`🔥 ACTIVE RECOMPUTE PATH — route.ts BUILD=2026-03-30T1`)
   try {
