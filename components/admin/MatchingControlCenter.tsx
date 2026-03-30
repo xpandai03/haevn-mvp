@@ -10,6 +10,7 @@ import { AISummaryDebug } from './AISummaryDebug'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
+import { ZipControl } from './ZipControl'
 
 interface MatchingControlCenterProps {
   userEmail: string
@@ -224,6 +225,9 @@ export function MatchingControlCenter({ userEmail }: MatchingControlCenterProps)
           )}
         </CardContent>
       </Card>
+
+      {/* ZIP Control */}
+      <ZipControl />
 
       {/* Lookup Panel */}
       <Card className="border-purple-200">

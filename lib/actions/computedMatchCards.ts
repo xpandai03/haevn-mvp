@@ -102,6 +102,20 @@ export async function getComputedMatchCards(
   const adminClient = createAdminClient()
   const currentPartnershipId = await getCurrentPartnershipId()
 
+  // 0. Gate: only show matches if user is in a live market
+  const authClient = await createClient()
+  const { data: { user: authUser } } = await authClient.auth.getUser()
+  if (authUser) {
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('msa_status')
+      .eq('user_id', authUser.id)
+      .single()
+    if (profile?.msa_status !== 'live') {
+      return []
+    }
+  }
+
   // 1. Fetch computed matches for this partnership (bidirectional)
   //    Filter by release_at (Match Monday) and expires_at (90-day expiry)
   const now = new Date().toISOString()

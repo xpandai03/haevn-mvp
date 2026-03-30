@@ -106,7 +106,14 @@ export default function ZipCodePage() {
 
         if (updateError) throw updateError
 
-        console.log('Saved ZIP and MSA data:', { zipCode, ...msaData })
+        // Set msa_status based on ZIP validation
+        const msaStatus = msaData.valid ? 'live' : 'waitlist'
+        await supabase
+          .from('profiles')
+          .update({ msa_status: msaStatus })
+          .eq('user_id', user.id)
+
+        console.log('Saved ZIP and MSA data:', { zipCode, msaStatus, ...msaData })
         router.push('/onboarding/relationship-styles')
       }
     } catch (error) {
