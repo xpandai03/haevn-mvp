@@ -528,16 +528,26 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
     const nameMap = new Map<string, string>()
     if (allMembers && allMembers.length > 0) {
       const memberUserIds = allMembers.map(m => m.user_id)
+
+      // Get names from profiles
       const { data: profiles } = await adminClient
         .from('profiles')
-        .select('user_id, full_name, email')
+        .select('user_id, full_name')
         .in('user_id', memberUserIds)
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || [])
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+      // Get emails from auth.users for fallback
+      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      const emailMap = new Map<string, string>()
+      if (authData?.users) {
+        for (const u of authData.users) {
+          if (u.email) emailMap.set(u.id, u.email)
+        }
+      }
+
       for (const m of allMembers) {
         if (nameMap.has(m.partnership_id)) continue
-        const profile = profileMap.get(m.user_id)
-        const name = profile?.full_name || profile?.email || null
+        const name = profileMap.get(m.user_id) || emailMap.get(m.user_id) || null
         if (name) nameMap.set(m.partnership_id, name)
       }
     }

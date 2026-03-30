@@ -79,25 +79,29 @@ async function resolvePartnershipName(
   if (!members || members.length === 0) return null
 
   const userIds = members.map(m => m.user_id)
+
+  // Try profiles.full_name first
   const { data: profiles } = await adminClient
     .from('profiles')
-    .select('user_id, full_name, email')
+    .select('user_id, full_name')
     .in('user_id', userIds)
 
   if (profiles && profiles.length > 0) {
     const names = profiles
-      .map(p => p.full_name || p.email || null)
+      .map(p => p.full_name || null)
       .filter((n): n is string => !!n)
     if (names.length > 0) {
       return names.length > 1 ? names.join(' & ') : names[0]
     }
   }
 
-  // Last resort: try auth.users email
-  try {
-    const { data: authData } = await adminClient.auth.admin.getUserById(userIds[0])
-    if (authData?.user?.email) return authData.user.email
-  } catch { /* ignore */ }
+  // Fallback: auth.users email
+  for (const uid of userIds) {
+    try {
+      const { data: authData } = await adminClient.auth.admin.getUserById(uid)
+      if (authData?.user?.email) return authData.user.email
+    } catch { /* ignore */ }
+  }
 
   return null
 }
