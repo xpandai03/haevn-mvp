@@ -17,7 +17,7 @@ export const MIN_FIELDS_FOR_GENERATION = 4
  * Intentionally vague and non-committal.
  */
 export function getFallbackConnectionSummary(name: string): string {
-  return `${name} is exploring connections on HAEVN and appears to value an intentional approach to dating. Their profile is still developing as they complete more of their survey. More details about their connection style and preferences will become available as their profile grows.`
+  return `${name} is exploring connections on HAEVN. Their profile is still being built as they finish their survey. Once they complete more questions, you will be able to see what they are looking for and how they like to connect.`
 }
 
 /**
@@ -25,5 +25,5 @@ export function getFallbackConnectionSummary(name: string): string {
  * Acknowledges the sparse state without guessing.
  */
 export function getFallbackInsight(): string {
-  return `Your responses so far suggest that you are oriented toward intentional connection. As you complete more of your survey, HAEVN will be able to offer a more detailed picture of your relationship style and what kinds of connections are most likely to align with you. Check back after updating your responses for a fuller insight.`
+  return `We do not have enough from your survey yet to give you a full picture. As you answer more questions, we will be able to show you what your answers mean and what kind of people you are most likely to click with. Come back after finishing more of your survey.`
 }
