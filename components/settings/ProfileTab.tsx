@@ -17,7 +17,8 @@ export function ProfileTab() {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
-    display_name: ''
+    display_name: '',
+    phone: ''
   })
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function ProfileTab() {
         if (myPartnership) {
           const { data: partnership } = await supabase
             .from('partnerships')
-            .select('display_name')
+            .select('display_name, phone')
             .eq('id', myPartnership.partnershipId)
             .single()
 
@@ -53,13 +54,15 @@ export function ProfileTab() {
           setFormData({
             full_name: profile?.full_name || '',
             email: user.email || '',
-            display_name: partnership?.display_name || ''
+            display_name: partnership?.display_name || '',
+            phone: partnership?.phone || ''
           })
         } else {
           setFormData({
             full_name: profile?.full_name || '',
             email: user.email || '',
-            display_name: ''
+            display_name: '',
+            phone: ''
           })
         }
       }
@@ -100,12 +103,18 @@ export function ProfileTab() {
 
       const { partnership: myPartnership } = await partnershipResponse.json()
 
-      if (myPartnership && formData.display_name) {
-        console.log('[CLIENT] Updating partnership display name:', formData.display_name)
-        await supabase
-          .from('partnerships')
-          .update({ display_name: formData.display_name })
-          .eq('id', myPartnership.partnershipId)
+      if (myPartnership) {
+        const updates: Record<string, string> = {}
+        if (formData.display_name) updates.display_name = formData.display_name
+        if (formData.phone !== undefined) updates.phone = formData.phone || null as any
+
+        if (Object.keys(updates).length > 0) {
+          console.log('[CLIENT] Updating partnership:', Object.keys(updates))
+          await supabase
+            .from('partnerships')
+            .update(updates)
+            .eq('id', myPartnership.partnershipId)
+        }
       }
 
       toast({
@@ -178,6 +187,21 @@ export function ProfileTab() {
           />
           <p className="text-caption text-haevn-gray-600">
             This is the name shown on your match profile.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone" className="text-haevn-gray-900">Phone Number</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            placeholder="+1 (555) 123-4567"
+            className="border-haevn-gray-300"
+          />
+          <p className="text-caption text-haevn-gray-600">
+            Optional. We'll text you when new matches are ready.
           </p>
         </div>
       </div>
