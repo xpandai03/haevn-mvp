@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sdepasybfkmxcswaxnsz.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function POST(request: NextRequest) {
   console.log('[API /onboarding/save-identity] ===== SAVE IDENTITY REQUEST =====')
 
   try {
-    // Authenticate user using getUser() for server-side validation
-    const supabase = await createClient()
+    // Authenticate user — static imports, no lazy-loading
+    const cookieStore = await cookies()
+    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // read-only context
+          }
+        },
+      },
+    })
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (!user || authError) {
