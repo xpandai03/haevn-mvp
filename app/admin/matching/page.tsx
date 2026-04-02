@@ -23,31 +23,12 @@ export default async function AdminMatchingPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <a href="/account-details" className="text-gray-400 hover:text-gray-600 text-sm">
-                ← Back
-              </a>
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                  style={{ backgroundColor: '#008080' }}
-                >
-                  H
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900">Matching Control Center</h1>
-                  <p className="text-xs text-gray-400">
-                    {user.email}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <span className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider bg-gray-100 text-gray-500 rounded">
-              Internal
-            </span>
-          </div>
+        <div className="flex justify-center py-5">
+          <img
+            src="/haevn-logo-transparent.svg"
+            alt="HAEVN"
+            className="h-10"
+          />
         </div>
       </header>
 
