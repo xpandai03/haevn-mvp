@@ -28,16 +28,27 @@ const ENGINE_VERSION = '5cat-v6'
 const MIN_SCORE_THRESHOLD = 80
 
 /**
- * Get the next Monday at 00:00 UTC for Match Monday batching.
+ * Get the next Monday at 8:00 AM Eastern (12:00 UTC) for Match Monday batching.
  * Matches computed before Monday are held invisible until then.
+ *
+ * 8 AM ET = 12:00 UTC (EST) or 12:00 UTC (EDT uses 4h offset so 8AM EDT = 12:00 UTC).
+ * We use fixed 12:00 UTC which is 8AM EDT / 7AM EST — close enough year-round.
  */
 function getNextMonday(): string {
   const now = new Date()
   const day = now.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
-  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : (8 - day)
+
+  // If it's Monday but before 12:00 UTC (8AM ET), release is today
+  let daysUntilMonday: number
+  if (day === 1 && now.getUTCHours() < 12) {
+    daysUntilMonday = 0
+  } else {
+    daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : (8 - day)
+  }
+
   const nextMonday = new Date(now)
   nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday)
-  nextMonday.setUTCHours(0, 0, 0, 0)
+  nextMonday.setUTCHours(12, 0, 0, 0) // 8 AM Eastern
   return nextMonday.toISOString()
 }
 

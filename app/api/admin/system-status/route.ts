@@ -3,13 +3,21 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
 
+/** Next Monday at 8 AM Eastern (12:00 UTC). */
 function getNextMondayUTC(): string {
   const now = new Date()
   const day = now.getUTCDay()
-  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : (8 - day)
+
+  let daysUntilMonday: number
+  if (day === 1 && now.getUTCHours() < 12) {
+    daysUntilMonday = 0
+  } else {
+    daysUntilMonday = day === 0 ? 1 : day === 1 ? 7 : (8 - day)
+  }
+
   const nextMonday = new Date(now)
   nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday)
-  nextMonday.setUTCHours(0, 0, 0, 0)
+  nextMonday.setUTCHours(12, 0, 0, 0)
   return nextMonday.toISOString()
 }
 

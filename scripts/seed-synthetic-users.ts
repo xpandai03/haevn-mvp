@@ -35,6 +35,45 @@ const SEED_PREFIX = 'seed-test'
 const SEED_DOMAIN = 'haevn-seed.test'
 
 // =============================================================================
+// REALISTIC USER NAMES
+// =============================================================================
+
+const REAL_NAMES = [
+  'Marcus Rivera',
+  'Elena Vasquez',
+  'Sofia Chen',
+  'Daniel Kim',
+  'Ava Thompson',
+  'Lucas Bennett',
+  'Maya Patel',
+  'Noah Williams',
+  'Emma Garcia',
+  'Leo Martinez',
+  'Zara Mitchell',
+  'Kai Nakamura',
+  'Isla Reeves',
+  'Remy Delacroix',
+  'Luna Okafor',
+  'Jaden Park',
+  'Sienna Alvarez',
+  'Theo Bergstrom',
+  'Nadia Moreau',
+  'Callum Rhodes',
+]
+
+/** Get a realistic name for a given user index. */
+function getRealisticName(index: number): { fullName: string; firstName: string; email: string } {
+  const fullName = REAL_NAMES[index % REAL_NAMES.length]
+  const firstName = fullName.split(' ')[0]
+  const emailSlug = fullName.toLowerCase().replace(' ', '.')
+  return {
+    fullName,
+    firstName,
+    email: `${emailSlug}.test@haevn.co`,
+  }
+}
+
+// =============================================================================
 // PHONE ROUTING FOR SMS TESTING
 // =============================================================================
 
@@ -237,15 +276,19 @@ async function createSeededUser(
   mode: SeedMode,
   realSms: boolean = false
 ): Promise<SeededUser | null> {
-  const email = `${SEED_PREFIX}-${mode}-p${pairIndex}-m${memberIndex}@${SEED_DOMAIN}`
-  const displayName = `${label} (${mode} pair ${pairIndex}, member ${memberIndex})`
+  // Use realistic human names instead of "User A (high pair 0, member 0)"
+  const globalIndex = pairIndex * 2 + memberIndex
+  const persona = getRealisticName(globalIndex)
+  const email = persona.email
+  const displayName = persona.firstName
+  const fullName = persona.fullName
 
   // 1. Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password: 'SeedTest123!',
     email_confirm: true,
-    user_metadata: { full_name: displayName, seed: true },
+    user_metadata: { full_name: fullName, seed: true },
   })
 
   if (authError) {
@@ -279,7 +322,7 @@ async function createSeededUser(
     .upsert({
       user_id: userId,
       email: email,
-      full_name: displayName,
+      full_name: fullName,
       city: 'Austin',
       survey_complete: true,
       msa_status: 'live',
@@ -418,9 +461,13 @@ async function computeMatchesDirect(partnershipId: string, runId: string | null)
 async function cleanup(): Promise<void> {
   console.log('\nCleaning up seeded users...')
 
-  // Find all seed users by email pattern
+  // Find all seed users by metadata marker or email pattern
   const { data: listData } = await supabase.auth.admin.listUsers()
-  const seedUsers = listData?.users?.filter(u => u.email?.endsWith(`@${SEED_DOMAIN}`)) ?? []
+  const seedUsers = listData?.users?.filter(u =>
+    u.user_metadata?.seed === true ||
+    u.email?.endsWith(`@${SEED_DOMAIN}`) ||
+    u.email?.endsWith('.test@haevn.co')
+  ) ?? []
 
   if (seedUsers.length === 0) {
     console.log('No seeded users found.')

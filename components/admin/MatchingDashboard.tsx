@@ -182,6 +182,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
   const [showZipModal, setShowZipModal] = useState(false)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [releasing, setReleasing] = useState(false)
+  const [runningCycle, setRunningCycle] = useState(false)
   const { toast } = useToast()
 
   // Load system status on mount and after actions
@@ -237,6 +238,27 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' })
     } finally {
       setRecomputing(false)
+      loadSystemStatus()
+    }
+  }
+
+  const handleRunFullCycle = async () => {
+    setRunningCycle(true)
+    try {
+      const res = await fetch('/api/admin/run-full-cycle', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        toast({
+          title: 'Full Cycle Complete',
+          description: `Computed: ${data.compute.computed}/${data.compute.total} | Released: ${data.release.released} | Notified: ${data.notify.sent} (${data.notify.skipped} skipped)`,
+        })
+      } else {
+        toast({ title: 'Error', description: data.error || 'Full cycle failed', variant: 'destructive' })
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } finally {
+      setRunningCycle(false)
       loadSystemStatus()
     }
   }
@@ -307,8 +329,18 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
               <p className="text-gray-400 uppercase tracking-wide mb-0.5">Next Release</p>
               <p className="text-gray-700 font-medium">
                 {new Date(systemStatus.nextRelease).toLocaleDateString('en-US', {
-                  weekday: 'short', month: 'short', day: 'numeric'
-                })}
+                  weekday: 'long', month: 'short', day: 'numeric'
+                })} — 8:00 AM ET
+              </p>
+              <p className="text-gray-400">
+                {(() => {
+                  const ms = new Date(systemStatus.nextRelease).getTime() - Date.now()
+                  if (ms <= 0) return 'Now'
+                  const h = Math.floor(ms / 3600000)
+                  const d = Math.floor(h / 24)
+                  const rh = h % 24
+                  return d > 0 ? `in ${d}d ${rh}h` : `in ${rh}h`
+                })()}
               </p>
             </div>
           </div>
@@ -382,6 +414,25 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             </>
           ) : (
             'Recompute All Matches'
+          )}
+        </Button>
+
+        <Button
+          onClick={handleRunFullCycle}
+          disabled={runningCycle || recomputing}
+          variant="outline"
+          className="gap-2 border-teal-300 text-teal-700 hover:bg-teal-50"
+        >
+          {runningCycle ? (
+            <>
+              <HaevnLoader size={16} className="mr-1" />
+              Running Cycle...
+            </>
+          ) : (
+            <>
+              <Rocket className="h-4 w-4" />
+              Run Full Cycle
+            </>
           )}
         </Button>
 
