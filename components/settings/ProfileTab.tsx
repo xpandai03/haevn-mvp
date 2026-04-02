@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 
 export function ProfileTab() {
   const { user } = useAuth()
@@ -136,7 +136,7 @@ export function ProfileTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-haevn-teal-600" />
+        <HaevnLoader size={60} />
       </div>
     )
   }
@@ -212,7 +212,7 @@ export function ProfileTab() {
           disabled={saving}
           className="bg-haevn-teal-500 hover:bg-haevn-teal-600 text-white"
         >
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {saving && <HaevnLoader size={18} className="mr-2" />}
           Save Changes
         </Button>
       </div>

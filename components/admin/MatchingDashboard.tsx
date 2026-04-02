@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import {
-  Loader2, Search, X, ChevronDown, ChevronRight, Users,
+  Search, X, ChevronDown, ChevronRight, Users,
   CheckCircle2, AlertTriangle, XCircle, Zap, Code, Settings
 } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
 import { ZipControl } from './ZipControl'
 
@@ -270,7 +271,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
         >
           {recomputing ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <HaevnLoader size={20} className="mr-2" />
               Recomputing...
             </>
           ) : (
@@ -326,9 +327,9 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
 
       {/* Loading state */}
       {recomputing && (
-        <div className="text-center py-16">
-          <Loader2 className="h-10 w-10 mx-auto mb-4 animate-spin text-[#008080]" />
-          <p className="text-gray-500">Evaluating all partnerships...</p>
+        <div className="text-center py-12">
+          <HaevnLoader size={140} />
+          <p className="text-gray-500 mt-2">Evaluating all partnerships...</p>
           <p className="text-xs text-gray-400 mt-1">This may take a minute</p>
         </div>
       )}

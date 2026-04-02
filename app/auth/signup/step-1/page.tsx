@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { useAuth } from '@/lib/auth/context'
 import Link from 'next/link'
 
@@ -168,7 +168,7 @@ function SignupStep1Form() {
 function LoadingFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+      <HaevnLoader size={80} />
     </div>
   )
 }

@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
 import { updateProfile } from '@/lib/actions/profile'
 import { checkCityStatus } from '@/lib/data/cities'
-import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
+import { AlertCircle, ChevronLeft } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 
 export default function SignupStep3() {
   const router = useRouter()
@@ -235,7 +236,7 @@ export default function SignupStep3() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              <HaevnLoader size={20} className="mr-2" />
               Saving...
             </>
           ) : (

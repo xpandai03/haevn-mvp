@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
-import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
+import { AlertCircle, ChevronLeft } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 
 export default function SignupStep2() {
   const router = useRouter()
@@ -250,7 +251,7 @@ export default function SignupStep2() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              <HaevnLoader size={20} className="mr-2" />
               Creating account...
             </>
           ) : (

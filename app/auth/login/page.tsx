@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
 import { safeResponseJson } from '@/lib/utils'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -259,7 +260,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <HaevnLoader size={18} className="mr-2" />
                   Signing in...
                 </>
               ) : (

@@ -2,13 +2,13 @@
 
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { HaevnLoader } from '@/components/ui/haevn-loader'
 
 // Loading fallback
 function LoadingSpinner() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
+      <HaevnLoader size={80} />
     </div>
   )
 }
