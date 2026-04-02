@@ -40,6 +40,7 @@ export async function GET() {
     pendingRes,
     activeRes,
     expiredRes,
+    recentNotificationsRes,
   ] = await Promise.all([
     admin.from('system_events')
       .select('created_at, triggered_by, metadata')
@@ -78,6 +79,13 @@ export async function GET() {
       .select('id', { count: 'exact', head: true })
       .lte('expires_at', now)
       .eq('saved', false),
+
+    // Recent notification events (last 20)
+    admin.from('system_events')
+      .select('created_at, triggered_by, metadata')
+      .eq('event_type', 'notification_sent')
+      .order('created_at', { ascending: false })
+      .limit(20),
   ])
 
   return NextResponse.json({
@@ -102,6 +110,12 @@ export async function GET() {
     pendingMatches: pendingRes.count ?? 0,
     activeMatches: activeRes.count ?? 0,
     expiredMatches: expiredRes.count ?? 0,
+
+    recentNotifications: (recentNotificationsRes.data || []).map((e: any) => ({
+      at: e.created_at,
+      triggeredBy: e.triggered_by,
+      ...((e.metadata as any) || {}),
+    })),
 
     systemState: 'idle',
   })

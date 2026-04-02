@@ -163,6 +163,19 @@ interface MatchingDashboardProps {
   userEmail: string
 }
 
+interface NotificationEvent {
+  at: string
+  triggeredBy: string
+  notification_type: 'match' | 'message'
+  phone?: string | null
+  email?: string | null
+  sms_sent: boolean
+  email_sent: boolean
+  sms_error?: string | null
+  email_error?: string | null
+  partnership_id?: string | null
+}
+
 interface SystemStatus {
   lastComputation: { at: string; triggeredBy: string; computed?: number } | null
   lastRelease: { at: string; released?: number } | null
@@ -171,6 +184,7 @@ interface SystemStatus {
   pendingMatches: number
   activeMatches: number
   expiredMatches: number
+  recentNotifications: NotificationEvent[]
   systemState: string
 }
 
@@ -355,6 +369,51 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             <span className="text-gray-400 font-medium">
               {systemStatus.expiredMatches} expired
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Recent Notifications ── */}
+      {systemStatus && systemStatus.recentNotifications?.length > 0 && (
+        <div className="border rounded-xl bg-white p-5">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3">Recent Notifications</h3>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {systemStatus.recentNotifications.map((n, i) => {
+              const smsFailed = !n.sms_sent && n.phone
+              const emailFailed = !n.email_sent && n.email
+              const allFailed = smsFailed && emailFailed
+              const status = allFailed ? 'failed' : (smsFailed || emailFailed) ? 'partial' : 'sent'
+
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
+                    status === 'failed' ? 'bg-red-50 border border-red-200' :
+                    status === 'partial' ? 'bg-amber-50 border border-amber-200' :
+                    'bg-green-50 border border-green-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                      status === 'failed' ? 'bg-red-500' :
+                      status === 'partial' ? 'bg-amber-500' :
+                      'bg-green-500'
+                    }`} />
+                    <span className="font-medium text-gray-700 truncate">
+                      {n.email || n.phone || 'Unknown'}
+                    </span>
+                    <span className="text-gray-400 capitalize">{n.notification_type}</span>
+                    {n.sms_sent && <span className="text-green-600">SMS</span>}
+                    {n.email_sent && <span className="text-green-600">Email</span>}
+                    {smsFailed && <span className="text-red-500">SMS failed</span>}
+                    {emailFailed && <span className="text-red-500">Email failed</span>}
+                  </div>
+                  <span className="text-gray-400 flex-shrink-0 ml-2">
+                    {new Date(n.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

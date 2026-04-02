@@ -121,6 +121,7 @@ export async function POST() {
       type: 'match',
       phone: partnership.phone,
       email: userEmail,
+      partnershipId,
     })
 
     if (result.sms.sent || result.email.sent) {

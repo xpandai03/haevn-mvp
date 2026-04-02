@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
         type: 'match',
         phone: partnership.phone,
         email: userEmail,
+        partnershipId,
       })
 
       if (result.sms.sent || result.email.sent) {
