@@ -23,12 +23,19 @@ export default async function AdminMatchingPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="flex justify-center py-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+          <a
+            href="/account-details"
+            className="text-sm text-gray-400 hover:text-gray-600 shrink-0"
+          >
+            ← Back
+          </a>
           <img
             src="/haevn-logo-transparent.svg"
             alt="HAEVN"
-            className="h-10"
+            className="w-48 sm:w-56"
           />
+          <div className="w-12" />
         </div>
       </header>
 
