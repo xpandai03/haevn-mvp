@@ -31,9 +31,9 @@ export default async function AdminMatchingPage() {
             ← Back
           </a>
           <img
-            src="/haevn-logo-transparent.svg"
+            src="/haevn-logo-with-icon.svg"
             alt="HAEVN"
-            className="w-48 sm:w-56"
+            className="h-10 sm:h-12"
           />
           <div className="w-12" />
         </div>
