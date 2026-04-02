@@ -295,103 +295,138 @@ function mismatchAnswers(pairIndex: number, memberIndex: number): Record<string,
 // =============================================================================
 
 /**
- * Threshold match (80-85%): Intentional divergences across multiple categories.
+ * Threshold match (80-85%): Aggressive divergences targeting ALL categories.
  *
- * Divergences hit connection (20w) and chemistry (15w) hardest, with minor
- * lifestyle (10w) differences. Intent (30w) and structure (25w) stay high
- * so gates pass and the dominant categories keep the score above 80.
+ * Key strategy: eliminate bonus stacking AND create real Jaccard/tier distance.
+ * The scoring engine gives bonuses for:
+ *   +30 shared kinks, +25 shared erotic styles, +25 shared love languages,
+ *   +15 collaborative conflict, +15 both-high empathy, +10 both-low jealousy,
+ *   +10 secure attachment
+ * Threshold tier eliminates ALL of these while keeping gates passing.
  *
- * Expected category scores:
- *   Intent ~88, Structure ~90, Connection ~72, Chemistry ~70, Lifestyle ~72
- *   Overall ≈ 88×0.30 + 90×0.25 + 72×0.20 + 70×0.15 + 72×0.10 = 81.3
+ * Tier values verified against actual engine arrays in scoring.ts/categories/*.ts.
  */
 function thresholdAnswers(pairIndex: number, memberIndex: number): Record<string, any> {
   const answers = baseAnswers(pairIndex * 2 + memberIndex)
   if (memberIndex === 1) {
-    // ── Connection divergence (targets ~72) ──
-    answers.q12_conflict_resolution = 'compromising'       // loses collaborative bonus (-15)
-    answers.q12a_messaging_pace = 'slow'                   // 2 tiers off moderate
-    answers.q37_empathy = 'high'                           // loses very_high bonus (-15)
-    answers.q38_jealousy = 'moderate'                      // loses very_low bonus (-10), 2 tiers off
-    answers.q38a_emotional_reactive = 'moderate'           // 1 tier off
-    answers.q_emotional_pace = 5                           // 2 off → 65
-    answers.q_emotional_engagement = 5                     // 2 off → 60
+    // ── Intent divergence (30w, target ~80) ──
+    // Attachment sub (15w): fearful-avoidant is 2 tiers from secure → ~67 score
+    answers.q10_attachment_style = 'fearful-avoidant'       // ATTACHMENT_TIERS[2] vs [3], dist 1/5→80
+    answers.q10a_emotional_availability = 'limited'         // AVAILABILITY_TIERS[1] vs [4], dist 3/4→25
+    // Exclusivity sub (15w): different tiers
+    answers.q7_emotional_exclusivity = 'mostly_exclusive'   // EXCLUSIVITY_TIERS[1] vs [2], dist 1/4→75
+    answers.q8_sexual_exclusivity = 'fully_open'            // EXCLUSIVITY_TIERS[4] vs [3], dist 1/4→75
+    // HAEVN use sub (5w): zero overlap
+    answers.q21_platform_use = ['Events', 'Education']      // no Jaccard overlap with base
 
-    // ── Chemistry divergence (targets ~70) ──
-    answers.q25a_frequency = 'monthly'                     // 3 tiers off few_times_week
-    answers.q34_exploration = 4                            // 3 points off 7
-    answers.q34a_variety = 4                               // 3 points off 7
-    answers.q23_erotic_styles = ['Sensual', 'Adventurous'] // partial overlap (1 of 3 shared)
-    answers.q33_kinks = ['Role play']                      // partial overlap (1 of 3 shared)
+    // ── Structure divergence (25w, target ~85) ──
+    // Orientation sub (25w): different Kinsey
+    answers.q3b_kinsey_scale = '5'                          // dist 2 from '3', score ~67
+    // Boundaries sub (25w): zero overlap on hard boundaries
+    answers.q28_hard_boundaries = ['Blood play', 'Breath play'] // no overlap with base ['Degradation']
 
-    // ── Lifestyle divergence (targets ~72) ──
-    answers.q36_social_energy = 'extroverted'              // 1 tier off ambivert
-    answers.q36a_outgoing = 'extroverted'                  // loses exact match
-    answers.q18_substances = 'occasionally'                // 1 tier off social_drinker
-    answers.q_independence_balance = 5                     // 2 off → 65
+    // ── Connection divergence (20w, target ~60) ──
+    // Communication sub (26w): KILL all bonuses, max distance
+    answers.q11_love_languages = ['Acts of service']        // zero overlap → Jaccard 0, no +25 bonus
+    answers.q12_conflict_resolution = 'passive'             // CONFLICT_TIERS[2] vs [6], dist 4/9→56, no +15 bonus
+    answers.q12a_messaging_pace = 'very_slow'               // MESSAGING_PACE_TIERS[0] vs [2], dist 2/4→50
+    // Emotional sub (17w): KILL empathy+jealousy bonuses, large tier distances
+    answers.q37_empathy = 'low'                             // EMPATHY_TIERS[1] vs [5], dist 4/5→20, no +15 bonus
+    answers.q37a_harmony = 'low'                            // 2 tiers from 'high'
+    answers.q38_jealousy = 'high'                           // REACTIVITY_TIERS[4] vs [0], dist 4/5→20, no +10 bonus
+    answers.q38a_emotional_reactive = 'high'                // REACTIVITY_TIERS[4] vs [1], dist 3/5→40
+    // Emotional scales: max distance
+    answers.q_emotional_pace = 5                            // diff 2 → 65
+    answers.q_emotional_engagement = 5                      // diff 2 → 60 (steeper)
 
-    // ── Intent minor divergence (targets ~88) ──
-    answers.q15_time_availability = 'flexible'             // 1 tier off weekly
-    answers.q10a_emotional_availability = 'available'      // 1 tier off very_available
+    // ── Chemistry divergence (15w, target ~55) ──
+    // Erotic profile sub (30w): minimal overlap
+    answers.q23_erotic_styles = ['Adventurous', 'Kinky']    // zero overlap with base, no +25 bonus
+    answers.q24_experiences = ['Events', 'Travel']          // zero overlap with base
+    // Roles/kinks sub (30w): zero overlap, kill +30 bonus
+    answers.q33_kinks = ['Impact play', 'Latex']            // zero overlap with base, no +30 bonus
+    answers.q33a_experience_level = 'beginner'              // KINK_EXP_TIERS[2] vs [5], dist 3/7→57
+    // Frequency sub (10w): large tier distance
+    answers.q25a_frequency = 'few_times_year'               // FREQ_TIERS[1] vs [5], dist 4/7→43
+    // Exploration sub (10w): large slider distance
+    answers.q34_exploration = 2                             // diff 5 from 7, maxDist=5 → 0
+    answers.q34a_variety = 2                                // diff 5 from 7, maxDist=5 → 0
+    // Physical prefs sub (10w): no match
+    answers.q27_body_type_preferences = ['Slim / lean', 'Muscular / built'] // no overlap with base
+
+    // ── Lifestyle divergence (10w, target ~60) ──
+    answers.q36_social_energy = 'very_extroverted'          // SOCIAL_TIERS[7] vs [3], dist 4/7→43
+    answers.q36a_outgoing = 'very_extroverted'              // no exact match
+    answers.q18_substances = 'frequent'                     // SUBSTANCE_TIERS[7] vs [4], dist 3/9→67
+    answers.q_independence_balance = 5                      // diff 2 → 65
+    answers.q19c_mobility = 'rarely'                        // TRAVEL_TIERS[1] vs [4], dist 3/7→57
   }
   return answers
 }
 
 /**
- * Strong match (85-90%): Fewer divergences, mainly in lower-weight categories.
+ * Strong match (85-90%): Moderate divergences, mainly in chemistry + connection.
  *
- * Chemistry and lifestyle take small hits. Connection gets a minor dip.
- * Intent and structure stay near-perfect.
- *
- * Expected category scores:
- *   Intent ~92, Structure ~92, Connection ~82, Chemistry ~78, Lifestyle ~80
- *   Overall ≈ 92×0.30 + 92×0.25 + 82×0.20 + 78×0.15 + 80×0.10 = 87.1
+ * Keeps most bonuses but introduces tier distances in lower-weight sub-scores.
+ * Removes kink bonus and empathy bonus. Keeps secure attachment and collaborative.
  */
 function strongMatchAnswers_tiered(pairIndex: number, memberIndex: number): Record<string, any> {
   const answers = baseAnswers(pairIndex * 2 + memberIndex)
   if (memberIndex === 1) {
-    // ── Connection divergence (targets ~82) ──
-    answers.q12a_messaging_pace = 'responsive'             // 1 tier off moderate
-    answers.q37_empathy = 'high'                           // loses very_high bonus (-15)
-    answers.q_emotional_engagement = 4                     // 1 off → 85
+    // ── Intent divergence (30w, target ~88) ──
+    answers.q10a_emotional_availability = 'moderate'        // AVAILABILITY_TIERS[2] vs [4], dist 2/4→50
 
-    // ── Chemistry divergence (targets ~78) ──
-    answers.q25a_frequency = 'weekly'                      // 1 tier off few_times_week
-    answers.q34_exploration = 5                            // 2 points off 7
-    answers.q34a_variety = 5                               // 2 points off 7
-    answers.q23_erotic_styles = ['Sensual', 'Playful']     // 2 of 3 shared (loses Romantic)
+    // ── Connection divergence (20w, target ~75) ──
+    answers.q11_love_languages = ['Quality time', 'Acts of service'] // partial overlap (1 of 3), weaker Jaccard
+    answers.q12_conflict_resolution = 'compromising'        // CONFLICT_TIERS[4] vs [6], dist 2/9→78, loses +15 bonus
+    answers.q12a_messaging_pace = 'slow'                    // MESSAGING_PACE_TIERS[1] vs [2], dist 1/4→75
+    answers.q37_empathy = 'moderate'                         // EMPATHY_TIERS[2] vs [5], dist 3/5→40, loses +15 bonus
+    answers.q38_jealousy = 'moderate'                        // REACTIVITY_TIERS[2] vs [0], dist 2/5→60, loses +10 bonus
+    answers.q_emotional_pace = 5                             // diff 2 → 65
+    answers.q_emotional_engagement = 4                       // diff 1 → 85
 
-    // ── Lifestyle divergence (targets ~80) ──
-    answers.q36_social_energy = 'extroverted'              // 1 tier off ambivert
-    answers.q18_substances = 'occasionally'                // 1 tier off social_drinker
-    answers.q_independence_balance = 4                     // 1 off → 85
+    // ── Chemistry divergence (15w, target ~65) ──
+    answers.q23_erotic_styles = ['Sensual']                  // 1 of 3 overlap, lower Jaccard, weaker +25 bonus
+    answers.q33_kinks = ['Sensory play']                     // 1 of 3 overlap, weaker +30 bonus
+    answers.q33a_experience_level = 'intermediate'           // KINK_EXP_TIERS[4] vs [5], dist 1/7→86
+    answers.q25a_frequency = 'monthly'                       // FREQ_TIERS[2] vs [5], dist 3/7→57
+    answers.q34_exploration = 4                              // diff 3 from 7, maxDist=5 → 40
+    answers.q34a_variety = 4                                 // diff 3 from 7, maxDist=5 → 40
+    answers.q27_body_type_preferences = ['Athletic / fit', 'Slim / lean'] // partial overlap (1 of 3)
+
+    // ── Lifestyle divergence (10w, target ~70) ──
+    answers.q36_social_energy = 'extroverted'                // SOCIAL_TIERS[5] vs [3], dist 2/7→71
+    answers.q36a_outgoing = 'extroverted'                    // no exact match
+    answers.q18_substances = 'rarely'                        // SUBSTANCE_TIERS[2] vs [4], dist 2/9→78
+    answers.q_independence_balance = 5                       // diff 2 → 65
   }
   return answers
 }
 
 /**
- * Near-perfect match (90-95%): Minimal divergence, only in lowest-weight sub-scores.
+ * Near-perfect match (90-95%): Small divergences in lowest-weight sub-scores.
  *
- * Nearly identical answers with tiny differences that keep the score
- * from hitting 95+. Only lifestyle and chemistry take small dips.
- *
- * Expected category scores:
- *   Intent ~95, Structure ~95, Connection ~92, Chemistry ~88, Lifestyle ~85
- *   Overall ≈ 95×0.30 + 95×0.25 + 92×0.20 + 88×0.15 + 85×0.10 = 92.5
+ * Keeps all bonuses. Only introduces small tier distances in chemistry
+ * and lifestyle to bring score from ~95 down to ~91-93.
  */
 function nearPerfectAnswers(pairIndex: number, memberIndex: number): Record<string, any> {
   const answers = baseAnswers(pairIndex * 2 + memberIndex)
   if (memberIndex === 1) {
-    // ── Chemistry minor divergence (targets ~88) ──
-    answers.q34a_variety = 6                               // 1 point off 7
-    answers.q25a_frequency = 'weekly'                      // 1 tier off few_times_week
+    // ── Connection minor divergence (20w, target ~90) ──
+    answers.q12a_messaging_pace = 'quick'                    // MESSAGING_PACE_TIERS[3] vs [2], dist 1/4→75
+    answers.q_emotional_pace = 4                             // diff 1 → 85
+    answers.q_emotional_engagement = 4                       // diff 1 → 85
 
-    // ── Lifestyle minor divergence (targets ~85) ──
-    answers.q18_substances = 'moderate'                    // 1 tier off social_drinker
-    answers.q_independence_balance = 4                     // 1 off → 85
+    // ── Chemistry divergence (15w, target ~82) ──
+    answers.q23_erotic_styles = ['Sensual', 'Playful']       // 2 of 3 overlap, slightly lower Jaccard
+    answers.q25a_frequency = 'weekly'                        // FREQ_TIERS[4] vs [5], dist 1/7→86
+    answers.q34_exploration = 5                              // diff 2 from 7, maxDist=5 → 60
+    answers.q34a_variety = 5                                 // diff 2 from 7, maxDist=5 → 60
 
-    // ── Connection tiny dip (targets ~92) ──
-    answers.q_emotional_pace = 4                           // 1 off → 85
+    // ── Lifestyle divergence (10w, target ~80) ──
+    answers.q36_social_energy = 'extroverted'                // SOCIAL_TIERS[5] vs [3], dist 2/7→71
+    answers.q18_substances = 'moderate'                      // SUBSTANCE_TIERS[5] vs [4], dist 1/9→89
+    answers.q_independence_balance = 4                       // diff 1 → 85
   }
   return answers
 }
