@@ -671,6 +671,34 @@ export async function sendMessageAction(
       .eq('user_id', userId)
       .single()
 
+    // SMS notification to recipient (fire-and-forget, never blocks message send)
+    try {
+      const recipientPartnershipId =
+        handshake.a_partnership === userPartnershipId
+          ? handshake.b_partnership
+          : handshake.a_partnership
+
+      const { data: recipientPartnership } = await adminClient
+        .from('partnerships')
+        .select('phone')
+        .eq('id', recipientPartnershipId)
+        .single()
+
+      if (recipientPartnership?.phone) {
+        const { sendSMS } = await import('@/lib/services/twilio')
+        const senderName = profile?.full_name || 'Someone'
+        const smsResult = await sendSMS(
+          recipientPartnership.phone,
+          `${senderName} sent you a message on HAEVN. Log in to view it: https://haevn.co/chat`
+        )
+        if (!smsResult.success) {
+          console.error('[sendMessageAction] SMS failed (non-blocking):', smsResult.error)
+        }
+      }
+    } catch (smsError) {
+      console.error('[sendMessageAction] SMS notification error (non-blocking):', smsError)
+    }
+
     // Map DB columns (sender_partnership, content) to ChatMessage fields (sender_user, body)
     const chatMessage: ChatMessage = {
       id: newMessage.id,

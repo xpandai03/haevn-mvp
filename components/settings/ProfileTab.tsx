@@ -201,7 +201,7 @@ export function ProfileTab() {
             className="border-haevn-gray-300"
           />
           <p className="text-caption text-haevn-gray-600">
-            Optional. We'll text you when new matches are ready.
+            Used for match and message notifications via text.
           </p>
         </div>
       </div>
