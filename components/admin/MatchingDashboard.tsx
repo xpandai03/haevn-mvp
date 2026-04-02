@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import {
   Search, X, ChevronDown, ChevronRight, Users,
-  CheckCircle2, AlertTriangle, XCircle, Zap, Code, Settings
+  CheckCircle2, AlertTriangle, XCircle, Zap, Code, Settings, Clock, Rocket
 } from 'lucide-react'
 import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
@@ -163,13 +163,36 @@ interface MatchingDashboardProps {
   userEmail: string
 }
 
+interface SystemStatus {
+  lastComputation: { at: string; triggeredBy: string; computed?: number } | null
+  lastRelease: { at: string; released?: number } | null
+  lastSmsNotification: { at: string; sent?: number } | null
+  nextRelease: string
+  pendingMatches: number
+  activeMatches: number
+  expiredMatches: number
+  systemState: string
+}
+
 export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
   const [recomputing, setRecomputing] = useState(false)
   const [recomputeResult, setRecomputeResult] = useState<RecomputeResult | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showZipModal, setShowZipModal] = useState(false)
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
+  const [releasing, setReleasing] = useState(false)
   const { toast } = useToast()
+
+  // Load system status on mount and after actions
+  const loadSystemStatus = async () => {
+    try {
+      const res = await fetch('/api/admin/system-status')
+      if (res.ok) setSystemStatus(await res.json())
+    } catch {}
+  }
+
+  React.useEffect(() => { loadSystemStatus() }, [])
 
   // Transform data
   const cards = useMemo(
@@ -214,6 +237,25 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' })
     } finally {
       setRecomputing(false)
+      loadSystemStatus()
+    }
+  }
+
+  const handleForceRelease = async () => {
+    setReleasing(true)
+    try {
+      const res = await fetch('/api/admin/trigger-release', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'Matches Released', description: `${data.released} pending matches released.` })
+      } else {
+        toast({ title: 'Error', description: data.error, variant: 'destructive' })
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } finally {
+      setReleasing(false)
+      loadSystemStatus()
     }
   }
 
@@ -221,6 +263,70 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* ── System Status ── */}
+      {systemStatus && (
+        <div className="border rounded-xl bg-white p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <h3 className="text-sm font-semibold text-gray-800">System Status</h3>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleForceRelease}
+              disabled={releasing || systemStatus.pendingMatches === 0}
+              className="gap-2 text-xs"
+            >
+              {releasing ? <HaevnLoader size={14} /> : <Rocket className="h-3 w-3" />}
+              Force Release Now
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <p className="text-gray-400 uppercase tracking-wide mb-0.5">Last Compute</p>
+              <p className="text-gray-700 font-medium">
+                {systemStatus.lastComputation
+                  ? new Date(systemStatus.lastComputation.at).toLocaleString()
+                  : 'Never'}
+              </p>
+              {systemStatus.lastComputation?.triggeredBy && (
+                <p className="text-gray-400">{systemStatus.lastComputation.triggeredBy}</p>
+              )}
+            </div>
+            <div>
+              <p className="text-gray-400 uppercase tracking-wide mb-0.5">Last Release</p>
+              <p className="text-gray-700 font-medium">
+                {systemStatus.lastRelease
+                  ? new Date(systemStatus.lastRelease.at).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-400 uppercase tracking-wide mb-0.5">Next Release</p>
+              <p className="text-gray-700 font-medium">
+                {new Date(systemStatus.nextRelease).toLocaleDateString('en-US', {
+                  weekday: 'short', month: 'short', day: 'numeric'
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 mt-4 pt-3 border-t text-xs">
+            <span className="text-amber-600 font-medium">
+              {systemStatus.pendingMatches} pending
+            </span>
+            <span className="text-green-600 font-medium">
+              {systemStatus.activeMatches} active
+            </span>
+            <span className="text-gray-400 font-medium">
+              {systemStatus.expiredMatches} expired
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── Summary Bar ── */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -546,6 +546,14 @@ export async function computeMatchesForPartnership(
         ? `${errors} scoring errors`
         : undefined
 
+    // Log system event (survey completion trigger)
+    await adminClient.from('system_events').insert({
+      event_type: 'match_compute',
+      triggered_by: 'survey_complete',
+      partnership_id: partnershipId,
+      metadata: { computed: matchesComputed, evaluated: candidatesEvaluated, errors }
+    }).then(() => {}, () => {})
+
     return {
       success: true,
       matchesComputed,
@@ -699,6 +707,13 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
     // ===== END DIAGNOSTIC LOG =====
 
     console.log(`[recomputeAllMatches] DONE: ${totalComputed} matches across ${allPartnerships.length} partnerships, ${totalErrors} errors`)
+
+    // Log system event
+    await adminClient.from('system_events').insert({
+      event_type: 'match_compute',
+      triggered_by: 'admin_manual',
+      metadata: { total: allPartnerships.length, computed: totalComputed, errors: totalErrors }
+    }).then(() => {}, () => {}) // swallow errors — logging should never fail the operation
 
     return { total: allPartnerships.length, computed: totalComputed, errors: totalErrors, details }
   } catch (error: any) {

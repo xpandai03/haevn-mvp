@@ -98,6 +98,13 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[Cron notify-matches] Complete:', summary)
+
+    // Log system events
+    await supabase.from('system_events').insert([
+      { event_type: 'match_release', triggered_by: 'cron', metadata: { released: partnershipIds.length } },
+      { event_type: 'sms_notify', triggered_by: 'cron', metadata: summary },
+    ]).then(() => {}, () => {})
+
     return NextResponse.json(summary)
   } catch (error: any) {
     console.error('[Cron notify-matches] Unexpected error:', error)
