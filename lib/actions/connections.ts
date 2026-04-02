@@ -671,7 +671,7 @@ export async function sendMessageAction(
       .eq('user_id', userId)
       .single()
 
-    // SMS notification to recipient (fire-and-forget, never blocks message send)
+    // Notify recipient via SMS + Email (fire-and-forget, never blocks message send)
     try {
       const recipientPartnershipId =
         handshake.a_partnership === userPartnershipId
@@ -684,19 +684,36 @@ export async function sendMessageAction(
         .eq('id', recipientPartnershipId)
         .single()
 
-      if (recipientPartnership?.phone) {
-        const { sendSMS } = await import('@/lib/services/twilio')
-        const senderName = profile?.full_name || 'Someone'
-        const smsResult = await sendSMS(
-          recipientPartnership.phone,
-          `${senderName} sent you a message on HAEVN. Log in to view it: https://haevn.co/chat`
-        )
-        if (!smsResult.success) {
-          console.error('[sendMessageAction] SMS failed (non-blocking):', smsResult.error)
+      // Get recipient's email
+      const { data: recipientMember } = await adminClient
+        .from('partnership_members')
+        .select('user_id')
+        .eq('partnership_id', recipientPartnershipId)
+        .limit(1)
+        .single()
+
+      let recipientEmail: string | null = null
+      if (recipientMember) {
+        const { data: recipientProfile } = await adminClient
+          .from('profiles')
+          .select('user_id')
+          .eq('user_id', recipientMember.user_id)
+          .single()
+        if (recipientProfile) {
+          const { data: authData } = await adminClient.auth.admin.getUserById(recipientMember.user_id)
+          recipientEmail = authData?.user?.email || null
         }
       }
-    } catch (smsError) {
-      console.error('[sendMessageAction] SMS notification error (non-blocking):', smsError)
+
+      const { sendNotification } = await import('@/lib/services/notifications')
+      await sendNotification({
+        type: 'message',
+        phone: recipientPartnership?.phone,
+        email: recipientEmail,
+        senderName: profile?.full_name || 'Someone',
+      })
+    } catch (notifyError) {
+      console.error('[sendMessageAction] Notification error (non-blocking):', notifyError)
     }
 
     // Map DB columns (sender_partnership, content) to ChatMessage fields (sender_user, body)

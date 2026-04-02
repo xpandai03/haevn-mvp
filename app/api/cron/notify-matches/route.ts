@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendSMS } from '@/lib/services/twilio'
-
-const SMS_MESSAGE = 'Your new matches are ready on HAEVN! Log in to view them: https://haevn.co/dashboard/matches'
+import { sendNotification } from '@/lib/services/notifications'
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -36,7 +34,6 @@ export async function GET(request: NextRequest) {
     const partnershipIds = [...new Set(rows.map(r => r.partnership_a))]
     console.log(`[Cron notify-matches] ${partnershipIds.length} partnerships to notify`)
 
-    // Fetch partnership phone numbers + member profile msa_status
     for (const partnershipId of partnershipIds) {
       // Get partnership phone
       const { data: partnership } = await supabase
@@ -48,7 +45,6 @@ export async function GET(request: NextRequest) {
       if (!partnership?.phone) {
         console.log(`[Cron notify-matches] Skip ${partnershipId}: no phone`)
         summary.skipped++
-        // Still mark as notified so we don't re-check every week
         await markNotified(supabase, partnershipId)
         continue
       }
@@ -76,15 +72,26 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Send SMS
-      const result = await sendSMS(partnership.phone, SMS_MESSAGE)
+      // Get user email for email notification
+      let userEmail: string | null = null
+      if (member) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(member.user_id)
+        userEmail = authUser?.user?.email || null
+      }
 
-      if (result.success) {
-        console.log(`[Cron notify-matches] Sent to ${partnershipId}, SID: ${result.sid}`)
+      // Send via notification system (SMS + Email in parallel)
+      const result = await sendNotification({
+        type: 'match',
+        phone: partnership.phone,
+        email: userEmail,
+      })
+
+      if (result.sms.sent || result.email.sent) {
+        console.log(`[Cron notify-matches] Notified ${partnershipId}: sms=${result.sms.sent} email=${result.email.sent}`)
         summary.sent++
         await markNotified(supabase, partnershipId)
       } else {
-        console.error(`[Cron notify-matches] Failed for ${partnershipId}:`, result.error)
+        console.error(`[Cron notify-matches] All channels failed for ${partnershipId}`)
         summary.errors++
         // Do NOT mark as notified — retry next run
       }
