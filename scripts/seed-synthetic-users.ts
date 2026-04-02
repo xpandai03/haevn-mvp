@@ -537,7 +537,9 @@ async function createSeededUser(
   }
 
   // 3. Create partnership (with phone for SMS testing)
-  const phone = realSms
+  // Tiered mode always uses real phones; other modes require --real-sms flag
+  const useRealPhone = realSms || mode === 'tiered'
+  const phone = useRealPhone
     ? (memberIndex === 0 ? TEST_PHONE_A : TEST_PHONE_B)
     : DUMMY_PHONE
 
