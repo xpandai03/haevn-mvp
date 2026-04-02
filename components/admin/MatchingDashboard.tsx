@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -191,8 +191,6 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
     [cards, searchQuery]
   )
 
-  const selectedCard = cards.find((c) => c.partnershipId === selectedId) || null
-
   // ─── Handlers ───────────────────────────────────────────────
 
   const handleRecompute = async () => {
@@ -339,14 +337,20 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
       {filteredCards.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredCards.map((card) => (
-            <UserCard
-              key={card.partnershipId}
-              card={card}
-              isSelected={selectedId === card.partnershipId}
-              onSelect={() =>
-                setSelectedId(selectedId === card.partnershipId ? null : card.partnershipId)
-              }
-            />
+            <React.Fragment key={card.partnershipId}>
+              <UserCard
+                card={card}
+                isSelected={selectedId === card.partnershipId}
+                onSelect={() =>
+                  setSelectedId(selectedId === card.partnershipId ? null : card.partnershipId)
+                }
+              />
+              {selectedId === card.partnershipId && (
+                <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+                  <DetailPanel card={card} onClose={() => setSelectedId(null)} />
+                </div>
+              )}
+            </React.Fragment>
           ))}
         </div>
       )}
@@ -357,9 +361,6 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
           No users match "{searchQuery}"
         </p>
       )}
-
-      {/* ── Detail Panel ── */}
-      {selectedCard && <DetailPanel card={selectedCard} onClose={() => setSelectedId(null)} />}
 
       {/* ── Engine Documentation (preserved) ── */}
       <MatchingEngineOverview />
