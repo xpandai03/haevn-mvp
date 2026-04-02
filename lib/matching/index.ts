@@ -108,3 +108,12 @@ export {
   MULTI_SELECT_QUESTIONS,
   TIER_QUESTIONS,
 } from './constants/questionMappings'
+
+// Sub-score display labels (for UI breakdown)
+export {
+  SUB_SCORE_LABELS,
+  getMatchQuality,
+  MATCH_QUALITY_CONFIG,
+  type SubScoreLabel,
+  type MatchQuality,
+} from './constants/subScoreLabels'

@@ -1,13 +1,21 @@
+'use client'
+
 /**
  * Match Detail Breakdown Component
  *
  * Displays the 5-category compatibility breakdown for external matches.
- * Uses the NEW category labels: Intent, Structure, Connection, Chemistry, Lifestyle
+ * Each category can be expanded to show a question-level SubScore breakdown.
  */
 
+import { useState, useCallback, lazy, Suspense } from 'react'
+import { ChevronDown } from 'lucide-react'
 import type { CategoryScore } from '@/lib/matching'
 
-// Category configuration with NEW labels and descriptions
+const SubScoreBreakdown = lazy(() =>
+  import('./SubScoreBreakdown').then(m => ({ default: m.SubScoreBreakdown }))
+)
+
+// Category configuration with labels and descriptions
 const CATEGORY_CONFIG: Record<string, { label: string; description: string }> = {
   intent: {
     label: 'Intent & Goals',
@@ -31,7 +39,6 @@ const CATEGORY_CONFIG: Record<string, { label: string; description: string }> = 
   },
 }
 
-// Ordered list of categories (Lifestyle may be excluded)
 const CATEGORY_ORDER = ['intent', 'structure', 'connection', 'chemistry', 'lifestyle'] as const
 
 interface MatchDetailBreakdownProps {
@@ -45,6 +52,12 @@ export function MatchDetailBreakdown({
   lifestyleIncluded,
   compact = false,
 }: MatchDetailBreakdownProps) {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+
+  const toggleCategory = useCallback((key: string) => {
+    setExpandedCategory(prev => (prev === key ? null : key))
+  }, [])
+
   // Create a map for quick lookup
   const categoryMap = new Map<string, CategoryScore>()
   for (const cat of categories) {
@@ -75,69 +88,105 @@ export function MatchDetailBreakdown({
           const config = CATEGORY_CONFIG[key]
           const score = categoryData?.score ?? 0
           const included = categoryData?.included ?? false
+          const isExpanded = expandedCategory === key
+          const hasSubScores = categoryData?.subScores && categoryData.subScores.length > 0
 
           return (
             <div
               key={key}
-              className="bg-white border border-haevn-gray-200 rounded-xl p-4"
+              className="bg-white border border-haevn-gray-200 rounded-xl overflow-hidden"
             >
-              {/* Category Header */}
-              <div className="flex items-center justify-between mb-2">
-                <span
-                  className="font-medium text-haevn-navy"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 500,
-                    fontSize: compact ? '13px' : '14px',
-                  }}
-                >
-                  {config.label}
-                </span>
-                <span
-                  className="font-semibold text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 600,
-                    fontSize: compact ? '13px' : '14px',
-                  }}
-                >
-                  {Math.round(score)}%
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-2 bg-haevn-lightgray rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-haevn-teal rounded-full transition-all duration-300"
-                  style={{ width: `${Math.round(score)}%` }}
-                />
-              </div>
-
-              {/* Description */}
-              <p
-                className="text-haevn-charcoal/60"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 400,
-                  fontSize: compact ? '11px' : '12px',
-                  lineHeight: '1.4',
-                }}
+              {/* Category Header — clickable to expand */}
+              <button
+                type="button"
+                className="w-full text-left p-4 hover:bg-haevn-lightgray/30 transition-colors"
+                onClick={() => hasSubScores && toggleCategory(key)}
+                aria-expanded={isExpanded}
               >
-                {config.description}
-              </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="font-medium text-haevn-navy"
+                      style={{
+                        fontFamily: 'Roboto, Helvetica, sans-serif',
+                        fontWeight: 500,
+                        fontSize: compact ? '13px' : '14px',
+                      }}
+                    >
+                      {config.label}
+                    </span>
+                    {hasSubScores && (
+                      <ChevronDown
+                        className={`h-4 w-4 text-haevn-charcoal/40 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    )}
+                  </div>
+                  <span
+                    className="font-semibold text-haevn-charcoal"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 600,
+                      fontSize: compact ? '13px' : '14px',
+                    }}
+                  >
+                    {Math.round(score)}%
+                  </span>
+                </div>
 
-              {/* Coverage indicator (optional, for low coverage) */}
-              {categoryData && categoryData.coverage < 0.5 && included && (
+                {/* Progress Bar */}
+                <div className="w-full h-2 bg-haevn-lightgray rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-haevn-teal rounded-full transition-all duration-300"
+                    style={{ width: `${Math.round(score)}%` }}
+                  />
+                </div>
+
+                {/* Description */}
                 <p
-                  className="text-amber-600 mt-1"
+                  className="text-haevn-charcoal/60"
                   style={{
                     fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 400,
-                    fontSize: '10px',
+                    fontSize: compact ? '11px' : '12px',
+                    lineHeight: '1.4',
                   }}
                 >
-                  Limited data available for this category
+                  {config.description}
                 </p>
+
+                {/* Coverage indicator */}
+                {categoryData && categoryData.coverage < 0.5 && included && (
+                  <p
+                    className="text-amber-600 mt-1"
+                    style={{
+                      fontFamily: 'Roboto, Helvetica, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '10px',
+                    }}
+                  >
+                    Limited data available for this category
+                  </p>
+                )}
+              </button>
+
+              {/* Expandable Sub-Score Panel */}
+              {isExpanded && hasSubScores && (
+                <div className="px-4 pb-4 border-t border-haevn-gray-200/60">
+                  <Suspense
+                    fallback={
+                      <p className="text-xs text-haevn-charcoal/40 py-3 text-center">
+                        Loading breakdown...
+                      </p>
+                    }
+                  >
+                    <SubScoreBreakdown
+                      subScores={categoryData!.subScores}
+                      categoryKey={key}
+                    />
+                  </Suspense>
+                </div>
               )}
             </div>
           )

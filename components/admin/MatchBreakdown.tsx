@@ -3,6 +3,11 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Code } from 'lucide-react'
 import type { ComputedMatchData } from './MatchingControlCenter'
+import {
+  SUB_SCORE_LABELS,
+  getMatchQuality,
+  MATCH_QUALITY_CONFIG,
+} from '@/lib/matching/constants/subScoreLabels'
 
 interface MatchBreakdownProps {
   match: ComputedMatchData
@@ -20,6 +25,7 @@ const CATEGORY_INFO: Record<string, { label: string; weight: number; color: stri
 
 export function MatchBreakdown({ match, lookupPartnershipId }: MatchBreakdownProps) {
   const [showRawJson, setShowRawJson] = useState(false)
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
   // Parse breakdown - it might be stored as JSON string or object
   let breakdown: any = null
@@ -62,26 +68,98 @@ export function MatchBreakdown({ match, lookupPartnershipId }: MatchBreakdownPro
             }
             const score = Math.round(cat.score || 0)
             const isIncluded = cat.included !== false
+            const isExpanded = expandedCategory === cat.category
+            const subScores = cat.subScores || []
 
             return (
               <div key={cat.category} className={`${!isIncluded ? 'opacity-50' : ''}`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-700">{info.label}</span>
-                  <span className="text-sm font-medium">
-                    {score}%
-                    <span className="text-gray-400 text-xs ml-1">
-                      ({Math.round(info.weight)}% weight)
+                {/* Category header — clickable */}
+                <button
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => setExpandedCategory(isExpanded ? null : cat.category)}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5">
+                      {subScores.length > 0 && (
+                        isExpanded
+                          ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                          : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                      )}
+                      <span className="text-sm text-gray-700">{info.label}</span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      {score}%
+                      <span className="text-gray-400 text-xs ml-1">
+                        ({Math.round(info.weight)}% weight)
+                      </span>
                     </span>
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${info.color} transition-all`}
-                    style={{ width: `${score}%` }}
-                  />
-                </div>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${info.color} transition-all`}
+                      style={{ width: `${score}%` }}
+                    />
+                  </div>
+                </button>
                 {!isIncluded && (
                   <p className="text-xs text-gray-400 mt-1">Not included in calculation</p>
+                )}
+
+                {/* Expandable sub-scores */}
+                {isExpanded && subScores.length > 0 && (
+                  <div className="mt-2 ml-5 space-y-1.5">
+                    {subScores.map((sub: any) => {
+                      const labelInfo = SUB_SCORE_LABELS[sub.key]
+                      const quality = getMatchQuality(sub.score, sub.matched)
+                      const qConfig = MATCH_QUALITY_CONFIG[quality]
+                      const subScore = Math.round(sub.score || 0)
+
+                      return (
+                        <div
+                          key={sub.key}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs ${qConfig.bgColor} ${qConfig.borderColor}`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium text-gray-700 truncate">
+                              {labelInfo?.label ?? sub.key}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${qConfig.color} ${qConfig.bgColor}`}>
+                              {qConfig.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="w-16 h-1.5 bg-white/60 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  quality === 'exact' ? 'bg-emerald-500' :
+                                  quality === 'close' ? 'bg-amber-500' :
+                                  quality === 'mismatch' ? 'bg-orange-500' :
+                                  quality === 'blocked' ? 'bg-red-500' : 'bg-gray-300'
+                                }`}
+                                style={{ width: `${sub.matched ? subScore : 0}%` }}
+                              />
+                            </div>
+                            <span className="font-mono font-medium text-gray-600 w-8 text-right">
+                              {sub.matched ? `${subScore}%` : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {/* Show reason if present on any sub-score */}
+                    {subScores.filter((s: any) => s.reason).length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {subScores
+                          .filter((s: any) => s.reason)
+                          .map((s: any) => (
+                            <p key={s.key} className="text-[10px] text-gray-500 italic pl-1">
+                              {SUB_SCORE_LABELS[s.key]?.label ?? s.key}: {s.reason}
+                            </p>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )

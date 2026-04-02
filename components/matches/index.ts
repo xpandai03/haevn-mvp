@@ -5,3 +5,4 @@
  */
 
 export { MatchDetailBreakdown } from './MatchDetailBreakdown'
+export { SubScoreBreakdown } from './SubScoreBreakdown'
