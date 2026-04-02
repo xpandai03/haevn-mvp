@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera, Eye } from 'lucide-react'
+import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera, Eye, Phone, Check, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
@@ -11,7 +11,7 @@ import FullPageLoader from '@/components/ui/full-page-loader'
 import { checkAdminAccess } from '@/lib/actions/adminAccess'
 import { PhotoManagerModal } from '@/components/dashboard/PhotoManagerModal'
 import { ProfilePreviewModal } from '@/components/dashboard/ProfilePreviewModal'
-import { getCurrentPartnershipId } from '@/lib/actions/partnership-simple'
+import { getCurrentPartnershipId, getPartnershipPhone, updatePartnershipPhone } from '@/lib/actions/partnership-simple'
 
 export default function AccountDetailsPage() {
   const { user, loading } = useAuth()
@@ -25,6 +25,10 @@ export default function AccountDetailsPage() {
   const [photoModalOpen, setPhotoModalOpen] = useState(false)
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [partnershipId, setPartnershipId] = useState<string | null>(null)
+  const [phone, setPhone] = useState('')
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [savingPhone, setSavingPhone] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,8 +51,26 @@ export default function AccountDetailsPage() {
       getCurrentPartnershipId().then(({ id }) => {
         if (id) setPartnershipId(id)
       })
+
+      // Fetch phone number
+      getPartnershipPhone().then(({ phone: p }) => {
+        if (p) {
+          setPhone(p)
+          setPhoneInput(p)
+        }
+      })
     }
   }, [user, loading, router])
+
+  const handleSavePhone = async () => {
+    setSavingPhone(true)
+    const { success } = await updatePartnershipPhone(phoneInput.trim())
+    if (success) {
+      setPhone(phoneInput.trim())
+      setEditingPhone(false)
+    }
+    setSavingPhone(false)
+  }
 
   if (loading || !user) {
     return <FullPageLoader />
@@ -98,6 +120,53 @@ export default function AccountDetailsPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
                 <p className="text-sm text-gray-900 truncate">{accountData.email}</p>
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Phone className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
+                {editingPhone ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="tel"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                      className="flex-1 text-sm border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-haevn-teal"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSavePhone}
+                      disabled={savingPhone}
+                      className="p-1 text-green-600 hover:text-green-700"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => { setEditingPhone(false); setPhoneInput(phone) }}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-900 truncate">
+                      {phone || 'Not set'}
+                    </p>
+                    <button
+                      onClick={() => setEditingPhone(true)}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

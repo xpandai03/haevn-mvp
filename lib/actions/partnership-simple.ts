@@ -200,3 +200,50 @@ export async function getCurrentPartnershipId(): Promise<{ id: string | null, er
     return { id: null, error: 'An unexpected error occurred' }
   }
 }
+
+/**
+ * Get the current user's partnership phone number
+ */
+export async function getPartnershipPhone(): Promise<{ phone: string | null, error: string | null }> {
+  try {
+    const { id, error } = await getCurrentPartnershipId()
+    if (error || !id) return { phone: null, error: error || 'No partnership' }
+
+    const adminClient = createAdminClient()
+    const { data } = await adminClient
+      .from('partnerships')
+      .select('phone')
+      .eq('id', id)
+      .single()
+
+    return { phone: data?.phone || null, error: null }
+  } catch (error) {
+    console.error('[getPartnershipPhone] Error:', error)
+    return { phone: null, error: 'Failed to load phone' }
+  }
+}
+
+/**
+ * Update the current user's partnership phone number
+ */
+export async function updatePartnershipPhone(phone: string): Promise<{ success: boolean, error: string | null }> {
+  try {
+    const { id, error } = await getCurrentPartnershipId()
+    if (error || !id) return { success: false, error: error || 'No partnership' }
+
+    const adminClient = createAdminClient()
+    const { error: updateError } = await adminClient
+      .from('partnerships')
+      .update({ phone: phone || null })
+      .eq('id', id)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    return { success: true, error: null }
+  } catch (error) {
+    console.error('[updatePartnershipPhone] Error:', error)
+    return { success: false, error: 'Failed to update phone' }
+  }
+}
