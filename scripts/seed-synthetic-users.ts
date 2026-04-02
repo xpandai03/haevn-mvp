@@ -9,6 +9,7 @@
  *   npx tsx scripts/seed-synthetic-users.ts --pairs 10       # 10 pairs
  *   npx tsx scripts/seed-synthetic-users.ts --mode medium    # ~70% match pairs
  *   npx tsx scripts/seed-synthetic-users.ts --mode mismatch  # gate-fail pairs
+ *   npx tsx scripts/seed-synthetic-users.ts --mode tiered    # 5 pairs each at 80-85%, 85-90%, 90-95%
  *   npx tsx scripts/seed-synthetic-users.ts --cleanup        # delete all seeded users
  *   npx tsx scripts/seed-synthetic-users.ts --real-sms       # assign real phone numbers for SMS testing
  */
@@ -61,11 +62,62 @@ const REAL_NAMES = [
   'Callum Rhodes',
 ]
 
+// Distinct name pool for tiered mode — no overlap with REAL_NAMES above
+const TIERED_NAMES = [
+  // Threshold pairs (80-85%): indices 0-9
+  'Adrian Cole',
+  'Lena Brooks',
+  'Victor Alvarez',
+  'Nina Shah',
+  'Owen Clarke',
+  'Isla Moreno',
+  'Ethan Rossi',
+  'Camila Duarte',
+  'Julian Park',
+  'Zoe Kaplan',
+  // Strong pairs (85-90%): indices 10-19
+  'Miles Turner',
+  'Aria Hassan',
+  'Noel Fischer',
+  'Dylan Reyes',
+  'Sienna Blake',
+  'Rowan Lindberg',
+  'Mila Santos',
+  'Felix Andersen',
+  'Tessa Okonkwo',
+  'Jasper Huang',
+  // Near-perfect pairs (90-95%): indices 20-29
+  'Sage Whitfield',
+  'Daria Petrov',
+  'Kieran Voss',
+  'Leila Amari',
+  'Cassian Delgado',
+  'Freya Inoue',
+  'Bodhi Castellano',
+  'Wren Sørensen',
+  'Emery Nakamura',
+  'Liora Chen',
+]
+
+type MatchTier = 'threshold' | 'strong' | 'near_perfect'
+
 /** Get a realistic name for a given user index. */
 function getRealisticName(index: number): { fullName: string; firstName: string; email: string } {
   const fullName = REAL_NAMES[index % REAL_NAMES.length]
   const firstName = fullName.split(' ')[0]
   const emailSlug = fullName.toLowerCase().replace(' ', '.')
+  return {
+    fullName,
+    firstName,
+    email: `${emailSlug}.test@haevn.co`,
+  }
+}
+
+/** Get a tiered-mode name. Index is global across all tiers (0-29). */
+function getTieredName(index: number): { fullName: string; firstName: string; email: string } {
+  const fullName = TIERED_NAMES[index % TIERED_NAMES.length]
+  const firstName = fullName.split(' ')[0]
+  const emailSlug = fullName.toLowerCase().replace(/[^a-z]/g, '.').replace(/\.+/g, '.')
   return {
     fullName,
     firstName,
@@ -238,13 +290,126 @@ function mismatchAnswers(pairIndex: number, memberIndex: number): Record<string,
   return answers
 }
 
-type SeedMode = 'high' | 'medium' | 'mismatch'
+// =============================================================================
+// TIERED MATCH ANSWER PROFILES
+// =============================================================================
 
-function getAnswers(mode: SeedMode, pairIndex: number, memberIndex: number): Record<string, any> {
+/**
+ * Threshold match (80-85%): Intentional divergences across multiple categories.
+ *
+ * Divergences hit connection (20w) and chemistry (15w) hardest, with minor
+ * lifestyle (10w) differences. Intent (30w) and structure (25w) stay high
+ * so gates pass and the dominant categories keep the score above 80.
+ *
+ * Expected category scores:
+ *   Intent ~88, Structure ~90, Connection ~72, Chemistry ~70, Lifestyle ~72
+ *   Overall ≈ 88×0.30 + 90×0.25 + 72×0.20 + 70×0.15 + 72×0.10 = 81.3
+ */
+function thresholdAnswers(pairIndex: number, memberIndex: number): Record<string, any> {
+  const answers = baseAnswers(pairIndex * 2 + memberIndex)
+  if (memberIndex === 1) {
+    // ── Connection divergence (targets ~72) ──
+    answers.q12_conflict_resolution = 'compromising'       // loses collaborative bonus (-15)
+    answers.q12a_messaging_pace = 'slow'                   // 2 tiers off moderate
+    answers.q37_empathy = 'high'                           // loses very_high bonus (-15)
+    answers.q38_jealousy = 'moderate'                      // loses very_low bonus (-10), 2 tiers off
+    answers.q38a_emotional_reactive = 'moderate'           // 1 tier off
+    answers.q_emotional_pace = 5                           // 2 off → 65
+    answers.q_emotional_engagement = 5                     // 2 off → 60
+
+    // ── Chemistry divergence (targets ~70) ──
+    answers.q25a_frequency = 'monthly'                     // 3 tiers off few_times_week
+    answers.q34_exploration = 4                            // 3 points off 7
+    answers.q34a_variety = 4                               // 3 points off 7
+    answers.q23_erotic_styles = ['Sensual', 'Adventurous'] // partial overlap (1 of 3 shared)
+    answers.q33_kinks = ['Role play']                      // partial overlap (1 of 3 shared)
+
+    // ── Lifestyle divergence (targets ~72) ──
+    answers.q36_social_energy = 'extroverted'              // 1 tier off ambivert
+    answers.q36a_outgoing = 'extroverted'                  // loses exact match
+    answers.q18_substances = 'occasionally'                // 1 tier off social_drinker
+    answers.q_independence_balance = 5                     // 2 off → 65
+
+    // ── Intent minor divergence (targets ~88) ──
+    answers.q15_time_availability = 'flexible'             // 1 tier off weekly
+    answers.q10a_emotional_availability = 'available'      // 1 tier off very_available
+  }
+  return answers
+}
+
+/**
+ * Strong match (85-90%): Fewer divergences, mainly in lower-weight categories.
+ *
+ * Chemistry and lifestyle take small hits. Connection gets a minor dip.
+ * Intent and structure stay near-perfect.
+ *
+ * Expected category scores:
+ *   Intent ~92, Structure ~92, Connection ~82, Chemistry ~78, Lifestyle ~80
+ *   Overall ≈ 92×0.30 + 92×0.25 + 82×0.20 + 78×0.15 + 80×0.10 = 87.1
+ */
+function strongMatchAnswers_tiered(pairIndex: number, memberIndex: number): Record<string, any> {
+  const answers = baseAnswers(pairIndex * 2 + memberIndex)
+  if (memberIndex === 1) {
+    // ── Connection divergence (targets ~82) ──
+    answers.q12a_messaging_pace = 'responsive'             // 1 tier off moderate
+    answers.q37_empathy = 'high'                           // loses very_high bonus (-15)
+    answers.q_emotional_engagement = 4                     // 1 off → 85
+
+    // ── Chemistry divergence (targets ~78) ──
+    answers.q25a_frequency = 'weekly'                      // 1 tier off few_times_week
+    answers.q34_exploration = 5                            // 2 points off 7
+    answers.q34a_variety = 5                               // 2 points off 7
+    answers.q23_erotic_styles = ['Sensual', 'Playful']     // 2 of 3 shared (loses Romantic)
+
+    // ── Lifestyle divergence (targets ~80) ──
+    answers.q36_social_energy = 'extroverted'              // 1 tier off ambivert
+    answers.q18_substances = 'occasionally'                // 1 tier off social_drinker
+    answers.q_independence_balance = 4                     // 1 off → 85
+  }
+  return answers
+}
+
+/**
+ * Near-perfect match (90-95%): Minimal divergence, only in lowest-weight sub-scores.
+ *
+ * Nearly identical answers with tiny differences that keep the score
+ * from hitting 95+. Only lifestyle and chemistry take small dips.
+ *
+ * Expected category scores:
+ *   Intent ~95, Structure ~95, Connection ~92, Chemistry ~88, Lifestyle ~85
+ *   Overall ≈ 95×0.30 + 95×0.25 + 92×0.20 + 88×0.15 + 85×0.10 = 92.5
+ */
+function nearPerfectAnswers(pairIndex: number, memberIndex: number): Record<string, any> {
+  const answers = baseAnswers(pairIndex * 2 + memberIndex)
+  if (memberIndex === 1) {
+    // ── Chemistry minor divergence (targets ~88) ──
+    answers.q34a_variety = 6                               // 1 point off 7
+    answers.q25a_frequency = 'weekly'                      // 1 tier off few_times_week
+
+    // ── Lifestyle minor divergence (targets ~85) ──
+    answers.q18_substances = 'moderate'                    // 1 tier off social_drinker
+    answers.q_independence_balance = 4                     // 1 off → 85
+
+    // ── Connection tiny dip (targets ~92) ──
+    answers.q_emotional_pace = 4                           // 1 off → 85
+  }
+  return answers
+}
+
+type SeedMode = 'high' | 'medium' | 'mismatch' | 'tiered'
+
+function getAnswers(mode: SeedMode, pairIndex: number, memberIndex: number, tier?: MatchTier): Record<string, any> {
   switch (mode) {
     case 'high': return highMatchAnswers(pairIndex, memberIndex)
     case 'medium': return mediumMatchAnswers(pairIndex, memberIndex)
     case 'mismatch': return mismatchAnswers(pairIndex, memberIndex)
+    case 'tiered':
+      switch (tier) {
+        case 'threshold': return thresholdAnswers(pairIndex, memberIndex)
+        case 'strong': return strongMatchAnswers_tiered(pairIndex, memberIndex)
+        case 'near_perfect': return nearPerfectAnswers(pairIndex, memberIndex)
+        default: return highMatchAnswers(pairIndex, memberIndex)
+      }
   }
 }
 
@@ -274,11 +439,15 @@ async function createSeededUser(
   pairIndex: number,
   memberIndex: number,
   mode: SeedMode,
-  realSms: boolean = false
+  realSms: boolean = false,
+  tier?: MatchTier,
+  tieredGlobalIndex?: number
 ): Promise<SeededUser | null> {
-  // Use realistic human names instead of "User A (high pair 0, member 0)"
+  // Use realistic human names — tiered mode uses its own distinct name pool
   const globalIndex = pairIndex * 2 + memberIndex
-  const persona = getRealisticName(globalIndex)
+  const persona = (mode === 'tiered' && tieredGlobalIndex !== undefined)
+    ? getTieredName(tieredGlobalIndex)
+    : getRealisticName(globalIndex)
   const email = persona.email
   const displayName = persona.firstName
   const fullName = persona.fullName
@@ -347,8 +516,8 @@ async function createSeededUser(
       city: 'Austin',
       msa: 'Austin-Round Rock-Georgetown, TX',
       display_name: displayName,
-      latitude: getAnswers(mode, pairIndex, memberIndex)._latitude,
-      longitude: getAnswers(mode, pairIndex, memberIndex)._longitude,
+      latitude: getAnswers(mode, pairIndex, memberIndex, tier)._latitude,
+      longitude: getAnswers(mode, pairIndex, memberIndex, tier)._longitude,
       phone,
     })
     .select('id')
@@ -377,7 +546,7 @@ async function createSeededUser(
   }
 
   // 5. Insert survey responses
-  const answers = getAnswers(mode, pairIndex, memberIndex)
+  const answers = getAnswers(mode, pairIndex, memberIndex, tier)
   const { error: surveyError } = await supabase
     .from('user_survey_responses')
     .upsert({
@@ -540,7 +709,7 @@ async function main() {
 
   const modeIdx = args.indexOf('--mode')
   const modeArg = modeIdx !== -1 ? args[modeIdx + 1] : 'high'
-  const mode: SeedMode = (['high', 'medium', 'mismatch'].includes(modeArg) ? modeArg : 'high') as SeedMode
+  const mode: SeedMode = (['high', 'medium', 'mismatch', 'tiered'].includes(modeArg) ? modeArg : 'high') as SeedMode
 
   // Handle --release flag (set release_at = NOW instead of next Monday)
   const forceRelease = args.includes('--release')
@@ -557,14 +726,41 @@ async function main() {
 
   const allUsers: SeededUser[] = []
 
-  for (let p = 0; p < numPairs; p++) {
-    console.log(`\n--- Pair ${p + 1} of ${numPairs} ---`)
+  if (mode === 'tiered') {
+    // Tiered mode: create 5 pairs per tier (threshold, strong, near_perfect)
+    const tiers: MatchTier[] = ['threshold', 'strong', 'near_perfect']
+    const pairsPerTier = numPairs
+    const tierLabels: Record<MatchTier, string> = {
+      threshold: '80-85%',
+      strong: '85-90%',
+      near_perfect: '90-95%',
+    }
 
-    const userA = await createSeededUser('User A', p, 0, mode, realSms)
-    const userB = await createSeededUser('User B', p, 1, mode, realSms)
+    let globalUserIndex = 0
+    for (const tier of tiers) {
+      console.log(`\n═══ ${tier.toUpperCase()} tier (${tierLabels[tier]}) ═══`)
+      for (let p = 0; p < pairsPerTier; p++) {
+        console.log(`\n--- ${tier} pair ${p + 1} of ${pairsPerTier} ---`)
 
-    if (userA) allUsers.push(userA)
-    if (userB) allUsers.push(userB)
+        const userA = await createSeededUser('User A', p, 0, mode, realSms, tier, globalUserIndex)
+        globalUserIndex++
+        const userB = await createSeededUser('User B', p, 1, mode, realSms, tier, globalUserIndex)
+        globalUserIndex++
+
+        if (userA) allUsers.push(userA)
+        if (userB) allUsers.push(userB)
+      }
+    }
+  } else {
+    for (let p = 0; p < numPairs; p++) {
+      console.log(`\n--- Pair ${p + 1} of ${numPairs} ---`)
+
+      const userA = await createSeededUser('User A', p, 0, mode, realSms)
+      const userB = await createSeededUser('User B', p, 1, mode, realSms)
+
+      if (userA) allUsers.push(userA)
+      if (userB) allUsers.push(userB)
+    }
   }
 
   // Trigger match computation for each partnership
@@ -596,8 +792,15 @@ async function main() {
 
   // Summary
   console.log(`\n=== Summary ===`)
-  console.log(`Created ${allUsers.length} users in ${numPairs} pairs`)
-  console.log(`Mode: ${mode}`)
+  if (mode === 'tiered') {
+    console.log(`Created ${allUsers.length} users across 3 tiers:`)
+    console.log(`  ${numPairs} threshold pairs (80-85%)`)
+    console.log(`  ${numPairs} strong pairs (85-90%)`)
+    console.log(`  ${numPairs} near-perfect pairs (90-95%)`)
+  } else {
+    console.log(`Created ${allUsers.length} users in ${numPairs} pairs`)
+    console.log(`Mode: ${mode}`)
+  }
   console.log(`\nSeeded users:`)
   for (const u of allUsers) {
     console.log(`  ${u.email} → partnership ${u.partnershipId}`)
