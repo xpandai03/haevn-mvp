@@ -10,6 +10,7 @@
  *   npx tsx scripts/seed-synthetic-users.ts --mode medium    # ~70% match pairs
  *   npx tsx scripts/seed-synthetic-users.ts --mode mismatch  # gate-fail pairs
  *   npx tsx scripts/seed-synthetic-users.ts --cleanup        # delete all seeded users
+ *   npx tsx scripts/seed-synthetic-users.ts --real-sms       # assign real phone numbers for SMS testing
  */
 
 import { config } from 'dotenv'
@@ -32,6 +33,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 // Marker to identify seeded users for cleanup
 const SEED_PREFIX = 'seed-test'
 const SEED_DOMAIN = 'haevn-seed.test'
+
+// =============================================================================
+// PHONE ROUTING FOR SMS TESTING
+// =============================================================================
+
+// Real phone numbers (E.164 format) for receiving test SMS via Twilio.
+// Only assigned when --real-sms flag is present.
+const TEST_PHONE_A = '+18184369821'  // Raunek
+const TEST_PHONE_B = '+19208091907'  // Rick
+const DUMMY_PHONE  = '+15005550006'  // Twilio test number (no real SMS sent)
 
 // =============================================================================
 // ANSWER TEMPLATES
@@ -223,7 +234,8 @@ async function createSeededUser(
   label: string,
   pairIndex: number,
   memberIndex: number,
-  mode: SeedMode
+  mode: SeedMode,
+  realSms: boolean = false
 ): Promise<SeededUser | null> {
   const email = `${SEED_PREFIX}-${mode}-p${pairIndex}-m${memberIndex}@${SEED_DOMAIN}`
   const displayName = `${label} (${mode} pair ${pairIndex}, member ${memberIndex})`
@@ -277,7 +289,11 @@ async function createSeededUser(
     console.error(`  Failed to create profile:`, profileError.message)
   }
 
-  // 3. Create partnership
+  // 3. Create partnership (with phone for SMS testing)
+  const phone = realSms
+    ? (memberIndex === 0 ? TEST_PHONE_A : TEST_PHONE_B)
+    : DUMMY_PHONE
+
   const { data: partnership, error: partnershipError } = await supabase
     .from('partnerships')
     .insert({
@@ -290,6 +306,7 @@ async function createSeededUser(
       display_name: displayName,
       latitude: getAnswers(mode, pairIndex, memberIndex)._latitude,
       longitude: getAnswers(mode, pairIndex, memberIndex)._longitude,
+      phone,
     })
     .select('id')
     .single()
@@ -299,7 +316,7 @@ async function createSeededUser(
     return null
   }
 
-  console.log(`  Created partnership: ${partnership.id}`)
+  console.log(`  Created partnership: ${partnership.id} (phone: ${phone})`)
 
   // 4. Link user to partnership
   const { error: memberError } = await supabase
@@ -481,8 +498,14 @@ async function main() {
   // Handle --release flag (set release_at = NOW instead of next Monday)
   const forceRelease = args.includes('--release')
 
+  // Handle --real-sms flag (assign real phone numbers for Twilio SMS testing)
+  const realSms = args.includes('--real-sms')
+
   console.log(`\n=== HAEVN Synthetic User Seeder ===`)
-  console.log(`Mode: ${mode} | Pairs: ${numPairs} | Force release: ${forceRelease}`)
+  console.log(`Mode: ${mode} | Pairs: ${numPairs} | Force release: ${forceRelease} | Real SMS: ${realSms}`)
+  if (realSms) {
+    console.log(`SMS routing: User A → ${TEST_PHONE_A} | User B → ${TEST_PHONE_B}`)
+  }
   console.log(`Seed email domain: @${SEED_DOMAIN}\n`)
 
   const allUsers: SeededUser[] = []
@@ -490,8 +513,8 @@ async function main() {
   for (let p = 0; p < numPairs; p++) {
     console.log(`\n--- Pair ${p + 1} of ${numPairs} ---`)
 
-    const userA = await createSeededUser('User A', p, 0, mode)
-    const userB = await createSeededUser('User B', p, 1, mode)
+    const userA = await createSeededUser('User A', p, 0, mode, realSms)
+    const userB = await createSeededUser('User B', p, 1, mode, realSms)
 
     if (userA) allUsers.push(userA)
     if (userB) allUsers.push(userB)
