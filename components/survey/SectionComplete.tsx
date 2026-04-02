@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AnimatedIllustration } from './AnimatedIllustration'
-import { getSectionAnimations } from '@/lib/survey/section-animations'
+import { useEffect } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 
 interface SectionCompleteProps {
   sectionId: string
@@ -19,69 +18,33 @@ export function SectionComplete({
   totalSections,
   onComplete
 }: SectionCompleteProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const animations = getSectionAnimations(sectionId)
-
+  // Auto-advance after a brief moment
   useEffect(() => {
-    // Fade in
-    setTimeout(() => setIsVisible(true), 100)
-
-    // Auto-complete after 1.5 seconds (shorter for completion)
     const timer = setTimeout(() => {
-      if (onComplete) {
-        onComplete()
-      }
-    }, 1500)
-
+      if (onComplete) onComplete()
+    }, 1200)
     return () => clearTimeout(timer)
   }, [onComplete])
 
-  if (!animations) {
-    // No animation - skip
-    useEffect(() => {
-      if (onComplete) {
-        onComplete()
-      }
-    }, [onComplete])
-    return null
-  }
-
   return (
-    <div
-      className={`flex flex-col items-center py-6 transition-opacity duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
-    >
-      {/* Animation */}
-      <div className="w-32 h-32 mb-4">
-        <AnimatedIllustration
-          src={animations.completion}
-          loop={false}
-          autoplay={true}
-          className="w-full h-full"
-          onComplete={onComplete}
-        />
-      </div>
+    <div className="flex flex-col items-center py-10">
+      <CheckCircle2 className="h-12 w-12 text-[#008080] mb-4" />
 
-      {/* Success Message */}
-      <div className="text-center">
-        <p
-          className="text-xl sm:text-2xl font-bold text-haevn-teal mb-1"
-          style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-        >
-          Section Complete!
-        </p>
-        <p
-          className="text-base text-haevn-charcoal/70"
-          style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
-        >
-          {sectionTitle}
-        </p>
-      </div>
-
-      {/* Progress */}
       <p
-        className="mt-4 text-sm text-haevn-charcoal/60"
+        className="text-xl font-bold text-[#008080] mb-1"
+        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
+      >
+        Section Complete
+      </p>
+      <p
+        className="text-base text-haevn-charcoal/70"
+        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+      >
+        {sectionTitle}
+      </p>
+
+      <p
+        className="mt-4 text-sm text-haevn-charcoal/50"
         style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
       >
         {sectionNumber} of {totalSections} sections completed
