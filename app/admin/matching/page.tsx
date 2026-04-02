@@ -8,7 +8,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isAdminUser } from '@/lib/admin/allowlist'
-import { MatchingControlCenter } from '@/components/admin/MatchingControlCenter'
+import { MatchingDashboard } from '@/components/admin/MatchingDashboard'
 
 export default async function AdminMatchingPage() {
   // Server-side access gate - redirect if not admin
@@ -16,42 +16,44 @@ export default async function AdminMatchingPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user?.email || !isAdminUser(user.email)) {
-    // Silent redirect - don't hint that admin route exists
     redirect('/account-details')
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-purple-900 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <header className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <a
-                href="/account-details"
-                className="text-purple-200 hover:text-white text-sm"
-              >
-                ← Back to Account
+            <div className="flex items-center gap-4">
+              <a href="/account-details" className="text-gray-400 hover:text-gray-600 text-sm">
+                ← Back
               </a>
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                  style={{ backgroundColor: '#008080' }}
+                >
+                  H
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">Matching Control Center</h1>
+                  <p className="text-xs text-gray-400">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 text-xs font-semibold uppercase tracking-wider bg-purple-700 rounded">
-                Internal
-              </span>
-            </div>
-          </div>
-          <div className="mt-4">
-            <h1 className="text-2xl font-bold">Matching Control Center</h1>
-            <p className="text-purple-200 text-sm mt-1">
-              Debug matches, scores, and social state • Logged in as {user.email}
-            </p>
+            <span className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider bg-gray-100 text-gray-500 rounded">
+              Internal
+            </span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <MatchingControlCenter userEmail={user.email} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <MatchingDashboard userEmail={user.email} />
       </main>
     </div>
   )
