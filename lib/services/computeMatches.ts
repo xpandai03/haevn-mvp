@@ -62,6 +62,8 @@ export interface PairDiagnostic {
   tier: string
   outcome: 'stored' | 'constraint-failed' | 'below-threshold' | 'no-survey' | 'no-members' | 'handshake' | 'scoring-error'
   reason?: string
+  /** Full category + sub-score breakdown (when scoring was performed) */
+  breakdown?: any
 }
 
 export interface ComputeMatchesResult {
@@ -459,6 +461,7 @@ export async function computeMatchesForPartnership(
             tier: result.tier,
             outcome: 'constraint-failed',
             reason: `${result.constraints.blockedBy}: ${result.constraints.reason}`,
+            breakdown: result.categories,
           })
           continue
         }
@@ -471,6 +474,7 @@ export async function computeMatchesForPartnership(
             tier: result.tier,
             outcome: 'below-threshold',
             reason: `Score ${result.overallScore} < ${MIN_SCORE_THRESHOLD}`,
+            breakdown: result.categories,
           })
           continue
         }
@@ -508,6 +512,7 @@ export async function computeMatchesForPartnership(
           score: result.overallScore,
           tier: result.tier,
           outcome: 'stored',
+          breakdown: result.categories,
         })
 
       } catch (matchError: any) {

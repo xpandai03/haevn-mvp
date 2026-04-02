@@ -20,6 +20,7 @@ interface PairDiag {
   tier: string
   outcome: string
   reason?: string
+  breakdown?: any
 }
 
 interface RecomputeDetail {
@@ -837,6 +838,24 @@ function Section({
   )
 }
 
+// ─── Sub-score display labels ───────────────────────────────────
+
+const SUB_SCORE_DISPLAY: Record<string, string> = {
+  goals: 'Relationship Goals', style: 'Relationship Style', exclusivity: 'Exclusivity',
+  attachment: 'Attachment & Availability', timing: 'Timing & Availability',
+  privacy: 'Privacy & Discretion', haevnUse: 'Platform Goals',
+  orientation: 'Orientation', status: 'Relationship Status', boundaries: 'Boundaries',
+  saferSex: 'Safer Sex', roles: 'Roles', fidelity: 'Fidelity Philosophy',
+  communication: 'Communication Style', emotional: 'Emotional Alignment',
+  emotionalPace: 'Emotional Pace', emotionalEngagement: 'Emotional Engagement',
+  eroticProfile: 'Erotic Profile', rolesKinks: 'Roles & Kinks',
+  frequency: 'Desired Frequency', physicalPreferences: 'Physical Preferences',
+  exploration: 'Exploration & Variety', distance: 'Distance & Mobility',
+  socialEnergy: 'Social Energy', substances: 'Substance Use', languages: 'Languages',
+  independenceBalance: 'Independence Balance', lifestyleImportance: 'Lifestyle Priority',
+  cultural: 'Cultural & Worldview', children: 'Children', dietary: 'Dietary Needs', pets: 'Pets',
+}
+
 // ─── Candidate Row ──────────────────────────────────────────────
 
 function CandidateRow({ diag }: { diag: PairDiag }) {
@@ -850,6 +869,8 @@ function CandidateRow({ diag }: { diag: PairDiag }) {
     : isBlocked
     ? 'border-red-100 bg-red-50/30'
     : 'border-gray-200 bg-gray-50/30'
+
+  const categories: any[] = diag.breakdown || []
 
   return (
     <div className={`border rounded-lg overflow-hidden ${borderColor}`}>
@@ -883,16 +904,75 @@ function CandidateRow({ diag }: { diag: PairDiag }) {
 
       {expanded && (
         <div className="px-4 pb-3 pt-0 border-t border-gray-100">
-          <p className="text-xs text-gray-500 mt-2 mb-1">
+          <p className="text-xs text-gray-500 mt-2 mb-2">
             {label}
             {diag.reason && diag.outcome !== 'constraint-failed' && (
               <span className="text-gray-400 ml-1">— {diag.reason}</span>
             )}
           </p>
-          {/* Tier info */}
-          <p className="text-[10px] font-mono text-gray-400 mt-1">
-            Score: {diag.score} | Tier: {diag.tier} | Outcome: {diag.outcome}
-          </p>
+
+          {/* Category + Sub-score breakdown */}
+          {categories.length > 0 ? (
+            <div className="space-y-3 mt-3">
+              {categories.map((cat: any) => {
+                const catLabel = CATEGORY_LABELS[cat.category] || cat.category
+                const catColor = CATEGORY_COLORS[cat.category] || 'bg-gray-500'
+                const catScore = Math.round(cat.score || 0)
+                const subs: any[] = cat.subScores || []
+
+                return (
+                  <div key={cat.category}>
+                    {/* Category header bar */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className={`w-2 h-2 rounded-full ${catColor}`} />
+                      <span className="text-xs font-semibold text-gray-700">{catLabel}</span>
+                      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${catColor}`} style={{ width: `${catScore}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-600 tabular-nums w-8 text-right">{catScore}%</span>
+                    </div>
+
+                    {/* Sub-scores */}
+                    {subs.length > 0 && (
+                      <div className="ml-4 space-y-1">
+                        {subs.map((sub: any) => {
+                          const subScore = Math.round(sub.score || 0)
+                          const quality = !sub.matched ? 'none' : subScore >= 90 ? 'high' : subScore >= 60 ? 'mid' : 'low'
+
+                          return (
+                            <div key={sub.key} className="flex items-center gap-2 text-[11px]">
+                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                quality === 'high' ? 'bg-emerald-500' :
+                                quality === 'mid' ? 'bg-amber-500' :
+                                quality === 'low' ? 'bg-red-400' : 'bg-gray-300'
+                              }`} />
+                              <span className="text-gray-600 truncate flex-1">{SUB_SCORE_DISPLAY[sub.key] || sub.key}</span>
+                              <span className={`font-medium tabular-nums w-7 text-right ${
+                                quality === 'high' ? 'text-emerald-700' :
+                                quality === 'mid' ? 'text-amber-700' :
+                                quality === 'low' ? 'text-red-600' : 'text-gray-400'
+                              }`}>
+                                {sub.matched ? `${subScore}%` : '—'}
+                              </span>
+                              {sub.reason && (
+                                <span className="text-gray-400 truncate max-w-[160px]" title={sub.reason}>
+                                  {sub.reason}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-[10px] font-mono text-gray-400 mt-1">
+              Score: {diag.score} | Tier: {diag.tier} | Outcome: {diag.outcome}
+            </p>
+          )}
         </div>
       )}
     </div>
