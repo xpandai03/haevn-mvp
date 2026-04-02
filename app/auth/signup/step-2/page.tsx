@@ -122,6 +122,7 @@ export default function SignupStep2() {
             <div className="w-8 h-1 rounded-full bg-haevn-teal" />
             <div className="w-8 h-1 rounded-full bg-haevn-teal" />
             <div className="w-8 h-1 rounded-full bg-gray-200" />
+            <div className="w-8 h-1 rounded-full bg-gray-200" />
           </div>
           <div className="w-16" /> {/* Spacer for balance */}
         </div>

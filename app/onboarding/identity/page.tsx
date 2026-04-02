@@ -104,7 +104,8 @@ export default function IdentityPage() {
         },
         body: JSON.stringify({
           profileType,
-          city: userCity
+          city: userCity,
+          phone: localStorage.getItem('haevn_signup_phone') || undefined
         })
       })
 
@@ -122,6 +123,9 @@ export default function IdentityPage() {
 
       console.log('[Identity] ✅ Identity saved successfully:', data.action)
       console.log('[Identity] Partnership ID:', data.partnershipId)
+
+      // Clean up phone from localStorage now that it's persisted
+      localStorage.removeItem('haevn_signup_phone')
 
       // Mark step as complete (identity is step 4)
       await flowController.markStepComplete(user.id, 4)

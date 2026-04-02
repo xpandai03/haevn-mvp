@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
 import { updateProfile } from '@/lib/actions/profile'
 import { checkCityStatus } from '@/lib/data/cities'
-import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { Loader2, AlertCircle, ChevronLeft } from 'lucide-react'
 
 export default function SignupStep3() {
@@ -88,23 +87,8 @@ export default function SignupStep3() {
         cityStatus: cityData.status
       }))
 
-      // Mark step complete via flow controller
-      const flow = getClientOnboardingFlowController()
-      await flow.markStepComplete('signup')
-
-      // Clear temp signup data
-      localStorage.removeItem('haevn_signup_firstName')
-      localStorage.removeItem('haevn_signup_email')
-
-      // Check for invite code
-      const inviteCode = localStorage.getItem('haevn_invite_code')
-
-      // Navigate based on invite presence
-      if (inviteCode) {
-        router.push('/onboarding/accept-invite')
-      } else {
-        router.push('/onboarding/expectations')
-      }
+      // Navigate to phone number collection
+      router.push('/auth/signup/step-4')
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setIsLoading(false)
@@ -136,6 +120,7 @@ export default function SignupStep3() {
             <div className="w-8 h-1 rounded-full bg-haevn-teal" />
             <div className="w-8 h-1 rounded-full bg-haevn-teal" />
             <div className="w-8 h-1 rounded-full bg-haevn-teal" />
+            <div className="w-8 h-1 rounded-full bg-gray-200" />
           </div>
           <div className="w-16" /> {/* Spacer for balance */}
         </div>

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[API /onboarding/save-identity] Incoming payload:', body)
 
-    const { profileType, relationshipOrientation, city = 'Austin' } = body
+    const { profileType, relationshipOrientation, city = 'Austin', phone } = body
 
     // Validate: Need at least one field to update
     if (!profileType && !relationshipOrientation) {
@@ -93,6 +93,10 @@ export async function POST(request: NextRequest) {
         updateData.relationship_orientation = [relationshipOrientation] // Store as array
       }
 
+      if (phone) {
+        updateData.phone = phone
+      }
+
       const { error: updateError } = await adminClient
         .from('partnerships')
         .update(updateData)
@@ -135,6 +139,10 @@ export async function POST(request: NextRequest) {
 
       if (relationshipOrientation) {
         insertData.relationship_orientation = [relationshipOrientation] // Store as array
+      }
+
+      if (phone) {
+        insertData.phone = phone
       }
 
       const { data: newPartnership, error: insertError } = await adminClient
