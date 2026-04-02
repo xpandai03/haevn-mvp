@@ -13,6 +13,8 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+export type NudgeItem = Nudge
+
 export interface Nudge {
   id: string // Nudge ID
   senderId: string
@@ -426,5 +428,18 @@ export async function hasNudgedUser(recipientUserId: string): Promise<boolean> {
 
   } catch (error) {
     return false
+  }
+}
+
+/**
+ * Get all nudges for the current user (alias for nudges page)
+ */
+export async function getUserNudges(): Promise<{ data: NudgeItem[]; error: string | null }> {
+  try {
+    const nudges = await getReceivedNudges()
+    return { data: nudges, error: null }
+  } catch (err: any) {
+    console.error('[getUserNudges] Error:', err)
+    return { data: [], error: err.message || 'Failed to load nudges' }
   }
 }
