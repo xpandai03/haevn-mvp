@@ -1,3 +1,5 @@
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -21,27 +23,14 @@ function getSupabaseUrl(): string {
   return KNOWN_SUPABASE_URL
 }
 
-// Lazy imports to avoid build-time SSR mismatch errors
-// This prevents "You're importing a component that needs next/headers" error
-let createServerClientFn: any
-let cookiesFn: any
-
 /**
- * Creates a Supabase server client with lazy-loaded dependencies
- * Safe to import in any context (middleware, route handlers, server components)
+ * Creates a Supabase server client with cookie-based auth.
+ * Safe to use in route handlers, server actions, and server components.
  */
 export async function createClient(): Promise<SupabaseClient<Database>> {
-  // Lazy-load dependencies at runtime only when needed
-  if (!createServerClientFn) {
-    const ssr = await import('@supabase/ssr')
-    createServerClientFn = ssr.createServerClient
-    const nh = await import('next/headers')
-    cookiesFn = nh.cookies
-  }
+  const cookieStore = await cookies()
 
-  const cookieStore = await cookiesFn()
-
-  return createServerClientFn<Database>(
+  return createServerClient<Database>(
     getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -52,14 +41,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // In production, use secure cookies for cross-domain (Veriff)
-              // In development, use lax for localhost
-              const isProduction = process.env.NODE_ENV === 'production'
-              cookieStore.set(name, value, {
-                ...options,
-                sameSite: isProduction ? 'none' : 'lax',
-                secure: isProduction
-              })
+              cookieStore.set(name, value, options)
             })
           } catch {
             // Server Component context - cookies can't be set here
@@ -79,13 +61,9 @@ export async function createServiceRoleClient(): Promise<SupabaseClient<Database
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
-  // Lazy-load createServerClient
-  if (!createServerClientFn) {
-    const ssr = await import('@supabase/ssr')
-    createServerClientFn = ssr.createServerClient
-  }
+  const cookieStore = await cookies()
 
-  return createServerClientFn<Database>(
+  return createServerClient<Database>(
     getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
