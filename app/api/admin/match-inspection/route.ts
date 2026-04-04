@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
 import { calculateCompatibilityFromRaw } from '@/lib/matching/calculateCompatibility'
 
 export async function GET(req: NextRequest) {
+  // Auth check uses regular client (cookie-based session)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -18,35 +20,38 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing a or b partnership IDs' }, { status: 400 })
   }
 
+  // Data queries use admin client to bypass RLS (same pattern as system-status route)
+  const admin = createAdminClient()
+
   // Fetch everything in parallel: persisted match (both orderings), answers, partnerships
   const [matchAB, matchBA, answersA, answersB, partnershipsResult] = await Promise.all([
-    supabase
+    admin
       .from('computed_matches')
       .select('score, tier, breakdown, engine_version, computed_at')
       .eq('partnership_a', a)
       .eq('partnership_b', b)
       .maybeSingle(),
 
-    supabase
+    admin
       .from('computed_matches')
       .select('score, tier, breakdown, engine_version, computed_at')
       .eq('partnership_a', b)
       .eq('partnership_b', a)
       .maybeSingle(),
 
-    supabase
+    admin
       .from('user_survey_responses')
       .select('answers_json')
       .eq('partnership_id', a)
       .maybeSingle(),
 
-    supabase
+    admin
       .from('user_survey_responses')
       .select('answers_json')
       .eq('partnership_id', b)
       .maybeSingle(),
 
-    supabase
+    admin
       .from('partnerships')
       .select('id, display_name, latitude, longitude, profile_type')
       .in('id', [a, b]),
