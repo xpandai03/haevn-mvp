@@ -16,6 +16,7 @@ import { ZipControl } from './ZipControl'
 
 interface PairDiag {
   candidate: string
+  candidateId?: string
   score: number
   tier: string
   outcome: string
@@ -721,7 +722,7 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
         {stored.length > 0 && (
           <Section title="Matches" count={stored.length} color="green">
             {stored.map((p, i) => (
-              <CandidateRow key={i} diag={p} />
+              <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
           </Section>
         )}
@@ -730,7 +731,7 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
         {close.length > 0 && (
           <Section title="Close Matches" count={close.length} color="amber">
             {close.map((p, i) => (
-              <CandidateRow key={i} diag={p} />
+              <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
           </Section>
         )}
@@ -739,7 +740,7 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
         {blocked.length > 0 && (
           <Section title="Not Compatible" count={blocked.length} color="gray" defaultCollapsed>
             {blocked.map((p, i) => (
-              <CandidateRow key={i} diag={p} />
+              <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
           </Section>
         )}
@@ -858,7 +859,7 @@ const SUB_SCORE_DISPLAY: Record<string, string> = {
 
 // ─── Candidate Row ──────────────────────────────────────────────
 
-function CandidateRow({ diag }: { diag: PairDiag }) {
+function CandidateRow({ diag, sourcePartnershipId }: { diag: PairDiag; sourcePartnershipId?: string }) {
   const [expanded, setExpanded] = useState(false)
   const isMatched = diag.outcome === 'stored'
   const isBlocked = diag.outcome === 'constraint-failed'
@@ -972,6 +973,17 @@ function CandidateRow({ diag }: { diag: PairDiag }) {
             <p className="text-[10px] font-mono text-gray-400 mt-1">
               Score: {diag.score} | Tier: {diag.tier} | Outcome: {diag.outcome}
             </p>
+          )}
+
+          {/* Deep Inspection link */}
+          {sourcePartnershipId && diag.candidateId && diag.score > 0 && (
+            <a
+              href={`/admin/match-inspection?a=${sourcePartnershipId}&b=${diag.candidateId}`}
+              className="inline-block mt-2 text-xs text-[#008080] font-medium hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Inspect match →
+            </a>
           )}
         </div>
       )}

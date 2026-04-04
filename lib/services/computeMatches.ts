@@ -405,7 +405,7 @@ export async function computeMatchesForPartnership(
 
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
-        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'handshake' })
+        pairDiagnostics.push({ candidate: name, candidateId: candidate.id, score: 0, tier: '-', outcome: 'handshake' })
         continue
       }
 
@@ -413,7 +413,7 @@ export async function computeMatchesForPartnership(
       const memberIds = membersByPartnership.get(candidate.id)
       if (!memberIds || memberIds.length === 0) {
         noSurvey++
-        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'no-members' })
+        pairDiagnostics.push({ candidate: name, candidateId: candidate.id, score: 0, tier: '-', outcome: 'no-members' })
         continue
       }
 
@@ -428,7 +428,7 @@ export async function computeMatchesForPartnership(
 
       if (!candidateRawAnswers) {
         noSurvey++
-        pairDiagnostics.push({ candidate: name, score: 0, tier: '-', outcome: 'no-survey', reason: `members=${memberIds.length}` })
+        pairDiagnostics.push({ candidate: name, candidateId: candidate.id, score: 0, tier: '-', outcome: 'no-survey', reason: `members=${memberIds.length}` })
         continue
       }
 
@@ -457,6 +457,7 @@ export async function computeMatchesForPartnership(
           constraintsFailed++
           pairDiagnostics.push({
             candidate: name,
+            candidateId: candidate.id,
             score: result.overallScore,
             tier: result.tier,
             outcome: 'constraint-failed',
@@ -470,6 +471,7 @@ export async function computeMatchesForPartnership(
         if (result.overallScore < MIN_SCORE_THRESHOLD) {
           pairDiagnostics.push({
             candidate: name,
+            candidateId: candidate.id,
             score: result.overallScore,
             tier: result.tier,
             outcome: 'below-threshold',
@@ -509,6 +511,7 @@ export async function computeMatchesForPartnership(
         matchesComputed++
         pairDiagnostics.push({
           candidate: name,
+          candidateId: candidate.id,
           score: result.overallScore,
           tier: result.tier,
           outcome: 'stored',
@@ -519,6 +522,7 @@ export async function computeMatchesForPartnership(
         errors++
         pairDiagnostics.push({
           candidate: name,
+          candidateId: candidate.id,
           score: 0,
           tier: '-',
           outcome: 'scoring-error',
