@@ -190,6 +190,26 @@ interface SystemStatus {
   systemState: string
 }
 
+const CACHE_KEY = 'haevn_admin_recompute'
+
+function loadCachedResult(): { result: RecomputeResult; at: string } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
+}
+
+function saveCachedResult(result: RecomputeResult, at: string) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ result, at }))
+  } catch {}
+}
+
+function clearCachedResult() {
+  try { localStorage.removeItem(CACHE_KEY) } catch {}
+}
+
 export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
   const [recomputing, setRecomputing] = useState(false)
   const [recomputeResult, setRecomputeResult] = useState<RecomputeResult | null>(null)
@@ -210,7 +230,15 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
     } catch {}
   }
 
-  React.useEffect(() => { loadSystemStatus() }, [])
+  // Restore cached recompute results on mount
+  React.useEffect(() => {
+    loadSystemStatus()
+    const cached = loadCachedResult()
+    if (cached) {
+      setRecomputeResult(cached.result)
+      setRecomputedAt(cached.at)
+    }
+  }, [])
 
   // Transform data
   const cards = useMemo(
@@ -239,12 +267,15 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
     setRecomputing(true)
     setRecomputeResult(null)
     setSelectedId(null)
+    clearCachedResult()
     try {
       const response = await fetch('/api/admin/recompute-matches', { method: 'POST' })
       const data = await response.json()
       if (data.success) {
+        const timestamp = new Date().toLocaleTimeString()
         setRecomputeResult(data.result)
-        setRecomputedAt(new Date().toLocaleTimeString())
+        setRecomputedAt(timestamp)
+        saveCachedResult(data.result, timestamp)
         toast({
           title: 'Matches Recomputed',
           description: `${data.result.total} users evaluated, ${data.result.computed} matches found.`,
