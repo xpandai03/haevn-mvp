@@ -116,6 +116,7 @@ export function MatchInspectionView({
   const [data, setData] = useState<InspectionPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [errorDebug, setErrorDebug] = useState<any>(null)
 
   useEffect(() => {
     async function load() {
@@ -124,6 +125,7 @@ export function MatchInspectionView({
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))
           setError(body.error || `HTTP ${res.status}`)
+          if (body.debug) setErrorDebug(body.debug)
           return
         }
         setData(await res.json())
@@ -147,7 +149,12 @@ export function MatchInspectionView({
   if (error || !data) {
     return (
       <div className="max-w-6xl mx-auto p-8">
-        <p className="text-red-600">Error: {error}</p>
+        <p className="text-red-600 font-semibold">Error: {error}</p>
+        {errorDebug && (
+          <pre className="mt-3 p-4 bg-gray-100 rounded-lg text-xs text-gray-700 overflow-auto">
+            {JSON.stringify(errorDebug, null, 2)}
+          </pre>
+        )}
         <Link href="/admin/matching" className="text-blue-600 underline mt-4 inline-block">
           ← Back to Dashboard
         </Link>

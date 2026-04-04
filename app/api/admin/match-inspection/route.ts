@@ -17,25 +17,33 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing a or b partnership IDs' }, { status: 400 })
   }
 
-  // Run all queries in parallel
-  const [matchResult, answersA, answersB, partnershipsResult] = await Promise.all([
+  // Try both orderings — computed_matches stores (partnership_a, partnership_b) in one direction only
+  const [matchAB, matchBA, answersA, answersB, partnershipsResult] = await Promise.all([
     supabase
       .from('computed_matches')
       .select('score, tier, breakdown, engine_version, computed_at')
-      .or(`and(partnership_a.eq.${a},partnership_b.eq.${b}),and(partnership_a.eq.${b},partnership_b.eq.${a})`)
-      .single(),
+      .eq('partnership_a', a)
+      .eq('partnership_b', b)
+      .maybeSingle(),
+
+    supabase
+      .from('computed_matches')
+      .select('score, tier, breakdown, engine_version, computed_at')
+      .eq('partnership_a', b)
+      .eq('partnership_b', a)
+      .maybeSingle(),
 
     supabase
       .from('user_survey_responses')
       .select('answers_json')
       .eq('partnership_id', a)
-      .single(),
+      .maybeSingle(),
 
     supabase
       .from('user_survey_responses')
       .select('answers_json')
       .eq('partnership_id', b)
-      .single(),
+      .maybeSingle(),
 
     supabase
       .from('partnerships')
@@ -43,9 +51,34 @@ export async function GET(req: NextRequest) {
       .in('id', [a, b]),
   ])
 
-  if (matchResult.error || !matchResult.data) {
-    return NextResponse.json({ error: 'Match not found', detail: matchResult.error?.message }, { status: 404 })
+  const matchData = matchAB.data || matchBA.data
+
+  if (!matchData) {
+    // Debug: check if either partnership has ANY matches at all
+    const { count: countA } = await supabase
+      .from('computed_matches')
+      .select('id', { count: 'exact', head: true })
+      .or(`partnership_a.eq.${a},partnership_b.eq.${a}`)
+
+    const { count: countB } = await supabase
+      .from('computed_matches')
+      .select('id', { count: 'exact', head: true })
+      .or(`partnership_a.eq.${b},partnership_b.eq.${b}`)
+
+    return NextResponse.json({
+      error: 'Match not found',
+      debug: {
+        pidA: a,
+        pidB: b,
+        matchesForA: countA ?? 0,
+        matchesForB: countB ?? 0,
+        errorAB: matchAB.error?.message,
+        errorBA: matchBA.error?.message,
+      },
+    }, { status: 404 })
   }
+
+  const matchResult = { data: matchData }
 
   const partnershipA = partnershipsResult.data?.find((p: any) => p.id === a)
   const partnershipB = partnershipsResult.data?.find((p: any) => p.id === b)
