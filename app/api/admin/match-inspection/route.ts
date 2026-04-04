@@ -65,13 +65,21 @@ export async function GET(req: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .or(`partnership_a.eq.${b},partnership_b.eq.${b}`)
 
+    const partAExists = partnershipsResult.data?.some((p: any) => p.id === a) ?? false
+    const partBExists = partnershipsResult.data?.some((p: any) => p.id === b) ?? false
+
     return NextResponse.json({
-      error: 'Match not found',
+      error: 'Match not found. Only persisted matches (score >= 80, outcome=stored) can be inspected. Below-threshold and constraint-failed pairs are not stored in computed_matches.',
       debug: {
         pidA: a,
         pidB: b,
+        partnershipAExists: partAExists,
+        partnershipBExists: partBExists,
+        answersAExists: !!answersA.data,
+        answersBExists: !!answersB.data,
         matchesForA: countA ?? 0,
         matchesForB: countB ?? 0,
+        lookupTried: ['A→B', 'B→A'],
         errorAB: matchAB.error?.message,
         errorBA: matchBA.error?.message,
       },
