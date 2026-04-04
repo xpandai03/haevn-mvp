@@ -165,11 +165,17 @@ export function normalizeAnswers(raw: RawAnswers): NormalizedAnswers {
 
     const isMultiSelect = MULTI_SELECT_QUESTIONS.includes(csvKey as any)
 
+    let normalizedValue: string | string[] | undefined
     if (isMultiSelect) {
-      (normalized as any)[csvKey] = normalizeToArray(value)
+      normalizedValue = normalizeToArray(value)
     } else {
-      (normalized as any)[csvKey] = normalizeToSingle(value)
+      normalizedValue = normalizeToSingle(value)
     }
+
+    // Apply semantic value normalization (numeric→tier, display→canonical)
+    normalizedValue = normalizeFieldValue(csvKey, normalizedValue as any) as any
+
+    ;(normalized as any)[csvKey] = normalizedValue
   }
 
   // Handle special case: Q13a_required flag (check all key variants)
@@ -207,6 +213,172 @@ export function validateNormalizedAnswers(
     hasQ20: (answers as any).Q20 !== undefined,
     missingCritical,
   }
+}
+
+// =============================================================================
+// VALUE NORMALIZATION — SEMANTIC MAPPINGS
+// =============================================================================
+// Maps real survey values (display strings, 1-10 scales) to canonical tier
+// strings expected by the scoring engine. Without this, tierProximityScore()
+// returns 50 (neutral) for unrecognized values, silently degrading scores.
+
+/**
+ * Map 1-10 numeric scales to canonical tier strings.
+ * Breakpoints: 1-2 → tier[0], 3-4 → tier[1], 5-6 → tier[2], 7-8 → tier[3], 9-10 → tier[4]
+ */
+function numericToTier(value: number, tiers: readonly string[]): string {
+  if (tiers.length === 5) {
+    if (value <= 2) return tiers[0]
+    if (value <= 4) return tiers[1]
+    if (value <= 6) return tiers[2]
+    if (value <= 8) return tiers[3]
+    return tiers[4]
+  }
+  if (tiers.length === 6) {
+    // 6-tier: 1 → [0], 2-3 → [1], 4-5 → [2], 6-7 → [3], 8-9 → [4], 10 → [5]
+    if (value <= 1) return tiers[0]
+    if (value <= 3) return tiers[1]
+    if (value <= 5) return tiers[2]
+    if (value <= 7) return tiers[3]
+    if (value <= 9) return tiers[4]
+    return tiers[5]
+  }
+  // Fallback: linear distribution
+  const idx = Math.min(Math.floor((value - 1) / (10 / tiers.length)), tiers.length - 1)
+  return tiers[Math.max(0, idx)]
+}
+
+// Tier arrays matching scoring engine (copied from scoring.ts and categories/*.ts)
+const EXCLUSIVITY_5 = ['fully_open', 'open', 'flexible', 'mostly_exclusive', 'monogamous'] as const
+const AVAILABILITY_5 = ['very_limited', 'limited', 'moderate', 'available', 'very_available'] as const
+const PRIVACY_5 = ['very_open', 'open', 'moderate', 'private', 'very_private'] as const
+const EMPATHY_6 = ['very_low', 'low', 'moderate', 'medium', 'high', 'very_high'] as const
+const REACTIVITY_6 = ['very_low', 'low', 'moderate', 'medium', 'high', 'very_high'] as const
+const SOCIAL_5 = ['very_introverted', 'introverted', 'ambivert', 'extroverted', 'very_extroverted'] as const
+
+/**
+ * Fields where numeric 1-10 values must be mapped to tier strings.
+ * Key = canonical CSV key, Value = tier array (low→high direction).
+ */
+const NUMERIC_TO_TIER_FIELDS: Record<string, readonly string[]> = {
+  'Q7':  EXCLUSIVITY_5,    // 1=fully_open → 10=monogamous
+  'Q8':  EXCLUSIVITY_5,    // same scale
+  'Q10a': AVAILABILITY_5,  // 1=very_limited → 10=very_available
+  'Q20': PRIVACY_5,        // 1=very_open → 10=very_private (inverted: high number = more private)
+  'Q36': SOCIAL_5,         // 1=very_introverted → 10=very_extroverted
+  'Q36a': SOCIAL_5,        // same scale
+  'Q37': EMPATHY_6,        // 1=very_low → 10=very_high
+  'Q37a': EMPATHY_6,       // same scale
+  'Q38': REACTIVITY_6,     // 1=very_low → 10=very_high (low jealousy = low reactivity)
+  'Q38a': REACTIVITY_6,    // same scale
+}
+
+/**
+ * Display string → canonical tier value mappings.
+ * These handle the verbose display strings from the survey UI.
+ * Matched case-insensitively via substring/prefix checks.
+ */
+const DISPLAY_TO_TIER: Record<string, [RegExp, string][]> = {
+  'Q10': [
+    [/secure/i, 'secure'],
+    [/anxious.*preoccupied|preoccupied/i, 'anxious-preoccupied'],
+    [/fearful.*avoidant/i, 'fearful-avoidant'],
+    [/dismissive.*avoidant/i, 'dismissive-avoidant'],
+    [/avoidant/i, 'avoidant'],
+    [/anxious/i, 'anxious'],
+  ],
+  'Q12': [
+    [/collaborative|work.*together|team/i, 'collaborative'],
+    [/compromise|middle.*ground/i, 'compromising'],
+    [/avoid|walk.*away|space/i, 'avoidant'],
+    [/passive|go.*with.*flow/i, 'passive'],
+    [/direct|head.*on|confront/i, 'competitive'],
+    [/depends|situati/i, 'compromising'],  // "It depends on the situation" → middle ground
+  ],
+  'Q12a': [
+    [/multiple.*daily|several.*day/i, 'very_quick'],
+    [/once.*day|daily/i, 'quick'],
+    [/few.*times.*week/i, 'moderate'],
+    [/once.*week|weekly/i, 'slow'],
+    [/rarely|when.*need/i, 'very_slow'],
+  ],
+  'Q15': [
+    [/unlimited|very.*available/i, 'very_flexible'],
+    [/quite.*bit|flexible|most/i, 'flexible'],
+    [/moderate|some/i, 'moderate'],
+    [/limited|busy/i, 'limited'],
+    [/very.*limited|minimal/i, 'very_limited'],
+  ],
+  'Q19a': [
+    [/same.*neighbor/i, 'same_neighborhood'],
+    [/same.*city/i, 'same_city'],
+    [/25.*mile|within.*25/i, 'within_30_miles'],
+    [/30.*mile|within.*30/i, 'within_30_miles'],
+    [/50.*mile|within.*50/i, 'within_50_miles'],
+    [/100.*mile|within.*100/i, 'within_100_miles'],
+    [/same.*state/i, 'same_state'],
+    [/same.*region/i, 'same_region'],
+    [/anywhere|any.*distance|doesn.*matter/i, 'anywhere'],
+  ],
+  'Q19c': [
+    [/very.*mobile|travel.*frequent/i, 'frequently'],
+    [/somewhat|sometimes|occasional/i, 'sometimes'],
+    [/prefer.*stay|rarely|not.*very/i, 'rarely'],
+    [/never|no.*travel/i, 'never'],
+    [/often/i, 'often'],
+  ],
+  'Q25a': [
+    [/multiple.*daily|every.*day.*multiple/i, 'multiple_daily'],
+    [/daily|every.*day/i, 'daily'],
+    [/few.*times.*week|several.*week/i, 'few_times_week'],
+    [/weekly|once.*week/i, 'weekly'],
+    [/few.*times.*month|couple.*month/i, 'few_times_month'],
+    [/monthly|once.*month/i, 'monthly'],
+    [/rarely|occasionally/i, 'few_times_year'],
+  ],
+  'Q9b': [
+    [/open.*ready|dating.*relationship/i, 'ready'],
+    [/curious|exploring|browsing/i, 'exploring'],
+    [/not.*sure|figuring/i, 'unsure'],
+  ],
+  'Q30a': [
+    [/yes.*right.*person|open.*to/i, 'open_to_it'],
+    [/maybe|needs.*discussion/i, 'needs_discussion'],
+    [/no|not.*interested|prefer.*not/i, 'no'],
+  ],
+}
+
+/**
+ * Apply semantic value normalization AFTER key mapping.
+ * Converts numeric scales and display strings to canonical tier values.
+ */
+function normalizeFieldValue(csvKey: string, value: string | string[] | undefined): string | string[] | undefined {
+  if (value === undefined) return undefined
+
+  // Handle numeric → tier for single-value fields
+  const tierMap = NUMERIC_TO_TIER_FIELDS[csvKey]
+  if (tierMap) {
+    const numVal = typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : NaN)
+    if (!isNaN(numVal) && numVal >= 1 && numVal <= 10) {
+      return numericToTier(numVal, tierMap)
+    }
+    // If it's already a valid tier string, pass through
+    if (typeof value === 'string' && tierMap.includes(value.toLowerCase() as any)) {
+      return value.toLowerCase()
+    }
+  }
+
+  // Handle display string → tier for single-value fields
+  const displayMap = DISPLAY_TO_TIER[csvKey]
+  if (displayMap && typeof value === 'string') {
+    for (const [pattern, canonical] of displayMap) {
+      if (pattern.test(value)) {
+        return canonical
+      }
+    }
+  }
+
+  return value
 }
 
 // =============================================================================
@@ -389,6 +561,7 @@ const NON_MONO_STYLES = [
   'open', 'polyamory', 'polyamorous', 'poly', 'enm',
   'ethical_non_monogamy', 'non-monogamous', 'non_monogamous',
   'dont_know_yet', 'exploring', 'relationship_anarchy',
+  'monogamish',  // Monogamish users answer Q7/Q8 in the survey
 ]
 
 const LTR_INTENTS = [
