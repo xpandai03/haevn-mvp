@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isAdminUser } from '@/lib/admin/allowlist'
+import { calculateCompatibilityFromRaw } from '@/lib/matching/calculateCompatibility'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing a or b partnership IDs' }, { status: 400 })
   }
 
-  // Try both orderings — computed_matches stores (partnership_a, partnership_b) in one direction only
+  // Fetch everything in parallel: persisted match (both orderings), answers, partnerships
   const [matchAB, matchBA, answersA, answersB, partnershipsResult] = await Promise.all([
     supabase
       .from('computed_matches')
@@ -47,69 +48,95 @@ export async function GET(req: NextRequest) {
 
     supabase
       .from('partnerships')
-      .select('id, display_name, latitude, longitude')
+      .select('id, display_name, latitude, longitude, profile_type')
       .in('id', [a, b]),
   ])
 
-  const matchData = matchAB.data || matchBA.data
+  const partnershipA = partnershipsResult.data?.find((p: any) => p.id === a)
+  const partnershipB = partnershipsResult.data?.find((p: any) => p.id === b)
+  const rawA = answersA.data?.answers_json as Record<string, any> | undefined
+  const rawB = answersB.data?.answers_json as Record<string, any> | undefined
 
-  if (!matchData) {
-    // Debug: check if either partnership has ANY matches at all
-    const { count: countA } = await supabase
-      .from('computed_matches')
-      .select('id', { count: 'exact', head: true })
-      .or(`partnership_a.eq.${a},partnership_b.eq.${a}`)
-
-    const { count: countB } = await supabase
-      .from('computed_matches')
-      .select('id', { count: 'exact', head: true })
-      .or(`partnership_a.eq.${b},partnership_b.eq.${b}`)
-
-    const partAExists = partnershipsResult.data?.some((p: any) => p.id === a) ?? false
-    const partBExists = partnershipsResult.data?.some((p: any) => p.id === b) ?? false
-
+  // Check if we can proceed at all
+  if (!rawA || !rawB) {
     return NextResponse.json({
-      error: 'Match not found. Only persisted matches (score >= 80, outcome=stored) can be inspected. Below-threshold and constraint-failed pairs are not stored in computed_matches.',
+      error: 'Cannot inspect: missing survey answers',
       debug: {
         pidA: a,
         pidB: b,
-        partnershipAExists: partAExists,
-        partnershipBExists: partBExists,
-        answersAExists: !!answersA.data,
-        answersBExists: !!answersB.data,
-        matchesForA: countA ?? 0,
-        matchesForB: countB ?? 0,
-        lookupTried: ['A→B', 'B→A'],
-        errorAB: matchAB.error?.message,
-        errorBA: matchBA.error?.message,
+        partnershipAExists: !!partnershipA,
+        partnershipBExists: !!partnershipB,
+        answersAExists: !!rawA,
+        answersBExists: !!rawB,
       },
     }, { status: 404 })
   }
 
-  const matchResult = { data: matchData }
+  // Try persisted match first
+  const matchData = matchAB.data || matchBA.data
+  const mode = matchData ? 'persisted' : 'debug'
 
-  const partnershipA = partnershipsResult.data?.find((p: any) => p.id === a)
-  const partnershipB = partnershipsResult.data?.find((p: any) => p.id === b)
+  let matchPayload: {
+    score: number
+    tier: string
+    engineVersion: string
+    computedAt: string
+    categories: any[]
+    constraints?: any
+  }
+
+  if (matchData) {
+    // Persisted match — use stored breakdown
+    matchPayload = {
+      score: matchData.score,
+      tier: matchData.tier,
+      engineVersion: matchData.engine_version,
+      computedAt: matchData.computed_at,
+      categories: matchData.breakdown ?? [],
+    }
+  } else {
+    // Debug mode — compute on demand from raw answers
+    const isACouple = partnershipA?.profile_type === 'couple'
+    const isBCouple = partnershipB?.profile_type === 'couple'
+
+    // Inject location metadata (same as computeMatches.ts does)
+    const rawAWithLocation = { ...rawA }
+    const rawBWithLocation = { ...rawB }
+    if (partnershipA?.latitude != null) {
+      rawAWithLocation._latitude = partnershipA.latitude
+      rawAWithLocation._longitude = partnershipA.longitude
+    }
+    if (partnershipB?.latitude != null) {
+      rawBWithLocation._latitude = partnershipB.latitude
+      rawBWithLocation._longitude = partnershipB.longitude
+    }
+
+    const result = calculateCompatibilityFromRaw(rawAWithLocation, rawBWithLocation, isACouple, isBCouple)
+
+    matchPayload = {
+      score: result.overallScore,
+      tier: result.tier,
+      engineVersion: 'live-debug',
+      computedAt: new Date().toISOString(),
+      categories: result.categories,
+      constraints: result.constraints,
+    }
+  }
 
   return NextResponse.json({
-    match: {
-      score: matchResult.data.score,
-      tier: matchResult.data.tier,
-      engineVersion: matchResult.data.engine_version,
-      computedAt: matchResult.data.computed_at,
-      categories: matchResult.data.breakdown ?? [],
-    },
+    mode,
+    match: matchPayload,
     userA: {
       partnershipId: a,
       displayName: partnershipA?.display_name ?? 'Unknown',
-      answers: answersA.data?.answers_json ?? {},
+      answers: rawA,
       latitude: partnershipA?.latitude ?? null,
       longitude: partnershipA?.longitude ?? null,
     },
     userB: {
       partnershipId: b,
       displayName: partnershipB?.display_name ?? 'Unknown',
-      answers: answersB.data?.answers_json ?? {},
+      answers: rawB,
       latitude: partnershipB?.latitude ?? null,
       longitude: partnershipB?.longitude ?? null,
     },

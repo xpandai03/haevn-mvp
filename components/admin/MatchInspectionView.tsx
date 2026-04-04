@@ -35,12 +35,18 @@ interface UserData {
 }
 
 interface InspectionPayload {
+  mode: 'persisted' | 'debug'
   match: {
     score: number
     tier: string
     engineVersion: string
     computedAt: string
     categories: CategoryScore[]
+    constraints?: {
+      passed: boolean
+      blockedBy?: string
+      reason?: string
+    }
   }
   userA: UserData
   userB: UserData
@@ -175,12 +181,29 @@ export function MatchInspectionView({
           SECTION A: Match Summary Header
           ══════════════════════════════════════════════════════════════════════ */}
       <div className="border rounded-xl p-6 bg-white shadow-sm">
+        {/* Debug mode banner */}
+        {data.mode === 'debug' && (
+          <div className="mb-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            <span className="font-semibold">Debug Mode</span> — This pair is not persisted (score &lt; 80 or constraint failed). Scoring computed live from raw answers.
+          </div>
+        )}
+
+        {/* Constraint failure banner */}
+        {match.constraints && !match.constraints.passed && (
+          <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            <span className="font-semibold">Gate Failed:</span> {match.constraints.blockedBy} — {match.constraints.reason}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">
               {userA.displayName} ↔ {userB.displayName}
             </h1>
             <Badge variant={tierBadgeVariant(match.tier)}>{match.tier}</Badge>
+            {data.mode === 'debug' && (
+              <Badge variant="outline" className="text-amber-700 border-amber-300">Live Debug</Badge>
+            )}
           </div>
           <div className={`text-4xl font-bold rounded-lg px-4 py-2 ${scoreColor(match.score)}`}>
             {match.score}%

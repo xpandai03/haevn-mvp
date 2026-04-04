@@ -975,8 +975,8 @@ function CandidateRow({ diag, sourcePartnershipId }: { diag: PairDiag; sourcePar
             </p>
           )}
 
-          {/* Deep Inspection link — only for persisted matches (outcome=stored) */}
-          {sourcePartnershipId && diag.candidateId && diag.outcome === 'stored' && (
+          {/* Deep Inspection link — works for any pair (debug mode for non-persisted) */}
+          {sourcePartnershipId && diag.candidateId && (
             <a
               href={`/admin/match-inspection?a=${sourcePartnershipId}&b=${diag.candidateId}`}
               className="inline-block mt-2 text-xs text-[#008080] font-medium hover:underline"
