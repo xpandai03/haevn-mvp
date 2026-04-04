@@ -348,12 +348,107 @@ const DISPLAY_TO_TIER: Record<string, [RegExp, string][]> = {
   ],
 }
 
+// =============================================================================
+// Q28 BOUNDARY CANONICALIZATION
+// =============================================================================
+// Maps free-text boundary strings to canonical tokens for Jaccard scoring.
+// Each pattern maps one or more user phrases to a single canonical token.
+
+const BOUNDARY_CANONICAL_MAP: [RegExp, string][] = [
+  [/\bpain\b/i, 'pain'],
+  [/\bblood\b/i, 'blood_play'],
+  [/\bbreath/i, 'breath_play'],
+  [/\bchok/i, 'choking'],
+  [/\bdegrad/i, 'degradation'],
+  [/\bhumiliat/i, 'humiliation'],
+  [/\bbodily|urin|scat|gross/i, 'bodily_fluids'],
+  [/\brough/i, 'rough_play'],
+  [/\bgroup|threesome|moresome|gangbang/i, 'group_dynamics'],
+  [/\bpower.*exchange|dom.*sub/i, 'power_exchange'],
+  [/\bexhibit/i, 'exhibitionism'],
+  [/\bpublic/i, 'public_play'],
+  [/\bbondag/i, 'bondage'],
+  [/\bimpact|spank|hit|slap|whip|flog/i, 'impact_play'],
+  [/\bedge/i, 'edge_play'],
+  [/\bdrug|substance|intoxic/i, 'substance_use'],
+  [/\banal/i, 'anal_play'],
+  [/\bage.*play/i, 'age_play'],
+  [/\brole.*play/i, 'roleplay'],
+  [/\bwax/i, 'wax_play'],
+  [/\belectr/i, 'electro_play'],
+  [/\bneedle|pierc/i, 'needle_play'],
+  [/\bfist/i, 'fisting'],
+  [/\blatex|rubber/i, 'latex'],
+  [/\bfeet|foot/i, 'foot_play'],
+  [/\bvoyeur/i, 'voyeurism'],
+  [/\bsensor/i, 'sensory_play'],
+]
+
+/**
+ * Canonicalize a free-text boundary array into canonical tokens.
+ * Tokenizes comma-separated text, then maps each fragment via regex patterns.
+ * Unrecognized fragments are preserved as-is (better than dropping them).
+ */
+function canonicalizeBoundaries(values: string[]): string[] {
+  const canonical = new Set<string>()
+  for (const raw of values) {
+    let matched = false
+    for (const [pattern, token] of BOUNDARY_CANONICAL_MAP) {
+      if (pattern.test(raw)) {
+        canonical.add(token)
+        matched = true
+      }
+    }
+    // Preserve unmatched values lowercase-trimmed (don't drop them)
+    if (!matched && raw.trim()) {
+      canonical.add(raw.toLowerCase().trim())
+    }
+  }
+  return [...canonical]
+}
+
+// =============================================================================
+// Q33 KINK READINESS NORMALIZATION
+// =============================================================================
+// Q33 is a SINGLE-SELECT kink readiness level, not a kink list.
+// The engine incorrectly treats it as a multi-select kink array.
+// Fix: map the display strings to canonical readiness tiers so the engine
+// can use tier-proximity scoring instead of Jaccard on description strings.
+
+const KINK_READINESS_MAP: [RegExp, string][] = [
+  [/not.*into.*kink|prefer.*conventional|vanilla/i, 'not_interested'],
+  [/prefer.*not.*say/i, 'not_interested'],
+  [/curious.*new|curious.*kink/i, 'curious'],
+  [/light.*exploration|playful.*restraint/i, 'beginner'],
+  [/bdsm|power.*dynamic/i, 'experienced'],
+  [/specific.*fetish|specific.*kink/i, 'experienced'],
+]
+
 /**
  * Apply semantic value normalization AFTER key mapping.
  * Converts numeric scales and display strings to canonical tier values.
  */
 function normalizeFieldValue(csvKey: string, value: string | string[] | undefined): string | string[] | undefined {
   if (value === undefined) return undefined
+
+  // Q28: Canonicalize free-text boundaries into standard tokens
+  if (csvKey === 'Q28' && Array.isArray(value)) {
+    return canonicalizeBoundaries(value)
+  }
+
+  // Q33: Map kink readiness description to canonical tier
+  // The engine treats Q33 as multi-select but it's actually single-select categorical.
+  // Convert the description string to a canonical readiness token array.
+  if (csvKey === 'Q33' && Array.isArray(value) && value.length > 0) {
+    const raw = value[0] // Single-select stored as first array element
+    for (const [pattern, tier] of KINK_READINESS_MAP) {
+      if (pattern.test(raw)) {
+        return [tier]
+      }
+    }
+    // If no match, preserve as-is
+    return value
+  }
 
   // Handle numeric → tier for single-value fields
   const tierMap = NUMERIC_TO_TIER_FIELDS[csvKey]
