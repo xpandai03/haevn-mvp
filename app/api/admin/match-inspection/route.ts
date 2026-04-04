@@ -62,6 +62,33 @@ export async function GET(req: NextRequest) {
   const rawA = answersA.data?.answers_json as Record<string, any> | undefined
   const rawB = answersB.data?.answers_json as Record<string, any> | undefined
 
+  // Resolve display names: partnership.display_name → profile.full_name → profile.email → "User"
+  async function resolveName(partnershipId: string, partnership: any): Promise<string> {
+    if (partnership?.display_name) return partnership.display_name
+    // Look up the owner's profile
+    const { data: member } = await admin
+      .from('partnership_members')
+      .select('user_id')
+      .eq('partnership_id', partnershipId)
+      .eq('role', 'owner')
+      .maybeSingle()
+    if (member?.user_id) {
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('full_name, email')
+        .eq('user_id', member.user_id)
+        .maybeSingle()
+      if (profile?.full_name) return profile.full_name
+      if (profile?.email) return profile.email.split('@')[0]
+    }
+    return partnershipId.slice(0, 8)
+  }
+
+  const [nameA, nameB] = await Promise.all([
+    resolveName(a, partnershipA),
+    resolveName(b, partnershipB),
+  ])
+
   // Check if we can proceed at all
   if (!rawA || !rawB) {
     return NextResponse.json({
@@ -133,14 +160,14 @@ export async function GET(req: NextRequest) {
     match: matchPayload,
     userA: {
       partnershipId: a,
-      displayName: partnershipA?.display_name ?? 'Unknown',
+      displayName: nameA,
       answers: rawA,
       latitude: partnershipA?.latitude ?? null,
       longitude: partnershipA?.longitude ?? null,
     },
     userB: {
       partnershipId: b,
-      displayName: partnershipB?.display_name ?? 'Unknown',
+      displayName: nameB,
       answers: rawB,
       latitude: partnershipB?.latitude ?? null,
       longitude: partnershipB?.longitude ?? null,
