@@ -193,6 +193,7 @@ interface SystemStatus {
 export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
   const [recomputing, setRecomputing] = useState(false)
   const [recomputeResult, setRecomputeResult] = useState<RecomputeResult | null>(null)
+  const [recomputedAt, setRecomputedAt] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showZipModal, setShowZipModal] = useState(false)
@@ -243,6 +244,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
       const data = await response.json()
       if (data.success) {
         setRecomputeResult(data.result)
+        setRecomputedAt(new Date().toLocaleTimeString())
         toast({
           title: 'Matches Recomputed',
           description: `${data.result.total} users evaluated, ${data.result.computed} matches found.`,
@@ -422,6 +424,12 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
 
       {/* ── Summary Bar ── */}
       {summary && (
+        <>
+        {recomputedAt && (
+          <p className="text-xs text-gray-400 mb-2">
+            Results from recompute at {recomputedAt}. If you re-seeded users since then, click Recompute again.
+          </p>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <SummaryCard
             icon={<Users className="h-5 w-5 text-slate-600" />}
@@ -448,6 +456,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             bg="bg-red-50"
           />
         </div>
+        </>
       )}
 
       {/* Best pair callout */}
