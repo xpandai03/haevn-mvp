@@ -1,3 +1,4 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * P0 Gate Integration Tests — Full Pipeline Validation
  *
@@ -5,6 +6,7 @@
  * - Failed gates stop scoring (score=0, no categories)
  * - Passed gates allow full scoring
  * - Edge cases handled gracefully
+ * - age_range and distance demoted to weighted scoring (no longer hard gates)
  *
  * Run with: npx tsx lib/matching/gates-integration.test.ts
  */
@@ -83,26 +85,24 @@ console.log('\n=== STEP 2: AGE GATE INTEGRATION ===\n')
   assert('Case A: Both ages in range → PASS, score > 0', result.constraints.passed && result.overallScore > 0)
 }
 
-// Case B: Match age outside User's range → FAIL
+// Case B: Match age outside User's range → NOW SCORED (demoted from gate to weighted penalty)
 {
   const user: RawAnswers = { ...BASE_USER_RAW, q1_age: '1996-01-01', q_age_min: '25', q_age_max: '30' }
   const match: RawAnswers = { ...BASE_MATCH_RAW, q1_age: '1988-01-01', q_age_min: '20', q_age_max: '45' }
-  // Match is ~38, User max is 30
+  // Match is ~38, User max is 30 → penalty in Lifestyle.ageRange but NOT blocked
   const result = calculateCompatibilityFromRaw(user, match)
-  assert('Case B: Match age 38 outside User range 25-30 → FAIL', !result.constraints.passed)
-  assert('  blockedBy=age_range', result.constraints.blockedBy === 'age_range')
-  assert('  score=0', result.overallScore === 0)
-  assert('  no categories scored', result.categories.every(c => c.score === 0 && !c.included))
+  assert('Case B: Match age 38 outside User range 25-30 → PASS (demoted to weighted)', result.constraints.passed)
+  assert('  overallScore > 0 (scored with penalty)', result.overallScore > 0)
 }
 
-// Case C: User age outside Match's range → FAIL
+// Case C: User age outside Match's range → NOW SCORED (demoted from gate)
 {
   const user: RawAnswers = { ...BASE_USER_RAW, q1_age: '1990-01-01', q_age_min: '20', q_age_max: '50' }
   const match: RawAnswers = { ...BASE_MATCH_RAW, q1_age: '1998-01-01', q_age_min: '22', q_age_max: '30' }
-  // User is ~36, Match max is 30
+  // User is ~36, Match max is 30 → penalty in Lifestyle.ageRange but NOT blocked
   const result = calculateCompatibilityFromRaw(user, match)
-  assert('Case C: User age 36 outside Match range 22-30 → FAIL', !result.constraints.passed)
-  assert('  blockedBy=age_range', result.constraints.blockedBy === 'age_range')
+  assert('Case C: User age 36 outside Match range 22-30 → PASS (demoted)', result.constraints.passed)
+  assert('  overallScore > 0 (scored with penalty)', result.overallScore > 0)
 }
 
 // Case D: Missing age data → SKIP (pass through, allow scoring)
@@ -145,7 +145,7 @@ console.log('\n=== STEP 3: DISTANCE GATE INTEGRATION ===\n')
   assert('Case A: SF→Oakland ~12mi, both caps ≥25mi → PASS', result.constraints.passed && result.overallScore > 0)
 }
 
-// Case B: Exceeds User's cap (SF to LA ~347mi)
+// Case B: Exceeds User's cap (SF to LA ~347mi) → NOW SCORED (demoted from gate to weighted penalty)
 {
   const user: RawAnswers = {
     ...BASE_USER_RAW,
@@ -158,12 +158,11 @@ console.log('\n=== STEP 3: DISTANCE GATE INTEGRATION ===\n')
     _latitude: 34.0522, _longitude: -118.2437,
   }
   const result = calculateCompatibilityFromRaw(user, match)
-  assert('Case B: SF→LA ~347mi, User cap 50mi → FAIL', !result.constraints.passed)
-  assert('  blockedBy=distance', result.constraints.blockedBy === 'distance')
-  assert('  score=0', result.overallScore === 0)
+  assert('Case B: SF→LA ~347mi, User cap 50mi → PASS (demoted to weighted)', result.constraints.passed)
+  assert('  overallScore > 0 (scored with distance penalty)', result.overallScore > 0)
 }
 
-// Case C: Exceeds Match's cap
+// Case C: Exceeds Match's cap → NOW SCORED (demoted from gate)
 {
   const user: RawAnswers = {
     ...BASE_USER_RAW,
@@ -176,8 +175,8 @@ console.log('\n=== STEP 3: DISTANCE GATE INTEGRATION ===\n')
     _latitude: 37.3382, _longitude: -121.8863, // San Jose ~42mi
   }
   const result = calculateCompatibilityFromRaw(user, match)
-  assert('Case C: SF→SJ ~42mi, Match cap 10mi → FAIL', !result.constraints.passed)
-  assert('  blockedBy=distance', result.constraints.blockedBy === 'distance')
+  assert('Case C: SF→SJ ~42mi, Match cap 10mi → PASS (demoted)', result.constraints.passed)
+  assert('  overallScore > 0 (scored with distance penalty)', result.overallScore > 0)
 }
 
 // Case D: Missing coordinates → SKIP
@@ -310,19 +309,15 @@ console.log('\n=== STEP 5: FULL PIPELINE INTEGRATION ===\n')
   console.log(`  → Score: ${result.overallScore}%, Tier: ${result.tier}`)
 }
 
-// Verify a failing pair gets zero everything
+// Verify a failing pair via core_intent gate gets zero everything
 {
   const user: RawAnswers = {
     ...BASE_USER_RAW,
-    q1_age: '1996-01-01',
-    q_age_min: '25',
-    q_age_max: '28',
+    q9_intentions: ['casual_only'],
   }
   const match: RawAnswers = {
     ...BASE_MATCH_RAW,
-    q1_age: '1980-01-01', // age ~46, way outside 25-28
-    q_age_min: '40',
-    q_age_max: '55',
+    q9_intentions: ['long_term_only'],
   }
   const result = calculateCompatibilityFromRaw(user, match)
   assert('Blocked pair: constraints.passed=false', result.constraints.passed === false)
@@ -334,7 +329,7 @@ console.log('\n=== STEP 5: FULL PIPELINE INTEGRATION ===\n')
   console.log(`  → Blocked by: ${result.constraints.blockedBy}, Reason: ${result.constraints.reason}`)
 }
 
-// Verify multiple gates: age passes but distance fails
+// age_range and distance are now weighted, not gates — verify they score through
 {
   const user: RawAnswers = {
     ...BASE_USER_RAW,
@@ -353,7 +348,8 @@ console.log('\n=== STEP 5: FULL PIPELINE INTEGRATION ===\n')
     _latitude: 34.0522, _longitude: -118.2437, // LA
   }
   const result = calculateCompatibilityFromRaw(user, match)
-  assert('Age passes but distance fails → blocked by distance', result.constraints.blockedBy === 'distance')
+  assert('Age+distance now scored (not gated) → constraints pass', result.constraints.passed === true)
+  assert('  overallScore > 0 (distance penalizes but does not block)', result.overallScore > 0)
 }
 
 // =============================================================================

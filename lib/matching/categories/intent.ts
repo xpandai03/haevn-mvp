@@ -1,3 +1,4 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Intent Fit Category
  *
@@ -6,7 +7,7 @@
  *
  * Weight: 30% of overall score
  *
- * Sub-components:
+ * Sub-components (from INTENT_WEIGHTS constant):
  * - Goals (30%): Q9, Q9a - Connection goals, must overlap
  * - Style (20%): Q6 - Relationship style, ENM matching
  * - Exclusivity (15%): Q7, Q8, Q25 - Tier logic comparison
@@ -17,14 +18,16 @@
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
-import { INTENT_WEIGHTS } from '../utils/weights'
+import { INTENT_WEIGHTS, CATEGORY_WEIGHTS } from '../utils/weights'
 import {
   hasOverlap,
   jaccardSimilarity,
+  overlapSoft,
   tierProximityScore,
   isWithinTiers,
   weightedAverage,
   calculateCoverage,
+  applyClassificationWeights,
   ATTACHMENT_TIERS,
   AVAILABILITY_TIERS,
   MESSAGING_PACE_TIERS,
@@ -55,7 +58,7 @@ export function scoreIntent(
   userAnswers: NormalizedAnswers,
   matchAnswers: NormalizedAnswers
 ): CategoryScore {
-  const subScores: SubScore[] = [
+  const rawSubScores: SubScore[] = [
     scoreGoals(userAnswers, matchAnswers),
     scoreStyle(userAnswers, matchAnswers),
     scoreExclusivity(userAnswers, matchAnswers),
@@ -65,16 +68,17 @@ export function scoreIntent(
     scoreHaevnUse(userAnswers, matchAnswers),
   ]
 
+  const subScores = applyClassificationWeights(rawSubScores, 'intent')
   const score = weightedAverage(subScores)
   const coverage = calculateCoverage(subScores)
 
   return {
     category: 'intent',
     score,
-    weight: 30,
+    weight: CATEGORY_WEIGHTS.intent,
     subScores,
     coverage,
-    included: true, // Intent is always included
+    included: true,
   }
 }
 
@@ -120,14 +124,14 @@ function scoreGoals(
     }
   }
 
-  // Calculate Jaccard similarity for main goals
-  const goalsScore = jaccardSimilarity(userGoals, matchGoals)
+  // overlap_soft: intersection/min with 0.65 floor (more generous than Jaccard)
+  const goalsScore = overlapSoft(userGoals, matchGoals)
 
-  // Bonus for sub-goals overlap (if both answered)
+  // Capped sub-goals bonus (max 3% total score impact per Rik spec 15.5)
   let subGoalsBonus = 0
   if (userSubGoals.length > 0 && matchSubGoals.length > 0) {
-    const subGoalsScore = jaccardSimilarity(userSubGoals, matchSubGoals)
-    subGoalsBonus = subGoalsScore * 0.2 // Up to 20% bonus
+    const subGoalsScore = overlapSoft(userSubGoals, matchSubGoals)
+    subGoalsBonus = Math.min(10, subGoalsScore * 0.1)
   }
 
   const finalScore = Math.min(100, Math.round(goalsScore + subGoalsBonus))
@@ -165,12 +169,12 @@ function scoreStyle(
     }
   }
 
-  // Calculate Jaccard similarity
-  const styleScore = jaccardSimilarity(userStyle, matchStyle)
+  // overlap_soft: intersection/min with 0.65 floor
+  const styleScore = overlapSoft(userStyle, matchStyle)
 
-  // Bonus for having any overlap (flexible ENM matching)
+  // Capped overlap bonus (max 3% total score impact per Rik spec 15.5)
   const hasStyleOverlap = hasOverlap(userStyle, matchStyle)
-  const overlapBonus = hasStyleOverlap ? 20 : 0
+  const overlapBonus = hasStyleOverlap ? 10 : 0
 
   const finalScore = Math.min(100, styleScore + overlapBonus)
 
@@ -225,7 +229,7 @@ function scoreExclusivity(
       matchChemistry,
       CHEMISTRY_IMPORTANCE_TIERS
     )
-    chemistryBonus = chemistryScore * 0.15 // Up to 15% bonus
+    chemistryBonus = Math.min(5, chemistryScore * 0.05) // Reduced from 15% to 5% — Q25 is duplicate concept (primary in Chemistry)
   }
 
   const finalScore = Math.min(100, Math.round(exclusivityScore + chemistryBonus))
@@ -474,11 +478,11 @@ function scoreHaevnUse(
     }
   }
 
-  // Calculate Jaccard similarity
-  const purposeScore = jaccardSimilarity(userPurposes, matchPurposes)
+  // overlap_soft: intersection/min with 0.65 floor
+  const purposeScore = overlapSoft(userPurposes, matchPurposes)
 
-  // Bonus for overlap (at least some shared purpose)
-  const finalScore = Math.min(100, purposeScore + 20)
+  // Capped bonus (max 3% total score impact)
+  const finalScore = Math.min(100, purposeScore + 10)
 
   return {
     key: 'haevnUse',

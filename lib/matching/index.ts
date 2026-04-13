@@ -48,6 +48,7 @@ export {
 export {
   calculateCompatibility,
   calculateCompatibilityFromRaw,
+  type CompatibilityOptions,
 } from './calculateCompatibility'
 
 // Type exports
@@ -61,13 +62,23 @@ export type {
   CompatibilityResult,
   PartnerAnswers,
   CompatibilityInput,
+  RowClassification,
+  PenaltyMode,
+  RowMetadata,
+  DebugOutput,
+  DebugRowScore,
 } from './types'
+
+// Classification constants
+export { CLASSIFICATION_MULTIPLIERS, CONCEPT_SUPPRESSION_FACTOR } from './types'
 
 // Utility exports
 export { normalizeAnswers, validateNormalizedAnswers, resolveToCanonicalKey, hasAnswer, asArray, asSingle } from './utils/normalizeAnswers'
 export { checkConstraints } from './utils/constraints'
 export {
   jaccardSimilarity,
+  overlapSoft,
+  tolerantDistance,
   hasOverlap,
   countOverlap,
   getOverlap,
@@ -76,6 +87,8 @@ export {
   weightedAverage,
   calculateCoverage,
   binaryMatch,
+  applyClassificationWeights,
+  applyConceptSuppression,
 } from './utils/scoring'
 export {
   CATEGORY_WEIGHTS,
@@ -96,6 +109,13 @@ export { scoreStructure } from './categories/structure'
 export { scoreConnection } from './categories/connection'
 export { scoreChemistry } from './categories/chemistry'
 export { scoreLifestyle, calculateLifestyleCoverage } from './categories/lifestyle'
+
+// Classification map
+export {
+  CLASSIFICATION_MAP,
+  getRowMetadata,
+  getRowsForSection,
+} from './constants/classificationMap'
 
 // Question mappings (for reference / debugging)
 export {

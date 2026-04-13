@@ -1,27 +1,32 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Sexual Chemistry Category
  *
  * Evaluates turn-ons, erotic alignment, boundaries,
  * preferred roles, and sexual energy.
  *
- * Weight: 15% of overall score
+ * Weight: 10% of overall score
  *
- * Sub-components:
- * - Erotic Profile Alignment (35%): Q23, Q24, Q25
- * - Roles/Kinks (35%): Q26, Q33, Q33a
- * - Frequency/Chemistry Priorities (20%): Q25a
+ * Sub-components (from CHEMISTRY_WEIGHTS constant):
+ * - Erotic Profile Alignment (30%): Q23, Q24, Q25
+ * - Roles/Kinks (30%): Q26, Q33, Q33a
+ * - Frequency (10%): Q25a
  * - Boundaries (10%): Q28, Q29
+ * - Physical Preferences (10%): Q27, Q27b
+ * - Exploration (10%): Q34, Q34a
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
-import { CHEMISTRY_WEIGHTS } from '../utils/weights'
+import { CHEMISTRY_WEIGHTS, CATEGORY_WEIGHTS } from '../utils/weights'
 import {
   hasOverlap,
   jaccardSimilarity,
+  overlapSoft,
   tierProximityScore,
   proximityScore,
   weightedAverage,
   calculateCoverage,
+  applyClassificationWeights,
 } from '../utils/scoring'
 import {
   getArrayAnswer,
@@ -79,7 +84,7 @@ export function scoreChemistry(
   userAnswers: NormalizedAnswers,
   matchAnswers: NormalizedAnswers
 ): CategoryScore {
-  const subScores: SubScore[] = [
+  const rawSubScores: SubScore[] = [
     scoreEroticProfile(userAnswers, matchAnswers),
     scoreRolesKinks(userAnswers, matchAnswers),
     scoreFrequency(userAnswers, matchAnswers),
@@ -88,13 +93,14 @@ export function scoreChemistry(
     scoreExploration(userAnswers, matchAnswers),
   ]
 
+  const subScores = applyClassificationWeights(rawSubScores, 'chemistry')
   const score = weightedAverage(subScores)
   const coverage = calculateCoverage(subScores)
 
   return {
     category: 'chemistry',
     score,
-    weight: 15,
+    weight: CATEGORY_WEIGHTS.chemistry,
     subScores,
     coverage,
     included: true,
@@ -140,20 +146,18 @@ function scoreEroticProfile(
   let totalScore = 0
   let components = 0
 
-  // Score erotic styles overlap
+  // overlap_soft: intersection/min with 0.65 floor
   if (userStyles.length > 0 && matchStyles.length > 0) {
-    const styleScore = jaccardSimilarity(userStyles, matchStyles)
-    // Bonus for any shared style
-    const overlapBonus = hasOverlap(userStyles, matchStyles) ? 25 : 0
+    const styleScore = overlapSoft(userStyles, matchStyles)
+    // Capped bonus (max 3% total score impact per Rik spec 15.5)
+    const overlapBonus = hasOverlap(userStyles, matchStyles) ? 10 : 0
     totalScore += Math.min(100, styleScore + overlapBonus)
     components++
   }
 
-  // Score experiences/interests overlap
   if (userExperiences.length > 0 && matchExperiences.length > 0) {
-    const expScore = jaccardSimilarity(userExperiences, matchExperiences)
-    // Bonus for shared experiences
-    const overlapBonus = hasOverlap(userExperiences, matchExperiences) ? 20 : 0
+    const expScore = overlapSoft(userExperiences, matchExperiences)
+    const overlapBonus = hasOverlap(userExperiences, matchExperiences) ? 10 : 0
     totalScore += Math.min(100, expScore + overlapBonus)
     components++
   }
@@ -227,11 +231,10 @@ function scoreRolesKinks(
     components++
   }
 
-  // Score kinks overlap
+  // overlap_soft for kinks (capped bonus per Rik spec 15.5)
   if (userKinks.length > 0 && matchKinks.length > 0) {
-    const kinkScore = jaccardSimilarity(userKinks, matchKinks)
-    // Strong bonus for shared kinks
-    const overlapBonus = hasOverlap(userKinks, matchKinks) ? 30 : 0
+    const kinkScore = overlapSoft(userKinks, matchKinks)
+    const overlapBonus = hasOverlap(userKinks, matchKinks) ? 10 : 0
     totalScore += Math.min(100, kinkScore + overlapBonus)
     components++
   }

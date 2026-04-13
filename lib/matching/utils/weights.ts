@@ -1,7 +1,15 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Weight Constants
  *
  * All category and sub-component weights for compatibility scoring.
+ *
+ * Category weights (sum to 100):
+ *   Intent & Goals:              30
+ *   Connection Style / Emotional: 25
+ *   Structure Fit:               20
+ *   Lifestyle Fit:               15
+ *   Sexual Chemistry:            10
  */
 
 // =============================================================================
@@ -14,10 +22,10 @@
  */
 export const CATEGORY_WEIGHTS = {
   intent: 30,
-  structure: 25,
-  connection: 20,
-  chemistry: 15,
-  lifestyle: 10,
+  structure: 20,
+  connection: 25,
+  chemistry: 10,
+  lifestyle: 15,
 } as const
 
 /**
@@ -113,28 +121,30 @@ export const CHEMISTRY_WEIGHTS = {
  * EXTENDED questions are shown mainly for romantic/long-term intent.
  */
 export const LIFESTYLE_WEIGHTS = {
-  /** Q19a, Q19b, Q19c: Distance and mobility - CORE */
-  distance: { weight: 19, type: 'core' as const },
+  /** Q19a, Q19b, Q19c: Distance and mobility - CORE (boosted from 19 to compensate for distance gate demotion) */
+  distance: { weight: 22, type: 'core' as const },
   /** Q20: Privacy/discretion - CORE */
-  privacy: { weight: 14, type: 'core' as const },
+  privacy: { weight: 12, type: 'core' as const },
   /** Q36, Q36a: Social energy - CORE */
-  socialEnergy: { weight: 14, type: 'core' as const },
+  socialEnergy: { weight: 12, type: 'core' as const },
   /** Q18: Substance use - CORE */
-  substances: { weight: 9, type: 'core' as const },
+  substances: { weight: 8, type: 'core' as const },
   /** Q13a: Languages - CORE/CONSTRAINT (handled separately) */
-  languages: { weight: 9, type: 'core' as const },
+  languages: { weight: 7, type: 'core' as const },
   /** Q_INDEPENDENCE_BALANCE: Independence vs integration (1-5 distance scoring) - CORE */
-  independenceBalance: { weight: 6, type: 'core' as const },
+  independenceBalance: { weight: 5, type: 'core' as const },
   /** Q13: Lifestyle alignment importance - EXTENDED */
-  lifestyleImportance: { weight: 5, type: 'extended' as const },
+  lifestyleImportance: { weight: 4, type: 'extended' as const },
   /** Q14a, Q14b: Cultural/worldview - EXTENDED */
-  cultural: { weight: 9, type: 'extended' as const },
+  cultural: { weight: 8, type: 'extended' as const },
   /** Q17: Children preferences - EXTENDED */
   children: { weight: 5, type: 'extended' as const },
   /** Q17a: Dietary needs - EXTENDED */
-  dietary: { weight: 5, type: 'extended' as const },
+  dietary: { weight: 4, type: 'extended' as const },
   /** Q17b: Pets - EXTENDED */
-  pets: { weight: 5, type: 'extended' as const },
+  pets: { weight: 4, type: 'extended' as const },
+  /** Q1, Q_AGE_MIN, Q_AGE_MAX: Age range scoring (demoted from hard gate) - CORE */
+  ageRange: { weight: 9, type: 'core' as const },
 } as const
 
 /**

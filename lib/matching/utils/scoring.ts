@@ -1,14 +1,19 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Shared Scoring Utilities
  *
  * Common scoring functions used across multiple categories:
  * - Set overlap (Jaccard similarity)
+ * - Overlap-soft (intersection/min with 0.65 floor)
  * - Tier/adjacency comparison
- * - Range checking
- * - Weighted averaging
+ * - Tolerance-band distance scoring
+ * - Classification-weighted averaging
+ * - Concept suppression
  */
 
-import type { SubScore } from '../types'
+import type { SubScore, RowClassification } from '../types'
+import { CLASSIFICATION_MULTIPLIERS, CONCEPT_SUPPRESSION_FACTOR } from '../types'
+import { getRowMetadata } from '../constants/classificationMap'
 
 // =============================================================================
 // SET OVERLAP / JACCARD SIMILARITY
@@ -406,3 +411,180 @@ export const CHEMISTRY_IMPORTANCE_TIERS = [
   'very_important',
   'essential',
 ] as const
+
+// =============================================================================
+// OVERLAP-SOFT SCORING (Rik spec section 15.2)
+// =============================================================================
+
+/**
+ * Soft overlap scoring: intersection / min(|A|, |B|) with a 0.65 floor.
+ * More generous than Jaccard for partial overlap — if ANY item overlaps,
+ * the minimum score is 65 (instead of potentially low Jaccard ratios).
+ *
+ * @returns Score from 0-100
+ */
+export function overlapSoft(setA: string[], setB: string[]): number {
+  if (setA.length === 0 && setB.length === 0) return 100
+  if (setA.length === 0 || setB.length === 0) return 0
+
+  const normalizedA = setA.map(s => s.toLowerCase().trim())
+  const normalizedB = setB.map(s => s.toLowerCase().trim())
+
+  const intersection = normalizedA.filter(a => normalizedB.includes(a))
+  const minSize = Math.min(normalizedA.length, normalizedB.length)
+
+  if (intersection.length === 0) return 0
+
+  const rawScore = intersection.length / minSize
+  return Math.round(Math.max(0.65, rawScore) * 100)
+}
+
+// =============================================================================
+// TOLERANCE-BAND DISTANCE SCORING (Rik spec)
+// =============================================================================
+
+/**
+ * Tolerance-band distance scoring for 1-5 scale questions.
+ * Softer penalties than the standard matrix: near-misses are forgiven.
+ *
+ * delta 0 → 100, delta 1 → 90, delta 2 → 75, delta 3 → 50, delta 4+ → 25
+ *
+ * @param valueA - First user's answer (1-5 as string)
+ * @param valueB - Second user's answer (1-5 as string)
+ * @returns Score 0-100, or null if either value is invalid
+ */
+export function tolerantDistance(
+  valueA: string | undefined,
+  valueB: string | undefined,
+): number | null {
+  if (!valueA || !valueB) return null
+
+  const a = parseFloat(valueA)
+  const b = parseFloat(valueB)
+
+  if (isNaN(a) || isNaN(b) || a < 1 || a > 5 || b < 1 || b > 5) return null
+
+  const delta = Math.abs(Math.round(a) - Math.round(b))
+
+  if (delta <= 0) return 100
+  if (delta === 1) return 90
+  if (delta === 2) return 75
+  if (delta === 3) return 50
+  return 25
+}
+
+// =============================================================================
+// CLASSIFICATION-WEIGHTED AVERAGING
+// =============================================================================
+
+/**
+ * Apply classification multipliers to sub-scores within a section.
+ * Adjusts weights based on row classification (major=1.0, moderate=0.6, light=0.2),
+ * then renormalizes so the section still sums to 100.
+ *
+ * @param subScores - Raw sub-scores from a category scorer
+ * @param section - Section name (e.g., 'intent', 'structure')
+ * @returns Sub-scores with adjusted weights and effectiveWeight set
+ */
+export function applyClassificationWeights(
+  subScores: SubScore[],
+  section: string
+): SubScore[] {
+  const adjusted = subScores.map(s => {
+    const meta = getRowMetadata(section, s.key)
+    if (!meta || meta.classification === 'hard_gate') return { ...s, effectiveWeight: s.weight }
+
+    const multiplier = CLASSIFICATION_MULTIPLIERS[meta.classification]
+    return { ...s, effectiveWeight: s.weight * multiplier }
+  })
+
+  const totalAdjusted = adjusted
+    .filter(s => s.matched)
+    .reduce((sum, s) => sum + (s.effectiveWeight ?? s.weight), 0)
+
+  if (totalAdjusted === 0) return adjusted
+
+  return adjusted.map(s => {
+    if (!s.matched) return s
+    const ew = s.effectiveWeight ?? s.weight
+    const normalized = (ew / totalAdjusted) * 100
+    return { ...s, weight: Math.round(normalized * 100) / 100, effectiveWeight: ew }
+  })
+}
+
+/**
+ * Apply cross-section concept suppression to all sub-scores from all categories.
+ * Non-primary instances of a concept get their effective weight × CONCEPT_SUPPRESSION_FACTOR.
+ *
+ * Operates on flattened sub-scores tagged with their section. Returns modified
+ * CategoryScore arrays with adjusted weights. Called after all categories are scored
+ * but before final score computation.
+ */
+export function applyConceptSuppression(
+  categories: Array<{ category: string; subScores: SubScore[] }>
+): Array<{ category: string; subScores: SubScore[] }> {
+  const seenConcepts = new Set<string>()
+
+  const allRows: Array<{
+    category: string
+    index: number
+    meta: ReturnType<typeof getRowMetadata>
+    subScore: SubScore
+  }> = []
+
+  for (const cat of categories) {
+    cat.subScores.forEach((s, i) => {
+      const meta = getRowMetadata(cat.category, s.key)
+      allRows.push({ category: cat.category, index: i, meta, subScore: s })
+    })
+  }
+
+  allRows.sort((a, b) => {
+    const classOrder: Record<string, number> = { major: 0, moderate: 1, light: 2, hard_gate: 3 }
+    const aOrder = classOrder[a.meta?.classification ?? 'light'] ?? 2
+    const bOrder = classOrder[b.meta?.classification ?? 'light'] ?? 2
+    if (aOrder !== bOrder) return aOrder - bOrder
+    const aPrimary = a.meta?.is_primary_concept ? 0 : 1
+    const bPrimary = b.meta?.is_primary_concept ? 0 : 1
+    return aPrimary - bPrimary
+  })
+
+  const result = categories.map(cat => ({
+    category: cat.category,
+    subScores: [...cat.subScores],
+  }))
+
+  for (const row of allRows) {
+    if (!row.meta || !row.subScore.matched) continue
+
+    const conceptKey = row.meta.concept_key
+    const catResult = result.find(c => c.category === row.category)
+    if (!catResult) continue
+
+    const subScore = catResult.subScores[row.index]
+
+    if (seenConcepts.has(conceptKey) && !row.meta.is_primary_concept) {
+      subScore.weight = Math.round(subScore.weight * CONCEPT_SUPPRESSION_FACTOR * 100) / 100
+      subScore.effectiveWeight = subScore.weight
+    }
+
+    seenConcepts.add(conceptKey)
+  }
+
+  for (const cat of result) {
+    const matchedTotal = cat.subScores
+      .filter(s => s.matched)
+      .reduce((sum, s) => sum + s.weight, 0)
+
+    if (matchedTotal > 0 && matchedTotal !== 100) {
+      const scale = 100 / matchedTotal
+      for (const s of cat.subScores) {
+        if (s.matched) {
+          s.weight = Math.round(s.weight * scale * 100) / 100
+        }
+      }
+    }
+  }
+
+  return result
+}

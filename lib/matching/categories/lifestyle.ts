@@ -1,10 +1,11 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Lifestyle Compatibility Category
  *
  * Evaluates energy levels, scheduling, cultural identity, habits,
  * logistics, and general life rhythm.
  *
- * Weight: 10% of overall score (when included)
+ * Weight: 15% of overall score (when included)
  *
  * IMPORTANT: Not all users answer every lifestyle question.
  * Scoring works with partial data. If coverage < 40%, this
@@ -27,7 +28,7 @@
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
-import { LIFESTYLE_WEIGHTS, LIFESTYLE_COVERAGE_THRESHOLD } from '../utils/weights'
+import { LIFESTYLE_WEIGHTS, LIFESTYLE_COVERAGE_THRESHOLD, CATEGORY_WEIGHTS } from '../utils/weights'
 import {
   hasOverlap,
   jaccardSimilarity,
@@ -36,6 +37,8 @@ import {
   calculateCoverage,
   binaryMatch,
   distanceScore,
+  tolerantDistance,
+  applyClassificationWeights,
   PRIVACY_TIERS,
 } from '../utils/scoring'
 import {
@@ -123,7 +126,7 @@ export function scoreLifestyle(
   userAnswers: NormalizedAnswers,
   matchAnswers: NormalizedAnswers
 ): CategoryScore {
-  const subScores: SubScore[] = [
+  const rawSubScores: SubScore[] = [
     // CORE sub-components
     scoreDistance(userAnswers, matchAnswers),
     scorePrivacy(userAnswers, matchAnswers),
@@ -137,18 +140,20 @@ export function scoreLifestyle(
     scoreChildren(userAnswers, matchAnswers),
     scoreDietary(userAnswers, matchAnswers),
     scorePets(userAnswers, matchAnswers),
+    // Age range (demoted from hard gate to weighted scoring)
+    scoreAgeRange(userAnswers, matchAnswers),
   ]
 
+  const subScores = applyClassificationWeights(rawSubScores, 'lifestyle')
   const score = weightedAverage(subScores)
   const coverage = calculateCoverage(subScores)
 
-  // Determine if category should be included based on coverage threshold
   const included = coverage >= LIFESTYLE_COVERAGE_THRESHOLD
 
   return {
     category: 'lifestyle',
     score,
-    weight: 10,
+    weight: CATEGORY_WEIGHTS.lifestyle,
     subScores,
     coverage,
     included,
@@ -458,7 +463,8 @@ function scoreIndependenceBalance(
   const userVal = getStringAnswer(userAnswers, 'Q_INDEPENDENCE_BALANCE')
   const matchVal = getStringAnswer(matchAnswers, 'Q_INDEPENDENCE_BALANCE')
 
-  const score = distanceScore(userVal, matchVal, 'standard')
+  // tolerantDistance: softer penalties for near-misses (100/90/75/50/25)
+  const score = tolerantDistance(userVal, matchVal)
 
   if (score === null) {
     return {
@@ -714,4 +720,79 @@ function scorePets(
       ? 'Compatible pet situations'
       : 'Different pet situations',
   }
+}
+
+/**
+ * Score Age Range sub-component (demoted from hard gate).
+ * Q1: age, Q_AGE_MIN/Q_AGE_MAX: preferred age range.
+ *
+ * Tolerance-band scoring:
+ *   within range → 100
+ *   1-2 years outside → 75
+ *   3-5 years outside → 50
+ *   5+ years outside → 25
+ */
+function scoreAgeRange(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers
+): SubScore {
+  const userAge = parseAge(getStringAnswer(userAnswers, 'Q1'))
+  const matchAge = parseAge(getStringAnswer(matchAnswers, 'Q1'))
+  const userMin = parseAge(getStringAnswer(userAnswers, 'Q_AGE_MIN'))
+  const userMax = parseAge(getStringAnswer(userAnswers, 'Q_AGE_MAX'))
+  const matchMin = parseAge(getStringAnswer(matchAnswers, 'Q_AGE_MIN'))
+  const matchMax = parseAge(getStringAnswer(matchAnswers, 'Q_AGE_MAX'))
+
+  if (userAge === null || matchAge === null) {
+    return {
+      key: 'ageRange',
+      score: 0,
+      weight: LIFESTYLE_WEIGHTS.ageRange.weight,
+      matched: false,
+      reason: 'Age not specified',
+    }
+  }
+
+  if ((userMin === null || userMax === null) && (matchMin === null || matchMax === null)) {
+    return {
+      key: 'ageRange',
+      score: 100,
+      weight: LIFESTYLE_WEIGHTS.ageRange.weight,
+      matched: true,
+      reason: 'No age preferences specified — no penalty',
+    }
+  }
+
+  const scoreForA = ageRangeScore(matchAge, userMin, userMax)
+  const scoreForB = ageRangeScore(userAge, matchMin, matchMax)
+  const finalScore = Math.min(scoreForA, scoreForB)
+
+  return {
+    key: 'ageRange',
+    score: finalScore,
+    weight: LIFESTYLE_WEIGHTS.ageRange.weight,
+    matched: true,
+    reason: finalScore >= 100
+      ? 'Within preferred age range'
+      : finalScore >= 75
+      ? 'Close to preferred age range'
+      : 'Outside preferred age range',
+  }
+}
+
+function parseAge(value: string | undefined): number | null {
+  if (!value) return null
+  const n = parseInt(value, 10)
+  return isNaN(n) || n < 16 || n > 120 ? null : n
+}
+
+function ageRangeScore(age: number, min: number | null, max: number | null): number {
+  if (min === null || max === null) return 100
+
+  if (age >= min && age <= max) return 100
+
+  const outside = age < min ? min - age : age - max
+  if (outside <= 2) return 75
+  if (outside <= 5) return 50
+  return 25
 }

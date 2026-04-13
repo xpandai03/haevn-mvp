@@ -1,24 +1,27 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Global Constraints
  *
  * Checks for hard blockers that prevent a match entirely,
  * regardless of category scores.
  *
- * Constraints (executed in order):
+ * 8 Hard Gates (age_range and distance demoted to weighted scoring):
  *
  * System gates:
  * 1. Core Intent (Q9) - Must share at least one connection goal
  * 2. Language (Q13a) - If required flag set and no overlap, BLOCK
  * 3. Mutual Interest (Q6b) - Must be mutually inclusive
  * 4. Couple Permissions (Q6d) - Couple connection rules must be compatible
- * 5. Age Range (Q1 + Q_AGE_MIN/MAX) - Mutual age preferences
- * 6. Distance Cap (_latitude/_longitude + Q19a) - Geographic proximity
  *
  * User-defined dealbreakers:
- * 7. Race (Q_RACE_PREFERENCE vs Q_RACE_IDENTITY) - Variable hard filter
- * 8. Hard Boundaries (Q28) - User desires can't conflict with Match nos
- * 9. Safer-Sex (Q30, Q30a) - Extreme tier mismatch or item conflicts, BLOCK
- * 10. Health (Q31) - Testing/disclosure conflicts, BLOCK
+ * 5. Race (Q_RACE_PREFERENCE vs Q_RACE_IDENTITY) - Variable hard filter
+ * 6. Hard Boundaries (Q28) - User desires can't conflict with Match nos
+ * 7. Safer-Sex (Q30, Q30a) - Extreme tier mismatch or item conflicts, BLOCK
+ * 8. Health (Q31) - Testing/disclosure conflicts, BLOCK
+ *
+ * DEMOTED to weighted scoring (in Lifestyle category):
+ * - Age Range (Q1 + Q_AGE_MIN/MAX) → lifestyle.ageRange
+ * - Distance Cap (_latitude/_longitude + Q19a) → lifestyle.distance
  */
 
 import type { NormalizedAnswers, ConstraintResult } from '../types'
@@ -154,21 +157,16 @@ export function checkConstraints(
   )
   if (!coupleResult.passed) return coupleResult
 
-  // 5. Age range (partial — preference fields not yet in survey schema)
-  const ageResult = checkAgeRangeConstraint(userAnswers, matchAnswers)
-  if (!ageResult.passed) return ageResult
-
-  // 6. Distance cap (partial — requires geolocation infrastructure)
-  const distanceResult = checkDistanceConstraint(userAnswers, matchAnswers)
-  if (!distanceResult.passed) return distanceResult
+  // age_range and distance DEMOTED to weighted scoring in Lifestyle category
+  // (see lifestyle.ts scoreAgeRange and scoreDistance)
 
   // --- User-defined dealbreakers ---
 
-  // 7. Race variable gate (hard filter only when user selects specific races without "any")
+  // 5. Race variable gate (hard filter only when user selects specific races without "any")
   const raceResult = checkRaceConstraint(userAnswers, matchAnswers)
   if (!raceResult.passed) return raceResult
 
-  // 8. Hard boundaries (Q28) — both directions
+  // 6. Hard boundaries (Q28) — both directions
   const boundariesResult = checkBoundariesConstraint(userAnswers, matchAnswers)
   if (!boundariesResult.passed) return boundariesResult
 
@@ -180,11 +178,11 @@ export function checkConstraints(
     }
   }
 
-  // 9. Safer-sex compatibility (Q30, Q30a)
+  // 7. Safer-sex compatibility (Q30, Q30a)
   const saferSexResult = checkSaferSexConstraint(userAnswers, matchAnswers)
   if (!saferSexResult.passed) return saferSexResult
 
-  // 10. Health compatibility (Q31)
+  // 8. Health compatibility (Q31)
   const healthResult = checkHealthConstraint(userAnswers, matchAnswers)
   if (!healthResult.passed) return healthResult
 

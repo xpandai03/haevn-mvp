@@ -1,3 +1,4 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Type Definitions
  *
@@ -211,6 +212,49 @@ export interface NormalizedAnswers {
 }
 
 // =============================================================================
+// ROW CLASSIFICATION TYPES (Matching Model Revision)
+// =============================================================================
+
+/**
+ * Classification tier for each scored row.
+ * Determines the weight multiplier applied to the row's contribution.
+ */
+export type RowClassification = 'hard_gate' | 'major' | 'moderate' | 'light'
+
+/**
+ * Penalty mode governing how a row penalizes mismatches.
+ * - strict: full penalty for any mismatch (safety-critical rows)
+ * - tolerant: tolerance-band curve, softer penalties for near-misses
+ * - overlap_soft: uses intersection/min instead of Jaccard for multi-select
+ */
+export type PenaltyMode = 'strict' | 'tolerant' | 'overlap_soft'
+
+/**
+ * Metadata for a single scored row, used for classification multipliers
+ * and cross-section duplicate concept suppression.
+ */
+export interface RowMetadata {
+  classification: RowClassification
+  concept_key: string
+  is_primary_concept: boolean
+  penalty_mode: PenaltyMode
+}
+
+/**
+ * Classification multipliers applied to effective question weights.
+ */
+export const CLASSIFICATION_MULTIPLIERS: Record<Exclude<RowClassification, 'hard_gate'>, number> = {
+  major: 1.0,
+  moderate: 0.6,
+  light: 0.2,
+} as const
+
+/**
+ * Suppression multiplier applied to non-primary instances of a concept.
+ */
+export const CONCEPT_SUPPRESSION_FACTOR = 0.33
+
+// =============================================================================
 // SCORING TYPES
 // =============================================================================
 
@@ -229,6 +273,8 @@ export interface SubScore {
   matched: boolean
   /** Human-readable explanation for UI display */
   reason?: string
+  /** Effective weight after classification multiplier and concept suppression */
+  effectiveWeight?: number
 }
 
 /**
@@ -256,7 +302,11 @@ export interface CategoryScore {
 export interface ConstraintResult {
   /** Whether all constraints passed */
   passed: boolean
-  /** Which constraint caused the block (if any) */
+  /**
+   * Which constraint caused the block (if any).
+   * age_range and distance are demoted to weighted scoring but kept in the
+   * union for backward compatibility with existing test assertions.
+   */
   blockedBy?:
     | 'language'
     | 'boundaries'
@@ -295,6 +345,31 @@ export interface CompatibilityResult {
   rawWeights: Record<string, number>
   /** Actual weights used after normalization (if Lifestyle excluded) */
   normalizedWeights: Record<string, number>
+  /** Debug output when debug mode is enabled */
+  debug?: DebugOutput
+}
+
+/**
+ * Detailed debug output for QA and before/after analysis.
+ */
+export interface DebugOutput {
+  hardGateResults: { gate: string; passed: boolean; reason?: string }[]
+  rowScores: DebugRowScore[]
+  sectionScores: { section: string; score: number; weight: number }[]
+  totalScore: number
+  tier: string
+}
+
+export interface DebugRowScore {
+  key: string
+  section: string
+  classification: RowClassification
+  rawScore: number
+  baseWeight: number
+  classificationMultiplier: number
+  conceptSuppressed: boolean
+  effectiveWeight: number
+  sectionContribution: number
 }
 
 // =============================================================================

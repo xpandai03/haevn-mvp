@@ -1,12 +1,13 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Connection Style Fit Category
  *
  * Evaluates how people communicate, bond emotionally,
  * handle conflict, and relate interpersonally.
  *
- * Weight: 20% of overall score
+ * Weight: 25% of overall score
  *
- * Sub-components:
+ * Sub-components (from CONNECTION_WEIGHTS constant):
  * - Attachment/Availability (34%): Q10, Q10a
  * - Communication/Conflict (26%): Q11, Q12, Q12a
  * - Emotional Patterns (17%): Q37, Q37a, Q38, Q38a
@@ -16,7 +17,7 @@
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
-import { CONNECTION_WEIGHTS } from '../utils/weights'
+import { CONNECTION_WEIGHTS, CATEGORY_WEIGHTS } from '../utils/weights'
 import {
   hasOverlap,
   jaccardSimilarity,
@@ -25,6 +26,8 @@ import {
   weightedAverage,
   calculateCoverage,
   distanceScore,
+  tolerantDistance,
+  applyClassificationWeights,
   ATTACHMENT_TIERS,
   AVAILABILITY_TIERS,
   MESSAGING_PACE_TIERS,
@@ -84,7 +87,7 @@ export function scoreConnection(
   userAnswers: NormalizedAnswers,
   matchAnswers: NormalizedAnswers
 ): CategoryScore {
-  const subScores: SubScore[] = [
+  const rawSubScores: SubScore[] = [
     scoreAttachment(userAnswers, matchAnswers),
     scoreCommunication(userAnswers, matchAnswers),
     scoreEmotional(userAnswers, matchAnswers),
@@ -93,13 +96,14 @@ export function scoreConnection(
     scoreEmotionalEngagement(userAnswers, matchAnswers),
   ]
 
+  const subScores = applyClassificationWeights(rawSubScores, 'connection')
   const score = weightedAverage(subScores)
   const coverage = calculateCoverage(subScores)
 
   return {
     category: 'connection',
     score,
-    weight: 20,
+    weight: CATEGORY_WEIGHTS.connection,
     subScores,
     coverage,
     included: true,
@@ -466,7 +470,8 @@ function scoreEmotionalPace(
   const userVal = getStringAnswer(userAnswers, 'Q_EMOTIONAL_PACE')
   const matchVal = getStringAnswer(matchAnswers, 'Q_EMOTIONAL_PACE')
 
-  const score = distanceScore(userVal, matchVal, 'standard')
+  // tolerantDistance: softer penalties for near-misses (100/90/75/50/25)
+  const score = tolerantDistance(userVal, matchVal)
 
   if (score === null) {
     return {

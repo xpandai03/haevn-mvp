@@ -1,21 +1,23 @@
+// REVISION: Matching Model Update per Rik spec 04-10-2026
 /**
  * HAEVN Matching Engine - Structure Fit Category
  *
  * Evaluates compatibility of relationship makeup, sexuality,
  * boundaries, and who each party is open to connecting with.
  *
- * Weight: 25% of overall score
+ * Weight: 20% of overall score
  *
- * Sub-components:
+ * Sub-components (from STRUCTURE_WEIGHTS constant):
  * - Orientation/Kinsey (25%): Q3, Q3b, Q3c
- * - Status/Structure (25%): Q4, Q6b
- * - Rules/Boundaries (25%): Q6c, Q6d, Q28
+ * - Status/Structure (20%): Q4, Q6b
+ * - Rules/Boundaries (20%): Q6c, Q6d, Q28
  * - Safer-Sex/Health (15%): Q30, Q30a, Q31
  * - Roles (10%): Q26
+ * - Fidelity (10%): Q3a
  */
 
 import type { NormalizedAnswers, CategoryScore, SubScore } from '../types'
-import { STRUCTURE_WEIGHTS } from '../utils/weights'
+import { STRUCTURE_WEIGHTS, CATEGORY_WEIGHTS } from '../utils/weights'
 import {
   hasOverlap,
   jaccardSimilarity,
@@ -23,6 +25,7 @@ import {
   weightedAverage,
   calculateCoverage,
   binaryMatch,
+  applyClassificationWeights,
 } from '../utils/scoring'
 import {
   getArrayAnswer,
@@ -87,7 +90,7 @@ export function scoreStructure(
   userIsCouple: boolean = false,
   matchIsCouple: boolean = false
 ): CategoryScore {
-  const subScores: SubScore[] = [
+  const rawSubScores: SubScore[] = [
     scoreOrientation(userAnswers, matchAnswers),
     scoreStatus(userAnswers, matchAnswers, userIsCouple, matchIsCouple),
     scoreBoundaries(userAnswers, matchAnswers),
@@ -96,13 +99,14 @@ export function scoreStructure(
     scoreFidelity(userAnswers, matchAnswers),
   ]
 
+  const subScores = applyClassificationWeights(rawSubScores, 'structure')
   const score = weightedAverage(subScores)
   const coverage = calculateCoverage(subScores)
 
   return {
     category: 'structure',
     score,
-    weight: 25,
+    weight: CATEGORY_WEIGHTS.structure,
     subScores,
     coverage,
     included: true,
