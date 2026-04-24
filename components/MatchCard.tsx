@@ -2,10 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Heart, X, Sparkles, Lock, CheckCircle } from 'lucide-react'
+import { Heart, X, Sparkles, Lock } from 'lucide-react'
 import { likePartnership } from '@/lib/db/likes'
 import { useToast } from '@/hooks/use-toast'
 
@@ -23,6 +20,13 @@ interface MatchCardProps {
   onUpgrade?: () => void
 }
 
+/**
+ * MatchCard — architectural reskin.
+ *
+ * This card is the standalone (non-dashboard) match surface. The dashboard
+ * matches list uses `ProfileCard`; this file is kept for discovery flows.
+ * Same props, sharper corners, Cabinet Grotesk heading, tier-gated CTA.
+ */
 export function MatchCard({
   partnershipId,
   currentPartnershipId,
@@ -34,158 +38,155 @@ export function MatchCard({
   onLikeComplete,
   onPass,
   membershipTier = 'free',
-  onUpgrade
+  onUpgrade,
 }: MatchCardProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLiking, setIsLiking] = useState(false)
-  const handleLike = async () => {
-    if (isLiking || membershipTier === 'free') return
+  const isLocked = membershipTier === 'free'
 
+  const handleLike = async () => {
+    if (isLiking || isLocked) return
     setIsLiking(true)
     try {
       const result = await likePartnership(currentPartnershipId, partnershipId)
-
       if (result.matched) {
         toast({
-          title: '🎉 Connection made!',
+          title: 'Connection made',
           description: (
             <div className="flex flex-col gap-2">
-              <p>You and {displayName} are now connected!</p>
+              <p>You and {displayName} are now connected.</p>
               {result.handshakeId && (
-                <Button
-                  size="sm"
-                  variant="default"
+                <button
+                  type="button"
                   onClick={() => router.push(`/chat/${result.handshakeId}`)}
+                  className="haevn-btn-teal text-sm"
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Start Conversation
-                </Button>
+                  Start conversation
+                </button>
               )}
             </div>
           ),
-          duration: 5000
+          duration: 5000,
         })
       } else {
         toast({
-          title: 'Connection request sent!',
-          description: `If ${displayName} connects back, you will match!`,
-          duration: 3000
+          title: 'Connection request sent',
+          description: `If ${displayName} connects back, you will match.`,
+          duration: 3000,
         })
       }
-
-      if (onLikeComplete) {
-        onLikeComplete(result.matched, result.handshakeId)
-      }
+      onLikeComplete?.(result.matched, result.handshakeId)
     } catch (error) {
       console.error('Error sending connection request:', error)
       toast({
         title: 'Failed to send connection request',
         description: 'Please try again later.',
-        variant: 'destructive'
+        variant: 'destructive',
       })
     } finally {
       setIsLiking(false)
     }
   }
 
-  const bucketColors = {
-    High: 'text-green-600 bg-green-50 border-green-200',
-    Medium: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-    Low: 'text-gray-600 bg-gray-50 border-gray-200'
-  }
-
-  const bucketBadgeVariant = {
-    High: 'default' as const,
-    Medium: 'secondary' as const,
-    Low: 'outline' as const
-  }
+  const bucketTone = {
+    High: 'text-[color:var(--haevn-teal)]',
+    Medium: 'text-[color:var(--haevn-gold)]',
+    Low: 'text-[color:var(--haevn-muted-fg)]',
+  }[bucket]
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl">{displayName}</CardTitle>
-            {bio && <CardDescription className="mt-1">{bio}</CardDescription>}
+    <div className="dash-card w-full max-w-md mx-auto flex flex-col">
+      {/* Header */}
+      <div className="flex items-start justify-between p-6 pb-0 gap-4">
+        <div className="min-w-0">
+          <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
+            {displayName}
+          </h3>
+          {bio && (
+            <p className="text-sm text-[color:var(--haevn-muted-fg)] mt-1.5 leading-relaxed line-clamp-2">
+              {bio}
+            </p>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-heading text-2xl text-[color:var(--haevn-navy)] tabular-nums">
+            {score}%
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{score}%</div>
-            <Badge variant={bucketBadgeVariant[bucket]} className="mt-1">
-              {bucket} Match
-            </Badge>
+          <div
+            className={`text-[11px] tracking-[0.14em] uppercase mt-0.5 ${bucketTone}`}
+          >
+            {bucket} match
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-4">
-        {/* No Photos Notice */}
-        <div className="bg-secondary/50 rounded-lg p-8 text-center">
-          <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">
+      <div className="p-6 space-y-4">
+        {/* Photo-hidden notice (kept from original — this card has no photo) */}
+        <div className="bg-[color:var(--haevn-dash-surface-alt)] border border-[color:var(--haevn-border)] p-8 text-center">
+          <Lock
+            className="h-10 w-10 mx-auto text-[color:var(--haevn-muted-fg)] mb-3"
+            strokeWidth={1.25}
+          />
+          <p className="text-sm text-[color:var(--haevn-muted-fg)]">
             Photos hidden until connection
           </p>
         </div>
 
         {/* Badges */}
         {badges.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {badges.map((badge, index) => (
-              <Badge key={index} variant="outline">
-                {badge === 'Verified' && <Sparkles className="h-3 w-3 mr-1" />}
+          <div className="flex flex-wrap gap-1.5">
+            {badges.map((badge) => (
+              <span
+                key={badge}
+                className="text-[11px] tracking-wide text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] px-2.5 py-1 inline-flex items-center gap-1"
+              >
+                {badge === 'Verified' && <Sparkles className="h-3 w-3" />}
                 {badge}
-              </Badge>
+              </span>
             ))}
           </div>
         )}
 
-        {/* Compatibility Breakdown (placeholder for future) */}
-        <div className={`border rounded-lg p-3 ${bucketColors[bucket]}`}>
-          <p className="text-xs font-medium">Why {bucket} Match?</p>
-          <p className="text-xs mt-1 opacity-75">
-            {bucket === 'High' && 'Strong alignment in intentions and relationship style'}
-            {bucket === 'Medium' && 'Some shared interests and compatible preferences'}
-            {bucket === 'Low' && 'Different preferences but potential for connection'}
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
+        {/* Actions */}
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="button"
             onClick={onPass}
+            className="haevn-btn-secondary flex-1"
           >
-            <X className="h-4 w-4 mr-2" />
+            <X className="h-4 w-4 mr-2" strokeWidth={1.75} />
             Pass
-          </Button>
+          </button>
 
-          {membershipTier === 'free' ? (
-            <Button
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
+          {isLocked ? (
+            <button
+              type="button"
               onClick={onUpgrade}
+              className="haevn-btn-gold flex-1"
             >
-              <Lock className="h-4 w-4 mr-2" />
-              Upgrade to Connect
-            </Button>
+              <Lock className="h-4 w-4 mr-2" strokeWidth={1.75} />
+              Upgrade to connect
+            </button>
           ) : (
-            <Button
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
+            <button
+              type="button"
               onClick={handleLike}
               disabled={isLiking}
+              className="haevn-btn-gold flex-1"
             >
-              <Heart className="h-4 w-4 mr-2" />
-              {isLiking ? 'Sending...' : 'Connect'}
-            </Button>
+              <Heart className="h-4 w-4 mr-2" strokeWidth={1.75} />
+              {isLiking ? 'Sending…' : 'Connect'}
+            </button>
           )}
         </div>
 
-        {membershipTier === 'free' && (
-          <p className="text-xs text-center text-muted-foreground">
-            Upgrade to HAEVN+ to connect and start conversations
+        {isLocked && (
+          <p className="text-xs text-center text-[color:var(--haevn-muted-fg)]">
+            Upgrade to HAEVN+ to connect and start conversations.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

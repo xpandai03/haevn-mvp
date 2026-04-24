@@ -3,11 +3,9 @@ import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
 
 // Force dynamic rendering to ensure fresh data on each request
 export const dynamic = 'force-dynamic'
-import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
 import { MatchesSection } from '@/components/dashboard/MatchesSection'
 import { ConnectionsSection } from '@/components/dashboard/ConnectionsSection'
-import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { NudgesSection } from '@/components/dashboard/NudgesSection'
 import { PendingRequestsSection } from '@/components/dashboard/PendingRequestsSection'
 import { getConnectionCards, getIncomingRequestCards } from '@/lib/actions/handshakes'
@@ -59,12 +57,12 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <HAEVNHeader />
-
-      {/* Main Content - Compact mobile-first layout */}
-      <main className="max-w-md mx-auto px-4 py-3 space-y-4">
+    <div>
+      {/* Header + top-level navigation are provided by the shared
+          DashboardShell (app/dashboard/layout.tsx). The old <HAEVNHeader />
+          and <DashboardNavigation /> components are still exported for
+          reference but no longer rendered here. */}
+      <div className="max-w-md mx-auto md:max-w-2xl px-4 md:px-8 py-6 space-y-4">
         {/* Profile Banner Card with Photo Modal and CTA */}
         <DashboardClient
           user={user}
@@ -117,10 +115,7 @@ export default async function DashboardPage() {
 
         {/* Connections Section */}
         <ConnectionsSection connections={connectionCards} />
-
-        {/* Personal & Resources Navigation */}
-        <DashboardNavigation membershipTier={partnership?.tier} />
-      </main>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
-import { MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft, X, Lock } from 'lucide-react'
 
 interface MatchProfileViewProps {
   match: {
@@ -28,55 +27,66 @@ interface MatchProfileViewProps {
 }
 
 const TIER_LABELS = {
-  Platinum: 'PLATINUM MATCH',
-  Gold: 'HIGH MATCH',
-  Silver: 'GOOD MATCH',
-  Bronze: 'MATCH',
+  Platinum: 'Platinum match',
+  Gold: 'High match',
+  Silver: 'Good match',
+  Bronze: 'Match',
 }
 
-// 5 compatibility categories matching PPT with descriptions
+// 5 compatibility categories
 const CATEGORIES = [
   {
     key: 'goals_expectations',
     label: 'Goals & Expectations',
-    description: 'What each of you is looking for right now; dating, play, exploration, or something more defined.'
+    description:
+      'What each of you is looking for right now — dating, play, exploration, or something more defined.',
   },
   {
     key: 'structure_fit',
     label: 'Structure Fit',
-    description: "How well your relationship setups line up, whether you're solo, partnered, or part of a more complex structure."
+    description:
+      "How well your relationship setups line up, whether you're solo, partnered, or part of a more complex structure.",
   },
   {
     key: 'boundaries_comfort',
-    label: 'Boundaries & Comfort Levels',
-    description: "What each person is open to, what each person isn't open to, and whether those limits work together."
+    label: 'Boundaries & Comfort',
+    description:
+      "What each person is open to, what each isn't, and whether those limits work together.",
   },
   {
     key: 'openness_curiosity',
     label: 'Openness & Curiosity',
-    description: 'How comfortable each of you is with trying new things, exploring different dynamics, or learning as you go.'
+    description:
+      'How comfortable each of you is with trying new things or learning as you go.',
   },
   {
     key: 'sexual_energy',
     label: 'Sexual Energy',
-    description: 'The kind of sexual tone, pace, and vibe each of you naturally enjoys.'
+    description:
+      'The kind of tone, pace, and vibe each of you naturally enjoys.',
   },
 ]
 
-export function MatchProfileView({ match, open, onClose, onConnect, onPass, targetMembershipTier }: MatchProfileViewProps) {
+export function MatchProfileView({
+  match,
+  open,
+  onClose,
+  onConnect,
+  onPass,
+  targetMembershipTier,
+}: MatchProfileViewProps) {
   if (!match || !open) return null
 
   const { partnership, score, tier, breakdown } = match
 
-  // Get initials for avatar
-  const initials = partnership.display_name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '??'
+  const initials =
+    partnership.display_name
+      ?.split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '??'
 
-  // Parse breakdown - get percentages for each category
   const sections = breakdown?.raw_sections || breakdown?.sections || {}
   const getPercentage = (key: string): number => {
     const data = sections[key]
@@ -89,125 +99,146 @@ export function MatchProfileView({ match, open, onClose, onConnect, onPass, targ
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      {/* Teal Header Bar */}
-      <div className="bg-[#1B9A9A] h-12 flex items-center justify-between px-4">
+    <div className="dash-layout fixed inset-0 z-50 bg-[color:var(--haevn-dash-bg)] flex flex-col">
+      {/* Top bar */}
+      <div className="flex items-center justify-between h-14 px-5 sm:px-8 border-b border-[color:var(--haevn-border)] bg-white">
         <button
           onClick={onClose}
-          className="text-white text-sm font-medium flex items-center gap-1"
+          className="text-[color:var(--haevn-navy)] flex items-center gap-2 text-sm"
+          aria-label="Back"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+          <span>Back</span>
         </button>
         <button
           onClick={onClose}
-          className="text-white"
+          className="text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-navy)] p-2"
+          aria-label="Close"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X className="w-4 h-4" strokeWidth={1.5} />
         </button>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        {/* Avatar */}
-        <div className="flex justify-center mb-3">
-          {partnership.photo_url ? (
-            <img
-              src={partnership.photo_url}
-              alt={partnership.display_name || 'Match'}
-              className="w-20 h-20 rounded-full object-cover border-3 border-[#1B9A9A]"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-[#0F2A4A] flex items-center justify-center text-white text-2xl font-bold">
-              {initials}
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 pt-8 pb-32 space-y-8">
+          {/* Photo / identity */}
+          <div className="flex flex-col items-start gap-5">
+            <div className="w-full aspect-[3/4] max-w-xs bg-white border border-[color:var(--haevn-border)] overflow-hidden">
+              {partnership.photo_url ? (
+                <img
+                  src={partnership.photo_url}
+                  alt={partnership.display_name || 'Match'}
+                  className="w-full h-full object-cover object-[center_25%]"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-b from-[#E8E6E3] to-[#D5D3D0] flex items-center justify-center font-heading text-4xl text-[color:var(--haevn-navy)]">
+                  {initials}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+                {TIER_LABELS[tier]}
+              </p>
+              <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-2">
+                {partnership.display_name || 'Anonymous'}
+              </h1>
+              <p className="text-sm text-[color:var(--haevn-muted-fg)] mt-1 capitalize">
+                {partnership.identity} · {partnership.age} · {partnership.city}
+              </p>
+            </div>
+          </div>
+
+          {/* Compat score */}
+          <div className="border-t border-[color:var(--haevn-border)] pt-6">
+            <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
+              Compatibility score
+            </p>
+            <div className="mt-2 flex items-baseline gap-3">
+              <span className="font-heading text-5xl text-[color:var(--haevn-gold)] tabular-nums">
+                {score}%
+              </span>
+            </div>
+            <p className="text-sm text-[color:var(--haevn-charcoal)] mt-2 leading-relaxed">
+              Strong alignment across core categories.
+            </p>
+          </div>
+
+          {/* Intro */}
+          {(partnership.connection_summary || partnership.short_bio) && (
+            <div className="border-t border-[color:var(--haevn-border)] pt-6">
+              <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
+                {partnership.connection_summary
+                  ? 'Connection summary'
+                  : 'In their words'}
+              </p>
+              <p className="text-base text-[color:var(--haevn-charcoal)] mt-3 leading-relaxed italic">
+                {partnership.connection_summary ?? partnership.short_bio}
+              </p>
             </div>
           )}
-        </div>
 
-        {/* Name and Info - Single Line */}
-        <div className="text-center mb-3">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">
-            {partnership.display_name || 'Anonymous'}
-          </h1>
-          <p className="text-sm text-gray-600">
-            <span className="capitalize">{partnership.identity}</span>
-            <span className="mx-1">·</span>
-            <span>{partnership.age}</span>
-            <span className="mx-1">·</span>
-            <span>{partnership.city}</span>
-          </p>
-        </div>
-
-        {/* Compatibility Score */}
-        <div className="text-center mb-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Compatibility Score</p>
-          <p className="text-4xl font-bold text-[#1B9A9A]">{score}%</p>
-          <p className="text-sm font-semibold text-[#1B9A9A] uppercase tracking-wide">
-            {TIER_LABELS[tier]}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">Strong Alignment Across Core Categories.</p>
-        </div>
-
-        {/* Their Intent Section */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-700 mb-1">
-            {partnership.connection_summary ? 'Connection Summary' : 'Their Intent, In Their Words:'}
-          </p>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {partnership.connection_summary ?? partnership.short_bio ?? 'No bio available'}
-          </p>
-        </div>
-
-        {/* Compatibility Breakdown */}
-        <div className="pb-4">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Compatibility Breakdown</p>
-          <div className="space-y-3">
-            {CATEGORIES.map((cat) => {
-              const pct = getPercentage(cat.key)
-              return (
-                <div key={cat.key} className="bg-white border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-gray-800">{cat.label}</span>
-                    <span className="text-sm font-bold text-gray-700">{pct}%</span>
+          {/* Breakdown */}
+          <div className="border-t border-[color:var(--haevn-border)] pt-6">
+            <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+              Compatibility breakdown
+            </p>
+            <div className="mt-4 space-y-3">
+              {CATEGORIES.map(cat => {
+                const pct = getPercentage(cat.key)
+                return (
+                  <div
+                    key={cat.key}
+                    className="bg-white border border-[color:var(--haevn-border)] p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-heading text-sm text-[color:var(--haevn-navy)]">
+                        {cat.label}
+                      </span>
+                      <span className="font-heading text-sm text-[color:var(--haevn-navy)] tabular-nums">
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="w-full h-[3px] bg-[color:var(--haevn-border)] overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-[color:var(--haevn-teal)] transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[color:var(--haevn-muted-fg)] leading-relaxed">
+                      {cat.description}
+                    </p>
                   </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
-                    <div
-                      className="h-full bg-[#1B9A9A] rounded-full"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">{cat.description}</p>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Fixed Bottom Buttons */}
-      <div className="px-5 pb-6 pt-3 bg-white border-t border-gray-100">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 h-12 text-base font-semibold border-2 border-gray-300 text-gray-500 hover:bg-gray-50 rounded-full"
+      {/* Fixed bottom action bar */}
+      <div className="bg-white border-t border-[color:var(--haevn-border)]">
+        <div className="max-w-2xl mx-auto px-5 sm:px-8 py-4 flex items-center gap-3">
+          <button
+            type="button"
             onClick={() => {
-              if (onPass) onPass(partnership.id)
+              onPass?.(partnership.id)
               onClose()
             }}
+            className="haevn-btn-secondary flex-1"
           >
-            PASS
-          </Button>
-          <Button
-            className="flex-1 h-12 text-base font-semibold bg-[#1B9A9A] hover:bg-[#178787] text-white rounded-full"
-            onClick={() => {
-              if (onConnect) onConnect(partnership.id)
-            }}
+            Pass
+          </button>
+          <button
+            type="button"
+            onClick={() => onConnect?.(partnership.id)}
+            className="haevn-btn-gold flex-1 inline-flex items-center gap-2"
           >
-            {targetMembershipTier === 'free' ? 'NUDGE' : 'CONNECT'}
-          </Button>
+            {targetMembershipTier === 'free' && <Lock className="w-4 h-4" />}
+            {targetMembershipTier === 'free' ? 'Nudge' : 'Connect'}
+          </button>
         </div>
       </div>
     </div>

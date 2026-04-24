@@ -129,93 +129,82 @@ export function MatchesSection({
   }
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       {/* Section Header */}
-      <div className="flex items-center justify-between px-1">
-        <h3 className="text-sm font-medium text-gray-900">
-          {!loading && matches.length === 0
-            ? 'Matches'
-            : loading
-              ? 'Matches'
-              : `Matches (${matches.length})`}
-        </h3>
+      <div className="flex items-baseline justify-between px-1">
+        <div>
+          <p className="text-[10px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+            Match Monday
+          </p>
+          <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] mt-0.5">
+            {loading || matches.length === 0
+              ? 'Your matches'
+              : `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`}
+          </h3>
+        </div>
         <Link
           href="/dashboard/matches"
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-teal)] transition-colors"
         >
-          View All
+          View all →
         </Link>
       </div>
 
       {/* Horizontal Scroll Container */}
       <div className="relative">
-        <div className="overflow-x-auto pb-2 -mx-4 px-4">
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           <div className="flex gap-3" style={{ minWidth: 'min-content' }}>
             {loading ? (
-              // Loading skeleton
               Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm animate-pulse"
+                  className="flex-shrink-0 w-36 h-44 bg-white border border-[color:var(--haevn-border)] animate-pulse"
                 />
               ))
             ) : matches.length > 0 ? (
-              // Real match cards
               matches.map((match) => {
                 const actionState = actionStates[match.partnership.id]
                 return (
                   <button
                     key={match.partnership.id}
                     onClick={() => handleCardClick(match)}
-                    className="flex-shrink-0 w-32 h-40 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 hover:shadow-md hover:border-gray-200 transition-all cursor-pointer relative"
+                    className="flex-shrink-0 w-36 h-44 bg-white border border-[color:var(--haevn-border)] flex flex-col items-center justify-center gap-2 hover:border-[color:var(--haevn-teal)]/40 transition-colors cursor-pointer relative px-3"
                   >
                     {actionState && (
-                      <span className={`absolute top-1.5 right-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                        actionState === 'pending'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-teal-100 text-teal-700'
-                      }`}>
+                      <span
+                        className={`absolute top-2 right-2 text-[10px] tracking-[0.12em] uppercase px-1.5 py-0.5 ${
+                          actionState === 'pending'
+                            ? 'bg-[rgba(226,158,12,0.1)] text-[color:var(--haevn-gold)]'
+                            : 'bg-[rgba(0,128,128,0.1)] text-[color:var(--haevn-teal)]'
+                        }`}
+                      >
                         {actionState === 'pending' ? 'Pending' : 'Nudged'}
                       </span>
                     )}
-                    {/* Avatar with initials */}
-                    <div className="w-14 h-14 rounded-full bg-[#0F2A4A] flex items-center justify-center text-white text-lg font-bold">
+                    <div className="w-14 h-14 keep-rounded bg-[color:var(--haevn-navy)] flex items-center justify-center text-white text-lg font-medium">
                       {getInitials(match.partnership.display_name)}
                     </div>
-                    {/* Name */}
-                    <span className="text-xs font-medium text-gray-700 text-center px-2 truncate w-full">
+                    <span className="text-xs font-medium text-[color:var(--haevn-navy)] text-center px-1 truncate w-full">
                       {match.partnership.display_name || 'Anonymous'}
                     </span>
-                    {/* Match percentage */}
-                    <span className="text-xs text-[#1B9A9A] font-semibold">
+                    <span className="font-heading text-sm text-[color:var(--haevn-gold)] tabular-nums">
                       {match.score}% match
                     </span>
                   </button>
                 )
               })
             ) : (
-              // Empty state
               <div className="w-full py-8 text-center">
-                <p className="text-sm text-gray-500">No matches yet</p>
-                <p className="text-xs text-gray-400 mt-1">New matches are released every Monday</p>
+                <p className="text-sm text-[color:var(--haevn-charcoal)]">
+                  No matches yet
+                </p>
+                <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-1">
+                  New matches release every Monday at 8 AM ET
+                </p>
               </div>
             )}
           </div>
         </div>
-
-        {/* Scroll indicator dots — only when more than 1 match */}
-        {matches.length > 1 && (
-          <div className="flex justify-center gap-1 mt-2">
-            {Array.from({ length: Math.min(matches.length, 5) }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full ${
-                  i === 0 ? 'bg-gray-400' : 'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Match Profile View - Full Screen */}

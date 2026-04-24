@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ProfileCard } from '@/components/dashboard/ProfileCard'
-import { getComputedMatchCards, type ComputedMatchCard } from '@/lib/actions/computedMatchCards'
+import {
+  getComputedMatchCards,
+  type ComputedMatchCard,
+} from '@/lib/actions/computedMatchCards'
 import { useAuth } from '@/lib/auth/context'
 import FullPageLoader from '@/components/ui/full-page-loader'
 
@@ -20,8 +22,27 @@ function getTopFactor(breakdown: Record<string, { score: number }>): string {
   }
   const entries = Object.entries(breakdown)
   if (entries.length === 0) return 'Compatible match'
-  const [bestKey] = entries.reduce((a, b) => (b[1].score > a[1].score ? b : a), entries[0])
+  const [bestKey] = entries.reduce(
+    (a, b) => (b[1].score > a[1].score ? b : a),
+    entries[0]
+  )
   return `Top factor: ${labels[bestKey] || bestKey}`
+}
+
+/** Pull up to 3 supporting signal tags from the breakdown */
+function getSignals(breakdown: Record<string, { score: number }>): string[] {
+  const labels: Record<string, string> = {
+    goals_expectations: 'Goals',
+    structure_fit: 'Structure',
+    boundaries_comfort: 'Boundaries',
+    sexual_energy: 'Chemistry',
+    openness_curiosity: 'Lifestyle',
+  }
+  return Object.entries(breakdown)
+    .filter(([, v]) => v.score >= 0.7)
+    .sort(([, a], [, b]) => b.score - a.score)
+    .slice(0, 3)
+    .map(([k]) => labels[k] || k)
 }
 
 export default function MatchesPage() {
@@ -30,17 +51,15 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [revealedCount, setRevealedCount] = useState(0)
 
-  // Load matches from computed_matches table
   useEffect(() => {
     async function loadMatches() {
       if (authLoading || !user) return
-
       try {
         setLoading(true)
         const matchData = await getComputedMatchCards('Bronze')
         setMatches(matchData)
-        console.log('[Matches] Loaded', matchData.length, 'computed matches')
       } catch (err: any) {
         console.error('[Matches] Error:', err)
         setError(err.message || 'Failed to load matches')
@@ -48,147 +67,134 @@ export default function MatchesPage() {
         setLoading(false)
       }
     }
-
     loadMatches()
   }, [user, authLoading])
+
+  // Staggered reveal — one card every 700ms on initial load
+  useEffect(() => {
+    if (loading || matches.length === 0) return
+    if (revealedCount >= matches.length) return
+    const timer = setTimeout(
+      () => setRevealedCount((c) => c + 1),
+      revealedCount === 0 ? 200 : 700
+    )
+    return () => clearTimeout(timer)
+  }, [revealedCount, matches.length, loading])
 
   const handleProfileClick = (id: string) => {
     router.push(`/profiles/${id}`)
   }
 
-  const handleBack = () => {
-    router.push('/dashboard')
-  }
+  if (loading) return <FullPageLoader />
 
-  // Loading state
-  if (loading) {
-    return <FullPageLoader />
-  }
-
-  // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
-          <h2 className="text-2xl font-bold text-haevn-navy mb-4">Error Loading Matches</h2>
-          <p className="text-haevn-charcoal mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()} className="w-full bg-haevn-teal">
-            Try Again
-          </Button>
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="dash-card max-w-md w-full p-10 text-left">
+          <h2 className="font-heading text-2xl text-[color:var(--haevn-navy)] mb-3">
+            Couldn&rsquo;t load matches
+          </h2>
+          <p className="text-sm text-[color:var(--haevn-muted-fg)] mb-6 leading-relaxed">
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="haevn-btn-primary"
+          >
+            Try again
+          </button>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-haevn-lightgray">
-      {/* Header */}
-      <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            {/* Back Button and Title */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="text-haevn-charcoal hover:text-haevn-teal"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1
-                  className="text-2xl sm:text-3xl font-bold text-haevn-navy"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 700,
-                    lineHeight: '110%',
-                    letterSpacing: '-0.015em'
-                  }}
-                >
-                  Matches
-                </h1>
-                <p
-                  className="text-sm text-haevn-charcoal/60"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 300
-                  }}
-                >
-                  {matches.length} {matches.length === 1 ? 'match' : 'matches'}
-                </p>
-              </div>
-            </div>
+  const visibleMatches = matches.slice(0, revealedCount)
 
-            {/* Filter Button (Future Enhancement) */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="text-haevn-charcoal"
-            >
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Filters</span>
-            </Button>
+  return (
+    <div className="w-full">
+      {/* Header */}
+      <header className="px-6 sm:px-10 pt-10 pb-6 border-b border-[color:var(--haevn-border)]">
+        <div className="max-w-5xl mx-auto flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+              Match Monday
+            </p>
+            <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-2 leading-tight">
+              Your Matches
+            </h1>
+            <p className="text-sm text-[color:var(--haevn-muted-fg)] mt-2">
+              {matches.length === 0
+                ? 'New matches are released every Monday at 8 AM ET.'
+                : `${matches.length} ${matches.length === 1 ? 'match' : 'matches'} curated for you this week.`}
+            </p>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      {/* Body */}
+      <main className="max-w-5xl mx-auto px-6 sm:px-10 py-8 sm:py-12">
         {matches.length === 0 ? (
-          // Empty State
-          <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
-            <div className="max-w-md mx-auto">
-              <h2
-                className="text-2xl font-bold text-haevn-navy mb-4"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 700
-                }}
-              >
-                No matches yet
-              </h2>
-              <p
-                className="text-haevn-charcoal mb-6"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 300,
-                  lineHeight: '120%'
-                }}
-              >
-                Complete your survey to find compatible connections. HAEVN uses your responses to match you with people who align with your values, intentions, and relationship style.
-              </p>
-              <Button
-                onClick={() => router.push('/onboarding/survey')}
-                className="bg-haevn-teal hover:opacity-90 text-white"
-              >
-                Complete Survey
-              </Button>
-            </div>
-          </div>
+          <EmptyMatchesState />
         ) : (
-          // Matches List
-          <div className="space-y-4">
-            {matches.map((match) => (
-              <div key={match.partnership.id} className="w-full">
-                <ProfileCard
-                  profile={{
-                    id: match.partnership.id,
-                    photo: match.partnership.photo_url || undefined,
-                    username: match.partnership.display_name || 'User',
-                    city: match.partnership.city,
-                    compatibilityPercentage: match.score,
-                    topFactor: getTopFactor(match.breakdown)
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <AnimatePresence initial={false}>
+              {visibleMatches.map((match) => (
+                <motion.div
+                  key={match.partnership.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
                   }}
-                  variant="match"
-                  onClick={handleProfileClick}
-                />
-              </div>
-            ))}
+                >
+                  <ProfileCard
+                    profile={{
+                      id: match.partnership.id,
+                      photo: match.partnership.photo_url || undefined,
+                      username: match.partnership.display_name || 'User',
+                      city: match.partnership.city,
+                      compatibilityPercentage: match.score,
+                      topFactor: getTopFactor(match.breakdown),
+                      signals: getSignals(match.breakdown),
+                    }}
+                    variant="match"
+                    onClick={handleProfileClick}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function EmptyMatchesState() {
+  return (
+    <div className="max-w-lg mx-auto py-16 sm:py-24 text-left">
+      <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+        Stay tuned
+      </p>
+      <h2 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-3 leading-tight">
+        Your matches are being curated.
+      </h2>
+      <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed mt-4">
+        HAEVN releases a hand-picked shortlist every Monday. We scan the
+        network all week so you don&rsquo;t have to — your next batch will
+        appear here when it&rsquo;s ready.
+      </p>
+      <div className="mt-8 pt-6 border-t border-[color:var(--haevn-border)]">
+        <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--haevn-muted-fg)]">
+          While you wait
+        </p>
+        <ul className="mt-3 space-y-2 text-sm text-[color:var(--haevn-charcoal)]">
+          <li>— Refine your profile and add photos.</li>
+          <li>— Revisit your survey answers anytime.</li>
+          <li>— Your compatibility only sharpens as the network grows.</li>
+        </ul>
+      </div>
     </div>
   )
 }

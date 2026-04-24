@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 @import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -25,6 +26,11 @@
     --haevn-bg: #FFFFFF;
     --haevn-bg-alt: #F5F4F2;
     --haevn-charcoal: #252627;
+    /* Dashboard-specific surfaces */
+    --haevn-dash-bg: #FAFAF8;
+    --haevn-dash-surface: #FFFFFF;
+    --haevn-dash-surface-alt: #F9FAFB;
+    --font-body: 'Outfit', 'Roboto', -apple-system, sans-serif;
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
     --font-heading: 'Cabinet Grotesk', 'Roboto', -apple-system, sans-serif;
@@ -346,4 +352,115 @@
   height: 100%;
   background: var(--haevn-teal);
   transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* =====================================================================
+ * Dashboard reskin — architectural, cream-on-white
+ * Sibling scope to .survey-layout. Both can coexist.
+ * ===================================================================== */
+
+.dash-layout {
+  --radius: 0rem;
+  background-color: var(--haevn-dash-bg);
+  color: var(--haevn-charcoal);
+  font-family: var(--font-body);
+}
+
+.dash-layout h1,
+.dash-layout h2,
+.dash-layout h3 {
+  font-family: var(--font-heading), 'Roboto', sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* Sharp corners on interactive elements inside the dashboard */
+.dash-layout button,
+.dash-layout input,
+.dash-layout select,
+.dash-layout textarea,
+.dash-layout [role="button"] {
+  border-radius: 0 !important;
+}
+
+.dash-layout [class*="rounded-xl"],
+.dash-layout [class*="rounded-2xl"],
+.dash-layout [class*="rounded-3xl"],
+.dash-layout [class*="rounded-full"] {
+  border-radius: 0 !important;
+}
+
+/* Avatars, badges, and silhouette circles deliberately keep rounded-full */
+.dash-layout .keep-rounded,
+.dash-layout .keep-rounded * {
+  border-radius: 9999px !important;
+}
+
+/* Dashboard card surfaces: white background, 1px border, no shadow at rest */
+.dash-card {
+  background: var(--haevn-dash-surface);
+  border: 1px solid var(--haevn-border);
+}
+.dash-card:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Gold CTA — reused by MatchCard Connect button */
+.haevn-btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  background-color: var(--haevn-gold);
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background-color 150ms ease;
+}
+.haevn-btn-gold:hover {
+  background-color: var(--haevn-gold-hover);
+}
+.haevn-btn-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Icon-only destructive button (Pass) */
+.haevn-btn-pass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: #EF4444;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.haevn-btn-pass:hover {
+  background-color: #EF4444;
+  color: #fff;
+  border-color: #EF4444;
+}
+
+/* Sidebar active state: gold left marker + gold text */
+.dash-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #4B5563;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.dash-nav-link:hover {
+  color: var(--haevn-navy);
+  background-color: var(--haevn-dash-surface-alt);
+}
+.dash-nav-link[aria-current="page"] {
+  color: var(--haevn-gold);
+  background-color: rgba(226, 158, 12, 0.08);
+  box-shadow: inset 3px 0 0 var(--haevn-gold);
+}
+.dash-nav-link[data-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

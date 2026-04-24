@@ -289,13 +289,16 @@ export function ChatConversation({
                           </span>
                         )}
                         <div
-                          className={`rounded-lg px-3 py-2 ${
+                          className={`px-3.5 py-2 ${
                             isOwnMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-card border'
+                              ? 'bg-[color:var(--haevn-navy)] text-white'
+                              : 'bg-[color:var(--haevn-dash-surface-alt)] border border-[color:var(--haevn-border)] text-[color:var(--haevn-charcoal)]'
                           }`}
+                          style={{ borderRadius: 0 }}
                         >
-                          <p className="text-sm break-words">{message.body}</p>
+                          <p className="text-sm break-words leading-relaxed">
+                            {message.body}
+                          </p>
                         </div>
                         <span className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {formatMessageTime(message.created_at)}
@@ -327,9 +330,13 @@ export function ChatConversation({
               placeholder="Type a message..."
               disabled={sending}
               maxLength={2000}
-              className="flex-1"
+              className="flex-1 rounded-none border-[color:var(--haevn-border)] focus-visible:ring-0 focus-visible:border-[color:var(--haevn-teal)]"
             />
-            <Button type="submit" disabled={!newMessage.trim() || sending}>
+            <Button
+              type="submit"
+              disabled={!newMessage.trim() || sending}
+              className="rounded-none bg-[color:var(--haevn-teal)] hover:bg-[color:var(--haevn-teal-hover)] text-white"
+            >
               {sending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
