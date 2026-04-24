@@ -55,7 +55,7 @@ export default function DatingIntentionsPage() {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="survey-layout min-h-screen flex flex-col bg-white">
       {/* Main content - centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <div className="w-full max-w-md space-y-6">

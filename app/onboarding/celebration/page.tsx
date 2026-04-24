@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { motion } from 'framer-motion'
+import { Check } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
-import { CheckCircle2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function CelebrationPage() {
@@ -15,15 +15,12 @@ export default function CelebrationPage() {
   const flowController = getClientOnboardingFlowController()
 
   useEffect(() => {
-    if (loading) return // Wait for auth to finish loading
-    if (!user) {
-      router.push('/auth/login')
-    }
+    if (loading) return
+    if (!user) router.push('/auth/login')
   }, [user, loading, router])
 
   const handleContinue = async () => {
     if (!user) return
-
     try {
       await flowController.markStepComplete(user.id, 8)
       router.push('/onboarding/membership')
@@ -32,157 +29,94 @@ export default function CelebrationPage() {
       toast({
         title: 'Error',
         description: 'Failed to save progress. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       })
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
-      <div className="w-full max-w-2xl">
-        {/* Icon */}
-        <div className="flex justify-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-haevn-teal/10 flex items-center justify-center">
-            <CheckCircle2 className="h-12 w-12 text-haevn-teal" />
+    <div
+      className="survey-layout min-h-screen bg-[color:var(--haevn-bg)] text-[color:var(--haevn-charcoal)]"
+      data-testid="celebration-page"
+    >
+      <div className="max-w-2xl mx-auto px-6 sm:px-12 py-16 sm:py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="space-y-10"
+        >
+          {/* Marker */}
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 flex items-center justify-center border border-[color:var(--haevn-teal)]">
+              <Check
+                className="w-5 h-5 text-[color:var(--haevn-teal)]"
+                strokeWidth={2.5}
+              />
+            </span>
+            <span className="text-xs tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+              Survey complete
+            </span>
           </div>
-        </div>
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1
-            className="text-haevn-navy mb-4"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 700,
-              fontSize: '42px',
-              lineHeight: '100%',
-              letterSpacing: '-0.015em',
-              textAlign: 'left'
-            }}
-          >
-            You're all set!
-          </h1>
-          <p
-            className="text-haevn-charcoal mb-6"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 300,
-              fontSize: '18px',
-              lineHeight: '120%',
-              textAlign: 'left'
-            }}
-          >
-            Your survey is complete. We'll use your responses to help you find compatible connections.
-          </p>
-        </div>
+          {/* Hero */}
+          <div className="space-y-4">
+            <h1 className="font-heading text-4xl sm:text-5xl font-medium text-[color:var(--haevn-navy)] leading-tight">
+              You&rsquo;re in.
+            </h1>
+            <p className="text-base sm:text-lg text-[color:var(--haevn-muted-fg)] leading-relaxed max-w-xl">
+              Your survey has been saved. We&rsquo;ll use your responses to
+              prepare your matches and shape your experience inside HAEVN.
+            </p>
+          </div>
 
-        {/* Content Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6 mb-6">
-          <div>
-            <h2
-              className="text-haevn-navy mb-4"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 500,
-                fontSize: '20px',
-                lineHeight: '120%',
-                textAlign: 'left'
-              }}
-            >
-              What happens next:
-            </h2>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <span
-                  className="text-haevn-gold mt-1"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '16px'
-                  }}
-                >
-                  •
+          {/* What happens next — architectural, no card */}
+          <div className="space-y-5 pt-4 border-t border-[color:var(--haevn-border)]">
+            <p className="text-xs tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
+              What happens next
+            </p>
+            <ol className="space-y-4 text-base leading-relaxed text-[color:var(--haevn-charcoal)]">
+              <li className="flex items-start gap-4">
+                <span className="font-heading text-sm tracking-wider text-[color:var(--haevn-teal)] w-8 shrink-0 mt-0.5">
+                  01
                 </span>
-                <span
-                  className="text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 300,
-                    fontSize: '16px',
-                    lineHeight: '120%',
-                    textAlign: 'left'
-                  }}
-                >
-                  We'll review your responses to find people who share your values and relationship style.
+                <span>
+                  We review your responses to find people who share your values
+                  and relationship style.
                 </span>
               </li>
-              <li className="flex items-start gap-3">
-                <span
-                  className="text-haevn-gold mt-1"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '16px'
-                  }}
-                >
-                  •
+              <li className="flex items-start gap-4">
+                <span className="font-heading text-sm tracking-wider text-[color:var(--haevn-teal)] w-8 shrink-0 mt-0.5">
+                  02
                 </span>
-                <span
-                  className="text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 300,
-                    fontSize: '16px',
-                    lineHeight: '120%',
-                    textAlign: 'left'
-                  }}
-                >
-                  You'll be able to explore your dashboard, update your profile, and see potential matches.
+                <span>
+                  You&rsquo;ll explore your dashboard, refine your profile, and
+                  see potential matches as we activate your market.
                 </span>
               </li>
-              <li className="flex items-start gap-3">
-                <span
-                  className="text-haevn-gold mt-1"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '16px'
-                  }}
-                >
-                  •
+              <li className="flex items-start gap-4">
+                <span className="font-heading text-sm tracking-wider text-[color:var(--haevn-teal)] w-8 shrink-0 mt-0.5">
+                  03
                 </span>
-                <span
-                  className="text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 300,
-                    fontSize: '16px',
-                    lineHeight: '120%',
-                    textAlign: 'left'
-                  }}
-                >
-                  Choose a membership plan to unlock messaging and connect with others.
+                <span>
+                  Choose a membership plan to unlock messaging and connect with
+                  others.
                 </span>
               </li>
-            </ul>
+            </ol>
           </div>
 
           {/* CTA */}
-          <div className="pt-4">
-            <Button
+          <div className="pt-6">
+            <button
               onClick={handleContinue}
-              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
-              size="lg"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 500,
-                fontSize: '18px'
-              }}
+              className="haevn-btn-primary"
+              data-testid="celebration-continue"
             >
-              Choose your membership
-            </Button>
+              Choose your membership →
+            </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

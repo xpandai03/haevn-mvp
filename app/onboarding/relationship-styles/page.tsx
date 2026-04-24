@@ -45,7 +45,7 @@ export default function RelationshipStylesPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col bg-haevn-lightgray">
       {/* Progress bar */}
       <div className="w-full px-4 pt-6 pb-4">
         <div className="max-w-2xl mx-auto">

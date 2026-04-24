@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
-import { Info, X } from 'lucide-react'
+import { Info, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -22,26 +19,34 @@ interface QuestionRendererProps {
   canAdvance?: boolean
 }
 
+const OTHER_MATCHER = /^Other\b|\bOther$/i
+const isOtherOption = (option: string) => OTHER_MATCHER.test(option)
+
 export function QuestionRenderer({
   question,
   value,
   onChange,
   onEnterPress,
-  canAdvance = false
+  canAdvance = false,
 }: QuestionRendererProps) {
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customValue, setCustomValue] = useState('')
   const [showInfoPopover, setShowInfoPopover] = useState(false)
 
-  // Check if value is a custom option (for "Other" selections)
+  // Detect a free-typed custom value coming back from storage (single select "Other")
   useEffect(() => {
-    if (question.type === 'select' && value && !question.options?.includes(value)) {
+    if (
+      question.type === 'select' &&
+      typeof value === 'string' &&
+      value.length > 0 &&
+      !question.options?.includes(value)
+    ) {
       setShowCustomInput(true)
       setCustomValue(value)
     }
   }, [value, question])
 
-  // Handle Enter key press to advance to next question
+  // Enter to advance (only when the current answer makes advance legal)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && canAdvance && onEnterPress) {
@@ -49,7 +54,6 @@ export function QuestionRenderer({
         onEnterPress()
       }
     }
-
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [canAdvance, onEnterPress])
@@ -61,45 +65,28 @@ export function QuestionRenderer({
     return (
       <>
         <button
-          onClick={() => setShowInfoPopover(true)}
-          className="flex-shrink-0 p-1.5 text-haevn-teal hover:opacity-80 rounded-full transition-opacity"
-          aria-label="More information"
           type="button"
+          onClick={() => setShowInfoPopover(true)}
+          className="flex-shrink-0 p-1.5 text-[color:var(--haevn-teal)] hover:opacity-80 transition-opacity"
+          aria-label="More information"
         >
-          <Info className="w-5 h-5" />
+          <Info className="w-5 h-5" strokeWidth={1.5} />
         </button>
-
         <Dialog open={showInfoPopover} onOpenChange={setShowInfoPopover}>
-          <DialogContent className="max-w-sm mx-4 rounded-2xl p-0 overflow-hidden">
-            <div className="p-5">
+          <DialogContent className="max-w-sm mx-4 rounded-none border border-[color:var(--haevn-border)] p-0 overflow-hidden">
+            <div className="p-6">
               <DialogHeader className="mb-3">
-                <DialogTitle
-                  className="text-lg text-haevn-navy"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 600
-                  }}
-                >
+                <DialogTitle className="text-lg text-[color:var(--haevn-navy)] font-heading font-medium">
                   About this question
                 </DialogTitle>
               </DialogHeader>
-              <p
-                className="text-sm text-haevn-charcoal leading-relaxed"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 400,
-                  lineHeight: '150%'
-                }}
-              >
+              <p className="text-sm text-[color:var(--haevn-charcoal)] leading-relaxed">
                 {infoText}
               </p>
               <button
+                type="button"
                 onClick={() => setShowInfoPopover(false)}
-                className="w-full mt-5 py-3 bg-haevn-teal text-white rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 500
-                }}
+                className="haevn-btn-teal w-full mt-5 text-sm"
               >
                 Got it
               </button>
@@ -111,86 +98,66 @@ export function QuestionRenderer({
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Question Label with Info Icon */}
-      <div className="flex items-start gap-2 sm:gap-3">
-        <h3
-          className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl text-haevn-navy leading-tight"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 700,
-            lineHeight: '110%',
-            letterSpacing: '-0.015em',
-            textAlign: 'left'
-          }}
-        >
+    <div className="space-y-6">
+      {/* Question label + info */}
+      <div className="flex items-start gap-3">
+        <h2 className="font-heading text-xl sm:text-2xl leading-snug font-medium text-[color:var(--haevn-navy)] flex-1">
           {question.label}
-        </h3>
+        </h2>
         {renderInfoButton()}
       </div>
 
-      {/* Subtext guidance below question */}
+      {/* Subtext / description */}
       {question.subtext && (
-        <p
-          className="text-sm sm:text-base text-haevn-charcoal/70 leading-relaxed whitespace-pre-line -mt-1"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 400,
-            lineHeight: '160%'
-          }}
-        >
+        <p className="text-sm sm:text-base text-[color:var(--haevn-muted-fg)] leading-relaxed whitespace-pre-line -mt-3">
           {question.subtext}
         </p>
       )}
 
-      {/* SELECT - Single choice with cards */}
+      {/* SELECT — single choice */}
       {question.type === 'select' && question.options && (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-            {question.options.map((option) => (
-              <button
-                key={option}
-                onClick={() => {
-                  if (option.includes('Other')) {
-                    setShowCustomInput(true)
-                    setCustomValue('')
-                  } else {
-                    setShowCustomInput(false)
-                    onChange(option)
-                  }
-                }}
-                className={`
-                  relative p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all duration-200 min-h-[44px]
-                  ${(showCustomInput && option.includes('Other')) || value === option
-                    ? 'border-haevn-teal bg-white shadow-sm'
-                    : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
-                  }
-                `}
-              >
-                <span
-                  className="text-sm sm:text-base text-haevn-charcoal"
-                  style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
-                    fontWeight: 500
+          <div className="space-y-2">
+            {question.options.map((option) => {
+              const isOther = isOtherOption(option)
+              const isSelected =
+                (isOther && showCustomInput) ||
+                (!isOther && value === option)
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    if (isOther) {
+                      setShowCustomInput(true)
+                      setCustomValue('')
+                      onChange('')
+                    } else {
+                      setShowCustomInput(false)
+                      setCustomValue('')
+                      onChange(option)
+                    }
                   }}
+                  className={`survey-option ${isSelected ? 'is-selected' : ''}`}
+                  aria-pressed={isSelected}
                 >
-                  {option}
-                </span>
-                {((showCustomInput && option.includes('Other')) || value === option) && (
-                  <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
+                  <span className="text-sm sm:text-base flex-1">{option}</span>
+                  {isSelected && (
+                    <Check
+                      className="w-4 h-4 ml-3 text-[color:var(--haevn-teal)]"
+                      strokeWidth={2.5}
+                    />
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {showCustomInput && (
-            <Input
+            <input
               type="text"
-              placeholder="Please specify..."
+              placeholder="Please specify…"
               value={customValue}
               onChange={(e) => {
                 setCustomValue(e.target.value)
@@ -202,68 +169,43 @@ export function QuestionRenderer({
                   onEnterPress()
                 }
               }}
-              className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 300
-              }}
+              className="haevn-input"
               autoFocus
             />
           )}
         </div>
       )}
 
-      {/* MULTISELECT - Multiple choice with cards */}
+      {/* MULTISELECT — multi choice */}
       {question.type === 'multiselect' && question.options && (
         <div className="space-y-3">
-          <p
-            className="text-xs sm:text-sm text-haevn-charcoal mb-3 sm:mb-4"
-            style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
-              fontWeight: 300,
-              lineHeight: '120%',
-              textAlign: 'left'
-            }}
-          >
+          <p className="text-xs tracking-[0.12em] uppercase text-[color:var(--haevn-muted-fg)]">
             Select all that apply
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="space-y-2">
             {question.options.map((option) => {
-              const isSelected = value?.includes(option) || false
+              const isSelected = Array.isArray(value) && value.includes(option)
               return (
                 <button
                   key={option}
+                  type="button"
                   onClick={() => {
-                    const currentValue = value || []
-                    if (isSelected) {
-                      onChange(currentValue.filter((v: string) => v !== option))
-                    } else {
-                      onChange([...currentValue, option])
-                    }
+                    const current: string[] = Array.isArray(value) ? value : []
+                    onChange(
+                      isSelected
+                        ? current.filter((v) => v !== option)
+                        : [...current, option]
+                    )
                   }}
-                  className={`
-                    relative p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all duration-200 min-h-[44px]
-                    ${isSelected
-                      ? 'border-haevn-teal bg-white shadow-sm'
-                      : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
-                    }
-                  `}
+                  className={`survey-option-multi ${isSelected ? 'is-selected' : ''}`}
+                  aria-pressed={isSelected}
                 >
-                  <span
-                    className="text-sm sm:text-base text-haevn-charcoal"
-                    style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
-                      fontWeight: 500
-                    }}
-                  >
-                    {option}
-                  </span>
+                  <span className="text-sm sm:text-base flex-1">{option}</span>
                   {isSelected && (
-                    <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
+                    <Check
+                      className="w-4 h-4 ml-3 text-[color:var(--haevn-teal)]"
+                      strokeWidth={2.5}
+                    />
                   )}
                 </button>
               )
@@ -272,9 +214,9 @@ export function QuestionRenderer({
         </div>
       )}
 
-      {/* TEXT INPUT */}
+      {/* TEXT */}
       {question.type === 'text' && (
-        <Input
+        <input
           type="text"
           placeholder={question.placeholder}
           value={value || ''}
@@ -285,40 +227,36 @@ export function QuestionRenderer({
               onEnterPress()
             }
           }}
-          className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 300
-          }}
+          className="haevn-input"
         />
       )}
 
-      {/* NUMBER INPUT */}
+      {/* NUMBER */}
       {question.type === 'number' && (
-        <Input
+        <input
           type="number"
           placeholder={question.placeholder}
-          value={value || ''}
-          onChange={(e) => onChange(parseInt(e.target.value) || '')}
+          value={value ?? ''}
+          onChange={(e) => {
+            const raw = e.target.value
+            onChange(raw === '' ? '' : Number.parseInt(raw, 10))
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && value && onEnterPress && canAdvance) {
+            if (e.key === 'Enter' && value !== '' && value !== undefined && onEnterPress && canAdvance) {
               e.preventDefault()
               onEnterPress()
             }
           }}
           min={question.min}
           max={question.max}
-          className="w-full max-w-[200px] px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 500
-          }}
+          className="haevn-input max-w-[240px]"
+          inputMode="numeric"
         />
       )}
 
-      {/* DATE INPUT */}
+      {/* DATE */}
       {question.type === 'date' && (
-        <Input
+        <input
           type="date"
           placeholder={question.placeholder}
           value={value || ''}
@@ -330,11 +268,7 @@ export function QuestionRenderer({
             }
           }}
           max={new Date().toISOString().split('T')[0]}
-          className="w-full max-w-[280px] px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[44px]"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 500
-          }}
+          className="haevn-input max-w-[320px]"
         />
       )}
 
@@ -344,118 +278,110 @@ export function QuestionRenderer({
           placeholder={question.placeholder}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3.5 sm:px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-sm sm:text-base text-haevn-charcoal placeholder:text-haevn-charcoal/40 focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20 min-h-[120px]"
-          style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontWeight: 300,
-            lineHeight: '120%'
-          }}
-          rows={4}
+          className="haevn-textarea min-h-[140px] rounded-none border border-[color:var(--haevn-border)] focus-visible:ring-0 focus-visible:border-[color:var(--haevn-teal)] text-sm sm:text-base"
+          rows={5}
         />
       )}
 
-      {/* SCALE / SLIDER */}
+      {/* SCALE / SLIDER — rendered as 1..N horizontal likert-style bar */}
       {(question.type === 'scale' || question.type === 'slider') && (
-        <div className="space-y-4">
-          <Slider
-            value={[value !== undefined && value !== null ? value : (question.min !== undefined ? question.min : 5)]}
-            onValueChange={(values) => onChange(values[0])}
-            max={question.max || 10}
-            min={question.min !== undefined ? question.min : 1}
-            step={question.step || 1}
-            className="w-full"
-          />
-          <div className="flex justify-between items-center">
-            <span
-              className="text-sm text-haevn-charcoal"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 300
-              }}
-            >
-              {question.min !== undefined ? question.min : 1}
-            </span>
-            <span
-              className="text-2xl text-haevn-navy"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 700
-              }}
-            >
-              {value !== undefined && value !== null ? value : (question.min !== undefined ? question.min : 5)}
-            </span>
-            <span
-              className="text-sm text-haevn-charcoal"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 300
-              }}
-            >
-              {question.max || 10}
-            </span>
-          </div>
-        </div>
+        <ScaleInput
+          value={value}
+          min={question.min ?? 1}
+          max={question.max ?? 10}
+          step={question.step ?? 1}
+          onChange={onChange}
+        />
       )}
 
       {/* BOOLEAN */}
       {question.type === 'boolean' && (
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => onChange(true)}
-            className={`
-              relative p-4 rounded-2xl border-2 text-center transition-all duration-200
-              ${value === true
-                ? 'border-haevn-teal bg-white shadow-sm'
-                : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
-              }
-            `}
-          >
-            <span
-              className="text-base text-haevn-charcoal"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              Yes
-            </span>
-            {value === true && (
-              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-          </button>
-          <button
-            onClick={() => onChange(false)}
-            className={`
-              relative p-4 rounded-2xl border-2 text-center transition-all duration-200
-              ${value === false
-                ? 'border-haevn-teal bg-white shadow-sm'
-                : 'border-haevn-navy bg-white hover:bg-haevn-lightgray/30'
-              }
-            `}
-          >
-            <span
-              className="text-base text-haevn-charcoal"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              No
-            </span>
-            {value === false && (
-              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-haevn-teal flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-          </button>
+          {[
+            { label: 'Yes', val: true },
+            { label: 'No', val: false },
+          ].map(({ label, val }) => {
+            const isSelected = value === val
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onChange(val)}
+                className={`survey-option justify-center ${isSelected ? 'is-selected' : ''}`}
+                aria-pressed={isSelected}
+              >
+                <span className="text-base">{label}</span>
+              </button>
+            )
+          })}
         </div>
       )}
+    </div>
+  )
+}
+
+interface ScaleInputProps {
+  value: number | undefined
+  min: number
+  max: number
+  step: number
+  onChange: (value: number) => void
+}
+
+function ScaleInput({ value, min, max, step, onChange }: ScaleInputProps) {
+  const steps: number[] = []
+  for (let i = min; i <= max; i += step) steps.push(i)
+
+  const current =
+    typeof value === 'number' && Number.isFinite(value) ? value : undefined
+
+  // If the scale is small (≤10 buttons) render as a segmented bar;
+  // otherwise fall back to a native range input to stay usable on mobile.
+  if (steps.length <= 10) {
+    return (
+      <div className="space-y-4">
+        <div className="flex w-full">
+          {steps.map((n) => {
+            const isSelected = current === n
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onChange(n)}
+                className={`likert-option ${isSelected ? 'is-selected' : ''}`}
+                aria-pressed={isSelected}
+              >
+                {n}
+              </button>
+            )
+          })}
+        </div>
+        <div className="flex justify-between text-xs uppercase tracking-[0.12em] text-[color:var(--haevn-muted-fg)]">
+          <span>{min}</span>
+          <span>{max}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <input
+        type="range"
+        value={current ?? min}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-[color:var(--haevn-teal)]"
+      />
+      <div className="flex justify-between items-center text-[color:var(--haevn-muted-fg)]">
+        <span className="text-sm">{min}</span>
+        <span className="font-heading text-2xl text-[color:var(--haevn-navy)]">
+          {current ?? min}
+        </span>
+        <span className="text-sm">{max}</span>
+      </div>
     </div>
   )
 }

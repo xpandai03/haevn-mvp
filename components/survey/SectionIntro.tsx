@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { motion } from 'framer-motion'
 
 // Map section IDs to their display order
 const SECTION_NUMBERS: Record<string, string> = {
@@ -25,53 +26,42 @@ export function SectionIntro({
   sectionId,
   sectionTitle,
   sectionDescription,
-  onComplete
+  onComplete,
 }: SectionIntroProps) {
   const sectionNumber = SECTION_NUMBERS[sectionId] || '00'
 
-  // Auto-advance after a brief moment (just enough to register the section change)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (onComplete) onComplete()
-    }, 1200)
+      onComplete?.()
+    }, 1600)
     return () => clearTimeout(timer)
   }, [onComplete])
 
   return (
-    <div className="flex flex-col items-center py-12">
-      {/* Section number */}
-      <div
-        className="text-6xl sm:text-7xl font-bold text-[#008080]/20 mb-3"
-        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-      >
-        {sectionNumber}
-      </div>
-
-      {/* Section title */}
-      <h2
-        className="text-2xl sm:text-3xl font-bold text-haevn-charcoal text-center mb-2"
-        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
-      >
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col items-start py-20 space-y-6 text-left"
+    >
+      <p className="text-xs tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
+        Section {sectionNumber}
+      </p>
+      <h2 className="font-heading text-3xl sm:text-4xl font-medium text-[color:var(--haevn-navy)] leading-tight">
         {sectionTitle}
       </h2>
-
-      {/* Description */}
       {sectionDescription && (
-        <p
-          className="text-base text-haevn-charcoal/60 text-center max-w-md"
-          style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
-        >
+        <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed max-w-xl">
           {sectionDescription}
         </p>
       )}
-
-      {/* Skip link */}
       <button
         onClick={onComplete}
-        className="mt-6 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        className="text-sm text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-teal)] transition-colors mt-4"
       >
-        Continue
+        Continue →
       </button>
-    </div>
+    </motion.div>
   )
 }

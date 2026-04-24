@@ -124,6 +124,10 @@ const config: Config = {
           light: '#E8F5E9',
         }
       },
+      fontFamily: {
+        heading: ['Cabinet Grotesk', 'Roboto', '-apple-system', 'sans-serif'],
+        body: ['Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+      },
       fontSize: {
         'display-lg': ['48px', { lineHeight: '1.0', letterSpacing: '-0.015em', fontWeight: '700' }],
         'display-md': ['40px', { lineHeight: '1.0', letterSpacing: '-0.015em', fontWeight: '700' }],

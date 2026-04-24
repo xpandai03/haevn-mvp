@@ -42,7 +42,7 @@ export default function ExpectationsPage() {
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-8 bg-white">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center px-6 py-8 bg-white">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-6">

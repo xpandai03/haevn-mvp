@@ -147,7 +147,7 @@ export default function IdentityPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-white">
       <div className="w-full max-w-3xl">
         <div className="text-center mb-8 space-y-3">
           <h1

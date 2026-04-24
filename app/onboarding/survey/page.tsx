@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuestionRenderer } from '@/components/survey/QuestionRenderer'
 import { AutoSaveIndicator } from '@/components/survey/AutoSaveIndicator'
@@ -12,7 +12,6 @@ import { SectionComplete } from '@/components/survey/SectionComplete'
 import { ProgressBar } from '@/components/survey/ProgressBar'
 import { useAuth } from '@/lib/auth/context'
 import type { SectionId } from '@/lib/theme/types'
-import { getSectionGlow } from '@/lib/theme/colors'
 import {
   surveySections,
   getActiveQuestions,
@@ -50,6 +49,10 @@ export default function SurveyPage() {
   const [showSectionIntro, setShowSectionIntro] = useState(false)
   const [showSectionComplete, setShowSectionComplete] = useState(false)
   const [previousSectionId, setPreviousSectionId] = useState<string | null>(null)
+
+  // Direction of the last navigation — used to drive framer-motion slide.
+  // +1 = forward, -1 = back. Defaults to forward on first render.
+  const navDirectionRef = useRef<1 | -1>(1)
 
   // Get active questions based on skip logic (memoized to prevent unnecessary recalculations)
   const activeQuestions = useMemo(() => {
@@ -425,6 +428,7 @@ export default function SurveyPage() {
       const newIndex = currentQuestionIndex + 1
       const nextQuestion = activeQuestions[newIndex]
       console.log('[Survey] Moving to index:', newIndex, '-', nextQuestion?.id)
+      navDirectionRef.current = 1
       setCurrentQuestionIndex(newIndex)
       saveAnswers(answers, newIndex, completedSections) // Save new index
     } else {
@@ -461,6 +465,7 @@ export default function SurveyPage() {
       const newIndex = currentQuestionIndex - 1
       const prevQuestion = activeQuestions[newIndex]
       console.log('[Survey] Moving to index:', newIndex, '-', prevQuestion?.id)
+      navDirectionRef.current = -1
       setCurrentQuestionIndex(newIndex)
       saveAnswers(answers, newIndex, completedSections) // Save new index
     } else {
@@ -537,10 +542,15 @@ export default function SurveyPage() {
     )
   }
 
+  const direction = navDirectionRef.current
+
   return (
-    <div className="min-h-screen flex flex-col bg-haevn-lightgray" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {/* Progress bar */}
-      <div className="w-full px-4 sm:px-6 pt-6 sm:pt-8 pb-3 sm:pb-4">
+    <div
+      className="survey-layout min-h-screen flex flex-col bg-[color:var(--haevn-bg)] text-[color:var(--haevn-charcoal)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {/* Fixed 2px top progress bar + inline caption row */}
+      <div className="w-full px-6 sm:px-12 pt-8 pb-2">
         <div className="max-w-2xl mx-auto">
           <ProgressBar
             currentStep={currentQuestionIndex + 1}
@@ -550,47 +560,36 @@ export default function SurveyPage() {
             sectionId={(currentSection?.id as SectionId) || 'basic_demographics'}
             showPercentage={true}
           />
-          <div className="flex justify-end items-center mt-1.5 sm:mt-2">
-            <AutoSaveIndicator status={saveStatus} error={saveError} />
-          </div>
         </div>
       </div>
 
-      {/* Back button and Save & Exit */}
-      <div className="w-full px-4 sm:px-6 mb-4 sm:mb-6">
+      {/* Top controls: Back / Save & Exit */}
+      <div className="w-full px-6 sm:px-12 mt-4 mb-6 sm:mb-10">
         <div className="max-w-2xl mx-auto flex justify-between items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center gap-1 sm:gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px]"
+            className="flex items-center gap-2 p-2 -ml-2 text-sm text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-navy)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <ChevronLeft className="w-5 h-5" />
-            <span className="text-xs sm:text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
-              Back
-            </span>
+            <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+            <span>Back</span>
           </button>
-
-          <button
-            onClick={handleSaveAndExit}
-            className="text-xs sm:text-sm text-haevn-navy hover:text-haevn-teal transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center px-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
-          >
-            Save & Exit
-          </button>
+          <div className="flex items-center gap-4">
+            <AutoSaveIndicator status={saveStatus} error={saveError} />
+            <button
+              onClick={handleSaveAndExit}
+              className="text-sm text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-teal)] transition-colors"
+            >
+              Save &amp; exit
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pb-8 sm:pb-12">
-        <div
-          className="w-full max-w-[95vw] sm:max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-lg p-4 sm:p-8 lg:p-12 transition-shadow duration-[350ms] ease-out"
-          style={{
-            boxShadow: currentSection
-              ? `0 0 24px ${getSectionGlow((currentSection.id as SectionId) || 'basic_demographics')}, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
-              : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-          }}
-        >
-          {/* Section Intro Animation */}
+      {/* Main content — cardless, architectural */}
+      <main className="flex-1 w-full px-6 sm:px-12 pb-28 sm:pb-20">
+        <div className="w-full max-w-2xl mx-auto">
+          {/* Section interstitials */}
           {showSectionIntro && currentSection && (
             <SectionIntro
               sectionId={currentSection.id}
@@ -600,7 +599,6 @@ export default function SurveyPage() {
             />
           )}
 
-          {/* Section Complete Animation */}
           {showSectionComplete && currentSection && (
             <SectionComplete
               sectionId={currentSection.id}
@@ -611,70 +609,65 @@ export default function SurveyPage() {
             />
           )}
 
-          {/* Section title with progress */}
+          {/* Section marker */}
           {!showSectionIntro && !showSectionComplete && currentSection && (
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-xs sm:text-sm text-haevn-gold mb-1.5 sm:mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="mb-8">
+              <p className="text-[11px] tracking-[0.2em] uppercase text-[color:var(--haevn-teal)]">
                 {currentSection.title}
-              </h2>
-              {currentSection.description && (
-                <p className="text-xs sm:text-sm text-haevn-charcoal/70 mb-1.5 sm:mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
-                  {currentSection.description}
-                </p>
-              )}
-              <p className="text-[11px] sm:text-xs text-haevn-charcoal/50" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}>
+              </p>
+              <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-1">
                 Question {questionIndexInSection + 1} of {questionsInSection.length}
               </p>
             </div>
           )}
 
-          {/* Question - hidden during animations */}
+          {/* Animated question region */}
           {!showSectionIntro && !showSectionComplete && (
-            <>
-              <QuestionRenderer
-                question={currentQuestion}
-                value={answers[currentQuestion.id]}
-                onChange={handleAnswerChange}
-                onEnterPress={handleNext}
-                canAdvance={isCurrentQuestionAnswered() && currentQuestionIndex < activeQuestions.length - 1}
-              />
-
-              {/* Continue button */}
-              <div className="mt-6 sm:mt-8">
-                <Button
-                  onClick={handleNext}
-                  disabled={!isCurrentQuestionAnswered()}
-                  className="w-full px-6 sm:px-8 py-5 sm:py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-base sm:text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
-                >
-                  {currentQuestionIndex === activeQuestions.length - 1 ? 'Complete Survey' : 'Continue'}
-                </Button>
-              </div>
-            </>
+            <AnimatePresence mode="wait" custom={direction} initial={false}>
+              <motion.div
+                key={currentQuestion.id}
+                custom={direction}
+                initial={{ x: direction > 0 ? 20 : -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: direction > 0 ? -20 : 20, opacity: 0 }}
+                transition={{
+                  duration: 0.3,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <QuestionRenderer
+                  question={currentQuestion}
+                  value={answers[currentQuestion.id]}
+                  onChange={handleAnswerChange}
+                  onEnterPress={handleNext}
+                  canAdvance={
+                    isCurrentQuestionAnswered() &&
+                    currentQuestionIndex < activeQuestions.length - 1
+                  }
+                />
+              </motion.div>
+            </AnimatePresence>
           )}
-        </div>
-
-        {/* Question counter - section specific */}
-        <div className="mt-4 sm:mt-6 text-center">
-          <p className="text-xs sm:text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
-            Question {questionIndexInSection + 1} of {questionsInSection.length}
-          </p>
         </div>
       </main>
 
-      {/* Step indicators */}
-      <div className="flex items-center justify-center gap-1.5 sm:gap-2 pb-4 sm:pb-6">
-        {Array.from({ length: Math.min(activeQuestions.length, 10) }).map((_, idx) => (
-          <div
-            key={idx}
-            className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
-              idx <= Math.floor((currentQuestionIndex / activeQuestions.length) * 10)
-                ? 'bg-haevn-gold'
-                : 'bg-white'
-            }`}
-          />
-        ))}
-      </div>
+      {/* Sticky bottom action bar */}
+      {!showSectionIntro && !showSectionComplete && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[color:var(--haevn-border)] z-40">
+          <div className="max-w-2xl mx-auto px-6 sm:px-12 py-4 flex items-center justify-end">
+            <button
+              onClick={handleNext}
+              disabled={!isCurrentQuestionAnswered()}
+              className="haevn-btn-primary"
+            >
+              {currentQuestionIndex === activeQuestions.length - 1
+                ? 'Submit'
+                : 'Continue'}
+              <ChevronLeft className="w-4 h-4 ml-2 rotate-180" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Section Celebration Modal */}
       {celebrationSection && (
