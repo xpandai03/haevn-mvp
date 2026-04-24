@@ -10,12 +10,14 @@ import {
   ChevronRight,
   Camera,
   Sparkles,
+  FileText,
 } from 'lucide-react'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
+import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
 
 interface PartnershipPhotoRow {
   id: string
@@ -69,9 +71,11 @@ export default async function ProfilePage() {
   const data = await loadDashboardData()
   if (!data) redirect('/auth/login')
 
-  const { user, profile, partnership } = data
+  const { user, profile, partnership, onboarding } = data
   const displayName = profile?.fullName || 'HAEVN Member'
   const memberSince = formatMemberSince((user as any).created_at)
+  const userCompletion = onboarding?.userCompletion ?? 0
+  const surveyComplete = userCompletion >= 100
 
   // Parallel secondary queries — independent of loadDashboardData
   const [photosRaw, connectionCards, computedMatches] = await Promise.all([
@@ -127,17 +131,29 @@ export default async function ProfilePage() {
 
   return (
     <div className="w-full">
-      {/* Section A — Cover + avatar */}
+      {/* Section A — Cover (primary photo) + bottom-left avatar */}
       <section className="relative">
-        <div
-          className="w-full h-40 sm:h-56"
-          style={{
-            background:
-              'linear-gradient(135deg, var(--haevn-navy) 0%, #2D3E66 60%, var(--haevn-teal) 100%)',
-          }}
-        />
-        <div className="max-w-3xl mx-auto px-5 sm:px-10 -mt-16 sm:-mt-20 flex items-end gap-4">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 keep-rounded shrink-0 border-4 border-[color:var(--haevn-dash-bg)] overflow-hidden bg-[color:var(--haevn-dash-surface-alt)]">
+        {primaryPhoto ? (
+          <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-[color:var(--haevn-dash-surface-alt)]">
+            <img
+              src={primaryPhoto}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover object-[center_25%]"
+            />
+          </div>
+        ) : (
+          <div
+            className="w-full h-40 sm:h-56"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--haevn-navy) 0%, #2D3E66 60%, var(--haevn-teal) 100%)',
+            }}
+          />
+        )}
+
+        <div className="max-w-3xl mx-auto px-5 sm:px-10 -mt-14 sm:-mt-16 flex justify-start">
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 keep-rounded shrink-0 border-4 border-[color:var(--haevn-dash-bg)] overflow-hidden bg-[color:var(--haevn-dash-surface-alt)] shadow-sm">
             {primaryPhoto ? (
               <img
                 src={primaryPhoto}
@@ -206,9 +222,17 @@ export default async function ProfilePage() {
             Your profile summary
           </h2>
           {haevnInsight ? (
-            <p className="text-base text-[color:var(--haevn-charcoal)] leading-relaxed">
+            <p className="text-base text-[color:var(--haevn-charcoal)] leading-relaxed whitespace-pre-line">
               {haevnInsight}
             </p>
+          ) : surveyComplete && partnership?.id ? (
+            <div>
+              <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed">
+                Your survey is complete. Generate your profile summary to see
+                how HAEVN is reading your answers.
+              </p>
+              <GenerateSummaryButton partnershipId={partnership.id} />
+            </div>
           ) : (
             <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed">
               Your profile summary will appear here once your survey responses
@@ -223,6 +247,35 @@ export default async function ProfilePage() {
             </p>
           )}
         </div>
+      </section>
+
+      {/* Section C2 — Survey responses link */}
+      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
+        <Link
+          href="/survey-results"
+          className="block bg-white border border-[color:var(--haevn-border)] px-5 sm:px-6 py-4 hover:border-[color:var(--haevn-teal)]/40 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <span className="w-10 h-10 flex items-center justify-center bg-[color:var(--haevn-dash-surface-alt)] text-[color:var(--haevn-teal)] shrink-0">
+              <FileText className="w-4 h-4" strokeWidth={1.5} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-heading text-base text-[color:var(--haevn-navy)]">
+                Your survey responses
+              </p>
+              <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-0.5">
+                Review the answers that power your matches
+              </p>
+            </div>
+            <span className="text-sm text-[color:var(--haevn-teal)] hidden sm:inline">
+              View
+            </span>
+            <ChevronRight
+              className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
+              strokeWidth={1.5}
+            />
+          </div>
+        </Link>
       </section>
 
       {/* Section D — Photos */}
