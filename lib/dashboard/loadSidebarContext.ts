@@ -14,7 +14,12 @@ import { isAdminUser } from '@/lib/admin/allowlist'
 
 export interface SidebarContext {
   userName?: string
-  tier: 'free' | 'plus' | 'select'
+  /**
+   * Paid-tier flag matching loadDashboardData's mapping: any value other
+   * than 'free' (e.g. 'pro', 'plus', 'select') is considered a paid tier
+   * and renders as "HAEVN+" in the sidebar.
+   */
+  tier: 'free' | 'plus'
   authenticated: boolean
   isAdmin: boolean
 }
@@ -47,9 +52,12 @@ export async function loadSidebarContext(): Promise<SidebarContext> {
       user.email?.split('@')[0] ||
       undefined
 
-    const rawTier = membership?.tier as string | undefined
+    // NOTE: `selectBestPartnership` returns `membership_tier`, not `tier`.
+    // An earlier version of this file read `membership?.tier`, which was
+    // always undefined and always rendered the sidebar as "Member".
+    const rawTier = membership?.membership_tier
     const tier: SidebarContext['tier'] =
-      rawTier === 'plus' || rawTier === 'select' ? rawTier : 'free'
+      rawTier && rawTier !== 'free' ? 'plus' : 'free'
 
     return {
       authenticated: true,

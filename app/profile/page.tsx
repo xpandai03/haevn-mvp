@@ -12,10 +12,46 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
-import { getPartnershipPhotos } from '@/lib/services/photos'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
+
+interface PartnershipPhotoRow {
+  id: string
+  photo_url: string
+  photo_type: 'public' | 'private'
+  is_primary: boolean
+  order_index: number
+}
+
+/**
+ * Server-side photo fetch.
+ * getPartnershipPhotos() in lib/services/photos.ts uses the *browser*
+ * Supabase client, which returns empty from server components because
+ * there are no browser cookies on the server and RLS rejects the query.
+ * We bypass with the admin client here.
+ */
+async function loadPartnershipPhotos(
+  partnershipId: string
+): Promise<PartnershipPhotoRow[]> {
+  try {
+    const adminClient = await createAdminClient()
+    const { data, error } = await adminClient
+      .from('partnership_photos')
+      .select('id, photo_url, photo_type, is_primary, order_index')
+      .eq('partnership_id', partnershipId)
+      .order('order_index', { ascending: true })
+    if (error) {
+      console.error('[ProfilePage] photos query error:', error.message)
+      return []
+    }
+    return (data || []) as PartnershipPhotoRow[]
+  } catch (err) {
+    console.error('[ProfilePage] photos query threw:', err)
+    return []
+  }
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -40,8 +76,8 @@ export default async function ProfilePage() {
   // Parallel secondary queries — independent of loadDashboardData
   const [photosRaw, connectionCards, computedMatches] = await Promise.all([
     partnership?.id
-      ? getPartnershipPhotos(partnership.id).catch(() => [])
-      : Promise.resolve([]),
+      ? loadPartnershipPhotos(partnership.id)
+      : Promise.resolve([] as PartnershipPhotoRow[]),
     getConnectionCards().catch(() => []),
     partnership?.id
       ? getComputedMatchesForPartnership(partnership.id).catch(() => ({
@@ -51,7 +87,7 @@ export default async function ProfilePage() {
       : Promise.resolve({ matches: [] as any[], error: null }),
   ])
 
-  const publicPhotos = (photosRaw || [])
+  const publicPhotos = photosRaw
     .filter(p => p.photo_type === 'public')
     .sort((a, b) => {
       if (a.is_primary && !b.is_primary) return -1
@@ -64,13 +100,30 @@ export default async function ProfilePage() {
       is_primary: p.is_primary,
     }))
 
-  const primaryPhoto = publicPhotos[0]?.photo_url
+  // Prefer the primary photo from the full list; fall back to the avatar
+  // that loadDashboardData already resolved (same table, admin client).
+  const primaryPhoto = publicPhotos[0]?.photo_url ?? profile?.photoUrl
 
   const matchCount = computedMatches.matches.length
   const connectionCount = connectionCards.length
   const tier = partnership?.tier === 'plus' ? 'HAEVN+' : 'Free'
   const isFree = partnership?.tier !== 'plus'
   const haevnInsight = partnership?.haevnInsight
+
+  // Instrumentation to disambiguate "summary missing" from "query misses field".
+  // loadDashboardData maps DB column `haevn_insight` -> `haevnInsight`.
+  // If this logs `null`, the DB value is genuinely empty for this partnership
+  // and the placeholder is correct; regenerate via /api/ai/generate-summaries.
+  console.log('[PROFILE_PAGE_STATE]', {
+    userId: user.id,
+    partnershipId: partnership?.id,
+    tierRaw: partnership?.tier,
+    haevnInsightPresent: !!haevnInsight,
+    haevnInsightLength: haevnInsight?.length ?? 0,
+    publicPhotoCount: publicPhotos.length,
+    matchCount,
+    connectionCount,
+  })
 
   return (
     <div className="w-full">
@@ -122,8 +175,17 @@ export default async function ProfilePage() {
         )}
 
         <div className="mt-6 flex flex-wrap gap-8 pt-6 border-t border-[color:var(--haevn-border)]">
-          <Stat value={matchCount} label="Matches" />
-          <Stat value={connectionCount} label="Connections" tint="teal" />
+          <Stat
+            value={matchCount}
+            label="Matches"
+            href="/dashboard/matches"
+          />
+          <Stat
+            value={connectionCount}
+            label="Connections"
+            tint="teal"
+            href="/dashboard/connections"
+          />
           <Stat textValue={tier} label="Plan" />
         </div>
       </section>
@@ -275,26 +337,39 @@ function Stat({
   textValue,
   label,
   tint = 'navy',
+  href,
 }: {
   value?: number
   textValue?: string
   label: string
   tint?: 'navy' | 'teal'
+  href?: string
 }) {
   const color =
     tint === 'teal'
       ? 'text-[color:var(--haevn-teal)]'
       : 'text-[color:var(--haevn-navy)]'
-  return (
-    <div>
+  const content = (
+    <>
       <div className={`font-heading text-3xl sm:text-4xl tabular-nums ${color}`}>
         {textValue ?? value}
       </div>
       <p className="mt-1 text-[11px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)]">
         {label}
       </p>
-    </div>
+    </>
   )
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group block transition-opacity hover:opacity-80"
+      >
+        {content}
+      </Link>
+    )
+  }
+  return <div>{content}</div>
 }
 
 function SectionHeading({
