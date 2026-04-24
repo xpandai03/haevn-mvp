@@ -20,7 +20,7 @@ export async function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <div className="dash-layout min-h-screen">
-      <Sidebar tier={ctx.tier} userName={ctx.userName} />
+      <Sidebar tier={ctx.tier} userName={ctx.userName} isAdmin={ctx.isAdmin} />
 
       <UpgradeBar tier={ctx.tier} />
 

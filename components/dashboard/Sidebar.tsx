@@ -8,6 +8,7 @@ import {
   User as UserIcon,
   MapPin,
   Eye,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 interface SidebarProps {
   tier?: 'free' | 'plus' | 'select'
   userName?: string
+  isAdmin?: boolean
 }
 
 const NAV_LINKS = [
@@ -32,10 +34,14 @@ const NAV_LINKS = [
     Icon: Eye,
     comingSoon: true,
   },
-  { href: '/profile/edit', label: 'Profile', Icon: UserIcon },
+  { href: '/profile', label: 'Profile', Icon: UserIcon },
 ] as const
 
-export function Sidebar({ tier = 'free', userName }: SidebarProps) {
+export function Sidebar({
+  tier = 'free',
+  userName,
+  isAdmin = false,
+}: SidebarProps) {
   const pathname = usePathname() || ''
   const { toast } = useToast()
 
@@ -59,10 +65,13 @@ export function Sidebar({ tier = 'free', userName }: SidebarProps) {
         aria-label="HAEVN home"
       >
         <img
-          src="/haevn-logo.svg"
+          src="/haevn-wordmark.svg"
           alt="HAEVN"
           className="h-7 w-auto"
         />
+        <p className="mt-2 text-[10px] tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
+          Austin Network
+        </p>
       </Link>
 
       {/* Nav */}
@@ -98,6 +107,25 @@ export function Sidebar({ tier = 'free', userName }: SidebarProps) {
           )
         })}
       </nav>
+
+      {/* Admin-only: control center link */}
+      {isAdmin && (
+        <div className="px-3 pb-2 pt-2 border-t border-[color:var(--haevn-border)]">
+          <Link
+            href="/admin/matching"
+            aria-current={
+              pathname.startsWith('/admin') ? 'page' : undefined
+            }
+            className={cn('dash-nav-link text-sm')}
+          >
+            <Shield size={18} strokeWidth={1.5} className="shrink-0" />
+            <span className="flex-1">Control Center</span>
+            <span className="text-[10px] tracking-wider uppercase text-[color:var(--haevn-muted-fg)]">
+              Admin
+            </span>
+          </Link>
+        </div>
+      )}
 
       {/* User / tier footer */}
       <div className="px-6 py-5 border-t border-[color:var(--haevn-border)]">

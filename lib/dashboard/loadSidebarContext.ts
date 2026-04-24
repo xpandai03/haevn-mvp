@@ -10,11 +10,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import { isAdminUser } from '@/lib/admin/allowlist'
 
 export interface SidebarContext {
   userName?: string
   tier: 'free' | 'plus' | 'select'
   authenticated: boolean
+  isAdmin: boolean
 }
 
 export async function loadSidebarContext(): Promise<SidebarContext> {
@@ -25,7 +27,7 @@ export async function loadSidebarContext(): Promise<SidebarContext> {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { authenticated: false, tier: 'free' }
+      return { authenticated: false, tier: 'free', isAdmin: false }
     }
 
     const adminClient = await createAdminClient()
@@ -49,10 +51,15 @@ export async function loadSidebarContext(): Promise<SidebarContext> {
     const tier: SidebarContext['tier'] =
       rawTier === 'plus' || rawTier === 'select' ? rawTier : 'free'
 
-    return { authenticated: true, userName, tier }
+    return {
+      authenticated: true,
+      userName,
+      tier,
+      isAdmin: isAdminUser(user.email),
+    }
   } catch (err) {
     // Never let a sidebar loader fault break the page — degrade gracefully.
     console.error('[loadSidebarContext] Failed to load context:', err)
-    return { authenticated: false, tier: 'free' }
+    return { authenticated: false, tier: 'free', isAdmin: false }
   }
 }

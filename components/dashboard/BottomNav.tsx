@@ -27,7 +27,7 @@ const TABS = [
     Icon: Eye,
     comingSoon: true,
   },
-  { href: '/profile/edit', label: 'Profile', Icon: UserIcon },
+  { href: '/profile', label: 'Profile', Icon: UserIcon },
 ] as const
 
 export function BottomNav() {
