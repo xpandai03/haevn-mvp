@@ -16,8 +16,23 @@ import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
 import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
+import { getFallbackInsight } from '@/lib/ai/fallbacks'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Detect whether a stored haevn_insight is the deterministic
+ * "we don't have enough yet" fallback string from lib/ai/fallbacks.ts.
+ *
+ * The DB can end up holding the fallback when generation ran without an
+ * AI key set (e.g. Anthropic before the OpenAI swap, or an envless
+ * preview deploy). We treat fallback content as "no real summary yet"
+ * so the user gets the Generate CTA instead of the placeholder text.
+ */
+function isFallbackInsight(text: string | null | undefined): boolean {
+  if (!text) return false
+  return text.trim() === getFallbackInsight().trim()
+}
 
 interface PartnershipPhotoRow {
   id: string
@@ -292,31 +307,53 @@ export default async function ProfilePage() {
         <p className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--haevn-navy)]/60 mb-4">
           What HAEVN understands about you
         </p>
-        {haevnInsight ? (
-          <p className="text-[15px] text-[color:var(--haevn-charcoal)] leading-relaxed whitespace-pre-line">
-            {haevnInsight}
-          </p>
-        ) : partnership?.id ? (
-          <div>
+        {(() => {
+          const insightIsRealContent =
+            !!haevnInsight && !isFallbackInsight(haevnInsight)
+
+          if (insightIsRealContent) {
+            return (
+              <div className="space-y-3">
+                <p className="text-[15px] text-[color:var(--haevn-charcoal)] leading-relaxed whitespace-pre-line">
+                  {haevnInsight}
+                </p>
+                {partnership?.id && (
+                  <GenerateSummaryButton
+                    partnershipId={partnership.id}
+                    variant="subtle"
+                  />
+                )}
+              </div>
+            )
+          }
+
+          if (partnership?.id) {
+            return (
+              <div>
+                <p className="text-[15px] text-[color:var(--haevn-muted-fg)] leading-relaxed">
+                  Generate your profile summary to see how HAEVN reads your
+                  survey answers. We use it to introduce you to potential
+                  matches.
+                </p>
+                <GenerateSummaryButton partnershipId={partnership.id} />
+              </div>
+            )
+          }
+
+          return (
             <p className="text-[15px] text-[color:var(--haevn-muted-fg)] leading-relaxed">
-              Generate your profile summary to see how HAEVN reads your survey
-              answers. We use it to introduce you to potential matches.
+              Your profile summary will appear here once your survey responses
+              have been processed.{' '}
+              <Link
+                href="/onboarding/survey"
+                className="text-[color:var(--haevn-teal)] underline underline-offset-2 hover:opacity-80"
+              >
+                Complete your survey
+              </Link>{' '}
+              to generate it.
             </p>
-            <GenerateSummaryButton partnershipId={partnership.id} />
-          </div>
-        ) : (
-          <p className="text-[15px] text-[color:var(--haevn-muted-fg)] leading-relaxed">
-            Your profile summary will appear here once your survey responses
-            have been processed.{' '}
-            <Link
-              href="/onboarding/survey"
-              className="text-[color:var(--haevn-teal)] underline underline-offset-2 hover:opacity-80"
-            >
-              Complete your survey
-            </Link>{' '}
-            to generate it.
-          </p>
-        )}
+          )
+        })()}
       </div>
 
       {/* ─── PHOTOS ACCORDION ─── */}

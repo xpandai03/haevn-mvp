@@ -7,6 +7,10 @@ import { useToast } from '@/hooks/use-toast'
 
 interface GenerateSummaryButtonProps {
   partnershipId: string
+  /** "primary" (gold CTA) or "subtle" (small text-link, e.g. for regenerate) */
+  variant?: 'primary' | 'subtle'
+  /** Override button label (defaults: Generate my summary / Regenerate). */
+  label?: string
 }
 
 /**
@@ -15,7 +19,11 @@ interface GenerateSummaryButtonProps {
  * freshly-written partnerships.haevn_insight field rehydrates into the
  * server component.
  */
-export function GenerateSummaryButton({ partnershipId }: GenerateSummaryButtonProps) {
+export function GenerateSummaryButton({
+  partnershipId,
+  variant = 'primary',
+  label,
+}: GenerateSummaryButtonProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isGenerating, setIsGenerating] = useState(false)
@@ -54,6 +62,33 @@ export function GenerateSummaryButton({ partnershipId }: GenerateSummaryButtonPr
     }
   }
 
+  const defaultLabel =
+    variant === 'subtle' ? 'Regenerate' : 'Generate my summary'
+  const text = isGenerating
+    ? variant === 'subtle'
+      ? 'Regenerating…'
+      : 'Generating…'
+    : label || defaultLabel
+
+  if (variant === 'subtle') {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isGenerating}
+        className="inline-flex items-center gap-1.5 text-xs text-[color:var(--haevn-teal)] hover:opacity-80 disabled:opacity-50 transition-opacity"
+        data-testid="regenerate-summary-btn"
+      >
+        {isGenerating ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Sparkles className="w-3 h-3" strokeWidth={1.75} />
+        )}
+        {text}
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
@@ -67,7 +102,7 @@ export function GenerateSummaryButton({ partnershipId }: GenerateSummaryButtonPr
       ) : (
         <Sparkles className="w-4 h-4" strokeWidth={1.75} />
       )}
-      {isGenerating ? 'Generating…' : 'Generate my summary'}
+      {text}
     </button>
   )
 }
