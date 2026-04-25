@@ -1,16 +1,13 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Bell,
-  ShieldCheck,
-  Mail,
-  User as UserIcon,
-  Lock,
-  CheckCircle2,
   ChevronRight,
   Camera,
-  Sparkles,
-  FileText,
+  User as UserIcon,
+  Mail,
+  Lock,
+  Shield,
+  AlertTriangle,
 } from 'lucide-react'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -18,6 +15,8 @@ import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
 import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
+
+export const dynamic = 'force-dynamic'
 
 interface PartnershipPhotoRow {
   id: string
@@ -28,11 +27,8 @@ interface PartnershipPhotoRow {
 }
 
 /**
- * Server-side photo fetch.
- * getPartnershipPhotos() in lib/services/photos.ts uses the *browser*
- * Supabase client, which returns empty from server components because
- * there are no browser cookies on the server and RLS rejects the query.
- * We bypass with the admin client here.
+ * Server-side photo fetch via admin client (browser client RLS-rejects
+ * in server components — see prior commit).
  */
 async function loadPartnershipPhotos(
   partnershipId: string
@@ -55,7 +51,70 @@ async function loadPartnershipPhotos(
   }
 }
 
-export const dynamic = 'force-dynamic'
+/**
+ * Inline admin query for the two profile-only fields the dashboard
+ * loader doesn't already return: partnership.city and the user's
+ * birthdate from user_survey_responses (Q1).
+ */
+async function loadProfileExtras(
+  userId: string,
+  partnershipId: string | undefined
+): Promise<{ city?: string; age?: number }> {
+  if (!partnershipId) return {}
+  try {
+    const adminClient = await createAdminClient()
+    const [partnershipQ, surveyQ] = await Promise.all([
+      adminClient
+        .from('partnerships')
+        .select('city')
+        .eq('id', partnershipId)
+        .single(),
+      adminClient
+        .from('user_survey_responses')
+        .select('answers_json')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ])
+    const city = (partnershipQ.data as any)?.city || undefined
+    const age = computeAge((surveyQ.data as any)?.answers_json?.q1_age)
+    return { city, age }
+  } catch (err) {
+    console.error('[ProfilePage] profile extras query threw:', err)
+    return {}
+  }
+}
+
+/** Accepts either an ISO date string or { year, month, day }. */
+function computeAge(raw: unknown): number | undefined {
+  if (!raw) return undefined
+  let y: number | undefined
+  let m: number | undefined
+  let d: number | undefined
+  if (typeof raw === 'string') {
+    const dt = new Date(raw)
+    if (!Number.isNaN(dt.getTime())) {
+      y = dt.getUTCFullYear()
+      m = dt.getUTCMonth() + 1
+      d = dt.getUTCDate()
+    }
+  } else if (typeof raw === 'object' && raw !== null) {
+    const o = raw as { year?: number; month?: number; day?: number }
+    y = o.year
+    m = o.month
+    d = o.day
+  }
+  if (!y) return undefined
+  const today = new Date()
+  let age = today.getUTCFullYear() - y
+  if (m && d) {
+    const monthDelta = today.getUTCMonth() + 1 - m
+    if (monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < d)) {
+      age -= 1
+    }
+  }
+  if (age < 0 || age > 130) return undefined
+  return age
+}
 
 function formatMemberSince(iso?: string | null): string | null {
   if (!iso) return null
@@ -71,14 +130,11 @@ export default async function ProfilePage() {
   const data = await loadDashboardData()
   if (!data) redirect('/auth/login')
 
-  const { user, profile, partnership, onboarding } = data
+  const { user, profile, partnership } = data
   const displayName = profile?.fullName || 'HAEVN Member'
   const memberSince = formatMemberSince((user as any).created_at)
-  const userCompletion = onboarding?.userCompletion ?? 0
-  const surveyComplete = userCompletion >= 100
 
-  // Parallel secondary queries — independent of loadDashboardData
-  const [photosRaw, connectionCards, computedMatches] = await Promise.all([
+  const [photosRaw, connectionCards, computedMatches, extras] = await Promise.all([
     partnership?.id
       ? loadPartnershipPhotos(partnership.id)
       : Promise.resolve([] as PartnershipPhotoRow[]),
@@ -89,6 +145,7 @@ export default async function ProfilePage() {
           error: null,
         }))
       : Promise.resolve({ matches: [] as any[], error: null }),
+    loadProfileExtras(user.id, partnership?.id),
   ])
 
   const publicPhotos = photosRaw
@@ -104,20 +161,14 @@ export default async function ProfilePage() {
       is_primary: p.is_primary,
     }))
 
-  // Prefer the primary photo from the full list; fall back to the avatar
-  // that loadDashboardData already resolved (same table, admin client).
   const primaryPhoto = publicPhotos[0]?.photo_url ?? profile?.photoUrl
 
   const matchCount = computedMatches.matches.length
   const connectionCount = connectionCards.length
-  const tier = partnership?.tier === 'plus' ? 'HAEVN+' : 'Free'
   const isFree = partnership?.tier !== 'plus'
+  const tierLabel = isFree ? 'Free' : 'HAEVN+'
   const haevnInsight = partnership?.haevnInsight
 
-  // Instrumentation to disambiguate "summary missing" from "query misses field".
-  // loadDashboardData maps DB column `haevn_insight` -> `haevnInsight`.
-  // If this logs `null`, the DB value is genuinely empty for this partnership
-  // and the placeholder is correct; regenerate via /api/ai/generate-summaries.
   console.log('[PROFILE_PAGE_STATE]', {
     userId: user.id,
     partnershipId: partnership?.id,
@@ -127,372 +178,417 @@ export default async function ProfilePage() {
     publicPhotoCount: publicPhotos.length,
     matchCount,
     connectionCount,
+    age: extras.age,
+    city: extras.city,
   })
 
+  const subtitleParts = [extras.city, memberSince].filter(Boolean)
+
   return (
-    <div className="w-full">
-      {/* Section A — Cover (primary photo) + bottom-left avatar */}
-      <section className="relative">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* ─── HERO PROFILE HEADER ─── */}
+      <div className="bg-white border border-[color:var(--haevn-border)] overflow-hidden">
+        {/* Cover (primary photo) — clickable to /profile/edit */}
         {primaryPhoto ? (
-          <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-[color:var(--haevn-dash-surface-alt)]">
+          <Link
+            href="/profile/edit"
+            className="relative block h-72 sm:h-96 md:h-[28rem] bg-gradient-to-br from-[#F9F5EB] to-[#E8E6E3] overflow-hidden group"
+          >
             <img
               src={primaryPhoto}
               alt=""
               aria-hidden="true"
-              className="w-full h-full object-cover object-[center_25%]"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: 'center 20%' }}
             />
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+          </Link>
         ) : (
-          <div
-            className="w-full h-40 sm:h-56"
-            style={{
-              background:
-                'linear-gradient(135deg, var(--haevn-navy) 0%, #2D3E66 60%, var(--haevn-teal) 100%)',
-            }}
-          />
-        )}
-
-        <div className="max-w-3xl mx-auto px-5 sm:px-10 -mt-14 sm:-mt-16 flex justify-start">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 keep-rounded shrink-0 border-4 border-[color:var(--haevn-dash-bg)] overflow-hidden bg-[color:var(--haevn-dash-surface-alt)] shadow-sm">
-            {primaryPhoto ? (
-              <img
-                src={primaryPhoto}
-                alt={displayName}
-                className="w-full h-full object-cover keep-rounded"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <UserIcon
-                  className="w-10 h-10 text-[color:var(--haevn-muted-fg)]"
-                  strokeWidth={1.25}
-                />
-              </div>
-            )}
-            <Link
-              href="/profile/edit"
-              className="absolute bottom-1 right-1 w-8 h-8 keep-rounded bg-[color:var(--haevn-navy)] text-white flex items-center justify-center hover:bg-[color:var(--haevn-teal)] transition-colors"
-              aria-label="Change photo"
-            >
-              <Camera className="w-4 h-4" strokeWidth={1.75} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Section B — Identity + stats */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pt-5 pb-8">
-        <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] leading-tight">
-          {displayName}
-        </h1>
-        {memberSince && (
-          <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
-            {memberSince}
-          </p>
-        )}
-
-        <div className="mt-6 flex flex-wrap gap-8 pt-6 border-t border-[color:var(--haevn-border)]">
-          <Stat
-            value={matchCount}
-            label="Matches"
-            href="/dashboard/matches"
-          />
-          <Stat
-            value={connectionCount}
-            label="Connections"
-            tint="teal"
-            href="/dashboard/connections"
-          />
-          <Stat textValue={tier} label="Plan" />
-        </div>
-      </section>
-
-      {/* Section C — Profile Summary */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
-        <div className="bg-white border border-[color:var(--haevn-border)] p-5 sm:p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles
-              className="w-4 h-4 text-[color:var(--haevn-teal)]"
-              strokeWidth={1.75}
-            />
-            <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
-              What HAEVN understands about you
-            </p>
-          </div>
-          <h2 className="font-heading text-xl text-[color:var(--haevn-navy)] mb-3">
-            Your profile summary
-          </h2>
-          {haevnInsight ? (
-            <p className="text-base text-[color:var(--haevn-charcoal)] leading-relaxed whitespace-pre-line">
-              {haevnInsight}
-            </p>
-          ) : surveyComplete && partnership?.id ? (
-            <div>
-              <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed">
-                Your survey is complete. Generate your profile summary to see
-                how HAEVN is reading your answers.
-              </p>
-              <GenerateSummaryButton partnershipId={partnership.id} />
-            </div>
-          ) : (
-            <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed">
-              Your profile summary will appear here once your survey responses
-              have been processed.{' '}
-              <Link
-                href="/onboarding/survey"
-                className="text-[color:var(--haevn-teal)] underline underline-offset-2 hover:opacity-80"
-              >
-                Complete your survey
-              </Link>{' '}
-              to generate it.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Section C2 — Survey responses link */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
-        <Link
-          href="/survey-results"
-          className="block bg-white border border-[color:var(--haevn-border)] px-5 sm:px-6 py-4 hover:border-[color:var(--haevn-teal)]/40 transition-colors"
-        >
-          <div className="flex items-center gap-4">
-            <span className="w-10 h-10 flex items-center justify-center bg-[color:var(--haevn-dash-surface-alt)] text-[color:var(--haevn-teal)] shrink-0">
-              <FileText className="w-4 h-4" strokeWidth={1.5} />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="font-heading text-base text-[color:var(--haevn-navy)]">
-                Your survey responses
-              </p>
-              <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-0.5">
-                Review the answers that power your matches
-              </p>
-            </div>
-            <span className="text-sm text-[color:var(--haevn-teal)] hidden sm:inline">
-              View
-            </span>
-            <ChevronRight
-              className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
+          <div className="relative h-72 sm:h-96 md:h-[28rem] flex flex-col items-center justify-center bg-gradient-to-br from-[#F9F5EB] to-[#E8E6E3]">
+            <Camera
+              className="w-8 h-8 text-[color:var(--haevn-muted-fg)] mb-2"
               strokeWidth={1.5}
             />
+            <p className="text-sm text-[color:var(--haevn-muted-fg)]">
+              Add a primary photo
+            </p>
           </div>
-        </Link>
-      </section>
+        )}
 
-      {/* Section D — Photos */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
-        <ProfilePhotosSection photos={publicPhotos} />
-      </section>
-
-      {/* Section E — Account */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
-        <div className="bg-white border border-[color:var(--haevn-border)]">
-          <SectionHeading>Account</SectionHeading>
-          <AccountRow
-            icon={<UserIcon className="w-4 h-4" strokeWidth={1.5} />}
-            label="Display name"
-            value={displayName}
-            href="/account-details"
-          />
-          <AccountRow
-            icon={<Mail className="w-4 h-4" strokeWidth={1.5} />}
-            label="Email"
-            value={user.email}
-            href="/account-details"
-          />
-          <AccountRow
-            icon={<Lock className="w-4 h-4" strokeWidth={1.5} />}
-            label="Password"
-            value="Reset"
-            href="/auth/reset-password"
-            valueTint="teal"
-          />
-          <AccountRow
-            icon={
-              <ShieldCheck
-                className="w-4 h-4 text-[color:var(--haevn-teal)]"
-                strokeWidth={1.5}
-              />
-            }
-            label="Verification"
-            value={
-              <span className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase text-white bg-[color:var(--haevn-teal)] px-2 py-1">
-                <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
-                Verified
-              </span>
-            }
-            href="/account-details"
-            isLast
-          />
-        </div>
-      </section>
-
-      {/* Section F — Plan & Billing */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-8">
-        <div className="bg-white border border-[color:var(--haevn-border)] p-5 sm:p-6">
-          <SectionHeading inline>Plan &amp; billing</SectionHeading>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading text-xl text-[color:var(--haevn-navy)]">
-                  {tier} plan
-                </span>
-                {!isFree && (
-                  <span className="text-[10px] tracking-[0.14em] uppercase text-white bg-[color:var(--haevn-gold)] px-2 py-0.5">
-                    Active
-                  </span>
-                )}
-              </div>
-              {isFree && (
-                <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
-                  Upgrade to unlock photos, connect, and message.
-                </p>
+        {/* Profile info */}
+        <div className="relative px-6 pb-6">
+          {/* Avatar overlapping the cover, left-aligned */}
+          <div className="-mt-20 mb-4 relative z-10">
+            <div className="w-32 h-32 sm:w-40 sm:h-40 keep-rounded border-4 border-white bg-[#F9F5EB] overflow-hidden shadow-sm">
+              {primaryPhoto ? (
+                <img
+                  src={primaryPhoto}
+                  alt={displayName}
+                  className="w-full h-full object-cover keep-rounded"
+                  style={{ objectPosition: 'center 20%' }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-heading text-4xl text-[color:var(--haevn-gold)]">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
               )}
             </div>
           </div>
-          {isFree && (
-            <Link
-              href="/onboarding/membership"
-              className="haevn-btn-gold w-full mt-5 inline-flex justify-center"
-            >
-              Upgrade to HAEVN+
-            </Link>
+
+          <h1 className="font-heading text-2xl text-[color:var(--haevn-navy)]">
+            {displayName}
+            {extras.age ? `, ${extras.age}` : ''}
+          </h1>
+          {subtitleParts.length > 0 && (
+            <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
+              {subtitleParts.join(' · ')}
+            </p>
           )}
+
+          {/* Stats inline */}
+          <div className="flex gap-6 mt-4">
+            <Link
+              href="/dashboard/matches"
+              className="block transition-opacity hover:opacity-80"
+            >
+              <span className="font-heading text-xl text-[color:var(--haevn-navy)] tabular-nums">
+                {matchCount}
+              </span>
+              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+                Matches
+              </p>
+            </Link>
+            <Link
+              href="/dashboard/connections"
+              className="block transition-opacity hover:opacity-80"
+            >
+              <span className="font-heading text-xl text-[color:var(--haevn-teal)] tabular-nums">
+                {connectionCount}
+              </span>
+              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+                Connection{connectionCount === 1 ? '' : 's'}
+              </p>
+            </Link>
+            <div>
+              <span className="text-sm font-medium text-[color:var(--haevn-muted-fg)]">
+                {tierLabel}
+              </span>
+              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+                Plan
+              </p>
+            </div>
+          </div>
         </div>
-      </section>
-
-      {/* Section G — Preferences */}
-      <section className="max-w-3xl mx-auto px-5 sm:px-10 pb-16">
-        <div className="bg-white border border-[color:var(--haevn-border)]">
-          <SectionHeading>Preferences</SectionHeading>
-          <AccountRow
-            icon={<Bell className="w-4 h-4" strokeWidth={1.5} />}
-            label="Notifications"
-            sublabel="Emails, SMS, in-app"
-            href="/settings"
-          />
-          <AccountRow
-            icon={<ShieldCheck className="w-4 h-4" strokeWidth={1.5} />}
-            label="Privacy"
-            sublabel="Who can see your profile"
-            href="/settings"
-            isLast
-          />
-        </div>
-      </section>
-    </div>
-  )
-}
-
-// ---------- tiny helpers rendered as server component markup ---------- //
-
-function Stat({
-  value,
-  textValue,
-  label,
-  tint = 'navy',
-  href,
-}: {
-  value?: number
-  textValue?: string
-  label: string
-  tint?: 'navy' | 'teal'
-  href?: string
-}) {
-  const color =
-    tint === 'teal'
-      ? 'text-[color:var(--haevn-teal)]'
-      : 'text-[color:var(--haevn-navy)]'
-  const content = (
-    <>
-      <div className={`font-heading text-3xl sm:text-4xl tabular-nums ${color}`}>
-        {textValue ?? value}
       </div>
-      <p className="mt-1 text-[11px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)]">
-        {label}
-      </p>
-    </>
-  )
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="group block transition-opacity hover:opacity-80"
-      >
-        {content}
-      </Link>
-    )
-  }
-  return <div>{content}</div>
-}
 
-function SectionHeading({
-  children,
-  inline = false,
-}: {
-  children: React.ReactNode
-  inline?: boolean
-}) {
-  return (
-    <div
-      className={`${inline ? 'mb-4' : 'px-5 sm:px-6 pt-5 pb-3 border-b border-[color:var(--haevn-border)]'}`}
-    >
-      <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
-        {children}
-      </p>
+      {/* ─── AI SUMMARY ─── */}
+      <div className="bg-white border border-[color:var(--haevn-border)] p-5 sm:p-6">
+        <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] mb-1">
+          Your Profile Summary
+        </h3>
+        <p className="text-[11px] tracking-[0.18em] uppercase text-[color:var(--haevn-navy)]/60 mb-4">
+          What HAEVN understands about you
+        </p>
+        {haevnInsight ? (
+          <p className="text-[15px] text-[color:var(--haevn-charcoal)] leading-relaxed whitespace-pre-line">
+            {haevnInsight}
+          </p>
+        ) : partnership?.id ? (
+          <div>
+            <p className="text-[15px] text-[color:var(--haevn-muted-fg)] leading-relaxed">
+              Generate your profile summary to see how HAEVN reads your survey
+              answers. We use it to introduce you to potential matches.
+            </p>
+            <GenerateSummaryButton partnershipId={partnership.id} />
+          </div>
+        ) : (
+          <p className="text-[15px] text-[color:var(--haevn-muted-fg)] leading-relaxed">
+            Your profile summary will appear here once your survey responses
+            have been processed.{' '}
+            <Link
+              href="/onboarding/survey"
+              className="text-[color:var(--haevn-teal)] underline underline-offset-2 hover:opacity-80"
+            >
+              Complete your survey
+            </Link>{' '}
+            to generate it.
+          </p>
+        )}
+      </div>
+
+      {/* ─── PHOTOS ACCORDION ─── */}
+      <ProfilePhotosSection photos={publicPhotos} />
+
+      {/* ─── ACCOUNT ─── */}
+      <div className="bg-white border border-[color:var(--haevn-border)] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[color:var(--haevn-border)]">
+          <h3 className="font-heading text-lg text-[color:var(--haevn-navy)]">
+            Account
+          </h3>
+        </div>
+        <AccountRow
+          icon={UserIcon}
+          label="Display Name"
+          value={displayName}
+          href="/account-details"
+        />
+        <AccountRow
+          icon={Mail}
+          label="Email Address"
+          value={user.email}
+          href="/account-details"
+        />
+        <AccountRow
+          icon={Lock}
+          label="Password"
+          action="Reset"
+          href="/auth/reset-password"
+        />
+        <AccountRow
+          icon={Shield}
+          label="Verification"
+          value="Verified"
+          badgeText="Verified"
+          href="/account-details"
+          isLast
+        />
+      </div>
+
+      {/* ─── PLAN & BILLING ─── */}
+      <div className="bg-white border border-[color:var(--haevn-border)] p-5 sm:p-6">
+        <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] mb-4">
+          Plan &amp; Billing
+        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm text-[color:var(--haevn-navy)] font-medium">
+              {isFree ? 'Free Plan' : 'HAEVN+ Member'}
+            </p>
+            <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-0.5">
+              {isFree
+                ? 'Upgrade to unlock photos, connect, and message'
+                : 'Active membership · Manage from billing'}
+            </p>
+          </div>
+          <span
+            className={
+              isFree
+                ? 'text-xs px-3 py-1 text-[color:var(--haevn-muted-fg)] bg-[color:var(--haevn-dash-surface-alt)]'
+                : 'text-xs px-3 py-1 text-[color:var(--haevn-gold)] bg-[rgba(226,158,12,0.08)] border border-[rgba(226,158,12,0.2)]'
+            }
+          >
+            {isFree ? 'Free' : 'Active'}
+          </span>
+        </div>
+        {isFree ? (
+          <Link
+            href="/onboarding/membership"
+            className="haevn-btn-gold w-full inline-flex justify-center"
+          >
+            Upgrade to HAEVN+
+          </Link>
+        ) : (
+          <Link
+            href="/account-details"
+            className="text-sm text-[color:var(--haevn-muted-fg)] hover:text-[color:var(--haevn-navy)] transition-colors"
+          >
+            Manage billing
+          </Link>
+        )}
+      </div>
+
+      {/* ─── PREFERENCES ─── */}
+      <div className="bg-white border border-[color:var(--haevn-border)] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[color:var(--haevn-border)]">
+          <h3 className="font-heading text-lg text-[color:var(--haevn-navy)]">
+            Preferences
+          </h3>
+        </div>
+        <NavRow
+          label="Notifications"
+          desc="Match Monday alerts, messages"
+          href="/settings"
+        />
+        <NavRow
+          label="Privacy"
+          desc="Profile visibility, data sharing"
+          href="/settings"
+        />
+        <NavRow
+          label="Matching Preferences"
+          desc="Update your survey responses"
+          href="/survey-results"
+          isLast
+        />
+      </div>
+
+      {/* ─── DANGER ZONE ─── */}
+      <div className="bg-white border border-red-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-red-50">
+          <h3 className="text-sm font-medium text-red-400 tracking-[0.14em] uppercase">
+            Danger Zone
+          </h3>
+        </div>
+        <DangerRow
+          label="Pause Account"
+          desc="Temporarily hide your profile from matches"
+          tone="muted"
+          icon="chevron"
+        />
+        <DangerRow
+          label="Cancel Account"
+          desc="Permanently delete your account and data"
+          tone="danger"
+          icon="warning"
+          isLast
+        />
+      </div>
+
+      <div className="h-12 md:h-0" />
     </div>
   )
 }
+
+// ---------- helpers ---------- //
 
 function AccountRow({
-  icon,
+  icon: Icon,
   label,
-  sublabel,
   value,
+  action,
+  badgeText,
   href,
-  valueTint,
   isLast = false,
 }: {
-  icon: React.ReactNode
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
   label: string
-  sublabel?: string
   value?: React.ReactNode
+  action?: string
+  badgeText?: string
   href: string
-  valueTint?: 'teal'
   isLast?: boolean
 }) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-5 sm:px-6 py-4 text-left hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors ${
+      className={`w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors ${
         isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
       }`}
     >
-      <span className="w-8 h-8 flex items-center justify-center text-[color:var(--haevn-muted-fg)] shrink-0">
-        {icon}
-      </span>
+      <div className="w-9 h-9 bg-[color:var(--haevn-dash-surface-alt)] flex items-center justify-center shrink-0">
+        <Icon
+          className="w-4 h-4 text-[color:var(--haevn-muted-fg)]"
+          strokeWidth={1.5}
+        />
+      </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-[color:var(--haevn-navy)]">{label}</p>
-        {sublabel && (
-          <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-0.5">
-            {sublabel}
+        {value !== undefined && (
+          <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5 truncate">
+            {value}
           </p>
         )}
       </div>
-      {value !== undefined && (
-        <span
-          className={`text-sm max-w-[50%] truncate ${
-            valueTint === 'teal'
-              ? 'text-[color:var(--haevn-teal)]'
-              : 'text-[color:var(--haevn-muted-fg)]'
-          }`}
-        >
-          {value}
+      {badgeText && (
+        <span className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] px-2 py-0.5 shrink-0">
+          {badgeText}
         </span>
       )}
+      {action && (
+        <span className="text-xs text-[color:var(--haevn-gold)] shrink-0">
+          {action}
+        </span>
+      )}
+      {!badgeText && !action && (
+        <ChevronRight
+          className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
+          strokeWidth={1.5}
+        />
+      )}
+    </Link>
+  )
+}
+
+function NavRow({
+  label,
+  desc,
+  href,
+  isLast = false,
+}: {
+  label: string
+  desc: string
+  href: string
+  isLast?: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors ${
+        isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
+      }`}
+    >
+      <div className="min-w-0">
+        <span className="text-sm text-[color:var(--haevn-charcoal)] block">
+          {label}
+        </span>
+        <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5">
+          {desc}
+        </p>
+      </div>
       <ChevronRight
         className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
         strokeWidth={1.5}
       />
     </Link>
+  )
+}
+
+function DangerRow({
+  label,
+  desc,
+  tone,
+  icon,
+  isLast = false,
+}: {
+  label: string
+  desc: string
+  tone: 'muted' | 'danger'
+  icon: 'chevron' | 'warning'
+  isLast?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      // No-op for now — feature is a placeholder per spec. Hooks up later.
+      className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-red-50/50 transition-colors ${
+        isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
+      }`}
+    >
+      <div>
+        <span
+          className={`text-sm block ${
+            tone === 'danger'
+              ? 'text-red-400'
+              : 'text-[color:var(--haevn-charcoal)]'
+          }`}
+        >
+          {label}
+        </span>
+        <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5">
+          {desc}
+        </p>
+      </div>
+      {icon === 'warning' ? (
+        <AlertTriangle
+          className="w-4 h-4 text-red-300 shrink-0"
+          strokeWidth={1.5}
+        />
+      ) : (
+        <ChevronRight
+          className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
+          strokeWidth={1.5}
+        />
+      )}
+    </button>
   )
 }
