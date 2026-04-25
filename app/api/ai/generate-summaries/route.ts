@@ -120,6 +120,29 @@ export async function POST(request: NextRequest) {
     // 8. Generate summaries
     const result = await generateSummaries(summaryInput)
 
+    // If the AI call genuinely failed (quota, network, missing key) the
+    // generator returns placeholder strings AND sets `result.error`.
+    // Surface a 503 to the client and DO NOT persist the placeholder —
+    // otherwise we'd write the deterministic fallback string into
+    // partnerships.haevn_insight, which the profile page would then
+    // detect as fallback and re-prompt the user to Generate again,
+    // creating an infinite loop.
+    if (result.error) {
+      console.error(
+        '[API /ai/generate-summaries] AI unavailable, skipping DB write:',
+        result.error.code,
+        result.error.detail || ''
+      )
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error.code,
+          message: result.error.message,
+        },
+        { status: 503 }
+      )
+    }
+
     console.log('[API /ai/generate-summaries] Generation complete:', {
       used_fallback: result.used_fallback,
       fields_populated: result.fields_populated,
@@ -166,7 +189,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API /ai/generate-summaries] ❌ Error:', error)
     return NextResponse.json(
-      { success: false, error: 'Summary generation failed' },
+      {
+        success: false,
+        error: 'summary_generation_failed',
+        message: 'Failed to generate summary. Please try again.',
+      },
       { status: 500 }
     )
   }

@@ -38,10 +38,29 @@ export function GenerateSummaryButton({
         credentials: 'include',
         body: JSON.stringify({ partnershipId }),
       })
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok || !payload?.success) {
-        throw new Error(payload?.error || `Request failed (${res.status})`)
+      const payload = (await res.json().catch(() => ({}))) as {
+        success?: boolean
+        message?: string
+        error?: string
       }
+
+      // 503 → AI unavailable (quota exceeded, network, missing key).
+      // The route does NOT write a fallback to the DB any more, so the
+      // user can simply try again later. Surface the API's message.
+      if (!res.ok || !payload.success) {
+        const friendly =
+          payload.message ||
+          (res.status === 503
+            ? 'AI service is temporarily unavailable. Please try again later.'
+            : `Couldn't generate summary (${res.status}).`)
+        toast({
+          title: "Couldn't generate summary",
+          description: friendly,
+          variant: 'destructive',
+        })
+        return
+      }
+
       toast({
         title: 'Summary ready',
         description: "We've written your profile summary — refreshing…",
@@ -54,7 +73,7 @@ export function GenerateSummaryButton({
         description:
           err instanceof Error
             ? err.message
-            : 'Please try again in a moment.',
+            : 'Network error. Check your connection and try again.',
         variant: 'destructive',
       })
     } finally {

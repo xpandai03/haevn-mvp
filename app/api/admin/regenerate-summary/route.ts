@@ -92,6 +92,25 @@ export async function POST(request: NextRequest) {
 
     const result = await generateSummaries(summaryInput)
 
+    // Same gate as the user-facing route: if AI was unavailable, return
+    // 503 and skip the DB write so we don't overwrite an existing
+    // summary with the deterministic fallback.
+    if (result.error) {
+      console.error(
+        '[API /admin/regenerate-summary] AI unavailable, skipping DB write:',
+        result.error.code,
+        result.error.detail || ''
+      )
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error.code,
+          message: result.error.message,
+        },
+        { status: 503 }
+      )
+    }
+
     const now = new Date().toISOString()
     const { error: updateError } = await adminClient
       .from('partnerships')

@@ -11,6 +11,14 @@
  * - Always check field count before calling AI
  * - Enforce word count after generation
  * - Strip any markdown/formatting from output
+ * - Distinguish "legitimate sparse-data fallback" (caller may persist
+ *   the fallback strings) from "AI was unavailable" (caller MUST NOT
+ *   persist — surface error to the user instead)
+ *
+ * IMPORTANT — OpenAI billing: OPENAI_API_KEY (set in Vercel env) must
+ * point at an account with active credits. If you see "exceeded your
+ * current quota" or 429s in the logs, top up at:
+ *   https://platform.openai.com/account/billing
  *
  * Migration note (2026-04-25): switched from Anthropic Claude Haiku to
  * OpenAI gpt-4o-mini. System prompts in ./prompts.ts are unchanged —
@@ -44,11 +52,58 @@ const TEMPERATURE = 0.3
 // TYPES
 // =============================================================================
 
+export type SummaryErrorCode =
+  | 'NO_API_KEY'
+  | 'AI_QUOTA_EXCEEDED'
+  | 'AI_UNAVAILABLE'
+
+export interface SummaryError {
+  code: SummaryErrorCode
+  /** User-facing copy. Safe to surface in toasts. */
+  message: string
+  /** Raw upstream detail for logs. Never shown to users. */
+  detail?: string
+}
+
 export interface GeneratedSummaries {
   connection_summary: string
   haevn_insight: string
   used_fallback: boolean
   fields_populated: number
+  /**
+   * Set when the AI call could not produce real output. Callers MUST
+   * NOT persist `connection_summary` / `haevn_insight` to the database
+   * when this is set — those fields will hold safe placeholder strings
+   * intended for in-memory fallback only. Sparse-data legitimate
+   * fallback leaves this undefined.
+   */
+  error?: SummaryError
+}
+
+const QUOTA_MARKERS = [
+  'exceeded your current quota',
+  'insufficient_quota',
+  'billing',
+  'rate_limit',
+  'rate limit',
+]
+
+function classifyOpenAIError(message: string): SummaryError {
+  const lower = message.toLowerCase()
+  const isQuota = QUOTA_MARKERS.some((m) => lower.includes(m))
+  if (isQuota) {
+    return {
+      code: 'AI_QUOTA_EXCEEDED',
+      message:
+        'AI service is temporarily unavailable. Please try again later.',
+      detail: message,
+    }
+  }
+  return {
+    code: 'AI_UNAVAILABLE',
+    message: 'Could not generate your summary right now. Please try again.',
+    detail: message,
+  }
 }
 
 // =============================================================================
@@ -77,12 +132,17 @@ export async function generateSummaries(input: SummaryInput): Promise<GeneratedS
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    console.error('[AI Summary] OPENAI_API_KEY not set — using fallbacks')
+    console.error('[AI Summary] OPENAI_API_KEY not set — generation aborted')
     return {
       connection_summary: getFallbackConnectionSummary(input.first_name),
       haevn_insight: getFallbackInsight(),
       used_fallback: true,
       fields_populated: fieldsPopulated,
+      error: {
+        code: 'NO_API_KEY',
+        message: 'AI service is not configured. Please try again later.',
+        detail: 'OPENAI_API_KEY env var missing',
+      },
     }
   }
 
@@ -100,12 +160,17 @@ export async function generateSummaries(input: SummaryInput): Promise<GeneratedS
       fields_populated: fieldsPopulated,
     }
   } catch (err) {
-    console.error('[AI Summary] OpenAI call failed — using fallbacks:', err)
+    const message = err instanceof Error ? err.message : String(err)
+    const classified = classifyOpenAIError(message)
+    console.error('[AI Summary] OpenAI call failed —', classified.code, '—', message)
     return {
+      // Provide safe placeholders so destructuring callers don't crash,
+      // but error is set so the API route knows NOT to persist these.
       connection_summary: getFallbackConnectionSummary(input.first_name),
       haevn_insight: getFallbackInsight(),
       used_fallback: true,
       fields_populated: fieldsPopulated,
+      error: classified,
     }
   }
 }
