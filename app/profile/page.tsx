@@ -3,6 +3,7 @@ import Link from 'next/link'
 import {
   ChevronRight,
   Camera,
+  CheckCircle2,
   User as UserIcon,
   Mail,
   Lock,
@@ -52,21 +53,21 @@ async function loadPartnershipPhotos(
 }
 
 /**
- * Inline admin query for the two profile-only fields the dashboard
- * loader doesn't already return: partnership.city and the user's
- * birthdate from user_survey_responses (Q1).
+ * Inline admin query for profile-only fields the dashboard loader
+ * doesn't already return: partnerships.city, partnerships.is_verified,
+ * and the user's birthdate from user_survey_responses (Q1).
  */
 async function loadProfileExtras(
   userId: string,
   partnershipId: string | undefined
-): Promise<{ city?: string; age?: number }> {
-  if (!partnershipId) return {}
+): Promise<{ city?: string; age?: number; isVerified: boolean }> {
+  if (!partnershipId) return { isVerified: false }
   try {
     const adminClient = await createAdminClient()
     const [partnershipQ, surveyQ] = await Promise.all([
       adminClient
         .from('partnerships')
-        .select('city')
+        .select('city, is_verified')
         .eq('id', partnershipId)
         .single(),
       adminClient
@@ -76,11 +77,12 @@ async function loadProfileExtras(
         .maybeSingle(),
     ])
     const city = (partnershipQ.data as any)?.city || undefined
+    const isVerified = (partnershipQ.data as any)?.is_verified === true
     const age = computeAge((surveyQ.data as any)?.answers_json?.q1_age)
-    return { city, age }
+    return { city, age, isVerified }
   } catch (err) {
     console.error('[ProfilePage] profile extras query threw:', err)
-    return {}
+    return { isVerified: false }
   }
 }
 
@@ -180,6 +182,7 @@ export default async function ProfilePage() {
     connectionCount,
     age: extras.age,
     city: extras.city,
+    isVerified: extras.isVerified,
   })
 
   const subtitleParts = [extras.city, memberSince].filter(Boolean)
@@ -344,14 +347,7 @@ export default async function ProfilePage() {
           action="Reset"
           href="/auth/reset-password"
         />
-        <AccountRow
-          icon={Shield}
-          label="Verification"
-          value="Verified"
-          badgeText="Verified"
-          href="/account-details"
-          isLast
-        />
+        <VerificationRow isVerified={extras.isVerified} isLast />
       </div>
 
       {/* ─── PLAN & BILLING ─── */}
@@ -505,6 +501,71 @@ function AccountRow({
           strokeWidth={1.5}
         />
       )}
+    </Link>
+  )
+}
+
+function VerificationRow({
+  isVerified,
+  isLast = false,
+}: {
+  isVerified: boolean
+  isLast?: boolean
+}) {
+  // Verified state: same shape as a static AccountRow but with the
+  // green VERIFIED pill and a chevron pointing back to /account-details.
+  if (isVerified) {
+    return (
+      <Link
+        href="/account-details"
+        className={`w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors ${
+          isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
+        }`}
+      >
+        <div className="w-9 h-9 bg-[rgba(0,128,128,0.08)] flex items-center justify-center shrink-0">
+          <Shield
+            className="w-4 h-4 text-[color:var(--haevn-teal)]"
+            strokeWidth={1.5}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-[color:var(--haevn-navy)]">Verification</p>
+          <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5">
+            Verified
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.14em] uppercase text-white bg-[color:var(--haevn-teal)] px-2 py-1 shrink-0">
+          <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+          Verified
+        </span>
+      </Link>
+    )
+  }
+
+  // Unverified state: gray shield + Verify CTA -> /onboarding/verification
+  return (
+    <Link
+      href="/onboarding/verification"
+      className={`w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors ${
+        isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
+      }`}
+    >
+      <div className="w-9 h-9 bg-[color:var(--haevn-dash-surface-alt)] flex items-center justify-center shrink-0">
+        <Shield
+          className="w-4 h-4 text-[color:var(--haevn-muted-fg)]"
+          strokeWidth={1.5}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-[color:var(--haevn-navy)]">Verification</p>
+        <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5">
+          Confirm your identity
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1 text-sm font-medium text-[color:var(--haevn-teal)] shrink-0">
+        Verify
+        <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
+      </span>
     </Link>
   )
 }

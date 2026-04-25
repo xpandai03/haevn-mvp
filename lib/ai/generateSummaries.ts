@@ -1,18 +1,22 @@
 /**
  * HAEVN AI Trust Layer — Summary Generation
  *
- * Generates Connection Summaries and HAEVN Insights using Claude.
+ * Generates Connection Summaries and HAEVN Insights using OpenAI's
+ * Chat Completions API. Backed by raw fetch (no extra SDK install).
  *
- * Flow: SummaryInput → prompts → Claude Haiku → validated output
+ * Flow: SummaryInput → prompts → OpenAI gpt-4o-mini → validated output
  *
  * CRITICAL DESIGN RULES:
  * - Never call without a valid SummaryInput
  * - Always check field count before calling AI
  * - Enforce word count after generation
  * - Strip any markdown/formatting from output
+ *
+ * Migration note (2026-04-25): switched from Anthropic Claude Haiku to
+ * OpenAI gpt-4o-mini. System prompts in ./prompts.ts are unchanged —
+ * only the inference call is different.
  */
 
-import Anthropic from '@anthropic-ai/sdk'
 import type { SummaryInput } from './types'
 import { countPopulatedSummaryFields } from './buildSummaryInput'
 import {
@@ -26,6 +30,15 @@ import {
   getFallbackConnectionSummary,
   getFallbackInsight,
 } from './fallbacks'
+
+// =============================================================================
+// CONFIG
+// =============================================================================
+
+const OPENAI_MODEL = 'gpt-4o-mini'
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
+const MAX_TOKENS = 300
+const TEMPERATURE = 0.3
 
 // =============================================================================
 // TYPES
@@ -62,9 +75,9 @@ export async function generateSummaries(input: SummaryInput): Promise<GeneratedS
     }
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    console.error('[AI Summary] ANTHROPIC_API_KEY not set — using fallbacks')
+    console.error('[AI Summary] OPENAI_API_KEY not set — using fallbacks')
     return {
       connection_summary: getFallbackConnectionSummary(input.first_name),
       haevn_insight: getFallbackInsight(),
@@ -73,19 +86,27 @@ export async function generateSummaries(input: SummaryInput): Promise<GeneratedS
     }
   }
 
-  const client = new Anthropic({ apiKey })
-
   // Generate both summaries in parallel
-  const [connectionSummary, haevnInsight] = await Promise.all([
-    generateSingle(client, CONNECTION_SUMMARY_SYSTEM, buildConnectionSummaryMessage(input)),
-    generateSingle(client, HAEVN_INSIGHT_SYSTEM, buildInsightMessage(input)),
-  ])
+  try {
+    const [connectionSummary, haevnInsight] = await Promise.all([
+      generateSingle(apiKey, CONNECTION_SUMMARY_SYSTEM, buildConnectionSummaryMessage(input)),
+      generateSingle(apiKey, HAEVN_INSIGHT_SYSTEM, buildInsightMessage(input)),
+    ])
 
-  return {
-    connection_summary: enforceOutputRules(connectionSummary),
-    haevn_insight: enforceOutputRules(haevnInsight),
-    used_fallback: false,
-    fields_populated: fieldsPopulated,
+    return {
+      connection_summary: enforceOutputRules(connectionSummary),
+      haevn_insight: enforceOutputRules(haevnInsight),
+      used_fallback: false,
+      fields_populated: fieldsPopulated,
+    }
+  } catch (err) {
+    console.error('[AI Summary] OpenAI call failed — using fallbacks:', err)
+    return {
+      connection_summary: getFallbackConnectionSummary(input.first_name),
+      haevn_insight: getFallbackInsight(),
+      used_fallback: true,
+      fields_populated: fieldsPopulated,
+    }
   }
 }
 
@@ -93,31 +114,53 @@ export async function generateSummaries(input: SummaryInput): Promise<GeneratedS
 // INTERNAL HELPERS
 // =============================================================================
 
+interface OpenAIChatResponse {
+  choices?: Array<{
+    message?: { role?: string; content?: string | null }
+    finish_reason?: string
+  }>
+  error?: { message?: string; type?: string; code?: string }
+}
+
 /**
- * Call Claude to generate a single summary.
+ * Call OpenAI Chat Completions to generate a single summary.
+ * Maps Anthropic's (system, user) shape to OpenAI's `messages` array.
  */
 async function generateSingle(
-  client: Anthropic,
+  apiKey: string,
   systemPrompt: string,
   userMessage: string,
 ): Promise<string> {
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 300,
-    temperature: 0.3,
-    system: systemPrompt,
-    messages: [
-      { role: 'user', content: userMessage },
-    ],
+  const res = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      max_tokens: MAX_TOKENS,
+      temperature: TEMPERATURE,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+    }),
   })
 
-  // Extract text from response
-  const block = response.content[0]
-  if (block.type !== 'text') {
-    throw new Error(`[AI Summary] Unexpected response type: ${block.type}`)
+  const payload = (await res.json().catch(() => ({}))) as OpenAIChatResponse
+
+  if (!res.ok) {
+    const detail = payload?.error?.message || `${res.status} ${res.statusText}`
+    throw new Error(`[AI Summary] OpenAI request failed: ${detail}`)
   }
 
-  return block.text
+  const text = payload.choices?.[0]?.message?.content
+  if (typeof text !== 'string' || text.trim().length === 0) {
+    throw new Error('[AI Summary] OpenAI returned empty content')
+  }
+
+  return text
 }
 
 /**
