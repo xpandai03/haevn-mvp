@@ -13,7 +13,6 @@ import { createClient } from '@/lib/supabase/client'
 import { setPrimaryPhoto } from '@/lib/services/photos'
 import { AlertCircle, CheckCircle, ArrowLeft, Loader2, Upload, X, User } from 'lucide-react'
 import FullPageLoader from '@/components/ui/full-page-loader'
-import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import Image from 'next/image'
 
 interface PhotoMetadata {
@@ -286,12 +285,9 @@ export default function ManagePhotosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HAEVN Header */}
-      <HAEVNHeader />
-
-      {/* Main Content */}
-      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+    <div>
+      {/* Main Content (header + nav now provided by app/profile/layout.tsx) */}
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {/* Page Header */}
         <div className="space-y-4">
           {/* Back + Title Row */}

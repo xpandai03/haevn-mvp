@@ -6,7 +6,6 @@ import { ArrowLeft, Mail, Calendar, Users, Shield, Wrench, Camera, Eye, Phone, C
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth/context'
-import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import { checkAdminAccess } from '@/lib/actions/adminAccess'
 import { PhotoManagerModal } from '@/components/dashboard/PhotoManagerModal'
@@ -77,10 +76,8 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HAEVNHeader />
-
-      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+    <div>
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {/* Page Header */}
         <div className="flex items-center gap-3">
           <button

@@ -366,10 +366,13 @@
   font-family: var(--font-body);
 }
 
+/* !important is required to defeat inline `style={{ fontFamily: 'Roboto' }}`
+ * still present on legacy pages (match detail, survey results, account
+ * details). Inline styles without `!important` lose to !important rules. */
 .dash-layout h1,
 .dash-layout h2,
 .dash-layout h3 {
-  font-family: var(--font-heading), 'Roboto', sans-serif;
+  font-family: var(--font-heading), 'Roboto', sans-serif !important;
   letter-spacing: -0.015em;
 }
 

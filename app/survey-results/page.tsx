@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { SurveyTab } from '@/components/settings/SurveyTab'
-import { HAEVNHeader } from '@/components/dashboard/HAEVNHeader'
 import FullPageLoader from '@/components/ui/full-page-loader'
 
 export default function SurveyResultsPage() {
@@ -23,10 +22,8 @@ export default function SurveyResultsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HAEVNHeader />
-
-      <main className="max-w-md mx-auto px-4 py-4 space-y-4">
+    <div>
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {/* Page Header */}
         <div className="flex items-center gap-3">
           <button
