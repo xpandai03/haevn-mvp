@@ -67,7 +67,7 @@ export default function HaevnLanding() {
             <div className="space-y-3 w-full">
               <Button
                 onClick={() => router.push('/auth/signup')}
-                className="w-full bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full h-14 text-lg font-medium transition-all"
+                className="w-full bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium transition-all"
                 size="lg"
                 style={{
                   fontFamily: 'Roboto, Helvetica, sans-serif',

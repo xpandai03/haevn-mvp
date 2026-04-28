@@ -133,7 +133,7 @@ export default function ReviewSurveyPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-lightgray">
         <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
       </div>
     )
@@ -141,7 +141,7 @@ export default function ReviewSurveyPage() {
 
   if (error && !surveyData) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
         <div className="w-full max-w-md">
           <Alert variant="destructive" className="rounded-xl mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default function ReviewSurveyPage() {
   const answerCount = surveyData?.answers ? Object.keys(surveyData.answers).length : 0
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-start p-6 bg-haevn-lightgray">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-8">

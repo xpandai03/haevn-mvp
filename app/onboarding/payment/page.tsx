@@ -64,7 +64,7 @@ function PaymentPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
       <div className="w-full max-w-2xl">
         <div className="bg-white rounded-3xl p-8 shadow-sm">
           {/* Header */}

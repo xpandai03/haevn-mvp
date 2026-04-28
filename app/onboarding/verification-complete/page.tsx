@@ -49,14 +49,14 @@ export default function VerificationCompletePage() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="survey-layout min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="survey-layout min-h-screen flex flex-col bg-white">
       {/* Main content - centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-md text-center space-y-8">

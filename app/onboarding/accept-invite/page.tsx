@@ -106,7 +106,7 @@ export default function AcceptInvitePage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-lightgray">
         <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
       </div>
     )
@@ -114,7 +114,7 @@ export default function AcceptInvitePage() {
 
   if (error && !inviteData) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
         <div className="w-full max-w-md">
           <Alert variant="destructive" className="rounded-xl mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -134,7 +134,7 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center">

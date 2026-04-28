@@ -108,7 +108,7 @@ export default function MembershipPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
       <div className="w-full max-w-6xl">
         {/* Header */}
         <div className="mb-10">

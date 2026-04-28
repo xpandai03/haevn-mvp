@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="survey-layout relative min-h-screen w-full overflow-hidden">
       {/* Hero Background Images */}
       <div className="absolute inset-0 z-0">
         {/* Mobile */}

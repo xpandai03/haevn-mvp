@@ -52,7 +52,7 @@ function SignupStep1Form() {
   const isValid = firstName.trim().length > 0
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="survey-layout min-h-screen flex flex-col bg-white">
       {/* Progress indicator */}
       <header className="pt-6 px-6 flex justify-center">
         <div className="flex items-center gap-2">

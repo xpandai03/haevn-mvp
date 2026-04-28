@@ -77,7 +77,7 @@ export default function SignupStep4() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="survey-layout min-h-screen flex flex-col bg-white">
       {/* Header with progress and back button */}
       <header className="pt-6 px-6">
         <div className="flex items-center justify-between max-w-md mx-auto">
