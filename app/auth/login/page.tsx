@@ -139,7 +139,7 @@ export default function LoginPage() {
       <div className="absolute inset-0 z-0">
         {/* Mobile */}
         <Image
-          src="/images/hero-mobile.png"
+          src="/login-bg-mobile.png"
           alt=""
           fill
           className="object-cover md:hidden"
@@ -147,7 +147,7 @@ export default function LoginPage() {
         />
         {/* Desktop */}
         <Image
-          src="/images/hero-desktop.png"
+          src="/login-bg-desktop.png"
           alt=""
           fill
           className="hidden md:block object-cover"

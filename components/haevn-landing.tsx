@@ -13,7 +13,7 @@ export default function HaevnLanding() {
       <div className="absolute inset-0 z-0">
         {/* Mobile Hero Image */}
         <Image
-          src="/images/hero-mobile.png"
+          src="/login-bg-mobile.png"
           alt="HAEVN Hero Background"
           fill
           priority
@@ -22,7 +22,7 @@ export default function HaevnLanding() {
         />
         {/* Desktop Hero Image */}
         <Image
-          src="/images/hero-desktop.png"
+          src="/login-bg-desktop.png"
           alt="HAEVN Hero Background"
           fill
           priority
