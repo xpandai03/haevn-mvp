@@ -35,11 +35,11 @@ export default function HaevnLanding() {
 
       {/* Content Container */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Main Content - Logo + Tagline at Top */}
-        <main className="flex-1 flex items-start justify-center px-6 pt-12 pb-6">
-          <div className="w-full max-w-md flex flex-col items-center text-center space-y-6">
-            {/* Logo - Centered */}
-            <div className="relative w-[220px] md:w-[280px] h-[55px] md:h-[70px]">
+        {/* Centered: Logo + Tagline + CTAs */}
+        <main className="flex-1 flex items-center justify-center px-6">
+          <div className="w-full max-w-sm flex flex-col items-center text-center">
+            {/* Logo */}
+            <div className="relative w-[220px] md:w-[280px] h-[55px] md:h-[70px] mb-4">
               <Image
                 src="/images/haevn-logo-icon-white.png"
                 alt="HAEVN"
@@ -49,52 +49,81 @@ export default function HaevnLanding() {
               />
             </div>
 
-            {/* Tagline - Directly under logo */}
-            <h1
-              className="text-white"
+            {/* Tagline */}
+            <p
+              className="text-white mb-12"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
-                fontWeight: 400,
+                fontWeight: 300,
                 fontSize: '20px',
                 lineHeight: '130%',
-                letterSpacing: '-0.01em'
+                letterSpacing: '-0.01em',
               }}
             >
-              Thoughtful introductions based on compatibility, values and what you're actually looking for.
-            </h1>
+              Find Your People
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="space-y-3 w-full">
+              <Button
+                onClick={() => router.push('/auth/signup')}
+                className="w-full bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full h-14 text-lg font-medium transition-all"
+                size="lg"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '18px',
+                }}
+              >
+                Get Started
+              </Button>
+              <Button
+                onClick={() => router.push('/auth/login')}
+                variant="outline"
+                className="w-full bg-transparent hover:bg-white/10 text-white border-2 border-white rounded-full h-14 text-lg font-medium transition-all"
+                size="lg"
+                style={{
+                  fontFamily: 'Roboto, Helvetica, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '18px',
+                }}
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
         </main>
 
-        {/* Footer - CTAs and Legal Links */}
-        <footer className="pb-8 md:pb-12 px-6">
-          <div className="w-full max-w-md mx-auto space-y-6">
-            {/* Disclaimer Text */}
+        {/* Footer pinned to bottom */}
+        <footer className="px-6 pb-6 md:pb-8">
+          <div className="w-full max-w-md mx-auto space-y-3 text-center">
+            {/* Disclaimer */}
             <p
-              className="text-center text-white/90"
+              className="text-white/90"
               style={{
                 fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '12px',
-                lineHeight: '150%'
+                lineHeight: '150%',
               }}
             >
-              By signing up for HAEVN, you agreed to our{' '}
+              By entering HAEVN, you agree to our{' '}
               <a
                 href="https://www.haevn.co/terms-of-service"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-white transition-colors"
               >
-                terms of service
+                Terms of Service
               </a>
-              . Learn how we process your data in our{' '}
+              . For details on how we honor and process your data, please see our{' '}
               <a
                 href="https://www.haevn.co/privacy-policy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-white transition-colors"
               >
-                privacy policy
+                Privacy
               </a>
               {' '}and{' '}
               <a
@@ -103,42 +132,13 @@ export default function HaevnLanding() {
                 rel="noopener noreferrer"
                 className="underline hover:text-white transition-colors"
               >
-                cookies policy
+                Cookie
               </a>
-              .
+              {' '}Policies.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="space-y-3">
-              <Button
-                onClick={() => router.push('/auth/signup')}
-                className="w-full bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium transition-all"
-                size="lg"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 500,
-                  fontSize: '18px'
-                }}
-              >
-                Get Started
-              </Button>
-              <Button
-                onClick={() => router.push('/auth/login')}
-                variant="outline"
-                className="w-full bg-white/10 hover:bg-white/20 text-white border-2 border-white rounded-full h-14 text-lg font-medium backdrop-blur-sm transition-all"
-                size="lg"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
-                  fontWeight: 500,
-                  fontSize: '18px'
-                }}
-              >
-                Sign In
-              </Button>
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex items-center justify-center gap-3 text-white/90 text-xs">
+            {/* Footer links row */}
+            <div className="flex items-center justify-center gap-3 text-white/90">
               <a
                 href="https://www.haevn.co/terms-of-service"
                 target="_blank"
@@ -147,7 +147,7 @@ export default function HaevnLanding() {
                 style={{
                   fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
-                  fontSize: '12px'
+                  fontSize: '12px',
                 }}
               >
                 Terms of Service
@@ -161,7 +161,7 @@ export default function HaevnLanding() {
                 style={{
                   fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
-                  fontSize: '12px'
+                  fontSize: '12px',
                 }}
               >
                 Privacy Policy
@@ -175,7 +175,7 @@ export default function HaevnLanding() {
                 style={{
                   fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
-                  fontSize: '12px'
+                  fontSize: '12px',
                 }}
               >
                 Cookies Policy
