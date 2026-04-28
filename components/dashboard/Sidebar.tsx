@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import {
   Users as UsersIcon,
   MessageCircle,
@@ -9,9 +10,11 @@ import {
   MapPin,
   Eye,
   Shield,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/lib/auth/context'
 
 interface SidebarProps {
   tier?: 'free' | 'plus' | 'select'
@@ -43,7 +46,21 @@ export function Sidebar({
   isAdmin = false,
 }: SidebarProps) {
   const pathname = usePathname() || ''
+  const router = useRouter()
   const { toast } = useToast()
+  const { signOut } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const footerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (!footerRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [menuOpen])
 
   const handleComingSoon = (label: string) => (e: React.MouseEvent) => {
     e.preventDefault()
@@ -51,6 +68,18 @@ export function Sidebar({
       title: `${label} — coming soon`,
       description: 'This feature is on the way.',
     })
+  }
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await signOut()
+      router.push('/')
+      router.refresh()
+    } catch (err) {
+      console.error('[Sidebar] Sign out failed:', err)
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -127,23 +156,47 @@ export function Sidebar({
         </div>
       )}
 
-      {/* User / tier footer */}
-      <div className="px-6 py-5 border-t border-[color:var(--haevn-border)]">
-        {userName && (
-          <p className="text-sm text-[color:var(--haevn-navy)] truncate mb-1">
-            {userName}
-          </p>
+      {/* User / tier footer — click to open sign-out menu */}
+      <div
+        ref={footerRef}
+        className="relative border-t border-[color:var(--haevn-border)]"
+      >
+        {menuOpen && (
+          <div className="absolute bottom-full left-0 right-0 bg-white border-t border-x border-[color:var(--haevn-border)] shadow-md">
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="w-full flex items-center gap-3 px-6 py-3 text-left text-sm text-[color:var(--haevn-navy)] hover:bg-[color:var(--haevn-dash-surface-alt)] disabled:opacity-50"
+            >
+              <LogOut size={16} strokeWidth={1.5} />
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
         )}
-        <span
-          className={cn(
-            'inline-block text-[10px] tracking-[0.14em] uppercase px-2 py-0.5',
-            tier === 'free'
-              ? 'text-[color:var(--haevn-muted-fg)] bg-[color:var(--haevn-dash-surface-alt)]'
-              : 'text-[color:var(--haevn-gold)] bg-[rgba(226,158,12,0.08)]'
-          )}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className="w-full text-left px-6 py-5 hover:bg-[color:var(--haevn-dash-surface-alt)] transition-colors"
         >
-          {tier === 'free' ? 'Member' : 'HAEVN+'}
-        </span>
+          {userName && (
+            <p className="text-sm text-[color:var(--haevn-navy)] truncate mb-1">
+              {userName}
+            </p>
+          )}
+          <span
+            className={cn(
+              'inline-block text-[10px] tracking-[0.14em] uppercase px-2 py-0.5',
+              tier === 'free'
+                ? 'text-[color:var(--haevn-muted-fg)] bg-[color:var(--haevn-dash-surface-alt)]'
+                : 'text-[color:var(--haevn-gold)] bg-[rgba(226,158,12,0.08)]'
+            )}
+          >
+            {tier === 'free' ? 'Member' : 'HAEVN+'}
+          </span>
+        </button>
       </div>
     </aside>
   )

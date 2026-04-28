@@ -16,6 +16,7 @@ import { getConnectionCards } from '@/lib/actions/handshakes'
 import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
 import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
+import { SignOutButton } from '@/components/dashboard/SignOutButton'
 import { getFallbackInsight } from '@/lib/ai/fallbacks'
 
 export const dynamic = 'force-dynamic'
@@ -454,6 +455,9 @@ export default async function ProfilePage() {
           isLast
         />
       </div>
+
+      {/* ─── SIGN OUT ─── */}
+      <SignOutButton />
 
       {/* ─── DANGER ZONE ─── */}
       <div className="bg-white border border-red-100 overflow-hidden">
