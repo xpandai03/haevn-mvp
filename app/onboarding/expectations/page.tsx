@@ -26,8 +26,8 @@ export default function ExpectationsPage() {
 
     try {
       await flowController.markStepComplete(user.id, 2)
-      // Route to new dating intentions page
-      router.push('/onboarding/dating-intentions')
+      // Identity is step 3 in the canonical flow.
+      router.push('/onboarding/identity')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({

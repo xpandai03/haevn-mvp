@@ -87,8 +87,15 @@ export default function MembershipPage() {
       await flowController.markStepComplete(user.id, 7)
 
       if (tierId !== 'free') {
-        // Paid tiers route through payment, which forwards to verification
-        router.push(`/onboarding/payment?tier=${tierId}`)
+        // Paid tiers: payment surface is a stub (deleted) — Stripe to wire later.
+        // For now, route paid users directly to verification like free users.
+        toast({
+          title: `Welcome to HAEVN ${tierId === 'plus' ? 'Plus' : 'Select'}!`,
+          description: 'Payment will be collected after verification.',
+        })
+        setTimeout(() => {
+          router.push('/onboarding/verification')
+        }, 500)
       } else {
         toast({
           title: 'Welcome to HAEVN Free!',
