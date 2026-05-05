@@ -84,22 +84,22 @@ export function HandshakeNotifications() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative text-[#252627] hover:text-[#008080] hover:bg-[#008080]/10"
+            className="relative text-haevn-gray-900 hover:text-haevn-teal hover:bg-haevn-teal/10"
           >
             <Bell className="h-5 w-5" />
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#E29E0C] text-white text-xs font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-haevn-orange text-white text-xs font-bold flex items-center justify-center">
                 {count > 9 ? '9+' : count}
               </span>
             )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
-          <div className="p-4 border-b border-[#252627]/10">
-            <h3 className="font-heading text-lg font-bold text-[#252627]" style={{ fontWeight: 900 }}>
+          <div className="p-4 border-b border-haevn-gray-900/10">
+            <h3 className="font-heading text-lg font-bold text-haevn-gray-900" style={{ fontWeight: 900 }}>
               Connection Requests
             </h3>
-            <p className="text-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
+            <p className="text-sm text-haevn-gray-900/60" style={{ fontWeight: 300 }}>
               {count === 0 ? 'No pending requests' : `${count} ${count === 1 ? 'request' : 'requests'} waiting`}
             </p>
           </div>
@@ -107,8 +107,8 @@ export function HandshakeNotifications() {
           <div className="max-h-[400px] overflow-y-auto">
             {requests.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="h-12 w-12 mx-auto text-[#252627]/20 mb-3" />
-                <p className="text-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
+                <Bell className="h-12 w-12 mx-auto text-haevn-gray-900/20 mb-3" />
+                <p className="text-sm text-haevn-gray-900/60" style={{ fontWeight: 300 }}>
                   No new requests
                 </p>
               </div>
@@ -121,28 +121,28 @@ export function HandshakeNotifications() {
                     onClick={() => handleViewRequest(request)}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar className="h-12 w-12 border-2 border-[#E29E0C]">
+                      <Avatar className="h-12 w-12 border-2 border-haevn-orange">
                         <AvatarImage src={''} />
-                        <AvatarFallback className="bg-white text-[#252627] font-bold">
+                        <AvatarFallback className="bg-white text-haevn-gray-900 font-bold">
                           {getInitials(request.partnership.display_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#252627] mb-1" style={{ fontWeight: 700 }}>
+                        <p className="font-bold text-haevn-gray-900 mb-1" style={{ fontWeight: 700 }}>
                           {request.partnership.display_name}
                         </p>
-                        <div className="flex items-center gap-1 text-xs text-[#252627]/60 mb-2">
+                        <div className="flex items-center gap-1 text-xs text-haevn-gray-900/60 mb-2">
                           <MapPin className="h-3 w-3" />
                           <span>{request.partnership.city}</span>
                           <span className="mx-1">•</span>
                           <span>{request.partnership.age}</span>
                         </div>
                         {request.message && (
-                          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontWeight: 300 }}>
+                          <p className="text-sm text-haevn-gray-900/70 line-clamp-2" style={{ fontWeight: 300 }}>
                             "{request.message}"
                           </p>
                         )}
-                        <Badge variant="outline" className="bg-[#008080]/10 text-[#008080] border-[#008080]/30 text-xs mt-2">
+                        <Badge variant="outline" className="bg-haevn-teal/10 text-haevn-teal border-haevn-teal/30 text-xs mt-2">
                           {request.partnership.identity}
                         </Badge>
                       </div>

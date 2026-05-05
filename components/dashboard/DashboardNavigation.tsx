@@ -18,7 +18,7 @@ function NavItem({ icon, label, sublabel, disabled, onClick }: NavItemProps) {
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-3 w-full p-3 rounded-xl transition-colors text-left ${
+      className={`flex items-center gap-3 w-full p-3 rounded-[var(--radius)] transition-colors text-left ${
         disabled
           ? 'opacity-50 cursor-not-allowed'
           : 'hover:bg-haevn-lightgray active:bg-haevn-lightgray/80'
@@ -57,7 +57,7 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
   return (
     <div className="space-y-3">
       {/* Personal Section */}
-      <Card className="rounded-2xl border-haevn-navy/10 shadow-sm">
+      <Card className="rounded-[var(--radius)] border-haevn-navy/10 shadow-sm">
         <CardContent className="p-2">
           <h3
             className="font-heading text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"
@@ -101,7 +101,7 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
       </Card>
 
       {/* Resources Section */}
-      <Card className="rounded-2xl border-haevn-navy/10 shadow-sm">
+      <Card className="rounded-[var(--radius)] border-haevn-navy/10 shadow-sm">
         <CardContent className="p-2">
           <h3
             className="font-heading text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"

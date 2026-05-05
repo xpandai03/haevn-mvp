@@ -90,7 +90,7 @@ export function OnboardingLayout({
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b border-[color:var(--haevn-border)] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -107,8 +107,10 @@ export function OnboardingLayout({
               )}
 
               <div>
-                <h2 className="text-lg font-semibold">{stepInfo?.title}</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="font-heading text-lg font-semibold text-[color:var(--haevn-navy)]">
+                  {stepInfo?.title}
+                </h2>
+                <p className="text-sm text-[color:var(--haevn-muted-fg)]">
                   Step {currentStep} of {totalRequiredSteps}
                 </p>
               </div>
@@ -131,7 +133,7 @@ export function OnboardingLayout({
           {showProgressBar && (
             <div className="mt-4">
               <Progress value={progress} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-1">
                 {progress}% complete
               </p>
             </div>
@@ -143,8 +145,8 @@ export function OnboardingLayout({
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Auto-save indicator */}
         {currentStep > 1 && currentStep < 10 && (
-          <Alert className="mb-6 border-blue-200 bg-blue-50">
-            <AlertDescription>
+          <Alert className="mb-6 border-[color:var(--haevn-teal)]/30 bg-[color:var(--haevn-teal)]/5">
+            <AlertDescription className="text-[color:var(--haevn-charcoal)]">
               Your progress saves automatically. You can leave and come back anytime.
             </AlertDescription>
           </Alert>
@@ -165,11 +167,13 @@ interface EducationCardProps {
 
 export function EducationCard({ icon, title, description }: EducationCardProps) {
   return (
-    <div className="flex gap-4 p-4 rounded-lg border bg-card">
+    <div className="flex gap-4 p-4 border border-[color:var(--haevn-border)] bg-white">
       <div className="flex-shrink-0 mt-1">{icon}</div>
       <div className="space-y-1">
-        <h3 className="font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h3 className="font-heading font-semibold text-[color:var(--haevn-navy)]">
+          {title}
+        </h3>
+        <p className="text-sm text-[color:var(--haevn-muted-fg)]">{description}</p>
       </div>
     </div>
   )

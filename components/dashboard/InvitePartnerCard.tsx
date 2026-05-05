@@ -92,7 +92,7 @@ export default function InvitePartnerCard() {
   }
 
   return (
-    <Card className="rounded-3xl border-haevn-navy/10">
+    <Card className="rounded-[var(--radius)] border-haevn-navy/10">
       <CardHeader>
         <CardTitle className="text-haevn-navy flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
@@ -130,13 +130,13 @@ export default function InvitePartnerCard() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="partner@example.com"
                 required
-                className="border-haevn-navy rounded-xl"
+                className="border-haevn-navy rounded-[var(--radius)]"
                 disabled={loading}
               />
             </div>
 
             {error && (
-              <Alert variant="destructive" className="rounded-xl">
+              <Alert variant="destructive" className="rounded-[var(--radius)]">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
@@ -165,7 +165,7 @@ export default function InvitePartnerCard() {
               )}
             </Button>
 
-            <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="p-3 bg-blue-50 rounded-[var(--radius)] border border-blue-200">
               <p
                 className="text-blue-800 text-sm"
                 style={{
@@ -181,7 +181,7 @@ export default function InvitePartnerCard() {
         ) : (
           <div className="space-y-4">
             {/* Success Message */}
-            <div className="flex items-start gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
+            <div className="flex items-start gap-3 p-4 bg-green-50 rounded-[var(--radius)] border border-green-200">
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
               <div className="flex-1">
                 <h4
@@ -220,12 +220,12 @@ export default function InvitePartnerCard() {
                 <Input
                   value={inviteResult.inviteCode}
                   readOnly
-                  className="border-haevn-navy rounded-xl font-mono text-lg text-center"
+                  className="border-haevn-navy rounded-[var(--radius)] font-mono text-lg text-center"
                 />
                 <Button
                   onClick={handleCopyCode}
                   variant="outline"
-                  className="rounded-xl border-haevn-navy"
+                  className="rounded-[var(--radius)] border-haevn-navy"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -247,11 +247,11 @@ export default function InvitePartnerCard() {
                 <Input
                   value={inviteResult.inviteUrl}
                   readOnly
-                  className="border-haevn-navy rounded-xl text-sm"
+                  className="border-haevn-navy rounded-[var(--radius)] text-sm"
                 />
                 <Button
                   onClick={handleCopyLink}
-                  className={`rounded-xl ${
+                  className={`rounded-[var(--radius)] ${
                     copied
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-haevn-teal hover:opacity-90'
@@ -263,7 +263,7 @@ export default function InvitePartnerCard() {
             </div>
 
             {/* Instructions */}
-            <div className="p-3 bg-haevn-lightgray rounded-xl">
+            <div className="p-3 bg-haevn-lightgray rounded-[var(--radius)]">
               <h5
                 className="text-haevn-navy mb-2"
                 style={{

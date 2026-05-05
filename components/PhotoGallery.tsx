@@ -156,18 +156,18 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
   }
 
   return (
-    <Card className="border-[#252627]/10 shadow-sm bg-white">
+    <Card className="border-haevn-gray-900/10 shadow-sm bg-white">
       <CardContent className="pt-5 pb-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4 text-[#E29E0C]" />
-            <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+            <Camera className="h-4 w-4 text-haevn-orange" />
+            <h2 className="font-heading text-lg text-haevn-gray-900" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
               Photos
             </h2>
           </div>
           <Button
             onClick={() => router.push('/add-photos')}
-            className="bg-[#008080] hover:bg-[#006666] text-white"
+            className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -184,19 +184,19 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
         </div>
 
         {photos.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-[#252627]/20 rounded-lg">
-            <Camera className="h-12 w-12 mx-auto text-[#252627]/40 mb-3" />
-            <p className="text-body text-[#252627]/60 mb-2" style={{ fontWeight: 300 }}>
+          <div className="text-center py-12 border-2 border-dashed border-haevn-gray-900/20 rounded-lg">
+            <Camera className="h-12 w-12 mx-auto text-haevn-gray-900/40 mb-3" />
+            <p className="text-body text-haevn-gray-900/60 mb-2" style={{ fontWeight: 300 }}>
               No photos yet
             </p>
-            <p className="text-body-sm text-[#252627]/40 mb-4" style={{ fontWeight: 300 }}>
+            <p className="text-body-sm text-haevn-gray-900/40 mb-4" style={{ fontWeight: 300 }}>
               Upload photos to your gallery
             </p>
             <Button
               onClick={() => router.push('/add-photos')}
               variant="outline"
               size="sm"
-              className="border-[#008080] text-[#008080] hover:bg-[#008080]/10"
+              className="border-haevn-teal text-haevn-teal hover:bg-haevn-teal/10"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Photos
@@ -215,7 +215,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
 
                 {/* Primary badge */}
                 {photo.is_primary && (
-                  <div className="absolute top-2 right-2 bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                  <div className="absolute top-2 right-2 bg-haevn-orange text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
                     <Star className="h-3 w-3 fill-white" />
                     Profile
                   </div>
@@ -228,7 +228,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
                       onClick={() => handleSetPrimary(photo.id)}
                       disabled={settingPrimaryId === photo.id}
                       size="sm"
-                      className="bg-[#008080] hover:bg-[#006666] text-white"
+                      className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
                     >
                       {settingPrimaryId === photo.id ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -262,7 +262,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
           </div>
         )}
 
-        <p className="text-caption text-[#252627]/60 mt-4" style={{ fontWeight: 300 }}>
+        <p className="text-caption text-haevn-gray-900/60 mt-4" style={{ fontWeight: 300 }}>
           Upload up to 10 photos. Max 5MB per photo. Supported: JPG, PNG, WebP
         </p>
       </CardContent>

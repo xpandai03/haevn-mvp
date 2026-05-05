@@ -48,7 +48,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
 
   return (
     <Card
-      className="group hover:shadow-lg transition-all duration-200 border-[#252627]/10 cursor-pointer"
+      className="group hover:shadow-lg transition-all duration-200 border-haevn-gray-900/10 cursor-pointer"
       onClick={() => onViewDetails(match)}
     >
       <CardContent className="p-4">
@@ -56,17 +56,17 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
           {/* Header with Avatar and Tier */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-14 w-14 border-2 border-[#E29E0C]">
+              <Avatar className="h-14 w-14 border-2 border-haevn-orange">
                 <AvatarImage src={''} /> {/* Anonymized - no photo until handshake */}
-                <AvatarFallback className="bg-[#E8E6E3] text-[#252627] text-lg font-bold">
+                <AvatarFallback className="bg-[#E8E6E3] text-haevn-gray-900 text-lg font-bold">
                   {getInitials(partnership.display_name)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-heading font-bold text-[#252627]" style={{ fontWeight: 900 }}>
+                <h3 className="font-heading font-bold text-haevn-gray-900" style={{ fontWeight: 900 }}>
                   {partnership.display_name || 'Anonymous'}
                 </h3>
-                <div className="flex items-center gap-1 text-sm text-[#252627]/60">
+                <div className="flex items-center gap-1 text-sm text-haevn-gray-900/60">
                   <MapPin className="h-3 w-3" />
                   <span>{partnership.city}</span>
                   <span className="mx-1">•</span>
@@ -78,16 +78,16 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
           </div>
 
           {/* Bio — prefers AI summary */}
-          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontWeight: 300 }}>
+          <p className="text-sm text-haevn-gray-900/70 line-clamp-2" style={{ fontWeight: 300 }}>
             {truncateBio(partnership.connection_summary ?? partnership.short_bio)}
           </p>
 
           {/* Identity Badge */}
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-[#008080]/10 text-[#008080] border-[#008080]/30">
+            <Badge variant="outline" className="bg-haevn-teal/10 text-haevn-teal border-haevn-teal/30">
               {partnership.identity}
             </Badge>
-            <div className="flex items-center gap-1 text-xs text-[#252627]/50">
+            <div className="flex items-center gap-1 text-xs text-haevn-gray-900/50">
               <Heart className="h-3 w-3" />
               <span>{score}% match</span>
             </div>
@@ -100,7 +100,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
               onSendHandshake(partnership.id)
             }}
             disabled={isPending}
-            className="w-full bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
+            className="w-full bg-gradient-to-r from-haevn-orange to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
             style={{ fontWeight: 500 }}
           >
             {isPending ? 'Request Sent' : 'Send Connection Request'}

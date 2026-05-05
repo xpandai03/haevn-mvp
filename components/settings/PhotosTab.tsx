@@ -299,7 +299,7 @@ export function PhotosTab() {
                   className="object-cover"
                 />
                 {photo.is_primary && (
-                  <div className="absolute top-2 left-2 bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <div className="absolute top-2 left-2 bg-haevn-orange text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                     <User className="h-3 w-3" />
                     Avatar
                   </div>
@@ -312,7 +312,7 @@ export function PhotosTab() {
                   <Button
                     size="sm"
                     onClick={() => handleSetPrimary(photo.id)}
-                    className="bg-[#E29E0C] hover:bg-[#c68a0a] text-white"
+                    className="bg-haevn-orange hover:bg-haevn-orange/90 text-white"
                   >
                     <User className="h-4 w-4 mr-1" />
                     Set as Avatar

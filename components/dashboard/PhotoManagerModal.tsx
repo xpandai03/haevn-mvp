@@ -310,7 +310,7 @@ export function PhotoManagerModal({
               <Button
                 type="button"
                 disabled={uploading || photos.length >= 5}
-                className="bg-[#1B9A9A] hover:bg-[#178787] text-white"
+                className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
                 onClick={() => document.getElementById('photo-manager-upload')?.click()}
               >
                 {uploading ? (
@@ -333,7 +333,7 @@ export function PhotoManagerModal({
               <div className="grid grid-cols-2 gap-3">
                 {photos.map((photo) => (
                   <div key={photo.id} className="relative group">
-                    <div className="aspect-square relative rounded-xl overflow-hidden border-2 border-gray-200">
+                    <div className="aspect-square relative rounded-[var(--radius)] overflow-hidden border-2 border-gray-200">
                       <Image
                         src={photo.photo_url}
                         alt="Photo"
@@ -341,7 +341,7 @@ export function PhotoManagerModal({
                         className="object-cover"
                       />
                       {photo.is_primary && (
-                        <div className="absolute top-2 left-2 bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                        <div className="absolute top-2 left-2 bg-haevn-orange text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                           <User className="h-3 w-3" />
                           Avatar
                         </div>
@@ -349,12 +349,12 @@ export function PhotoManagerModal({
                     </div>
 
                     {/* Hover Actions */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2 p-2">
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-[var(--radius)] flex flex-col items-center justify-center gap-2 p-2">
                       {!photo.is_primary && (
                         <Button
                           size="sm"
                           onClick={() => handleSetPrimary(photo.id)}
-                          className="bg-[#E29E0C] hover:bg-[#c68a0a] text-white text-xs w-full"
+                          className="bg-haevn-orange hover:bg-haevn-orange/90 text-white text-xs w-full"
                         >
                           <User className="h-3 w-3 mr-1" />
                           Set as Avatar
@@ -374,7 +374,7 @@ export function PhotoManagerModal({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-xl">
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-[var(--radius)]">
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-600 text-sm">No photos uploaded yet</p>
                 <p className="text-xs text-gray-500 mt-1">Upload your first photo to get started</p>

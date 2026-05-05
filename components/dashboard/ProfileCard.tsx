@@ -60,7 +60,7 @@ function SilhouetteOverlay() {
         <ellipse cx="100" cy="170" rx="60" ry="50" fill="#9CA3AF" />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-[11px] tracking-[0.12em] uppercase text-[#6B7280] bg-white/75 backdrop-blur-sm px-3 py-1.5 flex items-center gap-1.5">
+        <span className="text-[11px] tracking-[0.12em] uppercase text-[color:var(--haevn-muted-fg)] bg-white/75 backdrop-blur-sm px-3 py-1.5 flex items-center gap-1.5">
           <Lock size={12} strokeWidth={1.5} />
           Upgrade to view
         </span>

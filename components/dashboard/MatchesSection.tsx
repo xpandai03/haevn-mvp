@@ -220,7 +220,7 @@ export function MatchesSection({
       {/* Upgrade Modal for Free Users */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-6 mx-6 max-w-sm w-full shadow-xl">
+          <div className="bg-white rounded-[var(--radius)] p-6 mx-6 max-w-sm w-full shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               Upgrade to Connect
             </h3>
@@ -228,7 +228,7 @@ export function MatchesSection({
               Sending connection requests is a premium feature. Upgrade your membership to start connecting with your matches.
             </p>
             <button
-              className="w-full h-11 bg-[#1B9A9A] hover:bg-[#178787] text-white font-semibold rounded-full mb-3 transition-colors"
+              className="w-full h-11 bg-haevn-teal hover:bg-haevn-teal/90 text-white font-semibold rounded-full mb-3 transition-colors"
               onClick={() => setShowUpgradeModal(false)}
             >
               Upgrade Now

@@ -97,7 +97,7 @@ export function SurveyTab() {
       </Button>
 
       {/* Info Card */}
-      <div className="rounded-xl bg-haevn-teal/5 border border-haevn-teal/20 p-3">
+      <div className="rounded-[var(--radius)] bg-haevn-teal/5 border border-haevn-teal/20 p-3">
         <p className="text-xs text-gray-600 text-center">
           These responses help us find your best matches. Update anytime.
         </p>
@@ -106,7 +106,7 @@ export function SurveyTab() {
       {/* Survey Sections as Cards */}
       <div className="space-y-3">
         {surveySections.map((section) => (
-          <Card key={section.id} className="rounded-2xl border-gray-100 shadow-sm overflow-hidden">
+          <Card key={section.id} className="rounded-[var(--radius)] border-gray-100 shadow-sm overflow-hidden">
             <button
               onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
               className="w-full text-left"

@@ -93,7 +93,7 @@ export function AvatarUpload({
         type="button"
         onClick={handleClick}
         disabled={!editable || isUploading}
-        className={`relative rounded-full focus:outline-none focus:ring-2 focus:ring-[#1B9A9A] focus:ring-offset-2 ${
+        className={`relative rounded-full keep-rounded focus:outline-none focus:ring-2 focus:ring-haevn-teal focus:ring-offset-2 ${
           editable ? 'cursor-pointer' : 'cursor-default'
         } ${isUploading ? 'opacity-50' : ''}`}
         aria-label={editable ? 'Upload profile photo' : 'Profile photo'}
@@ -110,7 +110,7 @@ export function AvatarUpload({
         {/* Camera Badge - Only show if editable */}
         {editable && (
           <div
-            className={`absolute ${badgeSizes[size]} bg-[#1B9A9A] rounded-full flex items-center justify-center shadow-md`}
+            className={`absolute ${badgeSizes[size]} bg-haevn-teal rounded-full keep-rounded flex items-center justify-center shadow-md`}
           >
             <Camera className={`${iconSizes[size]} text-white`} />
           </div>

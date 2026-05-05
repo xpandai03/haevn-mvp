@@ -25,7 +25,7 @@ export function SignOutModal({
 }: SignOutModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-4 rounded-2xl">
+      <DialogContent className="max-w-sm mx-4 rounded-[var(--radius)]">
         <DialogHeader className="text-center">
           <DialogTitle className="text-lg font-semibold text-gray-900">
             Sign Out
@@ -39,7 +39,7 @@ export function SignOutModal({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
-            className="flex-1 rounded-xl"
+            className="flex-1 rounded-[var(--radius)]"
           >
             Cancel
           </Button>
@@ -47,7 +47,7 @@ export function SignOutModal({
             variant="destructive"
             onClick={onConfirm}
             disabled={isLoading}
-            className="flex-1 rounded-xl bg-red-500 hover:bg-red-600"
+            className="flex-1 rounded-[var(--radius)] bg-red-500 hover:bg-red-600"
           >
             {isLoading ? 'Signing out...' : 'Sign Out'}
           </Button>

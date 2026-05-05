@@ -106,7 +106,7 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
       {/* Profile Content */}
       <div className="px-4 py-4 space-y-4">
         {/* Name & Basic Info Card */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-[var(--radius)] p-4 shadow-sm border border-gray-100">
           <div className="flex items-start justify-between mb-2">
             <div>
               <h1
@@ -143,7 +143,7 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
 
         {/* About Section — prefers AI connection_summary over manual short_bio */}
         {(profile.connection_summary || profile.short_bio || profile.long_bio) && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-[var(--radius)] p-4 shadow-sm border border-gray-100">
             <h2
               className="font-heading text-sm font-semibold text-haevn-navy mb-2"
               style={{ fontWeight: 600 }}
@@ -169,7 +169,7 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
 
         {/* Intentions Section */}
         {profile.intentions && profile.intentions.length > 0 && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-[var(--radius)] p-4 shadow-sm border border-gray-100">
             <h2
               className="font-heading text-sm font-semibold text-haevn-navy mb-2"
               style={{ fontWeight: 600 }}
@@ -192,7 +192,7 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
 
         {/* Lifestyle Section */}
         {profile.lifestyle_tags && profile.lifestyle_tags.length > 0 && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-[var(--radius)] p-4 shadow-sm border border-gray-100">
             <h2
               className="font-heading text-sm font-semibold text-haevn-navy mb-2"
               style={{ fontWeight: 600 }}
@@ -217,7 +217,7 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
         {!profile.short_bio && !profile.long_bio &&
          (!profile.intentions || profile.intentions.length === 0) &&
          (!profile.lifestyle_tags || profile.lifestyle_tags.length === 0) && (
-          <div className="bg-gray-50 rounded-xl p-4 text-center">
+          <div className="bg-gray-50 rounded-[var(--radius)] p-4 text-center">
             <p className="text-sm text-gray-500">
               {isOwnProfile
                 ? 'Your profile details will appear here once your survey data is processed.'

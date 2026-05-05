@@ -55,7 +55,7 @@ export function ProfilePreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-auto p-0 max-h-[90vh] overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-md mx-auto p-0 max-h-[90vh] overflow-hidden rounded-[var(--radius)]">
         {/* Header */}
         <div className="bg-haevn-teal px-4 py-3 flex items-center justify-between">
           <span className="text-white font-medium text-sm">Your Match Profile</span>

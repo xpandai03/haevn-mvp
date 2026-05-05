@@ -18,7 +18,7 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
       {/* Score Header Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+      <div className="bg-white rounded-[var(--radius)] p-6 shadow-sm mb-6">
         <div className="text-center">
           <p
             className="text-xs text-haevn-charcoal uppercase tracking-widest mb-3"
@@ -56,7 +56,7 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
       </div>
 
       {/* Category Breakdown Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
+      <div className="bg-white rounded-[var(--radius)] p-6 shadow-sm">
         <CompatibilityBreakdown scores={scores} showDescriptions={true} />
       </div>
 

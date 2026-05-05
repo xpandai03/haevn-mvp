@@ -44,7 +44,7 @@ export function MatchCardSimple({ match, onClick }: MatchCardSimpleProps) {
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 overflow-hidden rounded-2xl border-2 border-haevn-gray-300 hover:border-haevn-orange-400"
+      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 overflow-hidden rounded-[var(--radius)] border-2 border-haevn-gray-300 hover:border-haevn-orange-400"
       onClick={onClick}
     >
       {/* Tier indicator bar */}

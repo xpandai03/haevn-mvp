@@ -71,7 +71,7 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-2xl border border-[#252627]/10 p-5 cursor-pointer hover:shadow-lg hover:border-haevn-teal/30 transition-all duration-200"
+      className="bg-white rounded-[var(--radius)] border border-haevn-gray-900/10 p-5 cursor-pointer hover:shadow-lg hover:border-haevn-teal/30 transition-all duration-200"
     >
       {/* Header: Avatar + Name */}
       <div className="flex items-start gap-4 mb-4">
@@ -90,11 +90,11 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
 
         <div className="flex-1 min-w-0">
           <h3
-            className="font-heading text-lg font-bold text-[#252627] truncate mb-1"
+            className="font-heading text-lg font-bold text-haevn-gray-900 truncate mb-1"
           >
             {partnership.display_name || 'Anonymous'}
           </h3>
-          <div className="flex items-center gap-2 text-[#252627]/60 text-sm">
+          <div className="flex items-center gap-2 text-haevn-gray-900/60 text-sm">
             <span className="text-haevn-teal font-medium">
               {PROFILE_TYPE_LABELS[partnership.profile_type] || 'Solo'}
             </span>
@@ -116,7 +116,7 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
           >
             {compatibility.overallScore}%
           </span>
-          <span className="text-sm text-[#252627]/60">match</span>
+          <span className="text-sm text-haevn-gray-900/60">match</span>
         </div>
         <Badge className={`${TIER_COLORS[compatibility.tier]} text-xs px-2 py-0.5`}>
           {compatibility.tier}
@@ -125,14 +125,14 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
 
       {/* Top Factor */}
       <p
-        className="text-sm text-[#252627]/70 mb-3"
+        className="text-sm text-haevn-gray-900/70 mb-3"
         style={{ fontWeight: 400 }}
       >
         Top match: <span className="font-medium">{getTopCategory()}</span>
       </p>
 
       {/* Location & Date */}
-      <div className="flex items-center justify-between text-xs text-[#252627]/50">
+      <div className="flex items-center justify-between text-xs text-haevn-gray-900/50">
         <div className="flex items-center gap-1">
           <MapPin className="h-3 w-3" />
           <span>{partnership.city || 'Unknown'}</span>

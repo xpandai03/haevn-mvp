@@ -35,7 +35,7 @@ export function ConnectionsSection({ connections }: ConnectionsSectionProps) {
                 <Link
                   key={connection.id}
                   href={`/profiles/${connection.partnershipId}`}
-                  className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer overflow-hidden"
+                  className="flex-shrink-0 w-32 bg-white rounded-[var(--radius)] border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer overflow-hidden"
                 >
                   {/* Photo */}
                   <div className="relative w-full h-24 bg-gray-100">

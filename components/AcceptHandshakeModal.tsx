@@ -92,10 +92,10 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-h3 text-[#252627]" style={{ fontWeight: 900 }}>
+          <DialogTitle className="text-h3 text-haevn-gray-900" style={{ fontWeight: 900 }}>
             Connection Request
           </DialogTitle>
-          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
+          <DialogDescription className="text-body-sm text-haevn-gray-900/60" style={{ fontWeight: 300 }}>
             {handshake.partnership.display_name} wants to connect with you
           </DialogDescription>
         </DialogHeader>
@@ -103,28 +103,28 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
         <div className="space-y-4 py-4">
           {/* Partnership Preview */}
           <div className="flex items-center gap-3 p-4 bg-[#E8E6E3] rounded-lg">
-            <Avatar className="h-16 w-16 border-2 border-[#E29E0C]">
+            <Avatar className="h-16 w-16 border-2 border-haevn-orange">
               <AvatarImage src={''} />
-              <AvatarFallback className="bg-white text-[#252627] text-xl font-bold">
+              <AvatarFallback className="bg-white text-haevn-gray-900 text-xl font-bold">
                 {getInitials(handshake.partnership.display_name)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h4 className="text-lg font-bold text-[#252627] mb-1" style={{ fontWeight: 900 }}>
+              <h4 className="text-lg font-bold text-haevn-gray-900 mb-1" style={{ fontWeight: 900 }}>
                 {handshake.partnership.display_name}
               </h4>
-              <div className="flex items-center gap-1 text-sm text-[#252627]/60 mb-2">
+              <div className="flex items-center gap-1 text-sm text-haevn-gray-900/60 mb-2">
                 <MapPin className="h-3 w-3" />
                 <span>{handshake.partnership.city}</span>
                 <span className="mx-1">•</span>
                 <span>{handshake.partnership.age}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-[#008080]/10 text-[#008080] border-[#008080]/30 text-xs">
+                <Badge variant="outline" className="bg-haevn-teal/10 text-haevn-teal border-haevn-teal/30 text-xs">
                   {handshake.partnership.identity}
                 </Badge>
                 {handshake.score && (
-                  <div className="flex items-center gap-1 text-xs text-[#252627]/50">
+                  <div className="flex items-center gap-1 text-xs text-haevn-gray-900/50">
                     <Heart className="h-3 w-3" />
                     <span>{handshake.score}% match</span>
                   </div>
@@ -135,8 +135,8 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
 
           {/* Bio — prefers AI summary */}
           {(handshake.partnership.connection_summary || handshake.partnership.short_bio) && (
-            <div className="p-3 bg-white border border-[#252627]/10 rounded-lg">
-              <p className="text-sm text-[#252627]/70 line-clamp-3" style={{ fontWeight: 300 }}>
+            <div className="p-3 bg-white border border-haevn-gray-900/10 rounded-lg">
+              <p className="text-sm text-haevn-gray-900/70 line-clamp-3" style={{ fontWeight: 300 }}>
                 {handshake.partnership.connection_summary ?? handshake.partnership.short_bio}
               </p>
             </div>
@@ -144,19 +144,19 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
 
           {/* Personal Message */}
           {handshake.message && (
-            <div className="p-3 bg-[#E29E0C]/10 border border-[#E29E0C]/20 rounded-lg">
-              <p className="text-xs font-medium text-[#252627]/60 mb-1" style={{ fontWeight: 500 }}>
+            <div className="p-3 bg-haevn-orange/10 border border-haevn-orange/20 rounded-lg">
+              <p className="text-xs font-medium text-haevn-gray-900/60 mb-1" style={{ fontWeight: 500 }}>
                 Personal Message:
               </p>
-              <p className="text-sm text-[#252627]" style={{ fontWeight: 400 }}>
+              <p className="text-sm text-haevn-gray-900" style={{ fontWeight: 400 }}>
                 "{handshake.message}"
               </p>
             </div>
           )}
 
           {/* Info */}
-          <div className="bg-[#008080]/10 border border-[#008080]/20 rounded-lg p-3">
-            <p className="text-sm text-[#008080]" style={{ fontWeight: 400 }}>
+          <div className="bg-haevn-teal/10 border border-haevn-teal/20 rounded-lg p-3">
+            <p className="text-sm text-haevn-teal" style={{ fontWeight: 400 }}>
               ✨ Accepting will unlock full profiles, photos, and messaging for both of you!
             </p>
           </div>
@@ -180,7 +180,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
           <Button
             onClick={() => handleRespond(true)}
             disabled={responding}
-            className="flex-1 bg-gradient-to-r from-[#008080] to-[#006666] hover:from-[#006666] hover:to-[#005555] text-white"
+            className="flex-1 bg-gradient-to-r from-haevn-teal to-[#006666] hover:from-[#006666] hover:to-[#005555] text-white"
             style={{ fontWeight: 500 }}
           >
             {responding ? (

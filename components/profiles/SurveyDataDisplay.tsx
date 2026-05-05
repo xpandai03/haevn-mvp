@@ -20,7 +20,7 @@ export function SurveyDataSection({ title, data }: SurveyDataSectionProps) {
       <h3 className="text-lg font-semibold text-haevn-navy">{title}</h3>
       <div className="space-y-2">
         {entries.map(([label, value]) => (
-          <div key={label} className="bg-haevn-gray-50 rounded-xl p-4">
+          <div key={label} className="bg-haevn-gray-50 rounded-[var(--radius)] p-4">
             <p className="text-sm font-medium text-haevn-charcoal/60 mb-1">{label}</p>
             <p className="text-haevn-charcoal">
               {Array.isArray(value) ? value.join(', ') : String(value)}

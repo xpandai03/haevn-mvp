@@ -90,10 +90,10 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-h3 text-[#252627]" style={{ fontWeight: 900 }}>
+          <DialogTitle className="text-h3 text-haevn-gray-900" style={{ fontWeight: 900 }}>
             Send Connection Request
           </DialogTitle>
-          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
+          <DialogDescription className="text-body-sm text-haevn-gray-900/60" style={{ fontWeight: 300 }}>
             Let {match.partnership.display_name} know you're interested in connecting
           </DialogDescription>
         </DialogHeader>
@@ -101,17 +101,17 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
         <div className="space-y-4 py-4">
           {/* Match Preview */}
           <div className="flex items-center gap-3 p-3 bg-[#E8E6E3] rounded-lg">
-            <Avatar className="h-12 w-12 border-2 border-[#E29E0C]">
+            <Avatar className="h-12 w-12 border-2 border-haevn-orange">
               <AvatarImage src={''} />
-              <AvatarFallback className="bg-white text-[#252627] font-bold">
+              <AvatarFallback className="bg-white text-haevn-gray-900 font-bold">
                 {getInitials(match.partnership.display_name)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h4 className="font-bold text-[#252627]" style={{ fontWeight: 700 }}>
+              <h4 className="font-bold text-haevn-gray-900" style={{ fontWeight: 700 }}>
                 {match.partnership.display_name}
               </h4>
-              <div className="flex items-center gap-1 text-sm text-[#252627]/60">
+              <div className="flex items-center gap-1 text-sm text-haevn-gray-900/60">
                 <MapPin className="h-3 w-3" />
                 <span>{match.partnership.city}</span>
                 <span className="mx-1">•</span>
@@ -123,7 +123,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
 
           {/* Optional Message */}
           <div>
-            <label className="text-sm font-medium text-[#252627] mb-2 block" style={{ fontWeight: 500 }}>
+            <label className="text-sm font-medium text-haevn-gray-900 mb-2 block" style={{ fontWeight: 500 }}>
               Add a personal message (optional)
             </label>
             <Textarea
@@ -132,16 +132,16 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
               onChange={(e) => setMessage(e.target.value)}
               maxLength={200}
               rows={3}
-              className="resize-none border-[#252627]/20"
+              className="resize-none border-haevn-gray-900/20"
             />
-            <p className="text-xs text-[#252627]/50 mt-1" style={{ fontWeight: 300 }}>
+            <p className="text-xs text-haevn-gray-900/50 mt-1" style={{ fontWeight: 300 }}>
               {message.length}/200 characters
             </p>
           </div>
 
           {/* Info */}
-          <div className="bg-[#008080]/10 border border-[#008080]/20 rounded-lg p-3">
-            <p className="text-sm text-[#008080]" style={{ fontWeight: 400 }}>
+          <div className="bg-haevn-teal/10 border border-haevn-teal/20 rounded-lg p-3">
+            <p className="text-sm text-haevn-teal" style={{ fontWeight: 400 }}>
               💡 If they accept your connection request, you'll both unlock full profiles, photos, and be able to message each other.
             </p>
           </div>
@@ -153,14 +153,14 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={sending}
-            className="flex-1 border-[#252627]/20"
+            className="flex-1 border-haevn-gray-900/20"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSend}
             disabled={sending}
-            className="flex-1 bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
+            className="flex-1 bg-gradient-to-r from-haevn-orange to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
             style={{ fontWeight: 500 }}
           >
             {sending ? (

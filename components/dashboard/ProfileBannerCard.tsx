@@ -28,7 +28,7 @@ export function ProfileBannerCard({
   const displayName = profile?.fullName || 'User'
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
+    <div className="rounded-[var(--radius)] overflow-hidden shadow-sm bg-white">
       {/* Top section - Avatar overlapping into navy */}
       <div className="relative">
         {/* White/transparent top area for avatar top half */}
@@ -36,22 +36,23 @@ export function ProfileBannerCard({
 
         {/* Navy Gradient Section - starts at avatar midpoint */}
         <div
-          className="px-6 pt-14 pb-6 rounded-t-3xl"
+          className="px-6 pt-14 pb-6"
           style={{
-            background: 'linear-gradient(135deg, #0F2A4A 0%, #1A4B6E 50%, #0F2A4A 100%)'
+            background:
+              'linear-gradient(135deg, var(--haevn-navy) 0%, #1A4B6E 50%, var(--haevn-navy) 100%)',
           }}
         >
           {/* Name + Badge - Centered, White Text */}
           <div className="text-center mb-5">
             <div className="flex items-center justify-center gap-2">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="font-heading text-xl font-bold text-white">
                 {displayName}
               </h2>
               <Badge
-                className={`rounded-full text-xs px-2.5 py-0.5 font-semibold ${
+                className={`rounded-full keep-rounded text-xs px-2.5 py-0.5 font-semibold ${
                   membershipTier === 'plus'
-                    ? 'bg-[#1B9A9A] text-white'
-                    : 'bg-orange-500 text-white'
+                    ? 'bg-haevn-teal text-white'
+                    : 'bg-haevn-orange text-white'
                 }`}
               >
                 {membershipTier === 'plus' ? 'PLUS' : 'FREE'}
@@ -65,7 +66,7 @@ export function ProfileBannerCard({
           <div className="grid grid-cols-3 gap-4">
             <Link
               href="/matches"
-              className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+              className="text-center py-2 hover:bg-white/10 rounded-[var(--radius)] transition-colors"
             >
               <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
                 Matches
@@ -79,7 +80,7 @@ export function ProfileBannerCard({
               /* Pro users: Messages */
               <Link
                 href="/chat"
-                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+                className="text-center py-2 hover:bg-white/10 rounded-[var(--radius)] transition-colors"
               >
                 <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
                   Messages
@@ -92,7 +93,7 @@ export function ProfileBannerCard({
               /* Free users: Nudges */
               <Link
                 href="/dashboard/nudges"
-                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+                className="text-center py-2 hover:bg-white/10 rounded-[var(--radius)] transition-colors"
               >
                 <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
                   Nudges
@@ -107,7 +108,7 @@ export function ProfileBannerCard({
               /* Pro users: Connections */
               <Link
                 href="/dashboard/connections"
-                className="text-center py-2 hover:bg-white/10 rounded-xl transition-colors"
+                className="text-center py-2 hover:bg-white/10 rounded-[var(--radius)] transition-colors"
               >
                 <p className="text-xs text-white/70 uppercase tracking-widest font-medium mb-1">
                   Connections

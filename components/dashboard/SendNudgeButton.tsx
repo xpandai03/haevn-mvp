@@ -34,7 +34,7 @@ export function SendNudgeButton() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+    <div className="bg-white rounded-[var(--radius)] border border-gray-100 shadow-sm p-4 space-y-3">
       <h3 className="text-sm font-medium text-gray-900">Send Test Nudge</h3>
 
       <div className="flex gap-2">

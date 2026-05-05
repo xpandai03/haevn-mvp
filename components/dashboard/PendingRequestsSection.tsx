@@ -34,7 +34,7 @@ export function PendingRequestsSection({ requests: initialRequests }: PendingReq
               <button
                 key={req.handshakeId}
                 onClick={() => setSelectedRequest(req)}
-                className="flex-shrink-0 w-32 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer overflow-hidden text-left"
+                className="flex-shrink-0 w-32 bg-white rounded-[var(--radius)] border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer overflow-hidden text-left"
               >
                 {/* Photo */}
                 <div className="relative w-full h-24 bg-gray-100">
@@ -53,7 +53,7 @@ export function PendingRequestsSection({ requests: initialRequests }: PendingReq
                     </div>
                   )}
                   {/* New indicator */}
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-[#E29E0C] rounded-full" />
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-haevn-orange rounded-full" />
                 </div>
 
                 {/* Info */}
