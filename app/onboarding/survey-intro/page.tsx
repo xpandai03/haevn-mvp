@@ -155,7 +155,7 @@ export default function SurveyIntroPage() {
           <div className="pt-4">
             <Button
               onClick={handleStart}
-              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+              className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
               size="lg"
               style={{
                 fontWeight: 500,

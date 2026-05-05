@@ -123,7 +123,7 @@ export default function AcceptInvitePage() {
 
           <Button
             onClick={() => router.push('/onboarding/expectations')}
-            className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+            className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
             size="lg"
           >
             Continue Without Invite
@@ -236,7 +236,7 @@ export default function AcceptInvitePage() {
           <Button
             onClick={handleAcceptInvite}
             disabled={accepting}
-            className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+            className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
             size="lg"
             style={{
               fontWeight: 500,

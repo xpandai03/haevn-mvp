@@ -146,7 +146,7 @@ export function ProfilePhotoModal({
           <Button
             onClick={handleButtonClick}
             disabled={uploading}
-            className="w-full max-w-xs bg-haevn-teal hover:bg-haevn-teal/90 text-white"
+            className="w-full max-w-xs bg-haevn-orange hover:bg-haevn-orange/90 text-white"
           >
             {uploading ? (
               <>

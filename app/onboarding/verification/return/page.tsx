@@ -251,7 +251,7 @@ function VerificationReturnContent() {
               <div className="space-y-3">
                 <Button
                   onClick={handleContinue}
-                  className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+                  className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
                   size="lg"
                   style={{
                     fontWeight: 500,

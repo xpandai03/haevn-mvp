@@ -242,7 +242,7 @@ export function PartnerProfile() {
 
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-haevn-teal text-white rounded-lg hover:bg-haevn-teal/90 transition-colors"
+              className="px-4 py-2 bg-haevn-orange text-white rounded-lg hover:bg-haevn-teal/90 transition-colors"
               style={{ fontWeight: 500 }}
             >
               Refresh Page
@@ -268,7 +268,7 @@ export function PartnerProfile() {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-haevn-teal text-white rounded-lg hover:bg-haevn-teal/90 transition-colors"
+              className="px-4 py-2 bg-haevn-orange text-white rounded-lg hover:bg-haevn-teal/90 transition-colors"
               style={{ fontWeight: 500 }}
             >
               Refresh
@@ -402,7 +402,7 @@ export function PartnerProfile() {
                     <div className="flex gap-2">
                       <Button
                         onClick={() => setInviteModalOpen(true)}
-                        className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
+                        className="bg-haevn-orange hover:bg-haevn-orange/90 text-white"
                         size="sm"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
@@ -561,7 +561,7 @@ export function PartnerProfile() {
                   </h2>
                 </div>
                 <div className="space-y-3">
-                  <Badge className="bg-haevn-teal text-white border-0" style={{ fontWeight: 500 }}>
+                  <Badge className="bg-haevn-orange text-white border-0" style={{ fontWeight: 500 }}>
                     {partnerData.communicationStyle.primary}
                   </Badge>
                   <p className="text-base text-haevn-gray-900" style={{ fontWeight: 300, lineHeight: '120%' }}>

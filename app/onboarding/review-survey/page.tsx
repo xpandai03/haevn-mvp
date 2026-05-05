@@ -150,7 +150,7 @@ export default function ReviewSurveyPage() {
 
           <Button
             onClick={() => router.push('/dashboard')}
-            className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+            className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
             size="lg"
           >
             Go to Dashboard
@@ -261,7 +261,7 @@ export default function ReviewSurveyPage() {
               </p>
               <Button
                 onClick={handleEditSurvey}
-                className="mt-4 bg-haevn-teal hover:opacity-90 text-white rounded-full"
+                className="mt-4 bg-haevn-orange hover:opacity-90 text-white rounded-full"
               >
                 Start Survey Together
               </Button>
@@ -314,7 +314,7 @@ export default function ReviewSurveyPage() {
           <Button
             onClick={handleApproveAndContinue}
             disabled={!approved || saving || completionPct < 100}
-            className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full disabled:opacity-50"
+            className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full disabled:opacity-50"
             size="lg"
             style={{
               fontWeight: 500,

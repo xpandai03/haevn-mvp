@@ -124,7 +124,7 @@ function SignupStep1Form() {
         <Button
           onClick={handleContinue}
           disabled={!isValid}
-          className="w-full max-w-md mx-auto block bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full max-w-md mx-auto block bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full h-14 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             fontWeight: 500,
             fontSize: '18px'

@@ -151,7 +151,7 @@ export default function NudgesPage() {
               </p>
               <Button
                 onClick={() => router.push(membershipTier === 'plus' ? '/dashboard/matches' : '/pricing')}
-                className="bg-haevn-teal hover:opacity-90 text-white"
+                className="bg-haevn-orange hover:opacity-90 text-white"
               >
                 {membershipTier === 'plus' ? 'View Matches' : 'Upgrade to HAEVN+'}
               </Button>

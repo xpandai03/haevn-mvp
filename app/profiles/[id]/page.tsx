@@ -276,7 +276,7 @@ export default function ProfileViewPage() {
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="grid grid-cols-2 gap-3">
               <Button
-                className="bg-haevn-teal hover:opacity-90 text-white"
+                className="bg-haevn-orange hover:opacity-90 text-white"
                 onClick={handleMessage}
                 disabled={resolvingHandshake}
               >

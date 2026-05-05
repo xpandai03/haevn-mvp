@@ -21,7 +21,7 @@ export function ConnectionDetailActions({
   return (
     <div className="px-5 pb-6 pt-3 bg-white border-t border-haevn-gray-200 flex-shrink-0">
       <Button
-        className="w-full h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full flex items-center justify-center gap-2"
+        className="w-full h-12 text-base font-semibold bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full flex items-center justify-center gap-2"
         onClick={onMessage}
         disabled={loading}
       >

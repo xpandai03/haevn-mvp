@@ -160,7 +160,7 @@ export default function MembershipPage() {
               {tier.popular && (
                 <div className="absolute -top-3 left-8">
                   <span
-                    className="bg-haevn-gold text-white px-4 py-1 rounded-full"
+                    className="bg-haevn-orange text-white px-4 py-1 rounded-full"
                     style={{
                       fontWeight: 500,
                       fontSize: '12px'
@@ -270,7 +270,7 @@ export default function MembershipPage() {
                 disabled={loading}
                 className={`w-full rounded-full ${
                   tier.popular
-                    ? 'bg-haevn-teal hover:opacity-90 text-white'
+                    ? 'bg-haevn-orange hover:opacity-90 text-white'
                     : 'bg-white hover:bg-haevn-cream text-haevn-navy border-2 border-haevn-navy'
                 }`}
                 size="lg"

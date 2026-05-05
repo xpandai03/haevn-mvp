@@ -443,7 +443,7 @@ export default function MatchDetailPage() {
             {viewerTier === 'free' ? (
               // Free viewer: show Connect but redirect to upgrade
               <Button
-                className="flex-1 h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full"
+                className="flex-1 h-12 text-base font-semibold bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full"
                 onClick={() => {
                   toast({
                     title: 'Upgrade Required',
@@ -467,7 +467,7 @@ export default function MatchDetailPage() {
             ) : (
               // Pro viewer + Pro target: show Connect
               <Button
-                className="flex-1 h-12 text-base font-semibold bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full"
+                className="flex-1 h-12 text-base font-semibold bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full"
                 onClick={handleConnect}
                 disabled={actionLoading}
               >

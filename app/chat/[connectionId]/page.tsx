@@ -326,7 +326,7 @@ export default function ChatWithConnectionPage() {
                       hasImage && !hasText ? 'p-1' : 'px-4 py-2.5'
                     } ${
                       isOwn
-                        ? 'bg-haevn-teal text-white rounded-br-md'
+                        ? 'bg-haevn-orange text-white rounded-br-md'
                         : 'bg-white border border-gray-200 text-haevn-charcoal rounded-bl-md'
                     }`}
                   >

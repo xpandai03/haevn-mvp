@@ -167,7 +167,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
           </div>
           <Button
             onClick={() => router.push('/add-photos')}
-            className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
+            className="bg-haevn-orange hover:bg-haevn-orange/90 text-white"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -228,7 +228,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
                       onClick={() => handleSetPrimary(photo.id)}
                       disabled={settingPrimaryId === photo.id}
                       size="sm"
-                      className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
+                      className="bg-haevn-orange hover:bg-haevn-orange/90 text-white"
                     >
                       {settingPrimaryId === photo.id ? (
                         <Loader2 className="h-3 w-3 animate-spin" />

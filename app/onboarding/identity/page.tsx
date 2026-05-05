@@ -365,7 +365,7 @@ export default function IdentityPage() {
           <Button
             onClick={handleContinue}
             disabled={!profileType || isSubmitting}
-            className="w-full max-w-md bg-haevn-teal hover:opacity-90 text-white rounded-full disabled:opacity-50"
+            className="w-full max-w-md bg-haevn-orange hover:opacity-90 text-white rounded-full disabled:opacity-50"
             size="lg"
             style={{
               fontWeight: 500,

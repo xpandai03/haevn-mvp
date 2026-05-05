@@ -310,7 +310,7 @@ export function PhotoManagerModal({
               <Button
                 type="button"
                 disabled={uploading || photos.length >= 5}
-                className="bg-haevn-teal hover:bg-haevn-teal/90 text-white"
+                className="bg-haevn-orange hover:bg-haevn-orange/90 text-white"
                 onClick={() => document.getElementById('photo-manager-upload')?.click()}
               >
                 {uploading ? (

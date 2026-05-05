@@ -153,7 +153,7 @@ export function MatchModal({ match, open, onClose, onConnect }: MatchModalProps)
             PASS
           </Button>
           <Button
-            className="flex-1 bg-haevn-teal hover:bg-haevn-teal/90 text-white font-semibold"
+            className="flex-1 bg-haevn-orange hover:bg-haevn-orange/90 text-white font-semibold"
             onClick={() => {
               if (onConnect) {
                 onConnect(partnership.id)

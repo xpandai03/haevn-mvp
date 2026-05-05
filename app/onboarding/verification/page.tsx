@@ -156,7 +156,7 @@ export default function VerificationPage() {
           <div className="pt-6 space-y-3">
             <Button
               onClick={handleStartVerification}
-              className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
+              className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full"
               size="lg"
               disabled={isStarting}
               style={{

@@ -160,7 +160,7 @@ export default function ResetPasswordPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full mt-6"
+                  className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full mt-6"
                   size="lg"
                   disabled={loading}
                   style={{

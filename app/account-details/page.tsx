@@ -209,7 +209,7 @@ export default function AccountDetailsPage() {
               </div>
               <Button
                 size="sm"
-                className="bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full px-4"
+                className="bg-haevn-orange hover:bg-haevn-orange/90 text-white rounded-full px-4"
                 onClick={() => setPreviewModalOpen(true)}
               >
                 View

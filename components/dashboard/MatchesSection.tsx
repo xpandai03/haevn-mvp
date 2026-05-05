@@ -228,7 +228,7 @@ export function MatchesSection({
               Sending connection requests is a premium feature. Upgrade your membership to start connecting with your matches.
             </p>
             <button
-              className="w-full h-11 bg-haevn-teal hover:bg-haevn-teal/90 text-white font-semibold rounded-full mb-3 transition-colors"
+              className="w-full h-11 bg-haevn-orange hover:bg-haevn-orange/90 text-white font-semibold rounded-full mb-3 transition-colors"
               onClick={() => setShowUpgradeModal(false)}
             >
               Upgrade Now
