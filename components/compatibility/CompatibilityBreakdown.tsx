@@ -58,7 +58,6 @@ export function CompatibilityBreakdown({
       <h4
         className="text-haevn-navy font-semibold"
         style={{
-          fontFamily: 'Roboto, Helvetica, sans-serif',
           fontWeight: 600,
           fontSize: compact ? '14px' : '16px'
         }}
@@ -77,7 +76,6 @@ export function CompatibilityBreakdown({
                 <span
                   className="font-medium text-haevn-navy"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: compact ? '13px' : '14px'
                   }}
@@ -87,7 +85,6 @@ export function CompatibilityBreakdown({
                 <span
                   className="font-semibold text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 600,
                     fontSize: compact ? '13px' : '14px'
                   }}
@@ -109,7 +106,6 @@ export function CompatibilityBreakdown({
                 <p
                   className="text-haevn-charcoal/60"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 400,
                     fontSize: compact ? '11px' : '12px',
                     lineHeight: '1.4'

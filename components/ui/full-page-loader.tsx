@@ -13,7 +13,7 @@ export default function FullPageLoader({ message }: FullPageLoaderProps) {
       {message && (
         <p
           className="text-haevn-charcoal mt-4 text-sm"
-          style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+          style={{ fontWeight: 300 }}
         >
           {message}
         </p>

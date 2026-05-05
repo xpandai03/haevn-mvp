@@ -104,9 +104,8 @@ export default function VerificationPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1
-            className="text-haevn-navy mb-4"
+            className="font-heading text-haevn-navy mb-4"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '36px',
               lineHeight: '100%',
@@ -118,7 +117,6 @@ export default function VerificationPage() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '18px',
               lineHeight: '120%'
@@ -161,7 +159,6 @@ export default function VerificationPage() {
               size="lg"
               disabled={isStarting}
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px'
               }}
@@ -175,7 +172,6 @@ export default function VerificationPage() {
               size="lg"
               variant="outline"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px'
               }}
@@ -188,7 +184,6 @@ export default function VerificationPage() {
                 onClick={() => setShowDetails(true)}
                 className="text-sm text-haevn-teal hover:underline"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 400
                 }}
               >
@@ -198,7 +193,6 @@ export default function VerificationPage() {
                 href="/onboarding/verification/return"
                 className="text-sm text-haevn-charcoal hover:underline"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300
                 }}
               >

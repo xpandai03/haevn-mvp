@@ -103,9 +103,8 @@ export default function RelationshipOrientationPage() {
           {/* Heading */}
           <div className="space-y-3">
             <h1
-              className="text-haevn-navy"
+              className="font-heading text-haevn-navy"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 700,
                 fontSize: '28px',
                 lineHeight: '120%',
@@ -117,7 +116,6 @@ export default function RelationshipOrientationPage() {
             <p
               className="text-haevn-charcoal"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 400,
                 fontSize: '16px',
                 lineHeight: '140%'
@@ -158,9 +156,8 @@ export default function RelationshipOrientationPage() {
                     </div>
                     <div className="flex-1">
                       <h3
-                        className="text-haevn-navy mb-1"
+                        className="font-heading text-haevn-navy mb-1"
                         style={{
-                          fontFamily: 'Roboto, Helvetica, sans-serif',
                           fontWeight: 600,
                           fontSize: '18px',
                           lineHeight: '120%'
@@ -171,7 +168,6 @@ export default function RelationshipOrientationPage() {
                       <p
                         className="text-haevn-charcoal"
                         style={{
-                          fontFamily: 'Roboto, Helvetica, sans-serif',
                           fontWeight: 400,
                           fontSize: '14px',
                           lineHeight: '140%'
@@ -195,7 +191,6 @@ export default function RelationshipOrientationPage() {
           disabled={!selectedOrientation || isSubmitting}
           className="w-full max-w-md mx-auto block bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 500,
             fontSize: '18px'
           }}

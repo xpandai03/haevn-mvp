@@ -54,9 +54,8 @@ export default function ExpectationsPage() {
           </div>
 
           <h1
-            className="text-haevn-navy mb-4"
+            className="font-heading text-haevn-navy mb-4"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '36px',
               lineHeight: '100%',
@@ -69,7 +68,6 @@ export default function ExpectationsPage() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '18px',
               lineHeight: '120%',
@@ -89,9 +87,8 @@ export default function ExpectationsPage() {
             </div>
             <div>
               <h3
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px',
                   lineHeight: '120%',
@@ -103,7 +100,6 @@ export default function ExpectationsPage() {
               <p
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '16px',
                   lineHeight: '120%',
@@ -122,9 +118,8 @@ export default function ExpectationsPage() {
             </div>
             <div>
               <h3
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px',
                   lineHeight: '120%',
@@ -136,7 +131,6 @@ export default function ExpectationsPage() {
               <p
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '16px',
                   lineHeight: '120%',
@@ -155,9 +149,8 @@ export default function ExpectationsPage() {
             </div>
             <div>
               <h3
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px',
                   lineHeight: '120%',
@@ -169,7 +162,6 @@ export default function ExpectationsPage() {
               <p
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '16px',
                   lineHeight: '120%',
@@ -188,7 +180,6 @@ export default function ExpectationsPage() {
               className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
               size="lg"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px'
               }}

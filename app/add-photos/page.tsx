@@ -183,10 +183,10 @@ export default function AddPhotosPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
-          <h1 className="text-h1 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <h1 className="font-heading text-h1 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
             Add photos
           </h1>
-          <p className="text-body text-[#252627]/80" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-body text-[#252627]/80" style={{ fontWeight: 300 }}>
             Add at least 2 photos to continue
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function AddPhotosPage() {
               onClick={handleContinue}
               disabled={uploadedCount < 2 || uploading}
               className="w-full bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white py-6 text-lg"
-              style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+              style={{ fontWeight: 500 }}
             >
               {uploading ? (
                 <>

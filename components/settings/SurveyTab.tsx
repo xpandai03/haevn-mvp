@@ -81,7 +81,7 @@ export function SurveyTab() {
         onClick={handleSave}
         disabled={saving}
         className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full h-12"
-        style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+        style={{ fontWeight: 500 }}
       >
         {saving ? (
           <>

@@ -174,9 +174,8 @@ export default function ReviewSurveyPage() {
             </div>
             <div>
               <h1
-                className="text-haevn-navy"
+                className="font-heading text-haevn-navy"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 700,
                   fontSize: '28px',
                   lineHeight: '100%',
@@ -188,7 +187,6 @@ export default function ReviewSurveyPage() {
               <p
                 className="text-haevn-charcoal mt-1"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '14px',
                 }}
@@ -241,7 +239,7 @@ export default function ReviewSurveyPage() {
         {/* Survey Answers Display */}
         <div className="bg-white rounded-3xl p-8 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-haevn-navy text-xl font-semibold">
+            <h2 className="font-heading text-haevn-navy text-xl font-semibold">
               Survey Responses
             </h2>
             <Button
@@ -300,9 +298,6 @@ export default function ReviewSurveyPage() {
             <label
               htmlFor="approve"
               className="text-haevn-navy text-sm font-medium cursor-pointer"
-              style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
-              }}
             >
               I have reviewed these survey responses and approve them. I understand that these responses
               represent our shared partnership and will be used for matching.
@@ -322,7 +317,6 @@ export default function ReviewSurveyPage() {
             className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full disabled:opacity-50"
             size="lg"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500,
               fontSize: '18px'
             }}
@@ -343,7 +337,6 @@ export default function ReviewSurveyPage() {
         <p
           className="text-center text-haevn-charcoal text-xs"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 300,
           }}
         >

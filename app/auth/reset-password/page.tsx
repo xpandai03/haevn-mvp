@@ -83,9 +83,8 @@ export default function ResetPasswordPage() {
           <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg">
             <div className="text-center mb-6">
               <h1
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 700,
                   fontSize: '28px',
                   lineHeight: '100%',
@@ -97,7 +96,6 @@ export default function ResetPasswordPage() {
               <p
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '16px',
                   lineHeight: '120%'
@@ -115,7 +113,6 @@ export default function ResetPasswordPage() {
                   <CheckCircle2 className="h-4 w-4 text-haevn-teal" />
                   <AlertDescription
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 400,
                       fontSize: '14px'
                     }}
@@ -127,7 +124,6 @@ export default function ResetPasswordPage() {
                 <div
                   className="text-center text-haevn-charcoal pt-4"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '14px'
                   }}
@@ -144,7 +140,6 @@ export default function ResetPasswordPage() {
                     htmlFor="email"
                     className="text-haevn-navy mb-2 block"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500,
                       fontSize: '14px',
                       textAlign: 'left'
@@ -169,7 +164,6 @@ export default function ResetPasswordPage() {
                   size="lg"
                   disabled={loading}
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: '18px'
                   }}
@@ -187,7 +181,6 @@ export default function ResetPasswordPage() {
                 <div
                   className="text-center text-haevn-charcoal pt-4"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '14px'
                   }}
@@ -210,7 +203,6 @@ export default function ResetPasswordPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >
@@ -222,7 +214,6 @@ export default function ResetPasswordPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >
@@ -234,7 +225,6 @@ export default function ResetPasswordPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >

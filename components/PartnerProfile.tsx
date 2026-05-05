@@ -211,7 +211,7 @@ export function PartnerProfile() {
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
-          <p className="text-body text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-body text-[#252627]" style={{ fontWeight: 300 }}>
             Loading profile...
           </p>
         </div>
@@ -232,10 +232,10 @@ export function PartnerProfile() {
             </div>
 
             <div>
-              <p className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              <p className="text-h3 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
                 Profile Not Found
               </p>
-              <p className="text-body text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+              <p className="text-body text-[#252627]" style={{ fontWeight: 300 }}>
                 Your user profile hasn't been created yet. This usually happens automatically. Try refreshing the page.
               </p>
             </div>
@@ -243,7 +243,7 @@ export function PartnerProfile() {
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-[#008080] text-white rounded-lg hover:bg-[#006666] transition-colors"
-              style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+              style={{ fontWeight: 500 }}
             >
               Refresh Page
             </button>
@@ -260,16 +260,16 @@ export function PartnerProfile() {
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-6">
         <Card className="max-w-md w-full border-[#252627]/10">
           <CardContent className="pt-6 text-center">
-            <p className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+            <p className="text-h3 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
               No profile found
             </p>
-            <p className="text-body text-[#252627] mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-body text-[#252627] mb-4" style={{ fontWeight: 300 }}>
               No profile data is available for this user yet. Try refreshing the page.
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-[#008080] text-white rounded-lg hover:bg-[#006666] transition-colors"
-              style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+              style={{ fontWeight: 500 }}
             >
               Refresh
             </button>
@@ -311,7 +311,7 @@ export function PartnerProfile() {
                     onClick={handleAvatarClick}
                   >
                     <AvatarImage src={partnerData.avatar} alt={partnerData.name} />
-                    <AvatarFallback className="bg-white text-[#1E2A4A] text-2xl" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                    <AvatarFallback className="bg-white text-[#1E2A4A] text-2xl" style={{ fontWeight: 900 }}>
                       {getInitials(partnerData.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -341,11 +341,11 @@ export function PartnerProfile() {
                 />
 
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl text-white" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h1 className="font-heading text-2xl text-white" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     {partnerData.username}
                   </h1>
                   {partnerData.isPaid && (
-                    <Badge className="bg-[#E29E0C] text-white border-0 px-2 py-0.5" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                    <Badge className="bg-[#E29E0C] text-white border-0 px-2 py-0.5" style={{ fontWeight: 500 }}>
                       PLUS
                     </Badge>
                   )}
@@ -355,26 +355,26 @@ export function PartnerProfile() {
               {/* Stats Grid */}
               <div className="bg-[#008080] px-6 py-5 grid grid-cols-3 gap-4 border-t border-white/20">
                 <div className="text-center">
-                  <p className="text-xs text-white/70 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500, lineHeight: '120%' }}>
+                  <p className="text-xs text-white/70 mb-1" style={{ fontWeight: 500, lineHeight: '120%' }}>
                     Matches
                   </p>
-                  <p className="text-3xl text-white" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <p className="text-3xl text-white" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     {partnerData.stats.matches}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-white/70 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500, lineHeight: '120%' }}>
+                  <p className="text-xs text-white/70 mb-1" style={{ fontWeight: 500, lineHeight: '120%' }}>
                     Nudges
                   </p>
-                  <p className="text-3xl text-white" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <p className="text-3xl text-white" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     {partnerData.stats.nudges}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-white/70 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500, lineHeight: '120%' }}>
+                  <p className="text-xs text-white/70 mb-1" style={{ fontWeight: 500, lineHeight: '120%' }}>
                     Profile views
                   </p>
-                  <p className="text-3xl text-white" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <p className="text-3xl text-white" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     {partnerData.stats.profileViews}
                   </p>
                 </div>
@@ -393,10 +393,10 @@ export function PartnerProfile() {
                     <Heart className="h-5 w-5 text-[#E29E0C]" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-body font-medium text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                    <p className="text-body font-medium text-[#252627] mb-1" style={{ fontWeight: 500 }}>
                       You haven't connected with a partner yet
                     </p>
-                    <p className="text-body-sm text-[#252627]/80 mb-3" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                    <p className="text-body-sm text-[#252627]/80 mb-3" style={{ fontWeight: 300 }}>
                       Invite your partner or accept an invitation to unlock matches, nudges, and connections.
                     </p>
                     <div className="flex gap-2">
@@ -427,10 +427,10 @@ export function PartnerProfile() {
         {/* Matches Section Preview */}
         <div className="px-6 py-3 bg-transparent">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-sm text-[#252627]" style={{ fontWeight: 300 }}>
               Matches ({partnerData.stats.matches} of {partnerData.stats.matches})
             </p>
-            <button className="text-sm text-[#008080] hover:underline" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+            <button className="text-sm text-[#008080] hover:underline" style={{ fontWeight: 500 }}>
               View all
             </button>
           </div>
@@ -438,17 +438,17 @@ export function PartnerProfile() {
             <div className="flex-1 h-1 bg-[#252627]/10 rounded-full overflow-hidden">
               <div className="h-full w-3/4 bg-[#008080] rounded-full"></div>
             </div>
-            <span className="text-xs text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>...</span>
+            <span className="text-xs text-[#252627]/60" style={{ fontWeight: 300 }}>...</span>
           </div>
         </div>
 
         {/* Connections Section Preview */}
         <div className="px-6 py-3 bg-transparent">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-sm text-[#252627]" style={{ fontWeight: 300 }}>
               Connections ({partnerData.stats.connections} of {partnerData.stats.connections})
             </p>
-            <button className="text-sm text-[#008080] hover:underline" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+            <button className="text-sm text-[#008080] hover:underline" style={{ fontWeight: 500 }}>
               View all
             </button>
           </div>
@@ -456,7 +456,7 @@ export function PartnerProfile() {
             <div className="flex-1 h-1 bg-[#252627]/10 rounded-full overflow-hidden">
               <div className="h-full w-1/2 bg-[#008080] rounded-full"></div>
             </div>
-            <span className="text-xs text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>...</span>
+            <span className="text-xs text-[#252627]/60" style={{ fontWeight: 300 }}>...</span>
           </div>
         </div>
 
@@ -479,7 +479,7 @@ export function PartnerProfile() {
                       : 'text-[#252627]/60 hover:text-[#1E2A4A]'
                     }
                   `}
-                  style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+                  style={{ fontWeight: 500 }}
                 >
                   <Icon className={`h-4 w-4 transition-transform ${isActive ? 'scale-110' : ''}`} />
                   <span className="text-xs">{section.label}</span>
@@ -505,11 +505,11 @@ export function PartnerProfile() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Heart className="h-4 w-4 text-[#E29E0C]" />
-                  <h2 className="text-lg text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     About
                   </h2>
                 </div>
-                <p className="text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
+                <p className="text-base text-[#252627]" style={{ fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
                   {partnerData.bio}
                 </p>
               </CardContent>
@@ -526,7 +526,7 @@ export function PartnerProfile() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="h-4 w-4 text-[#E29E0C]" />
-                  <h2 className="text-lg text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     Relationship goals
                   </h2>
                 </div>
@@ -535,7 +535,7 @@ export function PartnerProfile() {
                     <li
                       key={index}
                       className="flex items-start gap-3 text-base text-[#252627]"
-                      style={{ fontFamily: 'Roboto', fontWeight: 300, lineHeight: '120%' }}
+                      style={{ fontWeight: 300, lineHeight: '120%' }}
                     >
                       <span className="inline-block mt-2 h-1.5 w-1.5 rounded-full bg-[#E29E0C] flex-shrink-0" />
                       <span>{goal}</span>
@@ -556,15 +556,15 @@ export function PartnerProfile() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageCircle className="h-4 w-4 text-[#E29E0C]" />
-                  <h2 className="text-lg text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     Communication style
                   </h2>
                 </div>
                 <div className="space-y-3">
-                  <Badge className="bg-[#008080] text-white border-0" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                  <Badge className="bg-[#008080] text-white border-0" style={{ fontWeight: 500 }}>
                     {partnerData.communicationStyle.primary}
                   </Badge>
-                  <p className="text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300, lineHeight: '120%' }}>
+                  <p className="text-base text-[#252627]" style={{ fontWeight: 300, lineHeight: '120%' }}>
                     {partnerData.communicationStyle.description}
                   </p>
                 </div>
@@ -582,7 +582,7 @@ export function PartnerProfile() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="h-4 w-4 text-[#E29E0C]" />
-                  <h2 className="text-lg text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     Energy archetype
                   </h2>
                 </div>
@@ -590,10 +590,10 @@ export function PartnerProfile() {
                   <div className="text-5xl mb-3">
                     {partnerData.archetype.icon}
                   </div>
-                  <h3 className="text-xl text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+                  <h3 className="font-heading text-xl text-[#252627] mb-2" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
                     {partnerData.archetype.name}
                   </h3>
-                  <p className="text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300, lineHeight: '120%' }}>
+                  <p className="text-base text-[#252627]" style={{ fontWeight: 300, lineHeight: '120%' }}>
                     {partnerData.archetype.description}
                   </p>
                 </div>
@@ -616,7 +616,7 @@ export function PartnerProfile() {
 
         {/* Personal Section */}
         <div className="px-6 pt-4 pb-4 bg-transparent">
-          <h3 className="text-base text-[#252627] mb-3 px-1" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <h3 className="font-heading text-base text-[#252627] mb-3 px-1" style={{ fontWeight: 900 }}>
             Personal
           </h3>
           <div className="space-y-2">
@@ -634,7 +634,7 @@ export function PartnerProfile() {
                   }`}
                 >
                   <Icon className="h-5 w-5 text-[#252627]/40" />
-                  <span className="flex-1 text-left text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                  <span className="flex-1 text-left text-base text-[#252627]" style={{ fontWeight: 300 }}>
                     {item.label}
                   </span>
                   <ChevronRight className="h-4 w-4 text-[#252627]/40" />
@@ -646,7 +646,7 @@ export function PartnerProfile() {
 
         {/* Resources & Community Section */}
         <div className="px-6 pt-2 pb-8 bg-transparent">
-          <h3 className="text-base text-[#252627] mb-3 px-1" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <h3 className="font-heading text-base text-[#252627] mb-3 px-1" style={{ fontWeight: 900 }}>
             Resources & community
           </h3>
           <div className="space-y-2">
@@ -664,7 +664,7 @@ export function PartnerProfile() {
                   }`}
                 >
                   <Icon className="h-5 w-5 text-[#252627]/40" />
-                  <span className="flex-1 text-left text-base text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                  <span className="flex-1 text-left text-base text-[#252627]" style={{ fontWeight: 300 }}>
                     {item.label}
                   </span>
                   <ChevronRight className="h-4 w-4 text-[#252627]/40" />

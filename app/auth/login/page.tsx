@@ -177,9 +177,8 @@ export default function LoginPage() {
           <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg">
             <div className="text-center mb-6">
               <h1
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 700,
                   fontSize: '28px',
                   lineHeight: '100%',
@@ -191,7 +190,6 @@ export default function LoginPage() {
               <p
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '16px',
                   lineHeight: '120%'
@@ -207,7 +205,6 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="text-haevn-navy mb-2 block"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px',
                   textAlign: 'left'
@@ -231,7 +228,6 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="text-haevn-navy mb-2 block"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px',
                   textAlign: 'left'
@@ -253,7 +249,6 @@ export default function LoginPage() {
                   href="/auth/reset-password"
                   className="text-haevn-teal hover:underline font-medium"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 400,
                     fontSize: '13px'
                   }}
@@ -276,7 +271,6 @@ export default function LoginPage() {
               size="lg"
               disabled={loading}
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px'
               }}
@@ -299,7 +293,7 @@ export default function LoginPage() {
               <div className="relative flex justify-center text-xs uppercase">
                 <span
                   className="bg-white px-3 text-haevn-charcoal"
-                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, fontSize: '12px' }}
+                  style={{ fontWeight: 300, fontSize: '12px' }}
                 >
                   or
                 </span>
@@ -315,7 +309,6 @@ export default function LoginPage() {
               disabled={googleLoading || loading}
               onClick={handleGoogleSignIn}
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '16px',
               }}
@@ -341,7 +334,6 @@ export default function LoginPage() {
             <div
               className="text-center text-haevn-charcoal pt-4"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '14px'
               }}
@@ -364,7 +356,6 @@ export default function LoginPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >
@@ -376,7 +367,6 @@ export default function LoginPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >
@@ -388,7 +378,6 @@ export default function LoginPage() {
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300
               }}
             >

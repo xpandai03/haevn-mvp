@@ -113,9 +113,8 @@ export default function MembershipPage() {
         {/* Header */}
         <div className="mb-10">
           <h1
-            className="text-haevn-navy mb-3"
+            className="font-heading text-haevn-navy mb-3"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '36px',
               lineHeight: '100%',
@@ -128,7 +127,6 @@ export default function MembershipPage() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '18px',
               lineHeight: '120%',
@@ -153,7 +151,6 @@ export default function MembershipPage() {
                   <span
                     className="bg-haevn-gold text-white px-4 py-1 rounded-full"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500,
                       fontSize: '12px'
                     }}
@@ -165,9 +162,8 @@ export default function MembershipPage() {
 
               {/* Tier Name */}
               <h3
-                className="text-haevn-navy mb-2"
+                className="font-heading text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 700,
                   fontSize: '24px',
                   lineHeight: '100%',
@@ -182,7 +178,6 @@ export default function MembershipPage() {
               <p
                 className="text-haevn-charcoal mb-6"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '14px',
                   lineHeight: '120%',
@@ -198,7 +193,6 @@ export default function MembershipPage() {
                   <span
                     className="text-haevn-navy"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 700,
                       fontSize: '36px',
                       lineHeight: '100%'
@@ -209,7 +203,6 @@ export default function MembershipPage() {
                   <span
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '14px'
                     }}
@@ -227,7 +220,6 @@ export default function MembershipPage() {
                     <span
                       className="text-haevn-charcoal"
                       style={{
-                        fontFamily: 'Roboto, Helvetica, sans-serif',
                         fontWeight: 300,
                         fontSize: '14px',
                         lineHeight: '120%',
@@ -248,7 +240,6 @@ export default function MembershipPage() {
                       <span
                         className="text-haevn-charcoal line-through"
                         style={{
-                          fontFamily: 'Roboto, Helvetica, sans-serif',
                           fontWeight: 300,
                           fontSize: '13px',
                           lineHeight: '120%',
@@ -273,7 +264,6 @@ export default function MembershipPage() {
                 }`}
                 size="lg"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '16px'
                 }}

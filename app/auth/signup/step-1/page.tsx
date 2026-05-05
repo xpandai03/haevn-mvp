@@ -69,9 +69,8 @@ function SignupStep1Form() {
           {/* Heading */}
           <div className="space-y-3">
             <h1
-              className="text-haevn-navy"
+              className="font-heading text-haevn-navy"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '28px',
                 lineHeight: '120%',
@@ -83,7 +82,6 @@ function SignupStep1Form() {
             <p
               className="text-haevn-charcoal"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 400,
                 fontSize: '16px',
                 lineHeight: '140%'
@@ -100,7 +98,6 @@ function SignupStep1Form() {
                 htmlFor="firstName"
                 className="text-haevn-charcoal"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px'
                 }}
@@ -115,9 +112,6 @@ function SignupStep1Form() {
                 placeholder="e.g. John"
                 required
                 className="h-12 text-base"
-                style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif'
-                }}
                 autoFocus
               />
             </div>
@@ -132,7 +126,6 @@ function SignupStep1Form() {
           disabled={!isValid}
           className="w-full max-w-md mx-auto block bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 500,
             fontSize: '18px'
           }}
@@ -145,7 +138,6 @@ function SignupStep1Form() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 400,
               fontSize: '14px'
             }}

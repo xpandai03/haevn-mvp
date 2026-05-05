@@ -240,7 +240,7 @@ export default function ChatWithConnectionPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
-          <h2 className="text-2xl font-bold text-haevn-navy mb-4">
+          <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">
             {error || 'Connection Not Found'}
           </h2>
           <p className="text-haevn-charcoal mb-6">
@@ -290,7 +290,6 @@ export default function ChatWithConnectionPage() {
           </Avatar>
           <span
             className="text-white font-medium"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
           >
             {partnership.display_name || 'Anonymous'}
           </span>

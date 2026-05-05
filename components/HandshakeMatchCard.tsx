@@ -63,7 +63,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-bold text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+                <h3 className="font-heading font-bold text-[#252627]" style={{ fontWeight: 900 }}>
                   {partnership.display_name || 'Anonymous'}
                 </h3>
                 <div className="flex items-center gap-1 text-sm text-[#252627]/60">
@@ -78,7 +78,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
           </div>
 
           {/* Bio — prefers AI summary */}
-          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontWeight: 300 }}>
             {truncateBio(partnership.connection_summary ?? partnership.short_bio)}
           </p>
 
@@ -101,7 +101,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
             }}
             disabled={isPending}
             className="w-full bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
-            style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+            style={{ fontWeight: 500 }}
           >
             {isPending ? 'Request Sent' : 'Send Connection Request'}
           </Button>

@@ -51,7 +51,7 @@ export default function ConnectionsPage() {
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
-          <p className="text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-[#252627]/60" style={{ fontWeight: 300 }}>
             Loading your connections...
           </p>
         </div>
@@ -63,10 +63,10 @@ export default function ConnectionsPage() {
     return (
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl p-6 border-2 border-[#252627]/10">
-          <h2 className="text-h2 text-red-600 mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <h2 className="font-heading text-h2 text-red-600 mb-2" style={{ fontWeight: 900 }}>
             Error Loading Connections
           </h2>
-          <p className="text-body text-[#252627]/70 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-body text-[#252627]/70 mb-4" style={{ fontWeight: 300 }}>
             {error}
           </p>
           <Button
@@ -98,10 +98,10 @@ export default function ConnectionsPage() {
           </div>
 
           <div>
-            <h1 className="text-h1 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+            <h1 className="font-heading text-h1 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
               Your Connections
             </h1>
-            <p className="text-body text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-body text-[#252627]/70" style={{ fontWeight: 300 }}>
               {connections.length} {connections.length === 1 ? 'partnership' : 'partnerships'} you've connected with
             </p>
           </div>
@@ -112,16 +112,16 @@ export default function ConnectionsPage() {
           <div className="text-center py-16">
             <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-[#252627]/20">
               <Users className="h-16 w-16 mx-auto text-[#252627]/20 mb-4" />
-              <h3 className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              <h3 className="font-heading text-h3 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
                 No connections yet
               </h3>
-              <p className="text-body text-[#252627]/60 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+              <p className="text-body text-[#252627]/60 mb-4" style={{ fontWeight: 300 }}>
                 Browse matches to find compatible people.
               </p>
               <Button
                 onClick={() => router.push('/matches')}
                 className="bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
-                style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+                style={{ fontWeight: 500 }}
               >
                 Browse Matches
               </Button>

@@ -70,9 +70,8 @@ function PaymentPageContent() {
           {/* Header */}
           <div className="mb-8">
             <h1
-              className="text-haevn-navy mb-3"
+              className="font-heading text-haevn-navy mb-3"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 700,
                 fontSize: '32px',
                 lineHeight: '100%',
@@ -85,7 +84,6 @@ function PaymentPageContent() {
             <p
               className="text-haevn-charcoal"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '16px',
                 lineHeight: '120%',
@@ -102,9 +100,8 @@ function PaymentPageContent() {
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3
-                    className="text-haevn-navy"
+                    className="font-heading text-haevn-navy"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500,
                       fontSize: '18px',
                       textAlign: 'left'
@@ -115,7 +112,6 @@ function PaymentPageContent() {
                   <p
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '14px',
                       textAlign: 'left'
@@ -128,7 +124,6 @@ function PaymentPageContent() {
                   <p
                     className="text-haevn-navy"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 700,
                       fontSize: '28px',
                       lineHeight: '100%'
@@ -139,7 +134,6 @@ function PaymentPageContent() {
                   <p
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '12px'
                     }}
@@ -155,7 +149,6 @@ function PaymentPageContent() {
                   <span
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '14px'
                     }}
@@ -168,7 +161,6 @@ function PaymentPageContent() {
                   <span
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '14px'
                     }}
@@ -181,7 +173,6 @@ function PaymentPageContent() {
                   <span
                     className="text-haevn-charcoal"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       fontSize: '14px'
                     }}
@@ -197,7 +188,6 @@ function PaymentPageContent() {
               <AlertDescription
                 className="text-haevn-navy"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '14px',
                   lineHeight: '120%'
@@ -214,7 +204,6 @@ function PaymentPageContent() {
                   htmlFor="card"
                   className="text-haevn-navy"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: '14px'
                   }}
@@ -238,7 +227,6 @@ function PaymentPageContent() {
                     htmlFor="expiry"
                     className="text-haevn-navy"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500,
                       fontSize: '14px'
                     }}
@@ -257,7 +245,6 @@ function PaymentPageContent() {
                     htmlFor="cvc"
                     className="text-haevn-navy"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 500,
                       fontSize: '14px'
                     }}
@@ -281,7 +268,6 @@ function PaymentPageContent() {
                 <span
                   className="text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '12px'
                   }}
@@ -294,7 +280,6 @@ function PaymentPageContent() {
                 <span
                   className="text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '12px'
                   }}
@@ -305,7 +290,6 @@ function PaymentPageContent() {
               <span
                 className="px-3 py-1 rounded-full bg-haevn-navy text-white"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '11px'
                 }}
@@ -321,7 +305,6 @@ function PaymentPageContent() {
                 size="lg"
                 disabled={processing}
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px'
                 }}
@@ -335,7 +318,6 @@ function PaymentPageContent() {
                 onClick={() => router.push('/onboarding/membership')}
                 disabled={processing}
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '16px'
                 }}
@@ -347,7 +329,6 @@ function PaymentPageContent() {
             <p
               className="text-center text-haevn-charcoal opacity-70"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '12px',
                 lineHeight: '120%'

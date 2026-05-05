@@ -18,11 +18,11 @@ export default function QuestionPage() {
             {/* Section title */}
             {currentSection && (
                 <div className="mb-6">
-                    <h2 className="text-sm text-haevn-gold mb-2" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <h2 className="font-heading text-sm text-haevn-gold mb-2" style={{ fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {currentSection.title}
                     </h2>
                     {currentSection.description && (
-                        <p className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%' }}>
+                        <p className="text-sm text-haevn-charcoal/70" style={{ fontWeight: 300, lineHeight: '120%' }}>
                             {currentSection.description}
                         </p>
                     )}

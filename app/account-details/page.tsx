@@ -89,14 +89,13 @@ export default function AccountDetailsPage() {
           </button>
           <div className="flex-1">
             <h1
-              className="text-xl font-bold text-haevn-navy"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+              className="font-heading text-xl font-bold text-haevn-navy"
             >
               Account Details
             </h1>
             <p
               className="text-sm text-gray-500"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+              style={{ fontWeight: 300 }}
             >
               Manage your account information
             </p>

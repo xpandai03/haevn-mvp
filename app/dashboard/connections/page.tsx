@@ -55,7 +55,7 @@ export default function ConnectionsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
-          <h2 className="text-2xl font-bold text-haevn-navy mb-4">Error Loading Connections</h2>
+          <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">Error Loading Connections</h2>
           <p className="text-haevn-charcoal mb-6">{error}</p>
           <Button onClick={() => window.location.reload()} className="w-full bg-haevn-teal">
             Try Again
@@ -83,9 +83,8 @@ export default function ConnectionsPage() {
               </Button>
               <div>
                 <h1
-                  className="text-2xl sm:text-3xl font-bold text-haevn-navy"
+                  className="font-heading text-2xl sm:text-3xl font-bold text-haevn-navy"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 700,
                     lineHeight: '110%',
                     letterSpacing: '-0.015em'
@@ -96,7 +95,6 @@ export default function ConnectionsPage() {
                 <p
                   className="text-sm text-haevn-charcoal/60"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300
                   }}
                 >
@@ -126,9 +124,8 @@ export default function ConnectionsPage() {
           <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
             <div className="max-w-md mx-auto">
               <h2
-                className="text-2xl font-bold text-haevn-navy mb-4"
+                className="font-heading text-2xl font-bold text-haevn-navy mb-4"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 700
                 }}
               >
@@ -137,7 +134,6 @@ export default function ConnectionsPage() {
               <p
                 className="text-haevn-charcoal mb-6"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   lineHeight: '120%'
                 }}

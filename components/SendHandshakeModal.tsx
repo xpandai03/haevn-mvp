@@ -90,10 +90,10 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-h3 text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <DialogTitle className="text-h3 text-[#252627]" style={{ fontWeight: 900 }}>
             Send Connection Request
           </DialogTitle>
-          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
             Let {match.partnership.display_name} know you're interested in connecting
           </DialogDescription>
         </DialogHeader>
@@ -108,7 +108,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h4 className="font-bold text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 700 }}>
+              <h4 className="font-bold text-[#252627]" style={{ fontWeight: 700 }}>
                 {match.partnership.display_name}
               </h4>
               <div className="flex items-center gap-1 text-sm text-[#252627]/60">
@@ -123,7 +123,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
 
           {/* Optional Message */}
           <div>
-            <label className="text-sm font-medium text-[#252627] mb-2 block" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+            <label className="text-sm font-medium text-[#252627] mb-2 block" style={{ fontWeight: 500 }}>
               Add a personal message (optional)
             </label>
             <Textarea
@@ -134,14 +134,14 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
               rows={3}
               className="resize-none border-[#252627]/20"
             />
-            <p className="text-xs text-[#252627]/50 mt-1" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-xs text-[#252627]/50 mt-1" style={{ fontWeight: 300 }}>
               {message.length}/200 characters
             </p>
           </div>
 
           {/* Info */}
           <div className="bg-[#008080]/10 border border-[#008080]/20 rounded-lg p-3">
-            <p className="text-sm text-[#008080]" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
+            <p className="text-sm text-[#008080]" style={{ fontWeight: 400 }}>
               💡 If they accept your connection request, you'll both unlock full profiles, photos, and be able to message each other.
             </p>
           </div>
@@ -161,7 +161,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
             onClick={handleSend}
             disabled={sending}
             className="flex-1 bg-gradient-to-r from-[#E29E0C] to-[#D88A0A] hover:from-[#D88A0A] hover:to-[#C77A09] text-white"
-            style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+            style={{ fontWeight: 500 }}
           >
             {sending ? (
               <>

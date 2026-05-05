@@ -107,7 +107,6 @@ export default function InvitePartnerCard() {
                 htmlFor="partner-email"
                 className="text-haevn-navy mb-2 block"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px'
                 }}
@@ -117,7 +116,6 @@ export default function InvitePartnerCard() {
               <p
                 className="text-haevn-charcoal opacity-70 mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '13px',
                   lineHeight: '120%'
@@ -150,7 +148,6 @@ export default function InvitePartnerCard() {
               size="lg"
               disabled={loading}
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '16px'
               }}
@@ -172,7 +169,6 @@ export default function InvitePartnerCard() {
               <p
                 className="text-blue-800 text-sm"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 400,
                   lineHeight: '140%'
                 }}
@@ -191,7 +187,6 @@ export default function InvitePartnerCard() {
                 <h4
                   className="text-green-900 mb-1"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: '14px'
                   }}
@@ -201,7 +196,6 @@ export default function InvitePartnerCard() {
                 <p
                   className="text-green-800"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 400,
                     fontSize: '13px'
                   }}
@@ -216,7 +210,6 @@ export default function InvitePartnerCard() {
               <Label
                 className="text-haevn-navy"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px'
                 }}
@@ -244,7 +237,6 @@ export default function InvitePartnerCard() {
               <Label
                 className="text-haevn-navy"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '14px'
                 }}
@@ -275,7 +267,6 @@ export default function InvitePartnerCard() {
               <h5
                 className="text-haevn-navy mb-2"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '13px'
                 }}
@@ -285,7 +276,6 @@ export default function InvitePartnerCard() {
               <ul
                 className="text-haevn-charcoal space-y-1 text-sm"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '13px',
                   lineHeight: '140%'

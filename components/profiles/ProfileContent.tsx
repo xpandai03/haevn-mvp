@@ -110,8 +110,8 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
           <div className="flex items-start justify-between mb-2">
             <div>
               <h1
-                className="text-xl font-bold text-haevn-navy"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
+                className="font-heading text-xl font-bold text-haevn-navy"
+                style={{ fontWeight: 700 }}
               >
                 {profile.display_name || 'Anonymous'}
               </h1>
@@ -145,21 +145,21 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
         {(profile.connection_summary || profile.short_bio || profile.long_bio) && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <h2
-              className="text-sm font-semibold text-haevn-navy mb-2"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              className="font-heading text-sm font-semibold text-haevn-navy mb-2"
+              style={{ fontWeight: 600 }}
             >
               {profile.connection_summary ? 'Connection Summary' : 'About'}
             </h2>
             <p
               className="text-sm text-gray-700 leading-relaxed"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+              style={{ fontWeight: 400 }}
             >
               {profile.connection_summary ?? profile.short_bio}
             </p>
             {profile.long_bio && !profile.connection_summary && (
               <p
                 className="text-sm text-gray-600 leading-relaxed mt-2"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+                style={{ fontWeight: 400 }}
               >
                 {profile.long_bio}
               </p>
@@ -171,8 +171,8 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
         {profile.intentions && profile.intentions.length > 0 && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <h2
-              className="text-sm font-semibold text-haevn-navy mb-2"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              className="font-heading text-sm font-semibold text-haevn-navy mb-2"
+              style={{ fontWeight: 600 }}
             >
               Looking For
             </h2>
@@ -194,8 +194,8 @@ export function ProfileContent({ profile, isOwnProfile = false }: ProfileContent
         {profile.lifestyle_tags && profile.lifestyle_tags.length > 0 && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <h2
-              className="text-sm font-semibold text-haevn-navy mb-2"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              className="font-heading text-sm font-semibold text-haevn-navy mb-2"
+              style={{ fontWeight: 600 }}
             >
               Lifestyle & Interests
             </h2>

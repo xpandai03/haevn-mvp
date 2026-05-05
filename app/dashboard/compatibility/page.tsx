@@ -29,9 +29,8 @@ export default async function CompatibilityPage() {
             <ArrowLeft className="h-5 w-5 text-haevn-charcoal" />
           </Link>
           <h1
-            className="text-lg font-semibold text-haevn-navy"
+            className="font-heading text-lg font-semibold text-haevn-navy"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 600
             }}
           >

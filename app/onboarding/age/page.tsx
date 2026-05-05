@@ -71,7 +71,7 @@ export default function AgePage() {
             className="flex items-center gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+            <span className="text-sm font-medium" style={{ fontWeight: 500 }}>
               Back
             </span>
           </button>
@@ -84,9 +84,8 @@ export default function AgePage() {
           {/* Question with info icon - LEFT ALIGNED */}
           <div className="flex items-start gap-3 mb-8">
             <h1
-              className="text-3xl lg:text-4xl text-haevn-navy leading-tight"
+              className="font-heading text-3xl lg:text-4xl text-haevn-navy leading-tight"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 700,
                 lineHeight: '100%',
                 letterSpacing: '-0.015em',
@@ -114,7 +113,6 @@ export default function AgePage() {
                   <p
                     className="text-sm text-haevn-charcoal leading-relaxed"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300,
                       lineHeight: '120%',
                       textAlign: 'left'
@@ -132,7 +130,7 @@ export default function AgePage() {
             <Select value={month} onValueChange={setMonth}>
               <SelectTrigger
                 className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                style={{ fontWeight: 500 }}
               >
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
@@ -141,7 +139,7 @@ export default function AgePage() {
                   <SelectItem
                     key={m}
                     value={String(idx + 1)}
-                    style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                    style={{ fontWeight: 500 }}
                   >
                     {m}
                   </SelectItem>
@@ -152,7 +150,7 @@ export default function AgePage() {
             <Select value={day} onValueChange={setDay}>
               <SelectTrigger
                 className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                style={{ fontWeight: 500 }}
               >
                 <SelectValue placeholder="Day" />
               </SelectTrigger>
@@ -161,7 +159,7 @@ export default function AgePage() {
                   <SelectItem
                     key={d}
                     value={String(d)}
-                    style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                    style={{ fontWeight: 500 }}
                   >
                     {d}
                   </SelectItem>
@@ -172,7 +170,7 @@ export default function AgePage() {
             <Select value={year} onValueChange={setYear}>
               <SelectTrigger
                 className="w-full px-4 py-3 bg-white border-2 border-haevn-navy rounded-xl text-base text-haevn-charcoal focus:outline-none focus:border-haevn-teal focus:ring-2 focus:ring-haevn-teal/20"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                style={{ fontWeight: 500 }}
               >
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
@@ -181,7 +179,7 @@ export default function AgePage() {
                   <SelectItem
                     key={y}
                     value={String(y)}
-                    style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                    style={{ fontWeight: 500 }}
                   >
                     {y}
                   </SelectItem>
@@ -194,7 +192,6 @@ export default function AgePage() {
           <p
             className="text-sm text-haevn-charcoal mb-8"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               lineHeight: '120%',
               textAlign: 'left'
@@ -209,7 +206,6 @@ export default function AgePage() {
             disabled={!isFormValid}
             className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 active:opacity-80 text-white text-lg rounded-full transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500
             }}
           >

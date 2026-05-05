@@ -35,14 +35,13 @@ export default function SurveyResultsPage() {
           </button>
           <div className="flex-1">
             <h1
-              className="text-xl font-bold text-haevn-navy"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+              className="font-heading text-xl font-bold text-haevn-navy"
             >
               Survey Responses
             </h1>
             <p
               className="text-sm text-gray-500"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+              style={{ fontWeight: 300 }}
             >
               Your answers that power your matches
             </p>

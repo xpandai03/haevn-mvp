@@ -70,9 +70,8 @@ export default function VerificationCompletePage() {
           {/* Heading */}
           <div className="space-y-3">
             <h1
-              className="text-haevn-navy"
+              className="font-heading text-haevn-navy"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '28px',
                 lineHeight: '120%',
@@ -84,7 +83,6 @@ export default function VerificationCompletePage() {
             <p
               className="text-haevn-charcoal"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 400,
                 fontSize: '16px',
                 lineHeight: '140%'
@@ -103,7 +101,6 @@ export default function VerificationCompletePage() {
           disabled={isNavigating}
           className="w-full max-w-md mx-auto block bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 500,
             fontSize: '18px'
           }}

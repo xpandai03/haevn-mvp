@@ -92,10 +92,10 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-h3 text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <DialogTitle className="text-h3 text-[#252627]" style={{ fontWeight: 900 }}>
             Connection Request
           </DialogTitle>
-          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <DialogDescription className="text-body-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
             {handshake.partnership.display_name} wants to connect with you
           </DialogDescription>
         </DialogHeader>
@@ -110,7 +110,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h4 className="text-lg font-bold text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              <h4 className="text-lg font-bold text-[#252627] mb-1" style={{ fontWeight: 900 }}>
                 {handshake.partnership.display_name}
               </h4>
               <div className="flex items-center gap-1 text-sm text-[#252627]/60 mb-2">
@@ -136,7 +136,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
           {/* Bio — prefers AI summary */}
           {(handshake.partnership.connection_summary || handshake.partnership.short_bio) && (
             <div className="p-3 bg-white border border-[#252627]/10 rounded-lg">
-              <p className="text-sm text-[#252627]/70 line-clamp-3" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+              <p className="text-sm text-[#252627]/70 line-clamp-3" style={{ fontWeight: 300 }}>
                 {handshake.partnership.connection_summary ?? handshake.partnership.short_bio}
               </p>
             </div>
@@ -145,10 +145,10 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
           {/* Personal Message */}
           {handshake.message && (
             <div className="p-3 bg-[#E29E0C]/10 border border-[#E29E0C]/20 rounded-lg">
-              <p className="text-xs font-medium text-[#252627]/60 mb-1" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+              <p className="text-xs font-medium text-[#252627]/60 mb-1" style={{ fontWeight: 500 }}>
                 Personal Message:
               </p>
-              <p className="text-sm text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
+              <p className="text-sm text-[#252627]" style={{ fontWeight: 400 }}>
                 "{handshake.message}"
               </p>
             </div>
@@ -156,7 +156,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
 
           {/* Info */}
           <div className="bg-[#008080]/10 border border-[#008080]/20 rounded-lg p-3">
-            <p className="text-sm text-[#008080]" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
+            <p className="text-sm text-[#008080]" style={{ fontWeight: 400 }}>
               ✨ Accepting will unlock full profiles, photos, and messaging for both of you!
             </p>
           </div>
@@ -181,7 +181,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
             onClick={() => handleRespond(true)}
             disabled={responding}
             className="flex-1 bg-gradient-to-r from-[#008080] to-[#006666] hover:from-[#006666] hover:to-[#005555] text-white"
-            style={{ fontFamily: 'Roboto', fontWeight: 500 }}
+            style={{ fontWeight: 500 }}
           >
             {responding ? (
               <>

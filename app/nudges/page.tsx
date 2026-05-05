@@ -107,7 +107,7 @@ export default function NudgesPage() {
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
-          <p className="text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-[#252627]/60" style={{ fontWeight: 300 }}>
             Loading notifications...
           </p>
         </div>
@@ -119,10 +119,10 @@ export default function NudgesPage() {
     return (
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl p-6 border-2 border-[#252627]/10">
-          <h2 className="text-h2 text-red-600 mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+          <h2 className="font-heading text-h2 text-red-600 mb-2" style={{ fontWeight: 900 }}>
             Error Loading Notifications
           </h2>
-          <p className="text-body text-[#252627]/70 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-body text-[#252627]/70 mb-4" style={{ fontWeight: 300 }}>
             {error}
           </p>
           <Button
@@ -156,10 +156,10 @@ export default function NudgesPage() {
           </div>
 
           <div>
-            <h1 className="text-h1 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+            <h1 className="font-heading text-h1 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
               Nudges
             </h1>
-            <p className="text-body text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-body text-[#252627]/70" style={{ fontWeight: 300 }}>
               Stay updated with your activity and connections
             </p>
           </div>
@@ -170,10 +170,10 @@ export default function NudgesPage() {
           <Card className="text-center py-16 border-2 border-dashed border-[#252627]/20">
             <CardContent className="pt-6">
               <Bell className="h-16 w-16 mx-auto text-[#252627]/30 mb-4" />
-              <h3 className="text-h3 text-[#252627] mb-2" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+              <h3 className="font-heading text-h3 text-[#252627] mb-2" style={{ fontWeight: 900 }}>
                 No notifications yet
               </h3>
-              <p className="text-body text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+              <p className="text-body text-[#252627]/60" style={{ fontWeight: 300 }}>
                 Check back later for updates on your matches and connections.
               </p>
             </CardContent>
@@ -186,7 +186,7 @@ export default function NudgesPage() {
               return (
                 <div key={group}>
                   {/* Group Header */}
-                  <h2 className="text-sm text-[#252627]/50 mb-3 font-medium uppercase tracking-wide" style={{ fontFamily: 'Roboto', fontWeight: 500 }}>
+                  <h2 className="font-heading text-sm text-[#252627]/50 mb-3 font-medium uppercase tracking-wide" style={{ fontWeight: 500 }}>
                     {group}
                   </h2>
 
@@ -207,13 +207,13 @@ export default function NudgesPage() {
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-base font-semibold text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 700 }}>
+                              <h3 className="font-heading text-base font-semibold text-[#252627] mb-1" style={{ fontWeight: 700 }}>
                                 {nudge.title}
                               </h3>
-                              <p className="text-sm text-[#252627]/70" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                              <p className="text-sm text-[#252627]/70" style={{ fontWeight: 300 }}>
                                 {nudge.description}
                               </p>
-                              <p className="text-xs text-[#252627]/50 mt-2" style={{ fontFamily: 'Roboto', fontWeight: 400 }}>
+                              <p className="text-xs text-[#252627]/50 mt-2" style={{ fontWeight: 400 }}>
                                 {formatTime(nudge.created_at)}
                               </p>
                             </div>

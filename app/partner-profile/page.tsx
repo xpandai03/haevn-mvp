@@ -23,7 +23,7 @@ export default function PartnerProfilePage() {
       <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
-          <p className="text-body text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+          <p className="text-body text-[#252627]" style={{ fontWeight: 300 }}>
             Loading...
           </p>
         </div>

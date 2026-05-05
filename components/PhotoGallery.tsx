@@ -161,7 +161,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Camera className="h-4 w-4 text-[#E29E0C]" />
-            <h2 className="text-lg text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
+            <h2 className="font-heading text-lg text-[#252627]" style={{ fontWeight: 900, letterSpacing: '-0.015em', lineHeight: '100%' }}>
               Photos
             </h2>
           </div>
@@ -186,10 +186,10 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
         {photos.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-[#252627]/20 rounded-lg">
             <Camera className="h-12 w-12 mx-auto text-[#252627]/40 mb-3" />
-            <p className="text-body text-[#252627]/60 mb-2" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-body text-[#252627]/60 mb-2" style={{ fontWeight: 300 }}>
               No photos yet
             </p>
-            <p className="text-body-sm text-[#252627]/40 mb-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-body-sm text-[#252627]/40 mb-4" style={{ fontWeight: 300 }}>
               Upload photos to your gallery
             </p>
             <Button
@@ -262,7 +262,7 @@ export function PhotoGallery({ partnershipId, photos, onPhotosChange }: PhotoGal
           </div>
         )}
 
-        <p className="text-caption text-[#252627]/60 mt-4" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+        <p className="text-caption text-[#252627]/60 mt-4" style={{ fontWeight: 300 }}>
           Upload up to 10 photos. Max 5MB per photo. Supported: JPG, PNG, WebP
         </p>
       </CardContent>

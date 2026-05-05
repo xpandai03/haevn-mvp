@@ -90,8 +90,7 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
 
         <div className="flex-1 min-w-0">
           <h3
-            className="text-lg font-bold text-[#252627] truncate mb-1"
-            style={{ fontFamily: 'Roboto' }}
+            className="font-heading text-lg font-bold text-[#252627] truncate mb-1"
           >
             {partnership.display_name || 'Anonymous'}
           </h3>
@@ -114,7 +113,6 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
         <div className="flex items-baseline gap-2 mb-1">
           <span
             className="text-4xl font-bold text-haevn-teal"
-            style={{ fontFamily: 'Roboto' }}
           >
             {compatibility.overallScore}%
           </span>
@@ -128,7 +126,7 @@ export function ConnectionCard({ connection, onClick }: ConnectionCardProps) {
       {/* Top Factor */}
       <p
         className="text-sm text-[#252627]/70 mb-3"
-        style={{ fontFamily: 'Roboto', fontWeight: 400 }}
+        style={{ fontWeight: 400 }}
       >
         Top match: <span className="font-medium">{getTopCategory()}</span>
       </p>

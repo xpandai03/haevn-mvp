@@ -96,10 +96,10 @@ export function HandshakeNotifications() {
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
           <div className="p-4 border-b border-[#252627]/10">
-            <h3 className="text-lg font-bold text-[#252627]" style={{ fontFamily: 'Roboto', fontWeight: 900 }}>
+            <h3 className="font-heading text-lg font-bold text-[#252627]" style={{ fontWeight: 900 }}>
               Connection Requests
             </h3>
-            <p className="text-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+            <p className="text-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
               {count === 0 ? 'No pending requests' : `${count} ${count === 1 ? 'request' : 'requests'} waiting`}
             </p>
           </div>
@@ -108,7 +108,7 @@ export function HandshakeNotifications() {
             {requests.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="h-12 w-12 mx-auto text-[#252627]/20 mb-3" />
-                <p className="text-sm text-[#252627]/60" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                <p className="text-sm text-[#252627]/60" style={{ fontWeight: 300 }}>
                   No new requests
                 </p>
               </div>
@@ -128,7 +128,7 @@ export function HandshakeNotifications() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#252627] mb-1" style={{ fontFamily: 'Roboto', fontWeight: 700 }}>
+                        <p className="font-bold text-[#252627] mb-1" style={{ fontWeight: 700 }}>
                           {request.partnership.display_name}
                         </p>
                         <div className="flex items-center gap-1 text-xs text-[#252627]/60 mb-2">
@@ -138,7 +138,7 @@ export function HandshakeNotifications() {
                           <span>{request.partnership.age}</span>
                         </div>
                         {request.message && (
-                          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontFamily: 'Roboto', fontWeight: 300 }}>
+                          <p className="text-sm text-[#252627]/70 line-clamp-2" style={{ fontWeight: 300 }}>
                             "{request.message}"
                           </p>
                         )}

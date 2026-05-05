@@ -301,14 +301,13 @@ export default function ManagePhotosPage() {
             </button>
             <div className="flex-1">
               <h1
-                className="text-xl font-bold text-haevn-navy"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+                className="font-heading text-xl font-bold text-haevn-navy"
               >
                 Manage Photos
               </h1>
               <p
                 className="text-sm text-gray-500"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+                style={{ fontWeight: 300 }}
               >
                 Upload photos for your profile
               </p>
@@ -322,7 +321,7 @@ export default function ManagePhotosPage() {
             <AlertCircle className="h-4 w-4 text-orange-600" />
             <AlertDescription
               className="text-orange-800"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+              style={{ fontWeight: 400 }}
             >
               Add at least 1 photo to make your profile live
             </AlertDescription>
@@ -334,7 +333,7 @@ export default function ManagePhotosPage() {
             <CheckCircle className="h-4 w-4 text-[#1B9A9A]" />
             <AlertDescription
               className="text-[#0F2A4A]"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+              style={{ fontWeight: 400 }}
             >
               Your profile is live and visible to people you connect with.
             </AlertDescription>
@@ -344,7 +343,7 @@ export default function ManagePhotosPage() {
         {/* Upload Section */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
           <div>
-            <h3 className="text-base font-semibold text-haevn-navy mb-1">Profile Photos</h3>
+            <h3 className="font-heading text-base font-semibold text-haevn-navy mb-1">Profile Photos</h3>
             <p className="text-sm text-gray-600">
               Upload up to 5 photos. Your avatar is shown on your profile card.
             </p>

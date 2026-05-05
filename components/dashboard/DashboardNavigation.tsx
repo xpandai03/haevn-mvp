@@ -30,14 +30,12 @@ function NavItem({ icon, label, sublabel, disabled, onClick }: NavItemProps) {
       <div className="flex-1 min-w-0">
         <p
           className="text-sm font-medium text-haevn-navy"
-          style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
         >
           {label}
         </p>
         {sublabel && (
           <p
             className="text-xs text-haevn-charcoal/60"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
           >
             {sublabel}
           </p>
@@ -62,8 +60,7 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
       <Card className="rounded-2xl border-haevn-navy/10 shadow-sm">
         <CardContent className="p-2">
           <h3
-            className="text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+            className="font-heading text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"
           >
             Personal
           </h3>
@@ -107,8 +104,7 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
       <Card className="rounded-2xl border-haevn-navy/10 shadow-sm">
         <CardContent className="p-2">
           <h3
-            className="text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif' }}
+            className="font-heading text-xs font-semibold text-haevn-charcoal/60 uppercase tracking-wider px-3 py-2"
           >
             Resources & Community
           </h3>

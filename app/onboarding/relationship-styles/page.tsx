@@ -67,7 +67,7 @@ export default function RelationshipStylesPage() {
             className="flex items-center gap-2 p-2 text-haevn-navy hover:text-haevn-charcoal hover:bg-white/50 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm font-medium" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+            <span className="text-sm font-medium" style={{ fontWeight: 500 }}>
               Back
             </span>
           </button>
@@ -80,9 +80,8 @@ export default function RelationshipStylesPage() {
           {/* Question with info icon */}
           <div className="flex items-start gap-3 mb-4">
             <h1
-              className="text-3xl lg:text-4xl text-haevn-navy leading-tight"
+              className="font-heading text-3xl lg:text-4xl text-haevn-navy leading-tight"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 700,
                 lineHeight: '100%',
                 letterSpacing: '-0.015em',
@@ -100,7 +99,7 @@ export default function RelationshipStylesPage() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" align="start" className="max-w-xs p-4 bg-white border-haevn-teal">
-                  <p className="text-sm text-haevn-charcoal leading-relaxed" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
+                  <p className="text-sm text-haevn-charcoal leading-relaxed" style={{ fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
                     Monogamy, open, polyamory, etc. Select all that apply.
                   </p>
                 </TooltipContent>
@@ -108,7 +107,7 @@ export default function RelationshipStylesPage() {
             </TooltipProvider>
           </div>
 
-          <p className="text-sm text-haevn-charcoal mb-6" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
+          <p className="text-sm text-haevn-charcoal mb-6" style={{ fontWeight: 300, lineHeight: '120%', textAlign: 'left' }}>
             Select all that apply
           </p>
 
@@ -127,10 +126,10 @@ export default function RelationshipStylesPage() {
                 `}
               >
                 <div className="pr-8">
-                  <div className="text-base text-haevn-charcoal mb-1" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}>
+                  <div className="text-base text-haevn-charcoal mb-1" style={{ fontWeight: 500 }}>
                     {option.label}
                   </div>
-                  <div className="text-sm text-haevn-charcoal/70" style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}>
+                  <div className="text-sm text-haevn-charcoal/70" style={{ fontWeight: 300 }}>
                     {option.description}
                   </div>
                 </div>
@@ -150,7 +149,7 @@ export default function RelationshipStylesPage() {
             onClick={handleContinue}
             disabled={!isFormValid}
             className="w-full px-8 py-6 bg-haevn-teal hover:opacity-90 text-white text-lg rounded-full transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-haevn-teal/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+            style={{ fontWeight: 500 }}
           >
             Continue
           </Button>

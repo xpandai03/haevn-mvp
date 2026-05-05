@@ -151,9 +151,8 @@ export default function IdentityPage() {
       <div className="w-full max-w-3xl">
         <div className="text-center mb-8 space-y-3">
           <h1
-            className="text-haevn-navy"
+            className="font-heading text-haevn-navy"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '42px',
               lineHeight: '100%',
@@ -165,7 +164,6 @@ export default function IdentityPage() {
           <p
             className="text-haevn-charcoal text-lg"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '18px',
               lineHeight: '120%'
@@ -178,9 +176,8 @@ export default function IdentityPage() {
         {/* Profile Type Selection */}
         <div className="bg-white rounded-3xl p-8 shadow-sm space-y-6 mb-6">
           <h2
-            className="text-haevn-navy mb-4"
+            className="font-heading text-haevn-navy mb-4"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500,
               fontSize: '20px',
               lineHeight: '120%'
@@ -228,9 +225,8 @@ export default function IdentityPage() {
                 </div>
                 <div>
                   <h3
-                    className="text-haevn-navy font-medium mb-1"
+                    className="font-heading text-haevn-navy font-medium mb-1"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontSize: '18px'
                     }}
                   >
@@ -239,7 +235,6 @@ export default function IdentityPage() {
                   <p
                     className="text-haevn-charcoal text-sm"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300
                     }}
                   >
@@ -287,9 +282,8 @@ export default function IdentityPage() {
                 </div>
                 <div>
                   <h3
-                    className="text-haevn-navy font-medium mb-1"
+                    className="font-heading text-haevn-navy font-medium mb-1"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontSize: '18px'
                     }}
                   >
@@ -298,7 +292,6 @@ export default function IdentityPage() {
                   <p
                     className="text-haevn-charcoal text-sm"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300
                     }}
                   >
@@ -346,9 +339,8 @@ export default function IdentityPage() {
                 </div>
                 <div>
                   <h3
-                    className="text-haevn-navy font-medium mb-1"
+                    className="font-heading text-haevn-navy font-medium mb-1"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontSize: '18px'
                     }}
                   >
@@ -357,7 +349,6 @@ export default function IdentityPage() {
                   <p
                     className="text-haevn-charcoal text-sm"
                     style={{
-                      fontFamily: 'Roboto, Helvetica, sans-serif',
                       fontWeight: 300
                     }}
                   >
@@ -377,7 +368,6 @@ export default function IdentityPage() {
             className="w-full max-w-md bg-haevn-teal hover:opacity-90 text-white rounded-full disabled:opacity-50"
             size="lg"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500,
               fontSize: '18px'
             }}

@@ -21,7 +21,6 @@ export function CompleteProfileCTA({ onAddPhotosClick }: CompleteProfileCTAProps
         <p
           className="text-haevn-charcoal opacity-70 mb-4"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 300,
             fontSize: '13px',
             lineHeight: '140%'
@@ -34,7 +33,6 @@ export function CompleteProfileCTA({ onAddPhotosClick }: CompleteProfileCTAProps
           className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
           size="lg"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 500,
             fontSize: '16px'
           }}

@@ -42,9 +42,8 @@ export default function SurveyIntroPage() {
         {/* Header */}
         <div className="mb-8">
           <h1
-            className="text-haevn-navy mb-4"
+            className="font-heading text-haevn-navy mb-4"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '36px',
               lineHeight: '100%',
@@ -57,7 +56,6 @@ export default function SurveyIntroPage() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '16px',
               lineHeight: '120%',
@@ -73,9 +71,8 @@ export default function SurveyIntroPage() {
           {/* Key Points */}
           <div>
             <h3
-              className="text-haevn-navy mb-4"
+              className="font-heading text-haevn-navy mb-4"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px',
                 lineHeight: '120%',
@@ -89,7 +86,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-gold mt-1"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 700,
                     fontSize: '16px'
                   }}
@@ -99,7 +95,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '16px',
                     lineHeight: '120%',
@@ -113,7 +108,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-gold mt-1"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 700,
                     fontSize: '16px'
                   }}
@@ -123,7 +117,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '16px',
                     lineHeight: '120%',
@@ -137,7 +130,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-gold mt-1"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 700,
                     fontSize: '16px'
                   }}
@@ -147,7 +139,6 @@ export default function SurveyIntroPage() {
                 <span
                   className="text-haevn-charcoal"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 300,
                     fontSize: '16px',
                     lineHeight: '120%',
@@ -167,7 +158,6 @@ export default function SurveyIntroPage() {
               className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
               size="lg"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 500,
                 fontSize: '18px'
               }}

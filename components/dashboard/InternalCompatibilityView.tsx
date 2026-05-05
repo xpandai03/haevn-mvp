@@ -23,7 +23,6 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
           <p
             className="text-xs text-haevn-charcoal uppercase tracking-widest mb-3"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500
             }}
           >
@@ -32,7 +31,6 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
           <p
             className="text-6xl font-bold text-haevn-teal mb-2"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700
             }}
           >
@@ -41,7 +39,6 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
           <p
             className={`text-sm font-semibold uppercase tracking-wide ${matchClassName}`}
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 600
             }}
           >
@@ -50,7 +47,6 @@ export function InternalCompatibilityView({ scores }: InternalCompatibilityViewP
           <p
             className="text-sm text-haevn-charcoal/60 mt-2"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 400
             }}
           >

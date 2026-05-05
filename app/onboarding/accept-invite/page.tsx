@@ -144,9 +144,8 @@ export default function AcceptInvitePage() {
             </div>
           </div>
           <h1
-            className="text-haevn-navy mb-3"
+            className="font-heading text-haevn-navy mb-3"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 700,
               fontSize: '32px',
               lineHeight: '100%',
@@ -158,7 +157,6 @@ export default function AcceptInvitePage() {
           <p
             className="text-haevn-charcoal"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 300,
               fontSize: '16px',
               lineHeight: '120%',
@@ -241,7 +239,6 @@ export default function AcceptInvitePage() {
             className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
             size="lg"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500,
               fontSize: '18px'
             }}
@@ -263,7 +260,6 @@ export default function AcceptInvitePage() {
             className="w-full rounded-full border-haevn-navy text-haevn-navy"
             size="lg"
             style={{
-              fontFamily: 'Roboto, Helvetica, sans-serif',
               fontWeight: 500,
               fontSize: '16px'
             }}
@@ -275,7 +271,6 @@ export default function AcceptInvitePage() {
         <p
           className="text-center text-haevn-charcoal text-xs mt-6"
           style={{
-            fontFamily: 'Roboto, Helvetica, sans-serif',
             fontWeight: 300,
           }}
         >

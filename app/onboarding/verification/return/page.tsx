@@ -252,7 +252,6 @@ function VerificationReturnContent() {
                   className="w-full bg-haevn-teal hover:opacity-90 text-white rounded-full"
                   size="lg"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: '18px'
                   }}

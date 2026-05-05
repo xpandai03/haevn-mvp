@@ -53,7 +53,6 @@ export default function HaevnLanding() {
             <p
               className="text-white mb-12"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '20px',
                 lineHeight: '130%',
@@ -70,7 +69,6 @@ export default function HaevnLanding() {
                 className="w-full bg-haevn-teal hover:bg-haevn-teal/90 text-white rounded-full h-14 text-lg font-medium transition-all"
                 size="lg"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px',
                 }}
@@ -83,7 +81,6 @@ export default function HaevnLanding() {
                 className="w-full bg-transparent hover:bg-white/10 text-white border-2 border-white rounded-full h-14 text-lg font-medium transition-all"
                 size="lg"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 500,
                   fontSize: '18px',
                 }}
@@ -101,7 +98,6 @@ export default function HaevnLanding() {
             <p
               className="text-white/90"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 300,
                 fontSize: '12px',
                 lineHeight: '150%',
@@ -145,7 +141,6 @@ export default function HaevnLanding() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '12px',
                 }}
@@ -159,7 +154,6 @@ export default function HaevnLanding() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '12px',
                 }}
@@ -173,7 +167,6 @@ export default function HaevnLanding() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
                 style={{
-                  fontFamily: 'Roboto, Helvetica, sans-serif',
                   fontWeight: 300,
                   fontSize: '12px',
                 }}

@@ -66,7 +66,6 @@ export const SubScoreBreakdown = memo(function SubScoreBreakdown({
                 <span
                   className="font-medium text-haevn-navy block truncate"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 500,
                     fontSize: '13px',
                   }}
@@ -77,14 +76,13 @@ export const SubScoreBreakdown = memo(function SubScoreBreakdown({
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.color} ${config.bgColor} border ${config.borderColor}`}
-                  style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+                  style={{ fontWeight: 500 }}
                 >
                   {config.label}
                 </span>
                 <span
                   className="font-semibold text-haevn-charcoal tabular-nums"
                   style={{
-                    fontFamily: 'Roboto, Helvetica, sans-serif',
                     fontWeight: 600,
                     fontSize: '13px',
                     minWidth: '32px',
@@ -110,7 +108,6 @@ export const SubScoreBreakdown = memo(function SubScoreBreakdown({
             <p
               className="text-haevn-charcoal/60 mt-1"
               style={{
-                fontFamily: 'Roboto, Helvetica, sans-serif',
                 fontWeight: 400,
                 fontSize: '11px',
                 lineHeight: '1.4',

@@ -227,7 +227,7 @@ export default function MatchDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
-          <h2 className="text-2xl font-bold text-haevn-navy mb-4">
+          <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">
             {error || 'Match Not Found'}
           </h2>
           <p className="text-haevn-charcoal mb-6">
@@ -290,14 +290,14 @@ export default function MatchDetailPage() {
         {/* Name and Basic Info */}
         <div className="text-center mb-6">
           <h1
-            className="text-2xl font-bold text-haevn-navy mb-1"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
+            className="font-heading text-2xl font-bold text-haevn-navy mb-1"
+            style={{ fontWeight: 700 }}
           >
             {partnership.display_name || 'Anonymous'}
           </h1>
           <p
             className="text-sm text-haevn-charcoal/70"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 300 }}
+            style={{ fontWeight: 300 }}
           >
             <span className="capitalize">{partnership.profile_type}</span>
             <span className="mx-1.5">·</span>
@@ -311,25 +311,25 @@ export default function MatchDetailPage() {
         <div className="bg-haevn-lightgray rounded-2xl p-6 mb-6 text-center">
           <p
             className="text-xs text-haevn-charcoal/60 uppercase tracking-wider mb-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 500 }}
+            style={{ fontWeight: 500 }}
           >
             Compatibility Score
           </p>
           <p
             className="text-5xl font-bold text-haevn-teal mb-1"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 700 }}
+            style={{ fontWeight: 700 }}
           >
             {compatibility.overallScore}%
           </p>
           <p
             className="text-sm font-semibold text-haevn-teal uppercase tracking-wide mb-2"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+            style={{ fontWeight: 600 }}
           >
             {TIER_LABELS[compatibility.tier]}
           </p>
           <p
             className="text-xs text-haevn-charcoal/60"
-            style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+            style={{ fontWeight: 400 }}
           >
             {TIER_SUMMARY[compatibility.tier]}
           </p>
@@ -339,14 +339,14 @@ export default function MatchDetailPage() {
         {(partnership.connection_summary || partnership.short_bio) && (
           <div className="mb-6">
             <h3
-              className="text-sm font-semibold text-haevn-navy mb-2"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+              className="font-heading text-sm font-semibold text-haevn-navy mb-2"
+              style={{ fontWeight: 600 }}
             >
               {partnership.connection_summary ? 'Connection Summary' : 'Their Intent, In Their Words:'}
             </h3>
             <p
               className="text-sm text-haevn-charcoal leading-relaxed"
-              style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+              style={{ fontWeight: 400 }}
             >
               {partnership.connection_summary ?? partnership.short_bio}
             </p>
@@ -372,13 +372,13 @@ export default function MatchDetailPage() {
             <div>
               <h4
                 className="text-sm font-semibold text-amber-800 mb-1"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 600 }}
+                style={{ fontWeight: 600 }}
               >
                 Safety Reminder
               </h4>
               <p
                 className="text-xs text-amber-700 leading-relaxed"
-                style={{ fontFamily: 'Roboto, Helvetica, sans-serif', fontWeight: 400 }}
+                style={{ fontWeight: 400 }}
               >
                 Always meet in a public place for the first time. Trust your instincts and take your time getting to know new connections.
               </p>
