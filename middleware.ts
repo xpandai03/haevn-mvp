@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { FEATURE_FLAGS } from '@/lib/feature-flags'
 
 // DEBUG: Build ID for verifying deploy - remove after debugging
 const BUILD_ID = 'multi-partnership-fix'
@@ -398,7 +399,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(resumePath, request.url))
       }
     } else {
-      // isComplete is true - allow access
+      // isComplete is true - allow access (subject to verification gate below)
       logOnboardingGate({
         email: user.email,
         userId: user.id,
@@ -411,6 +412,24 @@ export async function middleware(request: NextRequest) {
         reason: 'COMPLETE_ALLOW',
         decision: 'allow'
       })
+    }
+
+    // Mandatory verification gate (feature-flagged).
+    // When FEATURE_FLAGS.requireVerification is true, users must have
+    // profiles.verified === true to access the dashboard. Skip-via-localStorage
+    // does not satisfy the gate. When the flag is false, this check is a no-op
+    // and verification stays optional.
+    if (FEATURE_FLAGS.requireVerification && pathname !== '/onboarding/verification' && !pathname.startsWith('/onboarding/verification/')) {
+      const { data: profileVerified } = await supabase
+        .from('profiles')
+        .select('verified')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!profileVerified?.verified) {
+        console.log('[TRACE-MW] 🔒 Verification gate active and user is unverified, redirecting')
+        return NextResponse.redirect(new URL('/onboarding/verification', request.url))
+      }
     }
 
     console.log('[TRACE-MW] ✅ All checks passed, allowing access to', pathname)

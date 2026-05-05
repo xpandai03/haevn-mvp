@@ -127,12 +127,12 @@ export default function IdentityPage() {
       // Clean up phone from localStorage now that it's persisted
       localStorage.removeItem('haevn_signup_phone')
 
-      // Mark step as complete (identity is step 4)
-      await flowController.markStepComplete(user.id, 4)
-      console.log('[Identity] Step 4 marked complete')
+      // Mark step as complete (identity is step 3)
+      await flowController.markStepComplete(user.id, 3)
+      console.log('[Identity] Step 3 marked complete')
 
-      // Navigate to relationship orientation page
-      router.push('/onboarding/relationship-orientation')
+      // Navigate to survey intro (verification has moved to post-membership)
+      router.push('/onboarding/survey-intro')
     } catch (error) {
       console.error('[Identity] Error saving identity:', error)
       const errMsg = error instanceof Error ? error.message : 'Unknown error'

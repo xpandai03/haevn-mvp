@@ -106,8 +106,8 @@ function VerificationReturnContent() {
           // Verification approved!
           localStorage.removeItem('veriff_session_id')
 
-          // Mark verification step as complete (step 4)
-          await flowController.markStepComplete(user.id, 4)
+          // Mark verification step as complete (step 8 in the new flow)
+          await flowController.markStepComplete(user.id, 8)
 
           // Redirect to verification-complete page
           router.push('/onboarding/verification-complete')
@@ -145,10 +145,11 @@ function VerificationReturnContent() {
     if (!user) return
 
     try {
-      // Mark verification step complete and verification-complete step
-      await flowController.markStepComplete(user.id, 4)
-      await flowController.markStepComplete(user.id, 5)
-      router.push('/onboarding/survey-intro')
+      // Mark verification step (8) and verification-complete step (9) as done
+      await flowController.markStepComplete(user.id, 8)
+      await flowController.markStepComplete(user.id, 9)
+      // Verification is the final gate before dashboard.
+      router.push('/dashboard')
     } catch (error) {
       console.error('[Return] Error continuing:', error)
       toast({

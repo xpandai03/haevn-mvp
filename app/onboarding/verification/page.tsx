@@ -9,6 +9,7 @@ import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { ShieldCheck, Camera, CreditCard } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { safeResponseJson } from '@/lib/utils'
+import { FEATURE_FLAGS } from '@/lib/feature-flags'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -80,14 +81,14 @@ export default function VerificationPage() {
     if (!user) return
 
     try {
-      // Mark this step as skipped
+      // Mark this step as skipped (verification is step 8 in the new flow)
       await flowController.updateOnboardingState(user.id, {
         verificationSkipped: true
       })
-      await flowController.markStepComplete(user.id, 4)
+      await flowController.markStepComplete(user.id, 8)
 
-      // Navigate to next step
-      router.push('/onboarding/survey-intro')
+      // Verification is the final gate before dashboard.
+      router.push('/dashboard')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({
@@ -166,18 +167,20 @@ export default function VerificationPage() {
               {isStarting ? 'Opening Verification...' : 'Start Verification'}
             </Button>
 
-            <Button
-              onClick={handleSkip}
-              className="w-full rounded-full"
-              size="lg"
-              variant="outline"
-              style={{
-                fontWeight: 500,
-                fontSize: '18px'
-              }}
-            >
-              Skip for Now
-            </Button>
+            {!FEATURE_FLAGS.requireVerification && (
+              <Button
+                onClick={handleSkip}
+                className="w-full rounded-full"
+                size="lg"
+                variant="outline"
+                style={{
+                  fontWeight: 500,
+                  fontSize: '18px'
+                }}
+              >
+                Skip for Now
+              </Button>
+            )}
 
             <div className="flex flex-col items-center gap-2">
               <button

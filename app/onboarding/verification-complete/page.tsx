@@ -33,9 +33,9 @@ export default function VerificationCompletePage() {
     setIsNavigating(true)
 
     try {
-      // Mark verification-complete step as done
-      await flowController.markStepComplete(user.id, 5)
-      router.push('/onboarding/survey-intro')
+      // Mark verification-complete step as done (step 9 in the new flow)
+      await flowController.markStepComplete(user.id, 9)
+      router.push('/dashboard')
     } catch (error) {
       console.error('[VerificationComplete] Error continuing:', error)
       toast({

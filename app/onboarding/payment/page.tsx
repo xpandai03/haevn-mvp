@@ -49,8 +49,8 @@ function PaymentPageContent() {
         description: `Welcome to ${tierName}!`,
       })
 
-      // Redirect to dashboard
-      router.push('/dashboard')
+      // After payment, verification is the final gate before dashboard
+      router.push('/onboarding/verification')
     } catch (error) {
       console.error('Payment error:', error)
       toast({

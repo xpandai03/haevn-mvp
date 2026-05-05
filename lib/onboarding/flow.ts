@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import { FEATURE_FLAGS } from '@/lib/feature-flags'
 
 export type OnboardingStep = {
   id: number
@@ -34,45 +35,45 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 4,
-    path: '/onboarding/verification',
-    title: 'Verification',
-    description: 'Keep HAEVN safe and real',
-    required: false // Can be skipped (beta feature)
-  },
-  {
-    id: 5,
-    path: '/onboarding/verification-complete',
-    title: 'Verification Complete',
-    description: 'Thanks for verifying',
-    required: false // Only shown if verification completed
-  },
-  {
-    id: 6,
     path: '/onboarding/survey-intro',
     title: 'Survey Introduction',
     description: 'The foundation of meaningful connections',
     required: true
   },
   {
-    id: 7,
+    id: 5,
     path: '/onboarding/survey',
     title: 'Relationship Survey',
     description: 'Help us understand your needs and boundaries',
     required: true
   },
   {
-    id: 8,
+    id: 6,
     path: '/onboarding/celebration',
     title: 'You\'re In!',
     description: 'Celebrate your completion',
     required: true
   },
   {
-    id: 9,
+    id: 7,
     path: '/onboarding/membership',
     title: 'Choose Your Plan',
     description: 'Select your membership level',
     required: true
+  },
+  {
+    id: 8,
+    path: '/onboarding/verification',
+    title: 'Verification',
+    description: 'Keep HAEVN safe and real',
+    required: false // Skippable while FEATURE_FLAGS.requireVerification === false
+  },
+  {
+    id: 9,
+    path: '/onboarding/verification-complete',
+    title: 'Verification Complete',
+    description: 'Thanks for verifying',
+    required: false // Only shown if verification completed
   },
   {
     id: 10,
@@ -181,16 +182,19 @@ export class OnboardingFlowController {
           updates.identityCompleted = true
           break
         case 4:
-          updates.verificationSkipped = true // If they complete or skip
-          break
-        case 5:
-          updates.verificationCompleted = true
-          break
-        case 6:
           updates.surveyIntroViewed = true
           break
-        case 8:
+        case 6:
           updates.celebrationViewed = true
+          break
+        case 7:
+          updates.membershipSelected = true
+          break
+        case 8:
+          updates.verificationSkipped = true // Skip handler calls this
+          break
+        case 9:
+          updates.verificationCompleted = true
           break
       }
 
@@ -365,6 +369,20 @@ export class OnboardingFlowController {
         // CRITICAL: Skip signup step (step 1) for authenticated users
         if (step.id === 1) {
           console.log('[FlowController] Skipping signup step - user is authenticated')
+          continue
+        }
+
+        // Verification step: not in `required`, but enforced when the
+        // mandatory-verification flag is on. Skip counts as complete only
+        // while the flag is off.
+        if (step.path === '/onboarding/verification') {
+          const verificationDone = FEATURE_FLAGS.requireVerification
+            ? state.verificationCompleted === true
+            : state.verificationCompleted === true || state.verificationSkipped === true
+          if (!verificationDone) {
+            console.log('[FlowController] Verification gate not satisfied, resuming at:', step.path, 'flagOn=', FEATURE_FLAGS.requireVerification)
+            return step.path
+          }
           continue
         }
 

@@ -34,52 +34,52 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 3,
-    path: '/onboarding/welcome',
-    title: 'Welcome to HAEVN',
-    description: 'Learn what makes HAEVN different',
-    required: true
-  },
-  {
-    id: 4,
     path: '/onboarding/identity',
     title: 'Your Identity',
     description: 'Tell us who you are and how you connect',
     required: true
   },
   {
-    id: 5,
-    path: '/onboarding/verification',
-    title: 'Verification',
-    description: 'Keep HAEVN safe and real',
-    required: false // Can be skipped in Phase 1
-  },
-  {
-    id: 6,
+    id: 4,
     path: '/onboarding/survey-intro',
     title: 'Survey Introduction',
     description: 'The foundation of meaningful connections',
     required: true
   },
   {
-    id: 7,
+    id: 5,
     path: '/onboarding/survey',
     title: 'Relationship Survey',
     description: 'Help us understand your needs and boundaries',
     required: true
   },
   {
-    id: 8,
+    id: 6,
     path: '/onboarding/celebration',
     title: "You're In!",
     description: 'Celebrate your completion',
     required: true
   },
   {
-    id: 9,
+    id: 7,
     path: '/onboarding/membership',
     title: 'Choose Your Plan',
     description: 'Select your membership level',
     required: true
+  },
+  {
+    id: 8,
+    path: '/onboarding/verification',
+    title: 'Verification',
+    description: 'Keep HAEVN safe and real',
+    required: false // Skippable while FEATURE_FLAGS.requireVerification === false
+  },
+  {
+    id: 9,
+    path: '/onboarding/verification-complete',
+    title: 'Verification Complete',
+    description: 'Thanks for verifying',
+    required: false // Only shown if verification completed
   },
   {
     id: 10,
@@ -94,13 +94,13 @@ export interface OnboardingState {
   currentStep: number
   completedSteps: number[]
   expectationsViewed: boolean
-  welcomeViewed: boolean
   identityCompleted: boolean
-  verificationSkipped: boolean
   surveyIntroViewed: boolean
   surveyCompleted: boolean
   celebrationViewed: boolean
   membershipSelected: boolean
+  verificationCompleted: boolean
+  verificationSkipped: boolean
 }
 
 /**
@@ -128,13 +128,13 @@ export class ClientOnboardingFlowController {
         currentStep: 1,
         completedSteps: [],
         expectationsViewed: false,
-        welcomeViewed: false,
         identityCompleted: false,
-        verificationSkipped: false,
         surveyIntroViewed: false,
         surveyCompleted: false,
         celebrationViewed: false,
-        membershipSelected: false
+        membershipSelected: false,
+        verificationCompleted: false,
+        verificationSkipped: false
       }
     } catch (error) {
       console.error('[ClientFlow] Error in getOnboardingState:', error)
@@ -192,19 +192,22 @@ export class ClientOnboardingFlowController {
           updates.expectationsViewed = true
           break
         case 3:
-          updates.welcomeViewed = true
-          break
-        case 4:
           updates.identityCompleted = true
           break
-        case 5:
-          updates.verificationSkipped = true
-          break
-        case 6:
+        case 4:
           updates.surveyIntroViewed = true
           break
-        case 8:
+        case 6:
           updates.celebrationViewed = true
+          break
+        case 7:
+          updates.membershipSelected = true
+          break
+        case 8:
+          updates.verificationSkipped = true // Skip handler calls this
+          break
+        case 9:
+          updates.verificationCompleted = true
           break
       }
 

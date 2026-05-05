@@ -83,17 +83,21 @@ export default function MembershipPage() {
     setLoading(true)
 
     try {
-      await flowController.markStepComplete(user.id, 9)
+      // Membership is step 7 in the new flow
+      await flowController.markStepComplete(user.id, 7)
 
       if (tierId !== 'free') {
+        // Paid tiers route through payment, which forwards to verification
         router.push(`/onboarding/payment?tier=${tierId}`)
       } else {
         toast({
           title: 'Welcome to HAEVN Free!',
           description: 'You can upgrade anytime from your dashboard.',
         })
+        // After membership, verification is the final gate before dashboard.
+        // It is skippable while FEATURE_FLAGS.requireVerification is false.
         setTimeout(() => {
-          router.push('/dashboard')
+          router.push('/onboarding/verification')
         }, 500)
       }
     } catch (error) {
