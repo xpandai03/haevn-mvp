@@ -208,7 +208,7 @@ export function PartnerProfile() {
   if (loading) {
     console.log('⏳ [PartnerProfile] Showing loading spinner')
     return (
-      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
+      <div className="min-h-screen bg-haevn-warm-gray flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
           <p className="text-body text-haevn-gray-900" style={{ fontWeight: 300 }}>
@@ -224,7 +224,7 @@ export function PartnerProfile() {
     console.log('❌ [PartnerProfile] Showing error state:', error.message)
 
     return (
-      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-haevn-warm-gray flex items-center justify-center p-6">
         <Card className="max-w-md w-full border-haevn-gray-900/10">
           <CardContent className="pt-6 pb-6 text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-haevn-teal/10 rounded-full flex items-center justify-center">
@@ -257,7 +257,7 @@ export function PartnerProfile() {
   if (!partnerData) {
     console.log('⚠️ [PartnerProfile] No partner data but no error - unexpected state')
     return (
-      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-haevn-warm-gray flex items-center justify-center p-6">
         <Card className="max-w-md w-full border-haevn-gray-900/10">
           <CardContent className="pt-6 text-center">
             <p className="text-h3 text-haevn-gray-900 mb-2" style={{ fontWeight: 900 }}>
@@ -283,11 +283,11 @@ export function PartnerProfile() {
   console.log('✅ [PartnerProfile] Single-user mode:', !hasPartnership)
 
   return (
-    <div className="min-h-screen bg-[#E8E6E3]">
-      <div className="max-w-md mx-auto bg-[#E8E6E3] min-h-screen">
+    <div className="min-h-screen bg-haevn-warm-gray">
+      <div className="max-w-md mx-auto bg-haevn-warm-gray min-h-screen">
 
         {/* Logo at Top - Light Background */}
-        <div className="bg-[#E8E6E3] pt-6 pb-3">
+        <div className="bg-haevn-warm-gray pt-6 pb-3">
           <div className="container mx-auto px-6 flex justify-center">
             <img
               src="/haevn-logo-icon-white.svg"

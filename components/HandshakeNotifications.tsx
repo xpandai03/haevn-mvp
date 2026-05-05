@@ -117,7 +117,7 @@ export function HandshakeNotifications() {
                 {requests.map((request) => (
                   <div
                     key={request.id}
-                    className="p-4 hover:bg-[#E8E6E3]/50 cursor-pointer transition-colors"
+                    className="p-4 hover:bg-haevn-warm-gray/50 cursor-pointer transition-colors"
                     onClick={() => handleViewRequest(request)}
                   >
                     <div className="flex items-start gap-3">

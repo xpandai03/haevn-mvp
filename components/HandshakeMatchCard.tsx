@@ -58,7 +58,7 @@ export function HandshakeMatchCard({ match, onSendHandshake, onViewDetails, isPe
             <div className="flex items-center gap-3">
               <Avatar className="h-14 w-14 border-2 border-haevn-orange">
                 <AvatarImage src={''} /> {/* Anonymized - no photo until handshake */}
-                <AvatarFallback className="bg-[#E8E6E3] text-haevn-gray-900 text-lg font-bold">
+                <AvatarFallback className="bg-haevn-warm-gray text-haevn-gray-900 text-lg font-bold">
                   {getInitials(partnership.display_name)}
                 </AvatarFallback>
               </Avatar>

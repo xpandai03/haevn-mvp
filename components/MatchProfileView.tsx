@@ -132,7 +132,7 @@ export function MatchProfileView({
                   className="w-full h-full object-cover object-[center_25%]"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-b from-[#E8E6E3] to-[#D5D3D0] flex items-center justify-center font-heading text-4xl text-[color:var(--haevn-navy)]">
+                <div className="w-full h-full bg-gradient-to-b from-haevn-warm-gray to-[#D5D3D0] flex items-center justify-center font-heading text-4xl text-[color:var(--haevn-navy)]">
                   {initials}
                 </div>
               )}

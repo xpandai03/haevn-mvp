@@ -104,7 +104,7 @@ export default function NudgesPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="dash-layout min-h-screen bg-[#E8E6E3] flex items-center justify-center">
+      <div className="dash-layout min-h-screen bg-haevn-warm-gray flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
           <p className="text-[#252627]/60" style={{ fontWeight: 300 }}>
@@ -117,7 +117,7 @@ export default function NudgesPage() {
 
   if (error) {
     return (
-      <div className="dash-layout min-h-screen bg-[#E8E6E3] flex items-center justify-center p-4">
+      <div className="dash-layout min-h-screen bg-haevn-warm-gray flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl p-6 border-2 border-[#252627]/10">
           <h2 className="font-heading text-h2 text-red-600 mb-2" style={{ fontWeight: 900 }}>
             Error Loading Notifications
@@ -139,7 +139,7 @@ export default function NudgesPage() {
   const groupedNudges = groupByDate(nudges)
 
   return (
-    <div className="dash-layout min-h-screen bg-[#E8E6E3]">
+    <div className="dash-layout min-h-screen bg-haevn-warm-gray">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -201,7 +201,7 @@ export default function NudgesPage() {
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
                             {/* Icon */}
-                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#E8E6E3] flex items-center justify-center">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-haevn-warm-gray flex items-center justify-center">
                               {getNudgeIcon(nudge.type)}
                             </div>
 

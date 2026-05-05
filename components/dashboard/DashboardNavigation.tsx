@@ -21,7 +21,7 @@ function NavItem({ icon, label, sublabel, disabled, onClick }: NavItemProps) {
       className={`flex items-center gap-3 w-full p-3 rounded-[var(--radius)] transition-colors text-left ${
         disabled
           ? 'opacity-50 cursor-not-allowed'
-          : 'hover:bg-haevn-lightgray active:bg-haevn-lightgray/80'
+          : 'hover:bg-haevn-cream active:bg-haevn-cream/80'
       }`}
     >
       <div className="flex-shrink-0 text-haevn-charcoal/70">

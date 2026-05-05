@@ -189,7 +189,7 @@ export default function ProfileViewPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-cream">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
           <p className="text-haevn-charcoal">Loading profile...</p>
@@ -201,7 +201,7 @@ export default function ProfileViewPage() {
   // Error state
   if (error || !profile) {
     return (
-      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-cream p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
           <h2 className="text-2xl font-bold text-haevn-navy mb-4">Profile Not Found</h2>
           <p className="text-haevn-charcoal mb-6">{error || 'This profile could not be loaded.'}</p>
@@ -216,7 +216,7 @@ export default function ProfileViewPage() {
   // Free user gating
   if (membershipTier !== 'plus') {
     return (
-      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+      <div className="dash-layout min-h-screen flex items-center justify-center bg-haevn-cream p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-haevn-teal/10 flex items-center justify-center">
             <span className="text-2xl">🔒</span>
@@ -248,7 +248,7 @@ export default function ProfileViewPage() {
   }
 
   return (
-    <div className="dash-layout min-h-screen bg-haevn-lightgray">
+    <div className="dash-layout min-h-screen bg-haevn-cream">
       {/* Header */}
       <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
         <div className="max-w-md mx-auto flex items-center">

@@ -100,7 +100,7 @@ export function SendHandshakeModal({ open, onOpenChange, match, onSuccess }: Sen
 
         <div className="space-y-4 py-4">
           {/* Match Preview */}
-          <div className="flex items-center gap-3 p-3 bg-[#E8E6E3] rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-haevn-warm-gray rounded-lg">
             <Avatar className="h-12 w-12 border-2 border-haevn-orange">
               <AvatarImage src={''} />
               <AvatarFallback className="bg-white text-haevn-gray-900 font-bold">

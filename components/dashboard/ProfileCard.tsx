@@ -54,7 +54,7 @@ function redactName(name: string) {
 
 function SilhouetteOverlay() {
   return (
-    <div className="w-full aspect-[3/4] bg-gradient-to-b from-[#E8E6E3] to-[#D5D3D0] flex items-center justify-center relative overflow-hidden">
+    <div className="w-full aspect-[3/4] bg-gradient-to-b from-haevn-warm-gray to-[#D5D3D0] flex items-center justify-center relative overflow-hidden">
       <svg viewBox="0 0 200 200" className="w-28 h-28 opacity-30" aria-hidden>
         <circle cx="100" cy="70" r="40" fill="#9CA3AF" />
         <ellipse cx="100" cy="170" rx="60" ry="50" fill="#9CA3AF" />

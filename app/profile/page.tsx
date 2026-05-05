@@ -211,7 +211,7 @@ export default async function ProfilePage() {
         {primaryPhoto ? (
           <Link
             href="/profile/edit"
-            className="relative block h-72 sm:h-96 md:h-[28rem] bg-gradient-to-br from-[#F9F5EB] to-[#E8E6E3] overflow-hidden group"
+            className="relative block h-72 sm:h-96 md:h-[28rem] bg-gradient-to-br from-[#F9F5EB] to-haevn-warm-gray overflow-hidden group"
           >
             <img
               src={primaryPhoto}
@@ -223,7 +223,7 @@ export default async function ProfilePage() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
           </Link>
         ) : (
-          <div className="relative h-72 sm:h-96 md:h-[28rem] flex flex-col items-center justify-center bg-gradient-to-br from-[#F9F5EB] to-[#E8E6E3]">
+          <div className="relative h-72 sm:h-96 md:h-[28rem] flex flex-col items-center justify-center bg-gradient-to-br from-[#F9F5EB] to-haevn-warm-gray">
             <Camera
               className="w-8 h-8 text-[color:var(--haevn-muted-fg)] mb-2"
               strokeWidth={1.5}

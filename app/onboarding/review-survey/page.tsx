@@ -133,7 +133,7 @@ export default function ReviewSurveyPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-cream">
         <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
       </div>
     )
@@ -141,7 +141,7 @@ export default function ReviewSurveyPage() {
 
   if (error && !surveyData) {
     return (
-      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-cream">
         <div className="w-full max-w-md">
           <Alert variant="destructive" className="rounded-xl mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default function ReviewSurveyPage() {
   const answerCount = surveyData?.answers ? Object.keys(surveyData.answers).length : 0
 
   return (
-    <div className="survey-layout min-h-screen flex flex-col items-center justify-start p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-start p-6 bg-haevn-cream">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-8">
@@ -206,7 +206,7 @@ export default function ReviewSurveyPage() {
                 {completionPct}%
               </span>
             </div>
-            <div className="w-full bg-haevn-lightgray rounded-full h-2.5">
+            <div className="w-full bg-haevn-cream rounded-full h-2.5">
               <div
                 className="bg-haevn-teal h-2.5 rounded-full transition-all"
                 style={{ width: `${completionPct}%` }}
@@ -269,7 +269,7 @@ export default function ReviewSurveyPage() {
           ) : (
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
               {Object.entries(surveyData?.answers || {}).map(([questionId, answer]) => (
-                <div key={questionId} className="border-b border-haevn-lightgray pb-4 last:border-0">
+                <div key={questionId} className="border-b border-haevn-cream pb-4 last:border-0">
                   <p className="text-haevn-charcoal text-sm font-medium mb-1">
                     {questionId}
                   </p>

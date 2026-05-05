@@ -94,7 +94,7 @@ export function CompatibilityBreakdown({
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full h-2 bg-haevn-lightgray rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-haevn-cream rounded-full overflow-hidden">
                 <div
                   className="h-full bg-haevn-teal rounded-full transition-all duration-300"
                   style={{ width: `${score}%` }}

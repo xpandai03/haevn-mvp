@@ -531,7 +531,7 @@ export default function SurveyPage() {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-haevn-lightgray">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-haevn-cream">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>

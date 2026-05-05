@@ -122,7 +122,14 @@ const config: Config = {
         'haevn-success': {
           DEFAULT: '#388E3C',
           light: '#E8F5E9',
-        }
+        },
+        // Cream dashboard surface (matches --haevn-dash-bg in globals.css).
+        // Canonical alias for cream backgrounds — replaces the undefined
+        // `haevn-lightgray` token that was no-op'ing across ~40 files.
+        'haevn-cream': '#FAFAF8',
+        // Warm-gray surface (matches --haevn-border value but used as a
+        // bg color in modal accents, partner-profile, handshake cards).
+        'haevn-warm-gray': '#E8E6E3',
       },
       fontFamily: {
         heading: ['Cabinet Grotesk', 'Roboto', '-apple-system', 'sans-serif'],

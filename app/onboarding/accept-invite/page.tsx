@@ -106,7 +106,7 @@ export default function AcceptInvitePage() {
 
   if (authLoading || loading) {
     return (
-      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex items-center justify-center bg-haevn-cream">
         <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
       </div>
     )
@@ -114,7 +114,7 @@ export default function AcceptInvitePage() {
 
   if (error && !inviteData) {
     return (
-      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+      <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-cream">
         <div className="w-full max-w-md">
           <Alert variant="destructive" className="rounded-xl mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -134,7 +134,7 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-cream">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -181,7 +181,7 @@ export default function AcceptInvitePage() {
               </p>
             </div>
 
-            <div className="border-t border-haevn-lightgray pt-4">
+            <div className="border-t border-haevn-cream pt-4">
               <label className="text-haevn-charcoal text-sm font-medium">
                 Location
               </label>
@@ -190,7 +190,7 @@ export default function AcceptInvitePage() {
               </p>
             </div>
 
-            <div className="border-t border-haevn-lightgray pt-4">
+            <div className="border-t border-haevn-cream pt-4">
               <label className="text-haevn-charcoal text-sm font-medium">
                 Survey Status
               </label>
@@ -213,7 +213,7 @@ export default function AcceptInvitePage() {
               </div>
             </div>
 
-            <div className="border-t border-haevn-lightgray pt-4">
+            <div className="border-t border-haevn-cream pt-4">
               <label className="text-haevn-charcoal text-sm font-medium">
                 Membership Tier
               </label>

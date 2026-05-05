@@ -53,7 +53,7 @@ export default function ConnectionsPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-cream p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
           <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">Error Loading Connections</h2>
           <p className="text-haevn-charcoal mb-6">{error}</p>
@@ -66,7 +66,7 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-haevn-lightgray">
+    <div className="min-h-screen bg-haevn-cream">
       {/* Header */}
       <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto">

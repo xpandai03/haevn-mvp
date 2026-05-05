@@ -119,7 +119,7 @@ export default function MembershipPage() {
   }
 
   return (
-    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-lightgray">
+    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-cream">
       <div className="w-full max-w-6xl">
         {/* Header */}
         <div className="mb-10">
@@ -271,7 +271,7 @@ export default function MembershipPage() {
                 className={`w-full rounded-full ${
                   tier.popular
                     ? 'bg-haevn-teal hover:opacity-90 text-white'
-                    : 'bg-white hover:bg-haevn-lightgray text-haevn-navy border-2 border-haevn-navy'
+                    : 'bg-white hover:bg-haevn-cream text-haevn-navy border-2 border-haevn-navy'
                 }`}
                 size="lg"
                 style={{

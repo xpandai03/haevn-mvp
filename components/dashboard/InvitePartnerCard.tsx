@@ -263,7 +263,7 @@ export default function InvitePartnerCard() {
             </div>
 
             {/* Instructions */}
-            <div className="p-3 bg-haevn-lightgray rounded-[var(--radius)]">
+            <div className="p-3 bg-haevn-cream rounded-[var(--radius)]">
               <h5
                 className="text-haevn-navy mb-2"
                 style={{

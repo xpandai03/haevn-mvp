@@ -213,7 +213,7 @@ export default function MatchDetailPage() {
   // Loading state
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-cream">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
           <p className="text-haevn-charcoal">Loading match details...</p>
@@ -225,7 +225,7 @@ export default function MatchDetailPage() {
   // Error state
   if (error || !match) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-cream p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
           <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">
             {error || 'Match Not Found'}
@@ -308,7 +308,7 @@ export default function MatchDetailPage() {
         </div>
 
         {/* Compatibility Score Card */}
-        <div className="bg-haevn-lightgray rounded-2xl p-6 mb-6 text-center">
+        <div className="bg-haevn-cream rounded-2xl p-6 mb-6 text-center">
           <p
             className="text-xs text-haevn-charcoal/60 uppercase tracking-wider mb-2"
             style={{ fontWeight: 500 }}
@@ -416,7 +416,7 @@ export default function MatchDetailPage() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              className="flex-1 h-12 text-base font-semibold border-2 border-haevn-charcoal/30 text-haevn-charcoal/60 hover:bg-haevn-lightgray rounded-full"
+              className="flex-1 h-12 text-base font-semibold border-2 border-haevn-charcoal/30 text-haevn-charcoal/60 hover:bg-haevn-cream rounded-full"
               onClick={handlePass}
               disabled={actionLoading}
             >
@@ -427,7 +427,7 @@ export default function MatchDetailPage() {
               className={`h-12 px-4 text-base font-semibold border-2 rounded-full ${
                 saved
                   ? 'border-haevn-teal bg-haevn-teal/10 text-haevn-teal'
-                  : 'border-haevn-charcoal/30 text-haevn-charcoal/60 hover:bg-haevn-lightgray'
+                  : 'border-haevn-charcoal/30 text-haevn-charcoal/60 hover:bg-haevn-cream'
               }`}
               onClick={handleSave}
               disabled={actionLoading}

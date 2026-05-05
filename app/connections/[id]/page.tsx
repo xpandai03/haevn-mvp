@@ -83,7 +83,7 @@ export default function ConnectionDetailPage() {
   // Loading state
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-cream">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
           <p className="text-haevn-charcoal">Loading connection details...</p>
@@ -95,7 +95,7 @@ export default function ConnectionDetailPage() {
   // Error state
   if (error || !connection) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-lightgray p-4">
+      <div className="min-h-screen flex items-center justify-center bg-haevn-cream p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
           <h2 className="text-2xl font-bold text-haevn-navy mb-4">
             {error || 'Connection Not Found'}

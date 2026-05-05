@@ -102,7 +102,7 @@ export function AcceptHandshakeModal({ open, onOpenChange, handshake, onResponse
 
         <div className="space-y-4 py-4">
           {/* Partnership Preview */}
-          <div className="flex items-center gap-3 p-4 bg-[#E8E6E3] rounded-lg">
+          <div className="flex items-center gap-3 p-4 bg-haevn-warm-gray rounded-lg">
             <Avatar className="h-16 w-16 border-2 border-haevn-orange">
               <AvatarImage src={''} />
               <AvatarFallback className="bg-white text-haevn-gray-900 text-xl font-bold">

@@ -160,7 +160,7 @@ export default function AddPhotosPage() {
 
   if (authLoading || loadingPartnership) {
     return (
-      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
+      <div className="min-h-screen bg-haevn-warm-gray flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
       </div>
     )
@@ -171,8 +171,8 @@ export default function AddPhotosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E8E6E3]">
-      <div className="max-w-md mx-auto bg-[#E8E6E3] min-h-screen pb-24">
+    <div className="min-h-screen bg-haevn-warm-gray">
+      <div className="max-w-md mx-auto bg-haevn-warm-gray min-h-screen pb-24">
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
           <Button
