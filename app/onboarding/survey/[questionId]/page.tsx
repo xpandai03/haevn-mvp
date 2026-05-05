@@ -13,7 +13,7 @@ export default function QuestionPage() {
     )
 
 
-    return <main className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
+    return <main className="survey-layout flex-1 flex flex-col items-center justify-center px-4 pb-12">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg p-8 lg:p-12">
             {/* Section title */}
             {currentSection && (

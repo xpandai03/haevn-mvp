@@ -167,7 +167,7 @@ export default function DiscoveryPage() {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="dash-layout min-h-screen p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">

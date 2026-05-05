@@ -20,7 +20,7 @@ export default function PartnerProfilePage() {
   // Show loading while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#E8E6E3] flex items-center justify-center">
+      <div className="dash-layout min-h-screen bg-[#E8E6E3] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-[#008080]" />
           <p className="text-body text-[#252627]" style={{ fontWeight: 300 }}>
@@ -36,5 +36,9 @@ export default function PartnerProfilePage() {
     return null
   }
 
-  return <PartnerProfile />
+  return (
+    <div className="dash-layout">
+      <PartnerProfile />
+    </div>
+  )
 }

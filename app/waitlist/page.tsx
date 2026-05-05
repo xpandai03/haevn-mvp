@@ -17,7 +17,7 @@ export default function WaitlistPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="dash-layout min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>You're on the waitlist!</CardTitle>
