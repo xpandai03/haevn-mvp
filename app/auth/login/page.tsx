@@ -88,15 +88,15 @@ export default function LoginPage() {
 
         if (!response.ok) {
           console.error('[Login] API route returned error:', response.status)
-          // Fallback to dashboard if API fails
-          window.location.href = '/dashboard'
+          // Fallback to splash if API fails (post-login dashboard entry)
+          window.location.href = '/splash'
           return
         }
 
         const { data, parseError } = await safeResponseJson(response)
         if (parseError || !data) {
           console.error('[Login] Failed to parse resume-step response:', parseError)
-          window.location.href = '/dashboard'
+          window.location.href = '/splash'
           return
         }
         console.log('[Login] ===== RESUME PATH DETERMINED =====')
@@ -106,22 +106,22 @@ export default function LoginPage() {
 
         // CRITICAL: Check status BEFORE redirecting
         if (data.status === 'complete') {
-          // Onboarding is complete - go to dashboard
-          console.log('[Login] ✅ Onboarding COMPLETE - going to dashboard')
-          window.location.href = '/dashboard'
+          // Onboarding is complete - go to splash, then dashboard
+          console.log('[Login] ✅ Onboarding COMPLETE - going to splash')
+          window.location.href = '/splash'
         } else if (data.status === 'incomplete' && data.resumePath) {
-          // Onboarding incomplete - resume where they left off
+          // Onboarding incomplete - resume where they left off (no splash)
           console.log('[Login] Onboarding incomplete - resuming at:', data.resumePath)
           window.location.href = data.resumePath
         } else {
           // Fallback - should not happen but be safe
-          console.log('[Login] Unknown status, falling back to dashboard')
-          window.location.href = '/dashboard'
+          console.log('[Login] Unknown status, falling back to splash')
+          window.location.href = '/splash'
         }
       } catch (fetchError) {
         console.error('[Login] Failed to fetch resume path:', fetchError)
-        // Fallback to dashboard
-        window.location.href = '/dashboard'
+        // Fallback to splash (post-login dashboard entry)
+        window.location.href = '/splash'
       }
     } catch (err: any) {
       console.error('[Login] ❌ Login error:', err)

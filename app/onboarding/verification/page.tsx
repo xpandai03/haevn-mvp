@@ -87,8 +87,9 @@ export default function VerificationPage() {
       })
       await flowController.markStepComplete(user.id, 8)
 
-      // Verification is the final gate before dashboard.
-      router.push('/dashboard')
+      // Verification is the final gate before dashboard. Route through
+      // /splash for the logo-reveal interstitial.
+      router.push('/splash')
     } catch (error) {
       console.error('Error updating onboarding state:', error)
       toast({

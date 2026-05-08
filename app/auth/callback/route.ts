@@ -27,12 +27,17 @@ export async function GET(request: Request) {
         const flowController = await getServerOnboardingFlowController()
         const resumePath = await flowController.getResumeStep(session.user.id)
 
+        // null = onboarding complete; route through /splash for the
+        // logo-reveal interstitial before the dashboard. Otherwise
+        // resume the user at their next onboarding step (no splash).
+        const target = resumePath ?? '/splash'
+
         console.log('[TRACE-CB] getResumeStep resolved to', resumePath)
-        console.log('[TRACE-CB] Building redirect URL:', `${origin}${resumePath}`)
+        console.log('[TRACE-CB] Building redirect URL:', `${origin}${target}`)
         console.log('[TRACE-CB] About to redirect...')
         console.log('[TRACE-CB] ===== END CALLBACK =====')
 
-        return NextResponse.redirect(`${origin}${resumePath}`)
+        return NextResponse.redirect(`${origin}${target}`)
       }
     }
   }

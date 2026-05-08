@@ -253,7 +253,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes that require complete onboarding
-  const protectedRoutes = ['/dashboard', '/discovery', '/chat', '/connections', '/profile']
+  const protectedRoutes = ['/dashboard', '/discovery', '/chat', '/connections', '/profile', '/splash']
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
   if (isProtectedRoute) {

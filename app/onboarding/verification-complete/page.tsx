@@ -35,7 +35,8 @@ export default function VerificationCompletePage() {
     try {
       // Mark verification-complete step as done (step 9 in the new flow)
       await flowController.markStepComplete(user.id, 9)
-      router.push('/dashboard')
+      // Route through /splash for the logo-reveal interstitial.
+      router.push('/splash')
     } catch (error) {
       console.error('[VerificationComplete] Error continuing:', error)
       toast({
