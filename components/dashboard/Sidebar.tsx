@@ -85,7 +85,7 @@ export function Sidebar({
   return (
     <aside
       data-testid="dash-sidebar"
-      className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white border-r border-[color:var(--haevn-border)] z-40"
+      className="hidden md:flex flex-col w-64 h-[calc(100vh-2.25rem)] fixed left-0 top-9 bg-white border-r border-[color:var(--haevn-border)] z-40"
     >
       {/* Logo */}
       <Link
