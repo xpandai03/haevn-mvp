@@ -102,6 +102,23 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next()
   const pathname = request.nextUrl.pathname
 
+  // OAuth recovery: when /auth/callback isn't on the Supabase project's
+  // Redirect URLs allowlist, Supabase falls back to the configured Site
+  // URL and the user lands on "/" with ?code=... — the callback route
+  // never runs and no session gets set. Forward those requests to the
+  // real callback so exchangeCodeForSession can complete. The proper
+  // fix is allowlisting in the Supabase dashboard; this is the safety
+  // net that keeps sign-in working if config drifts.
+  if (
+    (pathname === '/' || pathname === '') &&
+    request.nextUrl.searchParams.has('code')
+  ) {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    callbackUrl.search = request.nextUrl.search
+    console.log('[TRACE-MW] OAuth code on root path — forwarding to /auth/callback')
+    return NextResponse.redirect(callbackUrl)
+  }
+
   // Create a Supabase client configured to use cookies
   // IMPORTANT: This must run for ALL requests, including API routes, to properly set up cookies
   const supabase = createServerClient(
