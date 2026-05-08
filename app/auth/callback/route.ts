@@ -28,9 +28,13 @@ export async function GET(request: Request) {
         const resumePath = await flowController.getResumeStep(session.user.id)
 
         // null = onboarding complete; route through /splash for the
-        // logo-reveal interstitial before the dashboard. Otherwise
-        // resume the user at their next onboarding step (no splash).
-        const target = resumePath ?? '/splash'
+        // logo-reveal interstitial before the dashboard. The splash
+        // page consumes a sessionStorage intent flag, but server
+        // redirects can't set sessionStorage — so we pass ?splash=1
+        // and the splash page accepts that as the intent signal.
+        // Otherwise resume the user at their next onboarding step
+        // (no splash).
+        const target = resumePath ?? '/splash?splash=1'
 
         console.log('[TRACE-CB] getResumeStep resolved to', resumePath)
         console.log('[TRACE-CB] Building redirect URL:', `${origin}${target}`)

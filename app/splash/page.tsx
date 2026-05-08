@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const SPLASH_FLAG = 'haevn_splash_shown'
+// Consume-on-entry intent flag. Login/onboarding-completion sets this
+// to 'true' right before navigating to /splash; the splash page clears
+// it as it boots. If the flag isn't set (direct URL hit, refresh, back
+// nav from dashboard), we skip the animation.
+const SPLASH_INTENT_FLAG = 'haevn_show_splash'
 const HARD_TIMEOUT_MS = 8000
 const AUTOPLAY_PROBE_MS = 1000
 const STATIC_FALLBACK_MS = 2000
@@ -25,11 +29,20 @@ export default function SplashPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    if (sessionStorage.getItem(SPLASH_FLAG) === 'true') {
+    // Splash plays only when the previous step (login or onboarding
+    // completion) set the intent flag. The OAuth callback runs on
+    // the server where sessionStorage is unreachable, so it appends
+    // ?splash=1 to the URL — accept either signal. Any other entry
+    // into /splash (refresh, back-nav, deep-link) goes straight to
+    // the dashboard.
+    const intent = sessionStorage.getItem(SPLASH_INTENT_FLAG)
+    sessionStorage.removeItem(SPLASH_INTENT_FLAG)
+    const fromQuery =
+      new URLSearchParams(window.location.search).get('splash') === '1'
+    if (intent !== 'true' && !fromQuery) {
       router.replace('/dashboard')
       return
     }
-    sessionStorage.setItem(SPLASH_FLAG, 'true')
     setReady(true)
 
     const hardTimeout = setTimeout(advance, HARD_TIMEOUT_MS)

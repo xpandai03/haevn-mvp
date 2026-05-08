@@ -150,6 +150,7 @@ function VerificationReturnContent() {
       await flowController.markStepComplete(user.id, 9)
       // Verification is the final gate before dashboard. Route through
       // /splash for the logo-reveal interstitial.
+      sessionStorage.setItem('haevn_show_splash', 'true')
       router.push('/splash')
     } catch (error) {
       console.error('[Return] Error continuing:', error)

@@ -36,6 +36,7 @@ export default function VerificationCompletePage() {
       // Mark verification-complete step as done (step 9 in the new flow)
       await flowController.markStepComplete(user.id, 9)
       // Route through /splash for the logo-reveal interstitial.
+      sessionStorage.setItem('haevn_show_splash', 'true')
       router.push('/splash')
     } catch (error) {
       console.error('[VerificationComplete] Error continuing:', error)

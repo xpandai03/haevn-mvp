@@ -86,17 +86,22 @@ export default function LoginPage() {
           },
         })
 
+        const goToSplash = () => {
+          sessionStorage.setItem('haevn_show_splash', 'true')
+          window.location.href = '/splash'
+        }
+
         if (!response.ok) {
           console.error('[Login] API route returned error:', response.status)
           // Fallback to splash if API fails (post-login dashboard entry)
-          window.location.href = '/splash'
+          goToSplash()
           return
         }
 
         const { data, parseError } = await safeResponseJson(response)
         if (parseError || !data) {
           console.error('[Login] Failed to parse resume-step response:', parseError)
-          window.location.href = '/splash'
+          goToSplash()
           return
         }
         console.log('[Login] ===== RESUME PATH DETERMINED =====')
@@ -108,7 +113,7 @@ export default function LoginPage() {
         if (data.status === 'complete') {
           // Onboarding is complete - go to splash, then dashboard
           console.log('[Login] ✅ Onboarding COMPLETE - going to splash')
-          window.location.href = '/splash'
+          goToSplash()
         } else if (data.status === 'incomplete' && data.resumePath) {
           // Onboarding incomplete - resume where they left off (no splash)
           console.log('[Login] Onboarding incomplete - resuming at:', data.resumePath)
@@ -116,11 +121,12 @@ export default function LoginPage() {
         } else {
           // Fallback - should not happen but be safe
           console.log('[Login] Unknown status, falling back to splash')
-          window.location.href = '/splash'
+          goToSplash()
         }
       } catch (fetchError) {
         console.error('[Login] Failed to fetch resume path:', fetchError)
         // Fallback to splash (post-login dashboard entry)
+        sessionStorage.setItem('haevn_show_splash', 'true')
         window.location.href = '/splash'
       }
     } catch (err: any) {
