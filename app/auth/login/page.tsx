@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,13 +17,89 @@ import { supabase } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { signIn, user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // True until we've confirmed there's no existing session. Prevents the
+  // login form from flashing in front of a user who's already authenticated
+  // (e.g. arriving from the OAuth callback in any code path).
+  const [authChecking, setAuthChecking] = useState(true)
+  // Guard so the post-auth redirect only fires once even if user state and
+  // onAuthStateChange both trigger it.
+  const redirectingRef = useRef(false)
+
+  // Resolve where an authenticated user should land, then navigate.
+  // Mirrors the post-password-login routing so OAuth returns and password
+  // logins both route the same way.
+  const redirectAuthenticatedUser = async () => {
+    if (redirectingRef.current) return
+    redirectingRef.current = true
+    const goToSplash = () => {
+      sessionStorage.setItem('haevn_show_splash', 'true')
+      window.location.href = '/splash'
+    }
+    try {
+      const response = await fetch('/api/onboarding/resume-step', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!response.ok) {
+        goToSplash()
+        return
+      }
+      const { data, parseError } = await safeResponseJson(response)
+      if (parseError || !data) {
+        goToSplash()
+        return
+      }
+      if (data.status === 'complete') {
+        goToSplash()
+      } else if (data.status === 'incomplete' && data.resumePath) {
+        window.location.href = data.resumePath
+      } else {
+        goToSplash()
+      }
+    } catch {
+      goToSplash()
+    }
+  }
+
+  // If the AuthProvider already has a user when this page mounts, redirect
+  // immediately. Covers the case where the OAuth callback set the cookies
+  // but something (race, manual navigation, second tab) landed the user
+  // back on /auth/login.
+  useEffect(() => {
+    if (authLoading) return
+    if (user) {
+      console.log('[Login] Existing session detected on mount, redirecting away from /auth/login')
+      redirectAuthenticatedUser()
+      return
+    }
+    setAuthChecking(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user])
+
+  // Reactively catch SIGNED_IN events that arrive AFTER the page mounts —
+  // e.g. cookies set by the OAuth callback get parsed slightly after the
+  // first getSession() call resolves with no user. Without this listener
+  // the user would be stuck staring at the login form.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          console.log('[Login] onAuthStateChange SIGNED_IN — redirecting away from /auth/login')
+          redirectAuthenticatedUser()
+        }
+      }
+    )
+    return () => subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
@@ -138,6 +214,17 @@ export default function LoginPage() {
       setError(isTechnical ? 'Login failed. Please check your credentials and try again.' : (msg || 'Invalid email or password'))
       setLoading(false)
     }
+  }
+
+  if (authChecking) {
+    return (
+      <div className="survey-layout relative min-h-screen w-full overflow-hidden bg-haevn-navy">
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <HaevnLoader size={48} />
+        </div>
+      </div>
+    )
   }
 
   return (
