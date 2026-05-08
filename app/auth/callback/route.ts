@@ -50,8 +50,33 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const origin = requestUrl.origin
+  const supabaseUrl = getSupabaseUrl()
+
+  // Snapshot the cookies the browser actually sent on this request.
+  // We need to know whether the PKCE code-verifier cookie that
+  // signInWithOAuth wrote on the login page made it back to the
+  // callback — without it, exchangeCodeForSession will fail with
+  // "invalid request: both auth code and code verifier should be
+  // non-empty" or similar. Names only; never log values.
+  const incomingCookieNames = request.cookies.getAll().map((c) => c.name)
+  const verifierCookieNames = incomingCookieNames.filter((n) =>
+    n.includes('code-verifier') || n.includes('code_verifier')
+  )
+  const authCookieNames = incomingCookieNames.filter((n) =>
+    n.startsWith('sb-') && n.includes('auth-token')
+  )
+  console.log('[TRACE-CB] ===== CALLBACK ENTRY =====')
+  console.log('[TRACE-CB] request.url:', request.url)
+  console.log('[TRACE-CB] origin:', origin)
+  console.log('[TRACE-CB] supabaseUrl in use:', supabaseUrl)
+  console.log('[TRACE-CB] code present:', !!code, 'len:', code?.length)
+  console.log('[TRACE-CB] cookie count:', incomingCookieNames.length)
+  console.log('[TRACE-CB] cookie names:', incomingCookieNames)
+  console.log('[TRACE-CB] verifier cookies:', verifierCookieNames)
+  console.log('[TRACE-CB] auth cookies:', authCookieNames)
 
   if (!code) {
+    console.error('[TRACE-CB] missing code in querystring')
     return NextResponse.redirect(`${origin}/auth/login?error=missing_code`)
   }
 
@@ -61,7 +86,7 @@ export async function GET(request: NextRequest) {
   const cookieJar = NextResponse.next()
 
   const supabase = createServerClient(
-    getSupabaseUrl(),
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
@@ -77,10 +102,35 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+  // Belt-and-suspenders: try/catch around exchangeCodeForSession in
+  // case it throws synchronously (network, malformed config, etc.)
+  // rather than returning { error }. Surface the actual error message
+  // back to the login page so we can debug without Vercel logs.
+  let exchangeError: any = null
+  try {
+    const result = await supabase.auth.exchangeCodeForSession(code)
+    exchangeError = result.error
+  } catch (thrown) {
+    exchangeError = thrown
+  }
+
   if (exchangeError) {
-    console.error('[TRACE-CB] exchangeCodeForSession failed:', exchangeError.message)
-    return NextResponse.redirect(`${origin}/auth/login?error=oauth_exchange`)
+    const detail = {
+      name: exchangeError?.name,
+      message: exchangeError?.message,
+      status: exchangeError?.status,
+      code: exchangeError?.code,
+      errorCode: exchangeError?.error_code,
+    }
+    console.error('[TRACE-CB] exchangeCodeForSession failed:', detail)
+    console.error('[TRACE-CB] full error:', exchangeError)
+    console.error('[TRACE-CB] verifier cookies present at failure:', verifierCookieNames)
+    const reason = encodeURIComponent(
+      (exchangeError?.message || 'unknown').slice(0, 240)
+    )
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=oauth_exchange&reason=${reason}`
+    )
   }
 
   const {

@@ -84,6 +84,28 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user])
 
+  // Surface OAuth-callback failures to the user. The callback redirects
+  // here with ?error=<code>&reason=<message> on failure; show the raw
+  // reason so we can debug without digging through Vercel function logs.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const errorCode = params.get('error')
+    const reason = params.get('reason')
+    if (!errorCode) return
+    if (errorCode === 'oauth_exchange') {
+      setError(
+        reason
+          ? `Google sign-in failed: ${decodeURIComponent(reason)}`
+          : 'Google sign-in failed during code exchange. Please try again.'
+      )
+    } else if (errorCode === 'oauth_no_session') {
+      setError('Google sign-in completed but no session was created. Please try again.')
+    } else if (errorCode === 'missing_code') {
+      setError('Google sign-in returned without an authorization code. Please try again.')
+    }
+  }, [])
+
   // Reactively catch SIGNED_IN events that arrive AFTER the page mounts —
   // e.g. cookies set by the OAuth callback get parsed slightly after the
   // first getSession() call resolves with no user. Without this listener
