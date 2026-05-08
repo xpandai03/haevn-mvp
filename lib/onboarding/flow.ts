@@ -106,28 +106,38 @@ export class OnboardingFlowController {
 
   async getOnboardingState(userId: string): Promise<OnboardingState | null> {
     try {
-      // For now, use localStorage as a fallback since the migration hasn't been run
-      // This is temporary until the database table is created
+      // Client-side: read from localStorage (the only place this state
+      // is persisted right now). Falls back to a fresh default object
+      // for first-time visitors so client-side callers (markStepComplete,
+      // updateOnboardingState) have something to merge into.
       if (typeof window !== 'undefined') {
         const storedState = localStorage.getItem(`onboarding_state_${userId}`)
         if (storedState) {
           return JSON.parse(storedState)
         }
+        return {
+          currentStep: 1,
+          completedSteps: [],
+          expectationsViewed: false,
+          identityCompleted: false,
+          verificationCompleted: false,
+          verificationSkipped: false,
+          surveyIntroViewed: false,
+          surveyCompleted: false,
+          celebrationViewed: false,
+          membershipSelected: false
+        }
       }
 
-      // Return default state if nothing is stored
-      return {
-        currentStep: 1,
-        completedSteps: [],
-        expectationsViewed: false,
-        identityCompleted: false,
-        verificationCompleted: false,
-        verificationSkipped: false,
-        surveyIntroViewed: false,
-        surveyCompleted: false,
-        celebrationViewed: false,
-        membershipSelected: false
-      }
+      // Server-side: localStorage isn't reachable, so we have no way to
+      // know which steps the user has actually completed. Return null
+      // (signal: "no state available") instead of the empty default —
+      // returning the empty default tricks getResumeStep into thinking
+      // the user has completed nothing, which sends every server-side
+      // resume calculation back to /onboarding/expectations regardless
+      // of how far the user actually progressed. Callers (getResumeStep)
+      // must use DB-derived signals instead when state is null.
+      return null
     } catch (error) {
       console.error('Error in getOnboardingState:', error)
       return null
@@ -354,28 +364,47 @@ export class OnboardingFlowController {
       console.log('[FlowController] Onboarding state:', state)
 
       if (!state) {
-        // No localStorage state found
-        console.log('[FlowController] No localStorage state found')
+        // No state available — either a returning user predating
+        // localStorage tracking, or (more importantly) we're running
+        // server-side where localStorage is unreachable. Resume from
+        // DB-derived signals instead of the empty client default; that
+        // default sends every server-side caller back to
+        // /onboarding/expectations and is exactly what causes the
+        // post-verification-skip loop.
+        console.log('[FlowController] No state available, deriving resume from DB signals')
 
-        // IMPORTANT: For existing users who completed everything before localStorage tracking
-        // If they have a partnership AND survey data (even if incomplete), they're returning users
         if (membership && surveyData) {
-          console.log('[FlowController] Existing user without localStorage - checking survey progress')
-
-          if (surveyData.completion_pct > 0 && surveyData.completion_pct < 100) {
-            // Survey in progress, resume from there
-            console.log('[FlowController] Survey in progress, resuming at survey')
+          // Survey complete but isComplete returned false earlier (e.g.
+          // a non-owner whose review state is still false, transient
+          // read of a stale row). Trust the DB completion and let the
+          // caller proceed — middleware's verification gate handles any
+          // mandatory-verification enforcement separately.
+          if (surveyData.completion_pct === 100) {
+            console.log('[FlowController] Survey at 100% but isComplete=false — letting through (null)')
+            return null
+          }
+          if (surveyData.completion_pct > 0) {
+            console.log('[FlowController] Survey in progress, resuming at /onboarding/survey')
             return '/onboarding/survey'
           }
-
-          // Survey is 0% or something else is wrong, but they have partnership
-          // This shouldn't happen, but if it does, send to survey
-          console.log('[FlowController] Survey incomplete, sending to survey')
+          // Survey row exists at 0% — they reached the survey but
+          // haven't answered anything. Resume at the survey itself,
+          // not back at expectations.
+          console.log('[FlowController] Survey row at 0%, resuming at /onboarding/survey')
           return '/onboarding/survey'
         }
 
-        // No survey data - brand new user, start onboarding
-        console.log('[FlowController] No survey data, sending to first onboarding step')
+        if (membership) {
+          // Has a partnership but no survey row — they passed identity
+          // (which is what creates the partnership) but haven't started
+          // the survey yet. Resume at survey-intro, NOT at expectations
+          // — going back to expectations would be a regression.
+          console.log('[FlowController] Has partnership, no survey — resuming at /onboarding/survey-intro')
+          return '/onboarding/survey-intro'
+        }
+
+        // No partnership, no survey — genuinely a new user.
+        console.log('[FlowController] No partnership, sending to /onboarding/expectations')
         return '/onboarding/expectations'
       }
 
