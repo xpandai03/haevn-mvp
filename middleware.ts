@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { FEATURE_FLAGS } from '@/lib/feature-flags'
+import { HAEVN_AUTH_COOKIE_NAME } from '@/lib/supabase/cookieName'
 
 // DEBUG: Build ID for verifying deploy - remove after debugging
 const BUILD_ID = 'multi-partnership-fix'
@@ -125,6 +126,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
       cookies: {
         getAll() {
           return request.cookies.getAll()

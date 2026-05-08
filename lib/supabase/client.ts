@@ -1,5 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/lib/types/supabase'
+import { HAEVN_AUTH_COOKIE_NAME } from './cookieName'
+
+export { HAEVN_AUTH_COOKIE_NAME }
 
 // Known Supabase project URL — hardcoded fallback because NEXT_PUBLIC_SUPABASE_URL
 // is baked into the client bundle at build time and may be misconfigured
@@ -56,7 +59,8 @@ export const supabase = createBrowserClient<Database>(
   resolvedUrl,
   resolvedAnonKey,
   {
-    global: { fetch: instrumentedFetch }
+    global: { fetch: instrumentedFetch },
+    cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
   }
 )
 
