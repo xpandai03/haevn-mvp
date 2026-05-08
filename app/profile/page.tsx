@@ -40,6 +40,7 @@ interface PartnershipPhotoRow {
   photo_url: string
   photo_type: 'public' | 'private'
   is_primary: boolean
+  is_banner: boolean
   order_index: number
 }
 
@@ -54,7 +55,7 @@ async function loadPartnershipPhotos(
     const adminClient = await createAdminClient()
     const { data, error } = await adminClient
       .from('partnership_photos')
-      .select('id, photo_url, photo_type, is_primary, order_index')
+      .select('id, photo_url, photo_type, is_primary, is_banner, order_index')
       .eq('partnership_id', partnershipId)
       .order('order_index', { ascending: true })
     if (error) {
@@ -177,9 +178,24 @@ export default async function ProfilePage() {
       id: p.id,
       photo_url: p.photo_url,
       is_primary: p.is_primary,
+      is_banner: p.is_banner,
     }))
 
-  const primaryPhoto = publicPhotos[0]?.photo_url ?? profile?.photoUrl
+  // Avatar (circular thumbnail) and banner (hero cover) are
+  // independently selectable on Manage Photos. Fall back to the
+  // other role, then to the first public photo, then to the legacy
+  // profile.photoUrl so partnerships that haven't set either still
+  // render something.
+  const avatarPhoto =
+    publicPhotos.find(p => p.is_primary)?.photo_url ??
+    publicPhotos.find(p => p.is_banner)?.photo_url ??
+    publicPhotos[0]?.photo_url ??
+    profile?.photoUrl
+  const bannerPhoto =
+    publicPhotos.find(p => p.is_banner)?.photo_url ??
+    publicPhotos.find(p => p.is_primary)?.photo_url ??
+    publicPhotos[0]?.photo_url ??
+    profile?.photoUrl
 
   const matchCount = computedMatches.matches.length
   const connectionCount = connectionCards.length
@@ -207,14 +223,14 @@ export default async function ProfilePage() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* ─── HERO PROFILE HEADER ─── */}
       <div className="bg-white border border-[color:var(--haevn-border)] overflow-hidden">
-        {/* Cover (primary photo) — clickable to /profile/edit */}
-        {primaryPhoto ? (
+        {/* Cover (banner photo) — clickable to /profile/edit */}
+        {bannerPhoto ? (
           <Link
             href="/profile/edit"
             className="relative block h-72 sm:h-96 md:h-[28rem] bg-gradient-to-br from-[#F9F5EB] to-haevn-warm-gray overflow-hidden group"
           >
             <img
-              src={primaryPhoto}
+              src={bannerPhoto}
               alt=""
               aria-hidden="true"
               className="w-full h-full object-cover"
@@ -239,9 +255,9 @@ export default async function ProfilePage() {
           {/* Avatar overlapping the cover, left-aligned */}
           <div className="-mt-20 mb-4 relative z-10">
             <div className="w-32 h-32 sm:w-40 sm:h-40 keep-rounded border-4 border-white bg-[#F9F5EB] overflow-hidden shadow-sm">
-              {primaryPhoto ? (
+              {avatarPhoto ? (
                 <img
-                  src={primaryPhoto}
+                  src={avatarPhoto}
                   alt={displayName}
                   className="w-full h-full object-cover keep-rounded"
                   style={{ objectPosition: 'center 20%' }}

@@ -10,8 +10,8 @@ import { useToast } from '@/hooks/use-toast'
 import { ensureUserPartnership } from '@/lib/services/partnership'
 import { getPartnershipPhotos } from '@/lib/services/photos'
 import { createClient } from '@/lib/supabase/client'
-import { setPrimaryPhoto } from '@/lib/services/photos'
-import { AlertCircle, CheckCircle, ArrowLeft, Loader2, Upload, X, User } from 'lucide-react'
+import { setPrimaryPhoto, setBannerPhoto } from '@/lib/services/photos'
+import { AlertCircle, CheckCircle, ArrowLeft, Loader2, Upload, X, User, Image as ImageIcon } from 'lucide-react'
 import FullPageLoader from '@/components/ui/full-page-loader'
 import Image from 'next/image'
 
@@ -21,6 +21,7 @@ interface PhotoMetadata {
   photo_url: string
   photo_type: 'public' | 'private'
   is_primary: boolean
+  is_banner: boolean
   order_index: number
   created_at: string
 }
@@ -217,6 +218,32 @@ export default function ManagePhotosPage() {
     }
   }
 
+  const handleSetBanner = async (photoId: string) => {
+    if (!partnershipId) return
+
+    try {
+      const result = await setBannerPhoto(partnershipId, photoId)
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      setPhotos(photos.map(p => ({ ...p, is_banner: p.id === photoId })))
+
+      toast({
+        title: 'Banner Updated',
+        description: 'Your profile banner has been updated.',
+      })
+    } catch (error) {
+      console.error('Error setting banner:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update banner.',
+        variant: 'destructive'
+      })
+    }
+  }
+
   const handleDeletePhoto = async (photoId: string, photoUrl: string) => {
     const photoToDelete = photos.find(p => p.id === photoId)
 
@@ -241,7 +268,16 @@ export default function ManagePhotosPage() {
       // If deleted photo was primary, set a new primary
       if (photoToDelete?.is_primary && remainingPhotos.length > 0) {
         await handleSetPrimary(remainingPhotos[0].id)
-      } else if (remainingPhotos.length === 0) {
+      }
+      // If deleted photo was banner, mirror the trigger's choice in
+      // local state (the DB trigger already reassigned). Prefer the
+      // current primary; otherwise the oldest remaining photo.
+      if (photoToDelete?.is_banner && remainingPhotos.length > 0) {
+        const next =
+          remainingPhotos.find(p => p.is_primary) ?? remainingPhotos[0]
+        await handleSetBanner(next.id)
+      }
+      if (remainingPhotos.length === 0) {
         // No photos left, set profile back to draft
         await supabase
           .from('partnerships')
@@ -345,7 +381,9 @@ export default function ManagePhotosPage() {
           <div>
             <h3 className="font-heading text-base font-semibold text-haevn-navy mb-1">Profile Photos</h3>
             <p className="text-sm text-gray-600">
-              Upload up to 5 photos. Your avatar is shown on your profile card.
+              Upload up to 5 photos. Pick one as your <strong>Avatar</strong> (the
+              circular thumbnail) and one as your <strong>Banner</strong> (the
+              hero cover). They can be the same photo or different ones.
             </p>
           </div>
 
@@ -392,12 +430,20 @@ export default function ManagePhotosPage() {
                       fill
                       className="object-cover"
                     />
-                    {photo.is_primary && (
-                      <div className="absolute top-2 left-2 bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Avatar
-                      </div>
-                    )}
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+                      {photo.is_primary && (
+                        <div className="bg-[#E29E0C] text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Avatar
+                        </div>
+                      )}
+                      {photo.is_banner && (
+                        <div className="bg-haevn-teal text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" />
+                          Banner
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Hover Actions */}
@@ -410,6 +456,16 @@ export default function ManagePhotosPage() {
                       >
                         <User className="h-3 w-3 mr-1" />
                         Set as Avatar
+                      </Button>
+                    )}
+                    {!photo.is_banner && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleSetBanner(photo.id)}
+                        className="bg-haevn-teal hover:opacity-90 text-white text-xs w-full"
+                      >
+                        <ImageIcon className="h-3 w-3 mr-1" />
+                        Set as Banner
                       </Button>
                     )}
                     <Button

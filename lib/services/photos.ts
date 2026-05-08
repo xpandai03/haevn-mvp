@@ -15,6 +15,7 @@ export interface PhotoMetadata {
   photo_url: string
   photo_type: 'public' | 'private'
   is_primary: boolean
+  is_banner: boolean
   width?: number
   height?: number
   nsfw_flag?: boolean
@@ -254,6 +255,52 @@ export async function setPrimaryPhoto(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to set primary photo'
+    }
+  }
+}
+
+/**
+ * Set a photo as the partnership's banner (hero cover).
+ * Independent of is_primary (avatar). Mirrors setPrimaryPhoto.
+ */
+export async function setBannerPhoto(
+  partnershipId: string,
+  photoId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+
+  try {
+    console.log('🖼️ [setBannerPhoto] Setting photo as banner:', photoId)
+
+    const { error: unsetError } = await supabase
+      .from('partnership_photos')
+      .update({ is_banner: false })
+      .eq('partnership_id', partnershipId)
+      .eq('is_banner', true)
+
+    if (unsetError) {
+      console.error('❌ [setBannerPhoto] Error unsetting previous banner:', unsetError)
+      throw unsetError
+    }
+
+    const { error: setBannerError } = await supabase
+      .from('partnership_photos')
+      .update({ is_banner: true })
+      .eq('id', photoId)
+      .eq('partnership_id', partnershipId)
+
+    if (setBannerError) {
+      console.error('❌ [setBannerPhoto] Error setting new banner:', setBannerError)
+      throw setBannerError
+    }
+
+    console.log('✅ [setBannerPhoto] Banner photo updated successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('❌ [setBannerPhoto] Error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set banner photo'
     }
   }
 }
