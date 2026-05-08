@@ -302,6 +302,32 @@ export class OnboardingFlowController {
       )
 
       if (isComplete) {
+        // Survey is complete — but verification (step 8) may still be
+        // pending. When localStorage is available (client-side calls), use
+        // it as source of truth: if neither completed nor skipped, send
+        // the user to /onboarding/verification before allowing dashboard.
+        // On server-side calls localStorage isn't reachable, so we keep
+        // the legacy short-circuit (the protected-route gate in
+        // middleware.ts handles mandatory verification when the
+        // FEATURE_FLAGS.requireVerification flag is on).
+        if (typeof window !== 'undefined') {
+          const stored = window.localStorage.getItem(`onboarding_state_${userId}`)
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored) as OnboardingState
+              const verificationDone = FEATURE_FLAGS.requireVerification
+                ? parsed.verificationCompleted === true
+                : parsed.verificationCompleted === true || parsed.verificationSkipped === true
+              if (!verificationDone) {
+                console.log('[FLOW] Survey complete but verification pending, resuming at /onboarding/verification')
+                console.log('[FLOW] =========================================')
+                return '/onboarding/verification'
+              }
+            } catch {
+              // ignore corrupt localStorage and fall through
+            }
+          }
+        }
         console.log('[FLOW] ✅ Survey complete - SHORT CIRCUIT - no resume needed')
         console.log('[FLOW] =========================================')
         return null  // No resume step needed - onboarding is complete

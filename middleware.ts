@@ -196,16 +196,24 @@ export async function middleware(request: NextRequest) {
           const isComplete = surveyData?.completion_pct === 100 &&
             (membership.role === 'owner' || membership.survey_reviewed === true)
 
+          // Verification routes are post-membership steps that survey-complete
+          // users still need to reach. Don't bounce them to /dashboard.
+          const isVerificationRoute =
+            pathname === '/onboarding/verification' ||
+            pathname.startsWith('/onboarding/verification/') ||
+            pathname === '/onboarding/verification-complete'
+
           console.log('[TRACE-MW] Onboarding completion check:', {
             hasPartnership: !!membership,
             completionPct: surveyData?.completion_pct,
             role: membership.role,
             reviewed: membership.survey_reviewed,
             isComplete,
+            isVerificationRoute,
             error: surveyError?.message
           })
 
-          if (isComplete) {
+          if (isComplete && !isVerificationRoute) {
             // User has completed onboarding, redirect to dashboard
             logOnboardingGate({
               email: user.email,
