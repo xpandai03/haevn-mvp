@@ -74,8 +74,12 @@ export function Sidebar({
     setSigningOut(true)
     try {
       await signOut()
-      router.push('/')
-      router.refresh()
+      // Hard navigation: router.push raced with Supabase's async cookie
+      // clear and the server tree refresh, leaving the user stuck on
+      // the current page until manual reload. window.location.replace
+      // forces a full page load with cleared cookies and runs the
+      // middleware fresh, so the user lands on /auth/login reliably.
+      window.location.replace('/auth/login')
     } catch (err) {
       console.error('[Sidebar] Sign out failed:', err)
       setSigningOut(false)

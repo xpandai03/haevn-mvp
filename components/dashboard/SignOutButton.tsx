@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronRight, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 
 export function SignOutButton() {
-  const router = useRouter()
   const { signOut } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -14,8 +12,12 @@ export function SignOutButton() {
     setSigningOut(true)
     try {
       await signOut()
-      router.push('/')
-      router.refresh()
+      // Hard navigation: router.push raced with Supabase's async cookie
+      // clear and the server tree refresh, leaving the user stuck on
+      // the current page until manual reload. window.location.replace
+      // forces a full page load with cleared cookies and runs the
+      // middleware fresh, so the user lands on /auth/login reliably.
+      window.location.replace('/auth/login')
     } catch (err) {
       console.error('[Profile] Sign out failed:', err)
       setSigningOut(false)
