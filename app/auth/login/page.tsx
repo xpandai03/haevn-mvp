@@ -14,6 +14,7 @@ import { HaevnLoader } from '@/components/ui/haevn-loader'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase/client'
+import { HAEVN_AUTH_COOKIE_NAME } from '@/lib/supabase/cookieName'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -126,20 +127,65 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
     setError(null)
+
+    // Diagnostic: snapshot cookies BEFORE signInWithOAuth so we can
+    // tell whether the PKCE verifier cookie gets written client-side.
+    const cookieNamesBefore = document.cookie
+      .split(';')
+      .map((c) => c.trim().split('=')[0])
+      .filter(Boolean)
+    console.log('[Login-Diag] document.cookie names BEFORE signInWithOAuth:', cookieNamesBefore)
+    console.log('[Login-Diag] expected verifier name:', `${HAEVN_AUTH_COOKIE_NAME}-code-verifier`)
+
+    // Synthetic probe cookie: if THIS cookie doesn't survive the OAuth
+    // round-trip, the issue isn't @supabase/ssr — it's cookies not
+    // being sent on the redirect back to our domain.
+    const probeValue = `${Date.now()}`
+    document.cookie = `haevn_oauth_probe=${probeValue}; path=/; max-age=600; samesite=lax`
+    console.log('[Login-Diag] set probe cookie haevn_oauth_probe=', probeValue)
+
     try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      // skipBrowserRedirect lets us inspect the verifier cookie AFTER
+      // signInWithOAuth resolves but BEFORE the browser navigates, so
+      // a failure to write the verifier is observable in the console.
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: { prompt: 'select_account' },
+          skipBrowserRedirect: true,
         },
       })
+
       if (oauthError) {
         console.error('[Login] Google OAuth error:', oauthError)
         setError('Google sign-in is not available yet. Please use email and password.')
         setGoogleLoading(false)
+        return
       }
-    } catch {
+
+      const cookieNamesAfter = document.cookie
+        .split(';')
+        .map((c) => c.trim().split('=')[0])
+        .filter(Boolean)
+      const verifierName = `${HAEVN_AUTH_COOKIE_NAME}-code-verifier`
+      const verifierWritten = cookieNamesAfter.includes(verifierName)
+      console.log('[Login-Diag] document.cookie names AFTER signInWithOAuth:', cookieNamesAfter)
+      console.log('[Login-Diag] verifier cookie written client-side:', verifierWritten)
+      console.log('[Login-Diag] OAuth URL:', data?.url)
+
+      if (!data?.url) {
+        setError('Google sign-in did not return a redirect URL. Please try again.')
+        setGoogleLoading(false)
+        return
+      }
+
+      // Manual navigation — same effect as Supabase's default
+      // window.location.assign, but only AFTER we've logged the
+      // pre-redirect state.
+      window.location.assign(data.url)
+    } catch (err) {
+      console.error('[Login] Google OAuth exception:', err)
       setError('Google sign-in is not available yet. Please use email and password.')
       setGoogleLoading(false)
     }

@@ -66,15 +66,27 @@ export async function GET(request: NextRequest) {
   const authCookieNames = incomingCookieNames.filter((n) =>
     n.startsWith('sb-') && n.includes('auth-token')
   )
+  const probeCookie = request.cookies.get('haevn_oauth_probe')
+  const host = request.headers.get('host') || '(none)'
+  const referer = request.headers.get('referer') || '(none)'
+
   console.log('[TRACE-CB] ===== CALLBACK ENTRY =====')
   console.log('[TRACE-CB] request.url:', request.url)
   console.log('[TRACE-CB] origin:', origin)
+  console.log('[TRACE-CB] host header:', host)
+  console.log('[TRACE-CB] referer:', referer)
   console.log('[TRACE-CB] supabaseUrl in use:', supabaseUrl)
   console.log('[TRACE-CB] code present:', !!code, 'len:', code?.length)
   console.log('[TRACE-CB] cookie count:', incomingCookieNames.length)
   console.log('[TRACE-CB] cookie names:', incomingCookieNames)
   console.log('[TRACE-CB] verifier cookies:', verifierCookieNames)
   console.log('[TRACE-CB] auth cookies:', authCookieNames)
+  // Probe cookie test: if THIS arrives but the verifier doesn't, the
+  // problem is supabase-js naming/encoding, not cookie transport. If
+  // NEITHER arrives, cookies aren't being sent on the redirect-back at
+  // all (host mismatch — most likely the OAuth flow landed us on a
+  // different subdomain than where signInWithOAuth was called).
+  console.log('[TRACE-CB] probe cookie present:', !!probeCookie?.value, 'value-len:', probeCookie?.value?.length || 0)
 
   if (!code) {
     console.error('[TRACE-CB] missing code in querystring')
