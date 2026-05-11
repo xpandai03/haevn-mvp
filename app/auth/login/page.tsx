@@ -29,9 +29,20 @@ export default function LoginPage() {
   // login form from flashing in front of a user who's already authenticated
   // (e.g. arriving from the OAuth callback in any code path).
   const [authChecking, setAuthChecking] = useState(true)
+  // True while we're silently re-triggering OAuth after a known mobile
+  // PKCE failure (see retry useEffect below). Renders a loader instead
+  // of the login form so the user doesn't see a flash.
+  const [oauthRetrying, setOauthRetrying] = useState(false)
   // Guard so the post-auth redirect only fires once even if user state and
   // onAuthStateChange both trigger it.
   const redirectingRef = useRef(false)
+  // Guard so the retry_oauth mount effect only fires once per page load.
+  const retryHandledRef = useRef(false)
+
+  // sessionStorage key tracking whether we've already consumed the
+  // silent-retry budget this session. Cleared on explicit Google
+  // button click (each fresh user-initiated attempt gets one retry).
+  const OAUTH_RETRY_KEY = 'haevn_oauth_retry_attempted'
 
   // Resolve where an authenticated user should land, then navigate.
   // Mirrors the post-password-login routing so OAuth returns and password
@@ -107,6 +118,47 @@ export default function LoginPage() {
     }
   }, [])
 
+  // Silent OAuth retry. The callback redirects here with
+  // ?retry_oauth=google when exchangeCodeForSession fails with the
+  // mobile-PKCE-verifier-missing error. We immediately re-trigger
+  // signInWithOAuth without user interaction — Supabase's in-memory
+  // state from the first attempt makes the second one succeed. Strict
+  // session-scoped budget of one retry so we can never loop.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (retryHandledRef.current) return
+    retryHandledRef.current = true
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('retry_oauth') !== 'google') return
+
+    // Strip the param immediately so a reload doesn't re-trigger and
+    // the user doesn't see retry_oauth=google in the address bar.
+    const stripped = new URL(window.location.href)
+    stripped.searchParams.delete('retry_oauth')
+    window.history.replaceState(null, '', stripped.toString())
+
+    const alreadyRetried = sessionStorage.getItem(OAUTH_RETRY_KEY) === '1'
+    if (alreadyRetried) {
+      // Second consecutive failure — show the error instead of looping.
+      console.warn('[Login] retry_oauth signal but budget already consumed — showing error')
+      setError(
+        'Google sign-in is having trouble on this device. Please try once more, or sign in with email and password.'
+      )
+      return
+    }
+
+    sessionStorage.setItem(OAUTH_RETRY_KEY, '1')
+    setOauthRetrying(true)
+    console.log('[Login] retry_oauth=google detected — silently re-triggering signInWithOAuth')
+    // Defer one tick so React commits oauthRetrying=true (loader UI)
+    // before signInWithOAuth navigates the browser away.
+    setTimeout(() => {
+      void handleGoogleSignIn()
+    }, 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Reactively catch SIGNED_IN events that arrive AFTER the page mounts —
   // e.g. cookies set by the OAuth callback get parsed slightly after the
   // first getSession() call resolves with no user. Without this listener
@@ -123,6 +175,14 @@ export default function LoginPage() {
     return () => subscription.unsubscribe()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Explicit user-initiated Google click. Clears the silent-retry
+  // budget so this fresh attempt gets its own one retry if mobile
+  // PKCE drops the verifier again.
+  const handleGoogleClick = () => {
+    sessionStorage.removeItem(OAUTH_RETRY_KEY)
+    void handleGoogleSignIn()
+  }
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
@@ -284,12 +344,20 @@ export default function LoginPage() {
     }
   }
 
-  if (authChecking) {
+  if (authChecking || oauthRetrying) {
     return (
       <div className="survey-layout relative min-h-screen w-full overflow-hidden bg-haevn-navy">
         <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-4">
           <HaevnLoader size={48} />
+          {oauthRetrying && (
+            <p
+              className="text-white/90"
+              style={{ fontWeight: 300, fontSize: '16px' }}
+            >
+              Signing you in&hellip;
+            </p>
+          )}
         </div>
       </div>
     )
@@ -469,7 +537,7 @@ export default function LoginPage() {
               className="w-full rounded-full border-gray-300"
               size="lg"
               disabled={googleLoading || loading}
-              onClick={handleGoogleSignIn}
+              onClick={handleGoogleClick}
               style={{
                 fontWeight: 500,
                 fontSize: '16px',

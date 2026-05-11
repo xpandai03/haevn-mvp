@@ -144,6 +144,28 @@ export async function GET(request: NextRequest) {
     console.error('[TRACE-CB] exchangeCodeForSession failed:', detail)
     console.error('[TRACE-CB] full error:', exchangeError)
     console.error('[TRACE-CB] verifier cookies present at failure:', verifierCookieNames)
+
+    // PKCE verifier missing is a known mobile-browser problem: the
+    // verifier cookie set by signInWithOAuth on the login page gets
+    // purged during the cross-site redirect chain (your-app → google
+    // → supabase → your-app) on mobile Safari ITP and recent Chrome.
+    // No combination of SameSite/Secure/Domain attributes consistently
+    // survives that round-trip. The browser client caches the
+    // auth-flow state in memory though, so the SECOND attempt
+    // typically succeeds. Bounce back to /auth/login with a retry
+    // signal — the page auto-triggers signInWithOAuth once, with a
+    // session-scoped budget to prevent loops.
+    const isPkceError =
+      exchangeError?.name === 'AuthPKCECodeVerifierMissingError' ||
+      /code verifier/i.test(exchangeError?.message || '')
+
+    if (isPkceError) {
+      console.log('[TRACE-CB] PKCE verifier missing — redirecting for silent retry')
+      return NextResponse.redirect(
+        `${origin}/auth/login?retry_oauth=google`
+      )
+    }
+
     const reason = encodeURIComponent(
       (exchangeError?.message || 'unknown').slice(0, 240)
     )
