@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { HAEVN_AUTH_COOKIE_NAME } from './cookieName'
+import { HAEVN_AUTH_COOKIE_OPTIONS } from './cookieName'
 
 // Known Supabase project URL — hardcoded fallback because NEXT_PUBLIC_SUPABASE_URL
 // may be unavailable or misconfigured in Vercel serverless runtime.
@@ -35,7 +35,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
     getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
+      cookieOptions: HAEVN_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll()
@@ -69,7 +69,7 @@ export async function createServiceRoleClient(): Promise<SupabaseClient<Database
     getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
+      cookieOptions: HAEVN_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return []

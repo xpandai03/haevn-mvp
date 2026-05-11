@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/lib/types/supabase'
-import { HAEVN_AUTH_COOKIE_NAME } from './cookieName'
+import { HAEVN_AUTH_COOKIE_NAME, HAEVN_AUTH_COOKIE_OPTIONS } from './cookieName'
 
 export { HAEVN_AUTH_COOKIE_NAME }
 
@@ -54,13 +54,16 @@ const instrumentedFetch: typeof globalThis.fetch = async (input, init) => {
   return response
 }
 
-// Browser client with cookie-based session persistence for SSR
+// Browser client with cookie-based session persistence for SSR.
+// cookieOptions pins the cookie name AND adds Secure on production so
+// the PKCE verifier survives the cross-site redirect chain through
+// Google + Supabase on mobile Safari / Chrome.
 export const supabase = createBrowserClient<Database>(
   resolvedUrl,
   resolvedAnonKey,
   {
     global: { fetch: instrumentedFetch },
-    cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
+    cookieOptions: HAEVN_AUTH_COOKIE_OPTIONS,
   }
 )
 

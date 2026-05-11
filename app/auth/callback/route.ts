@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { OnboardingFlowController } from '@/lib/onboarding/flow'
-import { HAEVN_AUTH_COOKIE_NAME } from '@/lib/supabase/cookieName'
+import { HAEVN_AUTH_COOKIE_NAME, HAEVN_AUTH_COOKIE_OPTIONS } from '@/lib/supabase/cookieName'
 
 // Hardcoded fallback because NEXT_PUBLIC_SUPABASE_URL may be misconfigured
 // at runtime; same pattern as lib/supabase/{client,server}.ts.
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: { name: HAEVN_AUTH_COOKIE_NAME },
+      cookieOptions: HAEVN_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll()
