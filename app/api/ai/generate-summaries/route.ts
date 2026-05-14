@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     // 4. Fetch partnership display name
     const { data: partnership, error: partnershipError } = await adminClient
       .from('partnerships')
-      .select('display_name')
+      .select('display_name, haevn_insight, connection_summary')
       .eq('id', partnershipId)
       .single()
 
@@ -86,6 +86,26 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Partnership not found' },
         { status: 404 }
       )
+    }
+
+    const { isFallbackInsight } = await import('@/lib/ai/fallbacks')
+    const existingInsight = (partnership as { haevn_insight?: string | null })
+      .haevn_insight
+    const existingSummary = (partnership as { connection_summary?: string | null })
+      .connection_summary
+    if (
+      existingInsight?.trim() &&
+      !isFallbackInsight(existingInsight) &&
+      existingSummary?.trim()
+    ) {
+      console.log(
+        '[API /ai/generate-summaries] Summaries already present, skipping'
+      )
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Summaries already generated',
+      })
     }
 
     // 5. Fetch survey answers

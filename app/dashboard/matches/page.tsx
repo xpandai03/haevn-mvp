@@ -153,11 +153,12 @@ export default function MatchesPage() {
         {matches.length === 0 ? (
           <EmptyMatchesState />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 items-stretch">
             <AnimatePresence initial={false}>
               {visibleMatches.map((match) => (
                 <motion.div
                   key={match.partnership.id}
+                  className="h-full min-h-0"
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{

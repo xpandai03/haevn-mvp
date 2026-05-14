@@ -16,6 +16,9 @@ import { Card } from '@/components/ui/card'
 import { User, MapPin, MessageCircle, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+/** Compact photo band for match cards — uniform grid row height */
+const MATCH_PHOTO_H = 'h-[168px]'
+
 export type ProfileCardVariant = 'match' | 'connection' | 'nudge'
 
 export interface ProfileCardData {
@@ -85,9 +88,14 @@ function formatDemographicsLine(profile: ProfileCardData): string | null {
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
-function SilhouetteOverlay() {
+function SilhouetteOverlay({ className }: { className?: string }) {
   return (
-    <div className="w-full aspect-[3/4] bg-gradient-to-b from-haevn-warm-gray to-[#D5D3D0] flex items-center justify-center relative overflow-hidden">
+    <div
+      className={cn(
+        'w-full bg-gradient-to-b from-haevn-warm-gray to-[#D5D3D0] flex items-center justify-center relative overflow-hidden',
+        className ?? 'aspect-[3/4]'
+      )}
+    >
       <svg viewBox="0 0 200 200" className="w-28 h-28 opacity-30" aria-hidden>
         <circle cx="100" cy="70" r="40" fill="#9CA3AF" />
         <ellipse cx="100" cy="170" rx="60" ry="50" fill="#9CA3AF" />
@@ -135,14 +143,14 @@ export function ProfileCard({
       <button
         type="button"
         onClick={() => onClick(profile.id)}
-        className="dash-card group flex flex-col w-full text-left overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40"
+        className="dash-card group flex flex-col w-full h-full min-h-[440px] max-h-[480px] text-left overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40"
       >
-        {/* Photo / silhouette */}
-        <div className="shrink-0">
+        {/* Photo / silhouette — fixed height for uniform cards */}
+        <div className={cn('shrink-0 w-full overflow-hidden', MATCH_PHOTO_H)}>
           {isLocked || !profile.photo ? (
-            <SilhouetteOverlay />
+            <SilhouetteOverlay className={MATCH_PHOTO_H} />
           ) : (
-            <div className="w-full aspect-[3/4] overflow-hidden">
+            <div className={cn('w-full overflow-hidden', MATCH_PHOTO_H)}>
               <img
                 src={profile.photo}
                 alt={profile.username}
@@ -152,20 +160,20 @@ export function ProfileCard({
           )}
         </div>
 
-        {/* Body */}
-        <div className="p-5 flex flex-col gap-3">
-          <div>
-            <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight">
+        {/* Body — fills remainder; overflow hidden keeps row height stable */}
+        <div className="flex-1 min-h-0 flex flex-col gap-2 p-4 overflow-hidden">
+          <div className="min-w-0 shrink-0">
+            <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
               {nameHeading}
             </h3>
             {!isLocked && formatDemographicsLine(profile) && (
-              <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60">
+              <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60 truncate">
                 {formatDemographicsLine(profile)}
               </p>
             )}
           </div>
 
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 shrink-0">
             <span className="font-heading text-3xl text-[color:var(--haevn-gold)] tabular-nums">
               {profile.compatibilityPercentage}%
             </span>
@@ -175,11 +183,11 @@ export function ProfileCard({
           </div>
 
           {!isLocked && profile.signals && profile.signals.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 min-h-0 max-h-[2.75rem] overflow-hidden">
               {profile.signals.slice(0, 3).map((signal) => (
                 <span
                   key={signal}
-                  className="text-[11px] tracking-wide text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] px-2.5 py-0.5"
+                  className="text-[11px] tracking-wide text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] px-2.5 py-0.5 max-w-full truncate"
                 >
                   {signal}
                 </span>
@@ -187,14 +195,14 @@ export function ProfileCard({
             </div>
           )}
 
-          <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-3">
+          <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-2 min-h-0 mt-auto">
             {isLocked
               ? 'Full match context is available to HAEVN+ members.'
               : profile.topFactor}
           </p>
 
           {isLocked && (
-            <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)]">
+            <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
               Tap the card or upgrade below to unlock photos, profiles, and messaging.
             </p>
           )}
@@ -203,7 +211,93 @@ export function ProfileCard({
     )
   }
 
-  // --- CONNECTION / NUDGE variants: compact horizontal card --- //
+  // --- NUDGE variant: gold-stripe Emergent-style panel --- //
+  if (variant === 'nudge') {
+    return (
+      <Card
+        onClick={() => onClick(profile.id)}
+        className={cn(
+          'flex-shrink-0 w-[85vw] sm:w-[360px] max-w-full cursor-pointer overflow-hidden border border-[color:var(--haevn-border)] border-l-[5px] border-l-[color:var(--haevn-gold)] bg-white p-0 shadow-sm transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40'
+        )}
+      >
+        <div className="bg-[rgba(226,158,12,0.14)] px-4 py-3 border-b border-[color:var(--haevn-border)]">
+          <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[color:var(--haevn-gold)]">
+            NUDGE RECEIVED
+          </p>
+          <p className="text-sm font-semibold text-[color:var(--haevn-navy)] mt-2 leading-snug">
+            This HAEVN+ member wants to connect with you.
+          </p>
+          <p className="text-sm font-semibold text-[color:var(--haevn-charcoal)] mt-1.5">
+            Upgrade to respond.
+          </p>
+        </div>
+
+        <div className="p-5">
+          <div className="flex items-start gap-4 mb-4">
+            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-[color:var(--haevn-teal)] flex-shrink-0 keep-rounded">
+              {profile.photo && !isLocked ? (
+                <AvatarImage src={profile.photo} alt={profile.username} />
+              ) : (
+                <AvatarFallback className="bg-[rgba(0,128,128,0.1)] keep-rounded">
+                  <User className="h-8 w-8 sm:h-10 sm:w-10 text-[color:var(--haevn-teal)]" />
+                </AvatarFallback>
+              )}
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] truncate">
+                {nameHeading}
+              </h3>
+              {formatDemographicsLine(profile) && !isLocked ? (
+                <div className="flex items-start gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
+                  <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm line-clamp-2">
+                    {formatDemographicsLine(profile)}
+                  </span>
+                </div>
+              ) : (
+                !isLocked &&
+                (profile.city || profile.distance !== undefined) && (
+                  <div className="flex items-center gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm truncate">
+                      {profile.distance !== undefined
+                        ? `${profile.distance} miles away`
+                        : profile.city}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="mb-1">
+            <div className="flex items-baseline gap-2 mb-2">
+              <div className="font-heading text-4xl sm:text-5xl text-[color:var(--haevn-teal)] tabular-nums">
+                {profile.compatibilityPercentage}%
+              </div>
+              <span className="text-sm text-[color:var(--haevn-muted-fg)]">
+                match
+              </span>
+            </div>
+            <p className="text-sm text-[color:var(--haevn-charcoal)] leading-relaxed">
+              {isLocked
+                ? 'Full details are visible to HAEVN+ members.'
+                : profile.topFactor}
+            </p>
+          </div>
+
+          {nudgedAt && (
+            <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-3 pt-3 border-t border-[color:var(--haevn-border)]">
+              Nudged {getNudgeAgeText(nudgedAt)}
+            </p>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
+  // --- CONNECTION variant --- //
   return (
     <Card
       onClick={() => onClick(profile.id)}
@@ -265,8 +359,7 @@ export function ProfileCard({
         </p>
       </div>
 
-      {/* Variant-specific footer */}
-      {variant === 'connection' && latestMessage && (
+      {latestMessage && (
         <div className="mt-4 pt-4 border-t border-[color:var(--haevn-border)]">
           <div className="flex items-start gap-2">
             <MessageCircle className="h-4 w-4 text-[color:var(--haevn-charcoal)] flex-shrink-0 mt-0.5" />
@@ -279,17 +372,6 @@ export function ProfileCard({
               </Badge>
             )}
           </div>
-        </div>
-      )}
-
-      {variant === 'nudge' && nudgedAt && (
-        <div className="mt-4 pt-4 border-t border-[color:var(--haevn-border)]">
-          <p className="text-sm text-[color:var(--haevn-charcoal)]">
-            Nudged {getNudgeAgeText(nudgedAt)}
-          </p>
-          <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-1">
-            Reply → Upgrade to respond
-          </p>
         </div>
       )}
     </Card>

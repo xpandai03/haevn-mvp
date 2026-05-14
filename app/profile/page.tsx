@@ -10,6 +10,7 @@ import {
   Shield,
   AlertTriangle,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnectionCards } from '@/lib/actions/handshakes'
@@ -17,23 +18,9 @@ import { getComputedMatchesForPartnership } from '@/lib/actions/computedMatches'
 import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSection'
 import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
 import { SignOutButton } from '@/components/dashboard/SignOutButton'
-import { getFallbackInsight } from '@/lib/ai/fallbacks'
+import { isFallbackInsight } from '@/lib/ai/fallbacks'
 
 export const dynamic = 'force-dynamic'
-
-/**
- * Detect whether a stored haevn_insight is the deterministic
- * "we don't have enough yet" fallback string from lib/ai/fallbacks.ts.
- *
- * The DB can end up holding the fallback when generation ran without an
- * AI key set (e.g. Anthropic before the OpenAI swap, or an envless
- * preview deploy). We treat fallback content as "no real summary yet"
- * so the user gets the Generate CTA instead of the placeholder text.
- */
-function isFallbackInsight(text: string | null | undefined): boolean {
-  if (!text) return false
-  return text.trim() === getFallbackInsight().trim()
-}
 
 interface PartnershipPhotoRow {
   id: string
@@ -352,7 +339,10 @@ export default async function ProfilePage() {
                   survey answers. We use it to introduce you to potential
                   matches.
                 </p>
-                <GenerateSummaryButton partnershipId={partnership.id} />
+                <GenerateSummaryButton
+                  partnershipId={partnership.id}
+                  variant="primary"
+                />
               </div>
             )
           }
@@ -513,7 +503,7 @@ function AccountRow({
   href,
   isLast = false,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: LucideIcon
   label: string
   value?: React.ReactNode
   action?: string

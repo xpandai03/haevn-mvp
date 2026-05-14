@@ -312,6 +312,25 @@ export async function POST(request: NextRequest) {
       // This runs async so it never delays the survey save response
       ;(async () => {
         try {
+          const { isFallbackInsight } = await import('@/lib/ai/fallbacks')
+          const { data: existingP } = await adminClient
+            .from('partnerships')
+            .select('haevn_insight, connection_summary')
+            .eq('id', partnershipId)
+            .single()
+          const insight = existingP?.haevn_insight as string | null | undefined
+          const summary = existingP?.connection_summary as string | null | undefined
+          if (
+            insight?.trim() &&
+            !isFallbackInsight(insight) &&
+            summary?.trim()
+          ) {
+            console.log(
+              '[API /survey/save] AI summaries already present, skipping auto-gen'
+            )
+            return
+          }
+
           const { normalizeAnswers } = await import('@/lib/matching/utils/normalizeAnswers')
           const { buildSummaryInput } = await import('@/lib/ai/buildSummaryInput')
           const { generateSummaries } = await import('@/lib/ai/generateSummaries')
@@ -333,6 +352,14 @@ export async function POST(request: NextRequest) {
             displayName: pData?.display_name || 'This user',
           })
           const result = await generateSummaries(summaryInput)
+          if (result.error) {
+            console.error(
+              '[API /survey/save] AI summary unavailable (non-blocking):',
+              result.error.code,
+              result.error.detail || ''
+            )
+            return
+          }
           await adminClient
             .from('partnerships')
             .update({

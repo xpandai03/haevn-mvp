@@ -27,3 +27,9 @@ export function getFallbackConnectionSummary(name: string): string {
 export function getFallbackInsight(): string {
   return `We do not have enough from your survey yet to give you a full picture. As you answer more questions, we will be able to show you what your answers mean and what kind of people you are most likely to click with. Come back after finishing more of your survey.`
 }
+
+/** True if stored insight is the sparse-data placeholder (not real AI output). */
+export function isFallbackInsight(text: string | null | undefined): boolean {
+  if (!text) return false
+  return text.trim() === getFallbackInsight().trim()
+}

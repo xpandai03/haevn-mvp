@@ -21,7 +21,7 @@ interface GenerateSummaryButtonProps {
  */
 export function GenerateSummaryButton({
   partnershipId,
-  variant = 'primary',
+  variant = 'subtle',
   label,
 }: GenerateSummaryButtonProps) {
   const router = useRouter()
