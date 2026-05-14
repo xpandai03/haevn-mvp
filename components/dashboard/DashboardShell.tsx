@@ -23,7 +23,7 @@ export async function DashboardShell({ children }: DashboardShellProps) {
       {/* Sponsor bar — full-width, scrolls with the page. Visible to
           every tier; placed above the sidebar/BottomNav/UpgradeBar. */}
       <div className="w-full bg-black text-white text-center text-sm py-2 font-medium tracking-wide">
-        Sponsored by Tito&apos;s Vodka
+        HAEVN
       </div>
 
       <Sidebar tier={ctx.tier} userName={ctx.userName} isAdmin={ctx.isAdmin} />

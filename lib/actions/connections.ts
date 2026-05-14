@@ -15,6 +15,21 @@ import {
 import { type UnreadCounts } from '@/lib/services/chat'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { firstNameFromDisplayName } from '@/lib/utils/matchCardDisplay'
+
+function relationshipLabelFromStructure(
+  structure: { type?: string | null; open_to?: string[] | null } | null
+): string | null {
+  if (!structure) return null
+  const o = structure.open_to
+  if (Array.isArray(o) && o.length > 0) {
+    return o
+      .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      .slice(0, 2)
+      .join(', ')
+  }
+  return null
+}
 
 // Re-export UnreadCounts type
 export type { UnreadCounts }
@@ -387,8 +402,12 @@ export interface Connection {
   id: string
   photo?: string
   username: string
+  firstName?: string
+  age?: number
   city?: string
   distance?: number
+  sexuality?: string | null
+  relationshipStructure?: string | null
   compatibilityPercentage: number
   topFactor: string
   latestMessage?: string
@@ -426,7 +445,13 @@ export async function getConnections(): Promise<Connection[]> {
       id: conn.partnership.id,
       photo: conn.partnership.photo_url,
       username: conn.partnership.display_name || 'User',
+      firstName: firstNameFromDisplayName(conn.partnership.display_name),
+      age: conn.partnership.age || undefined,
       city: conn.partnership.city,
+      sexuality: conn.partnership.orientation?.value ?? null,
+      relationshipStructure: relationshipLabelFromStructure(
+        conn.partnership.structure
+      ),
       compatibilityPercentage: conn.compatibility.overallScore,
       topFactor: categoryLabels[topCategory.category] || 'Compatible',
       // These fields require message data - not currently fetched

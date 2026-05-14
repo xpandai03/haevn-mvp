@@ -38,8 +38,9 @@ function getSignals(breakdown: Record<string, { score: number }>): string[] {
     sexual_energy: 'Chemistry',
     openness_curiosity: 'Lifestyle',
   }
+  // Category scores from the engine are 0–100 (see parseBreakdown in computedMatchCards)
   return Object.entries(breakdown)
-    .filter(([, v]) => v.score >= 0.7)
+    .filter(([, v]) => v.score >= 70)
     .sort(([, a], [, b]) => b.score - a.score)
     .slice(0, 3)
     .map(([k]) => labels[k] || k)
@@ -153,7 +154,14 @@ export default function MatchesPage() {
                       id: match.partnership.id,
                       photo: match.partnership.photo_url || undefined,
                       username: match.partnership.display_name || 'User',
+                      firstName: match.partnership.first_name,
+                      age: match.partnership.age,
                       city: match.partnership.city,
+                      distance: match.partnership.distance_miles,
+                      gender: match.partnership.gender,
+                      sexuality: match.partnership.sexuality,
+                      relationshipStructure:
+                        match.partnership.relationship_structure,
                       compatibilityPercentage: match.score,
                       topFactor: getTopFactor(match.breakdown),
                       signals: getSignals(match.breakdown),

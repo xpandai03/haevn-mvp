@@ -21,9 +21,17 @@ export type ProfileCardVariant = 'match' | 'connection' | 'nudge'
 export interface ProfileCardData {
   id: string
   photo?: string
+  /** Display name or handle — used for alt text and fallbacks */
   username: string
+  /** Preferred given name for headings (e.g. from partnership display_name) */
+  firstName?: string
+  age?: number
   city?: string
+  /** Distance in miles (when geodata exists) */
   distance?: number
+  gender?: string | null
+  sexuality?: string | null
+  relationshipStructure?: string | null
   compatibilityPercentage: number
   topFactor: string
   /** Optional supporting tags — Emergent "top signals" surface */
@@ -52,6 +60,31 @@ function redactName(name: string) {
   return first ? `${first.toUpperCase()}***` : '—'
 }
 
+function cardFirstName(profile: ProfileCardData): string {
+  if (profile.firstName?.trim()) return profile.firstName.trim()
+  const raw = profile.username?.trim()
+  if (!raw) return 'Member'
+  const firstSegment = raw.split(/[\s_]+/).filter(Boolean)[0]
+  if (!firstSegment) return 'Member'
+  const lower = firstSegment.toLowerCase()
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
+}
+
+function formatDemographicsLine(profile: ProfileCardData): string | null {
+  const parts: string[] = []
+  if (profile.gender?.trim()) parts.push(profile.gender.trim())
+  if (profile.sexuality?.trim()) parts.push(profile.sexuality.trim())
+  if (profile.relationshipStructure?.trim()) {
+    parts.push(profile.relationshipStructure.trim())
+  }
+  if (profile.distance != null && profile.distance >= 0) {
+    parts.push(`${profile.distance} miles away`)
+  } else if (profile.city?.trim()) {
+    parts.push(profile.city.trim())
+  }
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
 function SilhouetteOverlay() {
   return (
     <div className="w-full aspect-[3/4] bg-gradient-to-b from-haevn-warm-gray to-[#D5D3D0] flex items-center justify-center relative overflow-hidden">
@@ -62,7 +95,7 @@ function SilhouetteOverlay() {
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-[11px] tracking-[0.12em] uppercase text-[color:var(--haevn-muted-fg)] bg-white/75 backdrop-blur-sm px-3 py-1.5 flex items-center gap-1.5">
           <Lock size={12} strokeWidth={1.5} />
-          Upgrade to view
+          Unlock to Connect
         </span>
       </div>
     </div>
@@ -89,7 +122,12 @@ export function ProfileCard({
   nudgedAt,
   isLocked = false,
 }: ProfileCardProps) {
-  const displayName = isLocked ? redactName(profile.username) : profile.username
+  const given = cardFirstName(profile)
+  const displayAge =
+    profile.age != null && profile.age > 0 ? profile.age : undefined
+  const base = isLocked ? redactName(given) : given
+  const nameHeading =
+    displayAge != null ? `${base}, ${displayAge}` : base
 
   // --- MATCH variant: the flagship 3/4-photo architectural card --- //
   if (variant === 'match') {
@@ -118,13 +156,11 @@ export function ProfileCard({
         <div className="p-5 flex flex-col gap-3">
           <div>
             <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight">
-              {displayName}
+              {nameHeading}
             </h3>
-            {(profile.city || profile.distance !== undefined) && (
-              <p className="mt-1 text-[13px] text-[color:var(--haevn-muted-fg)]">
-                {profile.distance !== undefined
-                  ? `${profile.distance} mi away`
-                  : profile.city}
+            {formatDemographicsLine(profile) && (
+              <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60">
+                {formatDemographicsLine(profile)}
               </p>
             )}
           </div>
@@ -187,17 +223,24 @@ export function ProfileCard({
 
         <div className="flex-1 min-w-0">
           <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] truncate">
-            {displayName}
+            {nameHeading}
           </h3>
-          {(profile.city || profile.distance !== undefined) && (
-            <div className="flex items-center gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
-              <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm truncate">
-                {profile.distance !== undefined
-                  ? `${profile.distance} mi away`
-                  : profile.city}
-              </span>
+          {formatDemographicsLine(profile) ? (
+            <div className="flex items-start gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
+              <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span className="text-sm line-clamp-2">{formatDemographicsLine(profile)}</span>
             </div>
+          ) : (
+            (profile.city || profile.distance !== undefined) && (
+              <div className="flex items-center gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm truncate">
+                  {profile.distance !== undefined
+                    ? `${profile.distance} miles away`
+                    : profile.city}
+                </span>
+              </div>
+            )
           )}
         </div>
       </div>

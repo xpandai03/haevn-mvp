@@ -222,7 +222,7 @@ export default function ProfileViewPage() {
             <span className="text-2xl">🔒</span>
           </div>
           <h2 className="text-2xl font-bold text-haevn-navy mb-4">
-            Upgrade to View Profile
+            Unlock to View Profile
           </h2>
           <p className="text-haevn-charcoal mb-6">
             Full profiles, messaging, and connections are available to HAEVN+ members.

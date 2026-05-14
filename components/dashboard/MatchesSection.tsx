@@ -20,10 +20,15 @@ function toProfileViewMatch(match: ComputedMatchCard) {
     partnership: {
       id: match.partnership.id,
       display_name: match.partnership.display_name,
+      first_name: match.partnership.first_name,
       short_bio: match.partnership.short_bio,
       identity: match.partnership.identity,
       city: match.partnership.city,
       age: match.partnership.age,
+      gender: match.partnership.gender,
+      sexuality: match.partnership.sexuality,
+      relationship_structure: match.partnership.relationship_structure,
+      distance_miles: match.partnership.distance_miles,
       discretion_level: 'standard',
       photo_url: match.partnership.photo_url,
     },
@@ -182,10 +187,15 @@ export function MatchesSection({
                       </span>
                     )}
                     <div className="w-14 h-14 keep-rounded bg-[color:var(--haevn-navy)] flex items-center justify-center text-white text-lg font-medium">
-                      {getInitials(match.partnership.display_name)}
+                      {getInitials(
+                        match.partnership.first_name ||
+                          match.partnership.display_name
+                      )}
                     </div>
                     <span className="text-xs font-medium text-[color:var(--haevn-navy)] text-center px-1 truncate w-full">
-                      {match.partnership.display_name || 'Anonymous'}
+                      {match.partnership.first_name ||
+                        match.partnership.display_name ||
+                        'Anonymous'}
                     </span>
                     <span className="font-heading text-sm text-[color:var(--haevn-gold)] tabular-nums">
                       {match.score}% match

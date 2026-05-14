@@ -2,6 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import {
+  firstNameFromDisplayName,
+  computeAgeFromBirthRaw,
+  relationshipStylesFromSurveyAnswers,
+  haversineMiles,
+} from '@/lib/utils/matchCardDisplay'
 
 // =============================================================================
 // TYPES
@@ -18,6 +25,13 @@ export interface ComputedMatchCard {
     age: number
     photo_url?: string
     membership_tier: 'free' | 'plus'
+    /** Derived for cards — not a DB column */
+    first_name: string
+    gender: string | null
+    sexuality: string | null
+    relationship_structure: string | null
+    /** Rounded road miles when both partnerships have coordinates */
+    distance_miles?: number
   }
   score: number
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
@@ -42,6 +56,7 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
 // HELPERS
 // =============================================================================
 
+/** Must match dashboard / connections — users with multiple partnerships get one active row. */
 async function getCurrentPartnershipId(): Promise<string> {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -51,23 +66,23 @@ async function getCurrentPartnershipId(): Promise<string> {
   }
 
   const adminClient = createAdminClient()
-  const { data: memberships, error } = await adminClient
-    .from('partnership_members')
-    .select('partnership_id, role')
-    .eq('user_id', user.id)
-    .order('role', { ascending: false })
-
-  if (error || !memberships || memberships.length === 0) {
+  const selected = await selectBestPartnership(adminClient, user.id)
+  if (!selected) {
     throw new Error('No partnership found for user')
   }
-
-  const primaryMembership = memberships.find(m => m.role === 'owner') || memberships[0]
-  return primaryMembership.partnership_id
+  return selected.partnership_id
 }
 
 /**
  * Parse the engine's category breakdown (stored as array) into display keys.
  */
+function parseOrientationValue(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null
+  const v = (raw as { value?: unknown }).value
+  if (typeof v === 'string' && v.trim()) return v.trim()
+  return null
+}
+
 function parseBreakdown(raw: any): Record<string, { score: number }> {
   const sections: Record<string, { score: number }> = {}
   if (!raw) return sections
@@ -111,7 +126,8 @@ export async function getComputedMatchCards(
       .select('msa_status')
       .eq('user_id', authUser.id)
       .single()
-    if (profile?.msa_status !== 'live') {
+    // Only explicit waitlist blocks; 'live' and legacy null still see matches
+    if (profile?.msa_status === 'waitlist') {
       return []
     }
   }
@@ -193,16 +209,63 @@ export async function getComputedMatchCards(
 
   if (filteredMatches.length === 0) return []
 
-  // 3. Fetch partner profile data in one query
+  // 3. Fetch partner profile data in one query (+ geo + JSON for card demographics)
   const partnerIds = filteredMatches.map(m => m.otherPartnerId)
   const { data: partnerships } = await adminClient
     .from('partnerships')
-    .select('id, display_name, short_bio, connection_summary, identity, city, age, membership_tier')
+    .select(
+      'id, owner_id, display_name, short_bio, connection_summary, identity, city, age, membership_tier, orientation, structure, latitude, longitude'
+    )
     .in('id', partnerIds)
 
   const partnershipMap = new Map(
     (partnerships || []).map(p => [p.id, p])
   )
+
+  // 3b. Viewer partnership coordinates (for distance)
+  const { data: viewerGeo } = await adminClient
+    .from('partnerships')
+    .select('latitude, longitude')
+    .eq('id', currentPartnershipId)
+    .maybeSingle()
+
+  const viewerLat =
+    typeof viewerGeo?.latitude === 'number' ? viewerGeo.latitude : null
+  const viewerLon =
+    typeof viewerGeo?.longitude === 'number' ? viewerGeo.longitude : null
+
+  // 3c. Owner survey answers (gender, relationship styles, DOB fallback)
+  const ownerIds = [
+    ...new Set(
+      (partnerships || [])
+        .map((p: { owner_id?: string }) => p.owner_id)
+        .filter((id): id is string => !!id)
+    ),
+  ]
+
+  const surveyByUserId = new Map<
+    string,
+    { answers_json: Record<string, unknown>; completion_pct: number }
+  >()
+
+  if (ownerIds.length > 0) {
+    const { data: surveys } = await adminClient
+      .from('user_survey_responses')
+      .select('user_id, answers_json, completion_pct')
+      .in('user_id', ownerIds)
+
+    for (const row of surveys || []) {
+      if (!row.user_id || !row.answers_json) continue
+      const prev = surveyByUserId.get(row.user_id)
+      const pct = typeof row.completion_pct === 'number' ? row.completion_pct : 0
+      if (!prev || pct > prev.completion_pct) {
+        surveyByUserId.set(row.user_id, {
+          answers_json: row.answers_json as Record<string, unknown>,
+          completion_pct: pct,
+        })
+      }
+    }
+  }
 
   // 4. Fetch photo URLs in one query
   const supabase = await createClient()
@@ -235,6 +298,58 @@ export async function getComputedMatchCards(
     const tier = partner.membership_tier
     const normalizedTier: 'free' | 'plus' = (tier && tier !== 'free') ? 'plus' : 'free'
 
+    const ownerId = (partner as { owner_id?: string }).owner_id
+    const ownerSurvey = ownerId ? surveyByUserId.get(ownerId) : undefined
+    const answers = ownerSurvey?.answers_json
+
+    const genderRaw = answers?.q2_gender_identity
+    const gender =
+      typeof genderRaw === 'string' && genderRaw.trim()
+        ? genderRaw.trim()
+        : null
+
+    let sexuality = parseOrientationValue((partner as { orientation?: unknown }).orientation)
+    if (!sexuality && answers?.q3_sexual_orientation) {
+      const q3 = answers.q3_sexual_orientation
+      sexuality =
+        typeof q3 === 'string'
+          ? q3.trim()
+          : Array.isArray(q3)
+            ? q3.filter((x): x is string => typeof x === 'string').join(', ')
+            : null
+    }
+
+    let relationship_structure = relationshipStylesFromSurveyAnswers(answers)
+    if (!relationship_structure) {
+      const st = (partner as { structure?: { type?: string; open_to?: string[] } | null })
+        .structure
+      if (st?.open_to?.length) {
+        relationship_structure = st.open_to.slice(0, 2).join(', ')
+      }
+    }
+
+    let resolvedAge =
+      typeof partner.age === 'number' && partner.age > 0 ? partner.age : 0
+    if (!resolvedAge && answers) {
+      const fromDob = computeAgeFromBirthRaw(answers.q1_age)
+      if (fromDob) resolvedAge = fromDob
+    }
+
+    const plat = partner as { latitude?: unknown; longitude?: unknown }
+    const pLat = typeof plat.latitude === 'number' ? plat.latitude : null
+    const pLon = typeof plat.longitude === 'number' ? plat.longitude : null
+    let distance_miles: number | undefined
+    if (
+      viewerLat != null &&
+      viewerLon != null &&
+      pLat != null &&
+      pLon != null
+    ) {
+      distance_miles = haversineMiles(viewerLat, viewerLon, pLat, pLon)
+    }
+
+    const first_name = firstNameFromDisplayName(partner.display_name)
+
     results.push({
       partnership: {
         id: partner.id,
@@ -243,9 +358,14 @@ export async function getComputedMatchCards(
         connection_summary: (partner as any).connection_summary || null,
         identity: partner.identity || 'Unknown',
         city: partner.city || 'Unknown',
-        age: partner.age || 0,
+        age: resolvedAge,
         photo_url: photoMap.get(partner.id),
         membership_tier: normalizedTier,
+        first_name,
+        gender,
+        sexuality,
+        relationship_structure,
+        distance_miles,
       },
       score: match.score,
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',

@@ -166,7 +166,7 @@ export function MatchCard({
               className="haevn-btn-gold flex-1"
             >
               <Lock className="h-4 w-4 mr-2" strokeWidth={1.75} />
-              Upgrade to connect
+              Unlock to Connect
             </button>
           ) : (
             <button

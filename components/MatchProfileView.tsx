@@ -7,11 +7,16 @@ interface MatchProfileViewProps {
     partnership: {
       id: string
       display_name: string | null
+      first_name?: string
       short_bio: string | null
       connection_summary?: string | null
       identity: string
       city: string
       age: number
+      gender?: string | null
+      sexuality?: string | null
+      relationship_structure?: string | null
+      distance_miles?: number
       discretion_level: string
       photo_url?: string | null
     }
@@ -79,9 +84,27 @@ export function MatchProfileView({
 
   const { partnership, score, tier, breakdown } = match
 
+  const headingName =
+    partnership.first_name?.trim() ||
+    partnership.display_name?.trim() ||
+    'Anonymous'
+  const headingWithAge =
+    partnership.age > 0 ? `${headingName}, ${partnership.age}` : headingName
+
+  const demographicsLine = [
+    partnership.gender,
+    partnership.sexuality,
+    partnership.relationship_structure,
+    partnership.distance_miles != null
+      ? `${partnership.distance_miles} miles away`
+      : partnership.city,
+  ]
+    .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    .join(' · ')
+
   const initials =
-    partnership.display_name
-      ?.split(' ')
+    headingName
+      .split(' ')
       .map(n => n[0])
       .join('')
       .toUpperCase()
@@ -143,11 +166,13 @@ export function MatchProfileView({
                 {TIER_LABELS[tier]}
               </p>
               <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-2">
-                {partnership.display_name || 'Anonymous'}
+                {headingWithAge}
               </h1>
-              <p className="text-sm text-[color:var(--haevn-muted-fg)] mt-1 capitalize">
-                {partnership.identity} · {partnership.age} · {partnership.city}
-              </p>
+              {demographicsLine.length > 0 && (
+                <p className="text-sm text-[color:var(--haevn-charcoal)]/60 mt-1">
+                  {demographicsLine}
+                </p>
+              )}
             </div>
           </div>
 
