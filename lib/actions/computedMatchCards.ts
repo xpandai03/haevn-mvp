@@ -9,6 +9,8 @@ import {
   relationshipStylesFromSurveyAnswers,
   haversineMiles,
 } from '@/lib/utils/matchCardDisplay'
+import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
+import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 
 // =============================================================================
 // TYPES
@@ -39,6 +41,8 @@ export interface ComputedMatchCard {
   breakdown: Record<string, { score: number }>
   /** Whether this match has been saved for later */
   saved: boolean
+  /** Mutual "ready to meet" signal (see ready_to_meet_signals). */
+  readyToMeet: ReadyToMeetUiState
 }
 
 /**
@@ -371,11 +375,65 @@ export async function getComputedMatchCards(
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',
       breakdown: parseBreakdown(match.breakdown),
       saved: match.saved,
+      readyToMeet: 'none',
     })
   }
 
   // Already sorted by score from DB, but ensure after dedup
   results.sort((a, b) => b.score - a.score)
 
-  return results.slice(0, limit)
+  const sliced = results.slice(0, limit)
+
+  // Ready-to-meet batch (table may not exist until migration 039 is applied)
+  try {
+    const otherIds = sliced.map((r) => r.partnership.id)
+    if (otherIds.length === 0) return sliced
+
+    const pairKeys = new Map<string, { p1: string; p2: string }>()
+    for (const oid of otherIds) {
+      const { partnership_smaller: p1, partnership_larger: p2 } =
+        canonicalPartnershipPair(currentPartnershipId, oid)
+      pairKeys.set(`${p1}:${p2}`, { p1, p2 })
+    }
+    const pairs = [...pairKeys.values()]
+    const orFilter = pairs
+      .map(
+        ({ p1, p2 }) =>
+          `and(partnership_smaller.eq.${p1},partnership_larger.eq.${p2})`
+      )
+      .join(',')
+
+    const { data: sigRows, error: sigErr } = await adminClient
+      .from('ready_to_meet_signals')
+      .select('partnership_smaller, partnership_larger, signaller_partnership_id')
+      .or(orFilter)
+
+    if (!sigErr && sigRows && sigRows.length > 0) {
+      const byPair = new Map<string, Set<string>>()
+      for (const row of sigRows as {
+        partnership_smaller: string
+        partnership_larger: string
+        signaller_partnership_id: string
+      }[]) {
+        const k = `${row.partnership_smaller}:${row.partnership_larger}`
+        if (!byPair.has(k)) byPair.set(k, new Set())
+        byPair.get(k)!.add(row.signaller_partnership_id)
+      }
+      for (const row of sliced) {
+        const oid = row.partnership.id
+        const { partnership_smaller: p1, partnership_larger: p2 } =
+          canonicalPartnershipPair(currentPartnershipId, oid)
+        const set = byPair.get(`${p1}:${p2}`) ?? new Set()
+        const v = set.has(currentPartnershipId)
+        const o = set.has(oid)
+        if (v && o) row.readyToMeet = 'mutual'
+        else if (v) row.readyToMeet = 'viewer_ready'
+        else row.readyToMeet = 'none'
+      }
+    }
+  } catch (e) {
+    console.warn('[getComputedMatchCards] ready_to_meet batch skipped:', e)
+  }
+
+  return sliced
 }

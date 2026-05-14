@@ -16,10 +16,9 @@ const TABS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
   {
-    href: '#meetups',
+    href: '/dashboard/meetups',
     label: 'Meetups',
     Icon: MapPin,
-    comingSoon: true,
   },
   {
     href: '#hidden',
@@ -50,7 +49,9 @@ export function BottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch justify-around h-16 max-w-lg mx-auto">
-        {TABS.map(({ href, label, Icon, comingSoon }) => {
+        {TABS.map((item) => {
+          const { href, label, Icon } = item
+          const comingSoon = 'comingSoon' in item && item.comingSoon === true
           const active =
             !comingSoon &&
             (pathname === href || pathname.startsWith(`${href}/`))

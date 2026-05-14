@@ -26,10 +26,9 @@ const NAV_LINKS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
   {
-    href: '#meetups',
+    href: '/dashboard/meetups',
     label: 'Meetups',
     Icon: MapPin,
-    comingSoon: true,
   },
   {
     href: '#hidden',
@@ -109,7 +108,9 @@ export function Sidebar({
 
       {/* Nav */}
       <nav className="flex-1 px-3 space-y-1" aria-label="Primary">
-        {NAV_LINKS.map(({ href, label, Icon, comingSoon }) => {
+        {NAV_LINKS.map((item) => {
+          const { href, label, Icon } = item
+          const comingSoon = 'comingSoon' in item && item.comingSoon === true
           const active =
             !comingSoon &&
             (pathname === href || pathname.startsWith(`${href}/`))

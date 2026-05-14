@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { User, MapPin, MessageCircle, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
+import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
 
 /** Compact photo band for match cards — uniform grid row height */
 const MATCH_PHOTO_H = 'h-[168px]'
@@ -55,6 +57,14 @@ export interface ProfileCardProps {
    * upgrade affordance). Off by default (backward-compatible).
    */
   isLocked?: boolean
+  /**
+   * When set on variant `match`, shows Ready to Meet control (HAEVN+ only;
+   * parent should omit when `isLocked`).
+   */
+  readyToMeet?: {
+    state: ReadyToMeetUiState
+    otherPartnershipId: string
+  }
 }
 
 function redactName(name: string) {
@@ -129,6 +139,7 @@ export function ProfileCard({
   unreadCount,
   nudgedAt,
   isLocked = false,
+  readyToMeet,
 }: ProfileCardProps) {
   const given = cardFirstName(profile)
   const displayAge =
@@ -140,74 +151,91 @@ export function ProfileCard({
   // --- MATCH variant: the flagship 3/4-photo architectural card --- //
   if (variant === 'match') {
     return (
-      <button
-        type="button"
-        onClick={() => onClick(profile.id)}
-        className="dash-card group flex flex-col w-full h-full min-h-[440px] max-h-[480px] text-left overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40"
-      >
-        {/* Photo / silhouette — fixed height for uniform cards */}
-        <div className={cn('shrink-0 w-full overflow-hidden', MATCH_PHOTO_H)}>
-          {isLocked || !profile.photo ? (
-            <SilhouetteOverlay className={MATCH_PHOTO_H} />
-          ) : (
-            <div className={cn('w-full overflow-hidden', MATCH_PHOTO_H)}>
-              <img
-                src={profile.photo}
-                alt={profile.username}
-                className="w-full h-full object-cover object-[center_25%] transition-transform duration-500 group-hover:scale-[1.02]"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Body — fills remainder; overflow hidden keeps row height stable */}
-        <div className="flex-1 min-h-0 flex flex-col gap-2 p-4 overflow-hidden">
-          <div className="min-w-0 shrink-0">
-            <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
-              {nameHeading}
-            </h3>
-            {!isLocked && formatDemographicsLine(profile) && (
-              <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60 truncate">
-                {formatDemographicsLine(profile)}
-              </p>
+      <div className="dash-card group flex flex-col w-full h-full min-h-[460px] max-h-[520px] overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40">
+        <button
+          type="button"
+          onClick={() => onClick(profile.id)}
+          className="flex flex-1 min-h-0 w-full flex-col overflow-hidden text-left"
+        >
+          {/* Photo / silhouette — fixed height for uniform cards */}
+          <div className={cn('shrink-0 w-full overflow-hidden', MATCH_PHOTO_H)}>
+            {isLocked || !profile.photo ? (
+              <SilhouetteOverlay className={MATCH_PHOTO_H} />
+            ) : (
+              <div className={cn('w-full overflow-hidden', MATCH_PHOTO_H)}>
+                <img
+                  src={profile.photo}
+                  alt={profile.username}
+                  className="w-full h-full object-cover object-[center_25%] transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
             )}
           </div>
 
-          <div className="flex items-baseline gap-2 shrink-0">
-            <span className="font-heading text-3xl text-[color:var(--haevn-gold)] tabular-nums">
-              {profile.compatibilityPercentage}%
-            </span>
-            <span className="text-[11px] tracking-[0.14em] uppercase text-[color:var(--haevn-muted-fg)]">
-              Match
-            </span>
-          </div>
-
-          {!isLocked && profile.signals && profile.signals.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 min-h-0 max-h-[2.75rem] overflow-hidden">
-              {profile.signals.slice(0, 3).map((signal) => (
-                <span
-                  key={signal}
-                  className="text-[11px] tracking-wide text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] px-2.5 py-0.5 max-w-full truncate"
-                >
-                  {signal}
-                </span>
-              ))}
+          {/* Body — fills remainder; overflow hidden keeps row height stable */}
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+            <div className="min-w-0 shrink-0">
+              <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
+                {nameHeading}
+              </h3>
+              {!isLocked && formatDemographicsLine(profile) && (
+                <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60 truncate">
+                  {formatDemographicsLine(profile)}
+                </p>
+              )}
             </div>
-          )}
 
-          <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-2 min-h-0 mt-auto">
-            {isLocked
-              ? 'Full match context is available to HAEVN+ members.'
-              : profile.topFactor}
-          </p>
+            <div className="flex items-baseline gap-2 shrink-0">
+              <span className="font-heading text-3xl text-[color:var(--haevn-gold)] tabular-nums">
+                {profile.compatibilityPercentage}%
+              </span>
+              <span className="text-[11px] tracking-[0.14em] uppercase text-[color:var(--haevn-muted-fg)]">
+                Match
+              </span>
+            </div>
 
-          {isLocked && (
-            <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
-              Tap the card or upgrade below to unlock photos, profiles, and messaging.
+            {!isLocked && profile.signals && profile.signals.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 min-h-0 max-h-[2.75rem] overflow-hidden">
+                {profile.signals.slice(0, 3).map((signal) => (
+                  <span
+                    key={signal}
+                    className="text-[11px] tracking-wide text-[color:var(--haevn-teal)] bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] px-2.5 py-0.5 max-w-full truncate"
+                  >
+                    {signal}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-2 min-h-0 mt-auto">
+              {isLocked
+                ? 'Full match context is available to HAEVN+ members.'
+                : profile.topFactor}
             </p>
-          )}
-        </div>
-      </button>
+
+            {isLocked && (
+              <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
+                Tap the card or upgrade below to unlock photos, profiles, and messaging.
+              </p>
+            )}
+
+            {!isLocked && readyToMeet && (
+              <div
+                className="mt-2 shrink-0 border-t border-[color:var(--haevn-border)] pt-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--haevn-muted-fg)] mb-2">
+                  Meet IRL
+                </p>
+                <ReadyToMeetButton
+                  otherPartnershipId={readyToMeet.otherPartnershipId}
+                  initialState={readyToMeet.state}
+                />
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
     )
   }
 

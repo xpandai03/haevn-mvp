@@ -185,6 +185,14 @@ export default function MatchesPage() {
                     }}
                     variant="match"
                     isLocked={isViewerFree}
+                    readyToMeet={
+                      !isViewerFree
+                        ? {
+                            state: match.readyToMeet,
+                            otherPartnershipId: match.partnership.id,
+                          }
+                        : undefined
+                    }
                     onClick={handleMatchCardClick}
                   />
                 </motion.div>

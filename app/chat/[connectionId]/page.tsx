@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Send, ImagePlus } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, ImagePlus, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
@@ -14,6 +14,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format, isToday, isYesterday } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
+import { MeetupChatCard } from '@/components/chat/MeetupChatCard'
+import {
+  encodeMeetupSuggestionMessage,
+  parseMeetupSuggestionMessage,
+} from '@/lib/chat/meetupMessage'
+
+/** Hardcoded midpoint-style suggestion until real geo + venue data ships. */
+const PLACEHOLDER_CHAT_MEETUP = {
+  venue_name: 'Blue Bottle Coffee',
+  venue_type: 'Coffee',
+  distance: '2.3 miles from both of you',
+  note: 'Based on your shared preference for coffee dates',
+  emoji: '☕',
+}
 
 export default function ChatWithConnectionPage() {
   const router = useRouter()
@@ -28,6 +42,7 @@ export default function ChatWithConnectionPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [showMeetupSuggestion, setShowMeetupSuggestion] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [myPartnershipId, setMyPartnershipId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -124,6 +139,24 @@ export default function ChatWithConnectionPage() {
       setMessages(prev => [...prev, result.message!])
     }
 
+    setSending(false)
+  }
+
+  const handleShareMeetupSuggestion = async () => {
+    if (!connection || sending) return
+    setSending(true)
+    const body = encodeMeetupSuggestionMessage(PLACEHOLDER_CHAT_MEETUP)
+    const result = await sendMessageAction(connection.handshakeId, body)
+    if (result.error) {
+      toast({
+        title: 'Could not share',
+        description: result.error,
+        variant: 'destructive',
+      })
+    } else if (result.message) {
+      setMessages((prev) => [...prev, result.message!])
+      setShowMeetupSuggestion(false)
+    }
     setSending(false)
   }
 
@@ -313,8 +346,37 @@ export default function ChatWithConnectionPage() {
           <div className="space-y-3">
             {messages.map((message) => {
               const isOwn = message.is_own_message
+              const meetup = message.body
+                ? parseMeetupSuggestionMessage(message.body)
+                : null
               const hasImage = !!message.image_url
-              const hasText = !!message.body
+              const hasPlainText = !!message.body && !meetup
+
+              if (meetup) {
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl border px-4 py-3 ${
+                        isOwn
+                          ? 'border-amber-300 bg-amber-50'
+                          : 'border-gray-200 bg-white text-haevn-charcoal'
+                      }`}
+                    >
+                      <MeetupChatCard data={meetup} />
+                      <p
+                        className={`mt-2 text-xs ${
+                          isOwn ? 'text-amber-900/60' : 'text-gray-400'
+                        }`}
+                      >
+                        {formatMessageTime(message.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
 
               return (
                 <div
@@ -323,16 +385,15 @@ export default function ChatWithConnectionPage() {
                 >
                   <div
                     className={`max-w-[75%] rounded-2xl ${
-                      hasImage && !hasText ? 'p-1' : 'px-4 py-2.5'
+                      hasImage && !hasPlainText ? 'p-1' : 'px-4 py-2.5'
                     } ${
                       isOwn
                         ? 'bg-haevn-orange text-white rounded-br-md'
                         : 'bg-white border border-gray-200 text-haevn-charcoal rounded-bl-md'
                     }`}
                   >
-                    {/* Image message */}
                     {hasImage && (
-                      <div className={hasText ? 'mb-2' : ''}>
+                      <div className={hasPlainText ? 'mb-2' : ''}>
                         <Image
                           src={message.image_url!}
                           alt="Shared image"
@@ -343,13 +404,11 @@ export default function ChatWithConnectionPage() {
                         />
                       </div>
                     )}
-                    {/* Text content */}
-                    {hasText && (
+                    {hasPlainText && (
                       <p className="text-sm break-words">{message.body}</p>
                     )}
-                    {/* Timestamp */}
                     <p
-                      className={`text-xs mt-1 ${hasImage && !hasText ? 'px-3 pb-2' : ''} ${
+                      className={`text-xs mt-1 ${hasImage && !hasPlainText ? 'px-3 pb-2' : ''} ${
                         isOwn ? 'text-white/70' : 'text-gray-400'
                       }`}
                     >
@@ -365,7 +424,46 @@ export default function ChatWithConnectionPage() {
       </div>
 
       {/* Message Input */}
-      <div className="px-4 pb-6 pt-3 bg-white border-t border-gray-200 flex-shrink-0">
+      <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 pb-6 pt-3">
+        {showMeetupSuggestion && (
+          <div className="mb-3 rounded-[var(--radius)] border border-[color:var(--haevn-border)] bg-[#F9F5EB] p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgba(0,128,128,0.1)]">
+                <MapPin className="h-5 w-5 text-[color:var(--haevn-teal)]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-sm font-semibold text-[color:var(--haevn-navy)]">
+                  {PLACEHOLDER_CHAT_MEETUP.emoji} {PLACEHOLDER_CHAT_MEETUP.venue_name}
+                </p>
+                <p className="mt-0.5 text-xs text-[color:var(--haevn-charcoal)]/70">
+                  {PLACEHOLDER_CHAT_MEETUP.venue_type} ·{' '}
+                  {PLACEHOLDER_CHAT_MEETUP.distance}
+                </p>
+                <p className="mt-1 text-xs text-[color:var(--haevn-charcoal)]/50">
+                  {PLACEHOLDER_CHAT_MEETUP.note}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                className="flex-1 bg-haevn-orange text-white hover:bg-haevn-orange/90"
+                disabled={sending || uploading}
+                onClick={() => void handleShareMeetupSuggestion()}
+              >
+                Share in Chat
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="shrink-0 text-[color:var(--haevn-charcoal)]/70"
+                onClick={() => setShowMeetupSuggestion(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -380,13 +478,25 @@ export default function ChatWithConnectionPage() {
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || sending}
-            className="text-haevn-charcoal hover:text-haevn-teal h-10 w-10"
+            className="h-10 w-10 text-haevn-charcoal hover:text-haevn-teal"
           >
             {uploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <ImagePlus className="h-5 w-5" />
             )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowMeetupSuggestion((v) => !v)}
+            disabled={uploading || sending}
+            className="h-10 w-10 text-haevn-charcoal/50 hover:text-haevn-teal"
+            aria-label="Suggest meetup location"
+            title="Suggest meetup location"
+          >
+            <MapPin className="h-5 w-5" />
           </Button>
           <input
             ref={fileInputRef}
@@ -410,7 +520,7 @@ export default function ChatWithConnectionPage() {
           <Button
             type="submit"
             disabled={!newMessage.trim() || sending || uploading}
-            className="rounded-full bg-haevn-teal hover:bg-haevn-teal/90 h-10 w-10 p-0"
+            className="h-10 w-10 rounded-full bg-haevn-teal p-0 hover:bg-haevn-teal/90"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
