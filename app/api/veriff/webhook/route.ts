@@ -7,14 +7,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { verifyVeriffSignature, isVerificationApproved, getVeriffStatusMessage } from '@/lib/veriff'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { verifyVeriffSignature, getVeriffStatusMessage } from '@/lib/veriff'
 
-// Use service role key for admin operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+/** Lazy init so `next build` does not require Supabase env at module evaluation time. */
+function getSupabaseAdmin(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new Error('Supabase URL or service role key is not configured')
+  }
+  return createClient(url, key)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +64,8 @@ export async function POST(request: NextRequest) {
         code,
         message: getVeriffStatusMessage(code)
       })
+
+      const supabase = getSupabaseAdmin()
 
       // Check if verification was approved (code 9001)
       if (code === 9001) {
