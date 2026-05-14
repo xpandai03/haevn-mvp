@@ -1,66 +1,201 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MessageCircle } from 'lucide-react'
+import { useAuth } from '@/lib/auth/context'
+import {
+  getMyConversations,
+  type ConversationItem,
+} from '@/lib/actions/connections'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { firstNameFromDisplayName } from '@/lib/utils/matchCardDisplay'
+import {
+  formatConversationListTime,
+  formatConversationPreviewText,
+} from '@/lib/utils/conversationPreview'
+import FullPageLoader from '@/components/ui/full-page-loader'
 
 function MessagesPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const partner = searchParams.get('partner')
+  const { user, loading: authLoading } = useAuth()
+
+  const [conversations, setConversations] = useState<ConversationItem[]>([])
+  const [tier, setTier] = useState<'free' | 'plus'>('free')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      if (authLoading) return
+      if (!user) {
+        router.replace('/auth/login')
+        return
+      }
+      try {
+        setLoading(true)
+        const [list, membership] = await Promise.all([
+          getMyConversations(),
+          getUserMembershipTier(),
+        ])
+        setConversations(list)
+        setTier(membership)
+      } catch (e: unknown) {
+        console.error('[Messages]', e)
+        setError(e instanceof Error ? e.message : 'Failed to load messages')
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
+  }, [user, authLoading, router])
+
+  if (authLoading || loading) {
+    return <FullPageLoader />
+  }
+
+  if (error) {
+    return (
+      <div className="w-full px-6 py-16 sm:px-10">
+        <div className="dash-card mx-auto max-w-md p-8">
+          <h2 className="font-heading text-xl text-[color:var(--haevn-navy)]">
+            Couldn&apos;t load conversations
+          </h2>
+          <p className="mt-2 text-sm text-[color:var(--haevn-muted-fg)]">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="haevn-btn-primary mt-6"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <header className="px-6 sm:px-10 pt-10 pb-6 border-b border-[color:var(--haevn-border)]">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
-            Conversations
+      <header className="border-b border-[color:var(--haevn-border)] px-6 pb-6 pt-10 sm:px-10">
+        <div className="mx-auto max-w-3xl">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--haevn-teal)]">
+            Inbox
           </p>
-          <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-2 leading-tight">
+          <h1 className="font-heading mt-2 text-3xl leading-tight text-[color:var(--haevn-navy)] sm:text-4xl">
             Messages
           </h1>
+          <p className="mt-2 text-sm text-[color:var(--haevn-muted-fg)]">
+            Your active conversations
+          </p>
         </div>
       </header>
 
-      {/* Body */}
-      <main className="max-w-4xl mx-auto px-6 sm:px-10 py-16 sm:py-24">
-        <div className="max-w-lg">
-          <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-muted-fg)]">
-            Coming soon
+      <main className="mx-auto max-w-3xl px-6 py-8 sm:px-10 sm:py-10">
+        {partner && (
+          <p className="mb-4 text-xs text-[color:var(--haevn-muted-fg)]">
+            Context: partnership {partner}
           </p>
-          <h2 className="font-heading text-3xl text-[color:var(--haevn-navy)] mt-3 leading-tight">
-            Messaging is on the way.
-          </h2>
-          <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed mt-4">
-            Full messaging will live here. For now, view your connections from
-            the dashboard — when you connect with someone, a thread will appear
-            in this view.
-          </p>
+        )}
 
-          {partner && (
-            <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-4">
-              Ready to message partnership: {partner}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-3 mt-10">
-            <button
-              type="button"
-              onClick={() => router.push('/dashboard/connections')}
-              className="haevn-btn-primary"
+        {tier === 'free' && (
+          <div className="dash-card mb-6 border border-[color:var(--haevn-border)] bg-[color:var(--haevn-dash-surface-alt)] px-4 py-3 text-sm text-[color:var(--haevn-charcoal)]">
+            You&apos;re viewing as a Member.{' '}
+            <Link
+              href="/onboarding/membership"
+              className="font-medium text-[color:var(--haevn-teal)] underline underline-offset-2"
             >
-              View connections
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/dashboard')}
-              className="haevn-btn-secondary"
-            >
-              Back to dashboard
-            </button>
+              Upgrade to HAEVN+
+            </Link>{' '}
+            to open chats and send messages.
           </div>
-        </div>
+        )}
+
+        {conversations.length === 0 ? (
+          <div className="dash-card p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-[color:var(--haevn-border)] bg-[color:var(--haevn-dash-surface-alt)]">
+              <MessageCircle
+                className="h-7 w-7 text-[color:var(--haevn-muted-fg)]"
+                strokeWidth={1.25}
+              />
+            </div>
+            <h2 className="font-heading text-xl text-[color:var(--haevn-navy)]">
+              No conversations yet
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[color:var(--haevn-muted-fg)]">
+              When you connect with a match, your thread will show here. Start
+              from Matches to send a connection request.
+            </p>
+            <Link href="/dashboard/matches" className="haevn-btn-teal mt-6 inline-block">
+              View matches
+            </Link>
+          </div>
+        ) : (
+          <div className="dash-card divide-y divide-[color:var(--haevn-border)] overflow-hidden">
+            {conversations.map((convo) => {
+              const first = firstNameFromDisplayName(convo.displayName)
+              const preview = convo.lastMessage
+                ? formatConversationPreviewText(
+                    convo.lastMessage.body,
+                    convo.lastMessage.imageUrl
+                  )
+                : 'Tap to start chatting'
+              const timeLabel = convo.lastMessage
+                ? formatConversationListTime(convo.lastMessage.createdAt)
+                : convo.matchedAt
+                  ? formatConversationListTime(convo.matchedAt)
+                  : ''
+
+              return (
+                <Link
+                  key={convo.handshakeId}
+                  href={`/chat/${convo.handshakeId}`}
+                  className="flex items-center gap-4 p-4 transition-colors hover:bg-[color:var(--haevn-dash-surface-alt)]"
+                >
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden border border-[color:var(--haevn-border)] bg-[color:var(--haevn-warm-gray)] keep-rounded">
+                    {convo.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={convo.photoUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center font-heading text-lg text-[color:var(--haevn-charcoal)]/50">
+                        {first.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-heading truncate text-sm font-semibold text-[color:var(--haevn-navy)]">
+                        {first}
+                      </h3>
+                      {timeLabel && (
+                        <span className="shrink-0 text-xs text-[color:var(--haevn-charcoal)]/45">
+                          {timeLabel}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-sm text-[color:var(--haevn-charcoal)]/65">
+                      {convo.lastMessage?.isOwn ? 'You: ' : ''}
+                      {preview}
+                    </p>
+                  </div>
+                  {convo.unreadCount > 0 && (
+                    <div className="flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center bg-haevn-orange px-1.5 keep-rounded">
+                      <span className="text-[10px] font-bold text-white">
+                        {convo.unreadCount > 9 ? '9+' : convo.unreadCount}
+                      </span>
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </main>
     </div>
   )
@@ -70,7 +205,7 @@ export default function MessagesPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex min-h-[60vh] items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-[color:var(--haevn-teal)]" />
         </div>
       }

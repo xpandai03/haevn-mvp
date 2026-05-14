@@ -330,7 +330,7 @@ export function ProfileCard({
     <Card
       onClick={() => onClick(profile.id)}
       className={cn(
-        'flex-shrink-0 w-[85vw] sm:w-[320px] cursor-pointer bg-white border border-[color:var(--haevn-border)] p-5 transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40'
+        'w-full max-w-full shrink-0 cursor-pointer border border-[color:var(--haevn-border)] bg-white p-5 shadow-none transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40 sm:w-full'
       )}
     >
       {/* Top: avatar + name */}

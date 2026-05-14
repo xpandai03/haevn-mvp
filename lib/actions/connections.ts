@@ -145,6 +145,7 @@ export interface ConversationItem {
     body: string
     createdAt: string
     isOwn: boolean
+    imageUrl?: string | null
   } | null
   unreadCount: number
   matchedAt: string | null
@@ -197,6 +198,7 @@ export async function getMyConversations(): Promise<ConversationItem[]> {
         messages(
           id,
           content,
+          image_url,
           sender_partnership,
           created_at
         )
@@ -262,15 +264,24 @@ export async function getMyConversations(): Promise<ConversationItem[]> {
         displayName: otherPartnership.display_name || 'User',
         city: otherPartnership.city,
         photoUrl,
-        lastMessage: lastMessage ? {
-          body: lastMessage.content,
-          createdAt: lastMessage.created_at,
-          isOwn: lastMessage.sender_partnership === userPartnershipInHandshake
-        } : null,
+        lastMessage: lastMessage
+          ? {
+              body: lastMessage.content ?? '',
+              createdAt: lastMessage.created_at,
+              isOwn: lastMessage.sender_partnership === userPartnershipInHandshake,
+              imageUrl: lastMessage.image_url ?? null,
+            }
+          : null,
         unreadCount: unreadCounts.byHandshake[handshake.id] || 0,
-        matchedAt: handshake.matched_at
+        matchedAt: handshake.matched_at,
       })
     }
+
+    conversations.sort((a, b) => {
+      const ta = a.lastMessage?.createdAt ?? a.matchedAt ?? ''
+      const tb = b.lastMessage?.createdAt ?? b.matchedAt ?? ''
+      return new Date(tb).getTime() - new Date(ta).getTime()
+    })
 
     return conversations
   } catch (error) {

@@ -16,7 +16,6 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load connections
   useEffect(() => {
     async function loadConnections() {
       if (authLoading || !user) return
@@ -25,16 +24,15 @@ export default function ConnectionsPage() {
         setLoading(true)
         const connectionsData = await getConnections()
         setConnections(connectionsData)
-        console.log('[Connections] Loaded', connectionsData.length, 'connections')
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[Connections] Error:', err)
-        setError(err.message || 'Failed to load connections')
+        setError(err instanceof Error ? err.message : 'Failed to load connections')
       } finally {
         setLoading(false)
       }
     }
 
-    loadConnections()
+    void loadConnections()
   }, [user, authLoading])
 
   const handleProfileClick = (id: string) => {
@@ -45,20 +43,24 @@ export default function ConnectionsPage() {
     router.push('/dashboard')
   }
 
-  // Loading state
   if (loading) {
     return <FullPageLoader />
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-cream p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm">
-          <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">Error Loading Connections</h2>
-          <p className="text-haevn-charcoal mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()} className="w-full bg-haevn-teal">
-            Try Again
+      <div className="flex min-h-[50vh] items-center justify-center px-6 py-16">
+        <div className="dash-card w-full max-w-md p-8 text-center">
+          <h2 className="font-heading text-xl text-[color:var(--haevn-navy)]">
+            Couldn&apos;t load connections
+          </h2>
+          <p className="mt-2 text-sm text-[color:var(--haevn-muted-fg)]">{error}</p>
+          <Button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="haevn-btn-teal mt-6 w-full"
+          >
+            Try again
           </Button>
         </div>
       </div>
@@ -66,101 +68,74 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-haevn-cream">
-      {/* Header */}
-      <header className="bg-white border-b border-haevn-gray-200 px-4 sm:px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            {/* Back Button and Title */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="text-haevn-charcoal hover:text-haevn-teal"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1
-                  className="font-heading text-2xl sm:text-3xl font-bold text-haevn-navy"
-                  style={{
-                    fontWeight: 700,
-                    lineHeight: '110%',
-                    letterSpacing: '-0.015em'
-                  }}
-                >
-                  Connections
-                </h1>
-                <p
-                  className="text-sm text-haevn-charcoal/60"
-                  style={{
-                    fontWeight: 300
-                  }}
-                >
-                  {connections.length} {connections.length === 1 ? 'connection' : 'connections'}
-                </p>
-              </div>
-            </div>
-
-            {/* Filter Button (Future Enhancement) */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="text-haevn-charcoal"
+    <div className="w-full">
+      <header className="border-b border-[color:var(--haevn-border)] px-6 pb-6 pt-10 sm:px-10">
+        <div className="mx-auto flex max-w-3xl items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="mt-1 text-[color:var(--haevn-charcoal)] transition-colors hover:text-[color:var(--haevn-teal)]"
+              aria-label="Back to dashboard"
             >
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Filters</span>
-            </Button>
+              <ArrowLeft className="h-5 w-5" strokeWidth={1.5} />
+            </button>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--haevn-teal)]">
+                Dashboard
+              </p>
+              <h1 className="font-heading mt-2 text-3xl leading-tight text-[color:var(--haevn-navy)] sm:text-4xl">
+                Connections
+              </h1>
+              <p className="mt-2 text-sm text-[color:var(--haevn-muted-fg)]">
+                {connections.length}{' '}
+                {connections.length === 1 ? 'connection' : 'connections'}
+              </p>
+            </div>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            className="mt-2 shrink-0 border-[color:var(--haevn-border)] text-[color:var(--haevn-charcoal)]"
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Filters</span>
+          </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="mx-auto max-w-3xl px-6 py-8 sm:px-10 sm:py-12">
         {connections.length === 0 ? (
-          // Empty State
-          <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
-            <div className="max-w-md mx-auto">
-              <h2
-                className="font-heading text-2xl font-bold text-haevn-navy mb-4"
-                style={{
-                  fontWeight: 700
-                }}
-              >
-                No connections yet
-              </h2>
-              <p
-                className="text-haevn-charcoal mb-6"
-                style={{
-                  fontWeight: 300,
-                  lineHeight: '120%'
-                }}
-              >
-                Connections are people you've matched with and started conversations with. Browse your matches and send a message to create a connection.
-              </p>
-              <Button
-                onClick={() => router.push('/dashboard/matches')}
-                className="bg-haevn-orange hover:opacity-90 text-white"
-              >
-                View Matches
-              </Button>
-            </div>
+          <div className="dash-card p-10 text-center">
+            <h2 className="font-heading text-xl text-[color:var(--haevn-navy)]">
+              No connections yet
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[color:var(--haevn-muted-fg)]">
+              Connections are people you&apos;ve matched with and started
+              conversations with. Browse your matches to send a connection
+              request.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard/matches')}
+              className="haevn-btn-primary mt-6"
+            >
+              View matches
+            </button>
           </div>
         ) : (
-          // Connections List
           <div className="space-y-4">
             {connections.map((connection) => (
-              <div key={connection.id} className="w-full">
-                <ProfileCard
-                  profile={connection}
-                  variant="connection"
-                  onClick={handleProfileClick}
-                  latestMessage={connection.latestMessage}
-                  unreadCount={connection.unreadCount}
-                />
-              </div>
+              <ProfileCard
+                key={connection.id}
+                profile={connection}
+                variant="connection"
+                onClick={handleProfileClick}
+                latestMessage={connection.latestMessage}
+                unreadCount={connection.unreadCount}
+              />
             ))}
           </div>
         )}

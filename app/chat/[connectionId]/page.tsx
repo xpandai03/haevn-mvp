@@ -259,10 +259,10 @@ export default function ChatWithConnectionPage() {
   // Loading state
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-cream">
+      <div className="flex min-h-[60vh] flex-1 items-center justify-center bg-[color:var(--haevn-dash-surface-alt)]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-haevn-teal" />
-          <p className="text-haevn-charcoal">Loading chat...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-[color:var(--haevn-teal)]" />
+          <p className="text-sm text-[color:var(--haevn-muted-fg)]">Loading chat…</p>
         </div>
       </div>
     )
@@ -271,16 +271,20 @@ export default function ChatWithConnectionPage() {
   // Error state
   if (error || !connection) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-haevn-cream p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm text-center">
-          <h2 className="font-heading text-2xl font-bold text-haevn-navy mb-4">
-            {error || 'Connection Not Found'}
+      <div className="flex min-h-[60vh] flex-1 items-center justify-center bg-[color:var(--haevn-dash-surface-alt)] p-4">
+        <div className="dash-card w-full max-w-md p-8 text-center">
+          <h2 className="font-heading text-xl text-[color:var(--haevn-navy)]">
+            {error || 'Connection not found'}
           </h2>
-          <p className="text-haevn-charcoal mb-6">
-            This connection may no longer be available.
+          <p className="mt-2 text-sm text-[color:var(--haevn-muted-fg)]">
+            This conversation may no longer be available.
           </p>
-          <Button onClick={() => router.push('/connections')} className="bg-haevn-teal">
-            Back to Connections
+          <Button
+            type="button"
+            onClick={() => router.push('/messages')}
+            className="haevn-btn-teal mt-6 w-full"
+          >
+            Back to messages
           </Button>
         </div>
       </div>
@@ -298,48 +302,49 @@ export default function ChatWithConnectionPage() {
     .slice(0, 2) || '??'
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header - clickable to view profile */}
-      <header className="bg-haevn-teal h-14 flex items-center justify-between px-4 flex-shrink-0">
+    <div className="flex min-h-0 flex-1 flex-col bg-[color:var(--haevn-dash-surface-alt)]">
+      <header className="flex h-14 shrink-0 items-center border-b border-[color:var(--haevn-border)] bg-white px-4">
         <button
-          onClick={() => router.back()}
-          className="text-white text-sm font-medium flex items-center gap-1 hover:opacity-80"
+          type="button"
+          onClick={() => router.push('/messages')}
+          className="flex items-center gap-1 text-sm font-medium text-[color:var(--haevn-navy)] transition-colors hover:text-[color:var(--haevn-teal)]"
+          aria-label="Back to messages"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={1.5} />
         </button>
-        {/* Clickable profile section */}
         <button
+          type="button"
           onClick={handleViewProfile}
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          className="flex min-w-0 flex-1 items-center justify-center gap-3 px-2 transition-opacity hover:opacity-80"
         >
-          <Avatar className="w-8 h-8 border-2 border-white/50">
+          <Avatar className="h-9 w-9 shrink-0 border border-[color:var(--haevn-border)] keep-rounded">
             {partnership.photo_url ? (
               <AvatarImage src={partnership.photo_url} alt={partnership.display_name || 'Connection'} />
             ) : (
-              <AvatarFallback className="bg-haevn-navy text-white text-xs font-bold">
+              <AvatarFallback className="bg-[color:var(--haevn-dash-surface-alt)] font-heading text-xs font-semibold text-[color:var(--haevn-navy)] keep-rounded">
                 {initials}
               </AvatarFallback>
             )}
           </Avatar>
-          <span
-            className="text-white font-medium"
-          >
+          <span className="truncate font-heading text-sm font-semibold text-[color:var(--haevn-navy)]">
             {partnership.display_name || 'Anonymous'}
           </span>
         </button>
-        <div className="w-5" /> {/* Spacer for centering */}
+        <div className="w-9 shrink-0" aria-hidden />
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="bg-haevn-teal/10 rounded-full p-4 mb-4">
-              <Send className="h-8 w-8 text-haevn-teal" />
+          <div className="flex h-full flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center border border-[color:var(--haevn-border)] bg-white">
+              <Send className="h-7 w-7 text-[color:var(--haevn-teal)]" strokeWidth={1.25} />
             </div>
-            <p className="text-haevn-charcoal font-medium mb-1">No messages yet</p>
-            <p className="text-haevn-charcoal/60 text-sm">
-              Say hello to {partnership.display_name || 'your match'}!
+            <p className="font-heading text-sm font-medium text-[color:var(--haevn-navy)]">
+              No messages yet
+            </p>
+            <p className="mt-1 max-w-xs text-sm text-[color:var(--haevn-muted-fg)]">
+              Say hello to {partnership.display_name || 'your match'}.
             </p>
           </div>
         ) : (
@@ -359,16 +364,16 @@ export default function ChatWithConnectionPage() {
                     className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl border px-4 py-3 ${
+                      className={`max-w-[85%] border px-4 py-3 rounded-[var(--radius)] ${
                         isOwn
                           ? 'border-amber-300 bg-amber-50'
-                          : 'border-gray-200 bg-white text-haevn-charcoal'
+                          : 'border-[color:var(--haevn-border)] bg-white text-[color:var(--haevn-charcoal)]'
                       }`}
                     >
                       <MeetupChatCard data={meetup} />
                       <p
                         className={`mt-2 text-xs ${
-                          isOwn ? 'text-amber-900/60' : 'text-gray-400'
+                          isOwn ? 'text-amber-900/60' : 'text-[color:var(--haevn-charcoal)]/45'
                         }`}
                       >
                         {formatMessageTime(message.created_at)}
@@ -384,12 +389,12 @@ export default function ChatWithConnectionPage() {
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl ${
+                    className={`max-w-[78%] rounded-[var(--radius)] border ${
                       hasImage && !hasPlainText ? 'p-1' : 'px-4 py-2.5'
                     } ${
                       isOwn
-                        ? 'bg-haevn-orange text-white rounded-br-md'
-                        : 'bg-white border border-gray-200 text-haevn-charcoal rounded-bl-md'
+                        ? 'border-transparent bg-haevn-orange text-white'
+                        : 'border-[color:var(--haevn-border)] bg-white text-[color:var(--haevn-charcoal)]'
                     }`}
                   >
                     {hasImage && (
@@ -399,17 +404,16 @@ export default function ChatWithConnectionPage() {
                           alt="Shared image"
                           width={300}
                           height={200}
-                          className="rounded-xl max-w-full h-auto object-cover"
-                          style={{ maxHeight: '300px' }}
+                          className="max-h-[300px] w-full max-w-full object-cover rounded-[var(--radius)]"
                         />
                       </div>
                     )}
                     {hasPlainText && (
-                      <p className="text-sm break-words">{message.body}</p>
+                      <p className="text-sm leading-relaxed break-words">{message.body}</p>
                     )}
                     <p
-                      className={`text-xs mt-1 ${hasImage && !hasPlainText ? 'px-3 pb-2' : ''} ${
-                        isOwn ? 'text-white/70' : 'text-gray-400'
+                      className={`mt-1 text-xs ${hasImage && !hasPlainText ? 'px-3 pb-2' : ''} ${
+                        isOwn ? 'text-white/75' : 'text-[color:var(--haevn-charcoal)]/45'
                       }`}
                     >
                       {formatMessageTime(message.created_at)}
@@ -424,7 +428,7 @@ export default function ChatWithConnectionPage() {
       </div>
 
       {/* Message Input */}
-      <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 pb-6 pt-3">
+      <div className="shrink-0 border-t border-[color:var(--haevn-border)] bg-white px-4 pb-6 pt-3">
         {showMeetupSuggestion && (
           <div className="mb-3 rounded-[var(--radius)] border border-[color:var(--haevn-border)] bg-[#F9F5EB] p-4">
             <div className="flex items-start gap-3">
@@ -515,12 +519,12 @@ export default function ChatWithConnectionPage() {
             placeholder="Type a message..."
             disabled={sending || uploading}
             maxLength={2000}
-            className="flex-1 rounded-full border-gray-300 focus:border-haevn-teal focus:ring-haevn-teal"
+            className="flex-1 rounded-[var(--radius)] border-[color:var(--haevn-border)] bg-white focus-visible:border-[color:var(--haevn-teal)] focus-visible:ring-[color:var(--haevn-teal)]"
           />
           <Button
             type="submit"
             disabled={!newMessage.trim() || sending || uploading}
-            className="h-10 w-10 rounded-full bg-haevn-teal p-0 hover:bg-haevn-teal/90"
+            className="h-10 w-10 shrink-0 rounded-[var(--radius)] bg-[color:var(--haevn-teal)] p-0 text-white hover:bg-[color:var(--haevn-teal)]/90"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
