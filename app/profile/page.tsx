@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronRight,
-  Camera,
   CheckCircle2,
   User as UserIcon,
   Mail,
@@ -19,6 +18,7 @@ import { ProfilePhotosSection } from '@/components/dashboard/ProfilePhotosSectio
 import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryButton'
 import { SignOutButton } from '@/components/dashboard/SignOutButton'
 import { isFallbackInsight } from '@/lib/ai/fallbacks'
+import { ProfilePhotoHero } from '@/components/profile/ProfilePhotoHero'
 
 export const dynamic = 'force-dynamic'
 
@@ -208,100 +208,58 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-      {/* ─── HERO PROFILE HEADER ─── */}
-      <div className="bg-white border border-[color:var(--haevn-border)] overflow-hidden">
-        {/* Cover (banner photo) — clickable to /profile/edit */}
-        {bannerPhoto ? (
-          <Link
-            href="/profile/edit"
-            className="relative block h-72 sm:h-96 md:h-[28rem] bg-gradient-to-br from-[#F9F5EB] to-haevn-warm-gray overflow-hidden group"
-          >
-            <img
-              src={bannerPhoto}
-              alt=""
-              aria-hidden="true"
-              className="w-full h-full object-cover"
-              style={{ objectPosition: 'center 20%' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          </Link>
-        ) : (
-          <div className="relative h-72 sm:h-96 md:h-[28rem] flex flex-col items-center justify-center bg-gradient-to-br from-[#F9F5EB] to-haevn-warm-gray">
-            <Camera
-              className="w-8 h-8 text-[color:var(--haevn-muted-fg)] mb-2"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-[color:var(--haevn-muted-fg)]">
-              Add a primary photo
-            </p>
-          </div>
+      {/* ─── HERO PROFILE HEADER (photo tap = lightbox; manage = orange camera chip) ─── */}
+      <ProfilePhotoHero
+        bannerPhoto={bannerPhoto ?? null}
+        avatarPhoto={avatarPhoto ?? null}
+        displayName={displayName}
+        showManagePhotos
+        manageHref="/profile/edit"
+      >
+        <h1 className="font-heading text-2xl text-[color:var(--haevn-navy)]">
+          {displayName}
+          {extras.age ? `, ${extras.age}` : ''}
+        </h1>
+        {subtitleParts.length > 0 && (
+          <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
+            {subtitleParts.join(' · ')}
+          </p>
         )}
 
-        {/* Profile info */}
-        <div className="relative px-6 pb-6">
-          {/* Avatar overlapping the cover, left-aligned */}
-          <div className="-mt-20 mb-4 relative z-10">
-            <div className="w-32 h-32 sm:w-40 sm:h-40 keep-rounded border-4 border-white bg-[#F9F5EB] overflow-hidden shadow-sm">
-              {avatarPhoto ? (
-                <img
-                  src={avatarPhoto}
-                  alt={displayName}
-                  className="w-full h-full object-cover keep-rounded"
-                  style={{ objectPosition: 'center 20%' }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center font-heading text-4xl text-[color:var(--haevn-gold)]">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <h1 className="font-heading text-2xl text-[color:var(--haevn-navy)]">
-            {displayName}
-            {extras.age ? `, ${extras.age}` : ''}
-          </h1>
-          {subtitleParts.length > 0 && (
-            <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
-              {subtitleParts.join(' · ')}
+        {/* Stats inline */}
+        <div className="flex gap-6 mt-4">
+          <Link
+            href="/dashboard/matches"
+            className="block transition-opacity hover:opacity-80"
+          >
+            <span className="font-heading text-xl text-[color:var(--haevn-navy)] tabular-nums">
+              {matchCount}
+            </span>
+            <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+              Matches
             </p>
-          )}
-
-          {/* Stats inline */}
-          <div className="flex gap-6 mt-4">
-            <Link
-              href="/dashboard/matches"
-              className="block transition-opacity hover:opacity-80"
-            >
-              <span className="font-heading text-xl text-[color:var(--haevn-navy)] tabular-nums">
-                {matchCount}
-              </span>
-              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
-                Matches
-              </p>
-            </Link>
-            <Link
-              href="/dashboard/connections"
-              className="block transition-opacity hover:opacity-80"
-            >
-              <span className="font-heading text-xl text-[color:var(--haevn-teal)] tabular-nums">
-                {connectionCount}
-              </span>
-              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
-                Connection{connectionCount === 1 ? '' : 's'}
-              </p>
-            </Link>
-            <div>
-              <span className="text-sm font-medium text-[color:var(--haevn-muted-fg)]">
-                {tierLabel}
-              </span>
-              <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
-                Plan
-              </p>
-            </div>
+          </Link>
+          <Link
+            href="/dashboard/connections"
+            className="block transition-opacity hover:opacity-80"
+          >
+            <span className="font-heading text-xl text-[color:var(--haevn-teal)] tabular-nums">
+              {connectionCount}
+            </span>
+            <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+              Connection{connectionCount === 1 ? '' : 's'}
+            </p>
+          </Link>
+          <div>
+            <span className="text-sm font-medium text-[color:var(--haevn-muted-fg)]">
+              {tierLabel}
+            </span>
+            <p className="text-[10px] tracking-[0.18em] uppercase text-[color:var(--haevn-muted-fg)] mt-0.5">
+              Plan
+            </p>
           </div>
         </div>
-      </div>
+      </ProfilePhotoHero>
 
       {/* ─── AI SUMMARY ─── */}
       <div className="bg-white border border-[color:var(--haevn-border)] p-5 sm:p-6">
