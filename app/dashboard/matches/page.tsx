@@ -8,6 +8,7 @@ import {
   getComputedMatchCards,
   type ComputedMatchCard,
 } from '@/lib/actions/computedMatchCards'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useAuth } from '@/lib/auth/context'
 import FullPageLoader from '@/components/ui/full-page-loader'
 
@@ -50,6 +51,7 @@ export default function MatchesPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [matches, setMatches] = useState<ComputedMatchCard[]>([])
+  const [viewerTier, setViewerTier] = useState<'free' | 'plus'>('free')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [revealedCount, setRevealedCount] = useState(0)
@@ -59,8 +61,12 @@ export default function MatchesPage() {
       if (authLoading || !user) return
       try {
         setLoading(true)
-        const matchData = await getComputedMatchCards('Bronze')
+        const [matchData, tier] = await Promise.all([
+          getComputedMatchCards('Bronze'),
+          getUserMembershipTier(),
+        ])
         setMatches(matchData)
+        setViewerTier(tier)
       } catch (err: any) {
         console.error('[Matches] Error:', err)
         setError(err.message || 'Failed to load matches')
@@ -82,8 +88,18 @@ export default function MatchesPage() {
     return () => clearTimeout(timer)
   }, [revealedCount, matches.length, loading])
 
+  const isViewerFree = viewerTier === 'free'
+
   const handleProfileClick = (id: string) => {
     router.push(`/profiles/${id}`)
+  }
+
+  const handleMatchCardClick = (id: string) => {
+    if (isViewerFree) {
+      router.push('/onboarding/membership')
+      return
+    }
+    handleProfileClick(id)
   }
 
   if (loading) return <FullPageLoader />
@@ -167,7 +183,8 @@ export default function MatchesPage() {
                       signals: getSignals(match.breakdown),
                     }}
                     variant="match"
-                    onClick={handleProfileClick}
+                    isLocked={isViewerFree}
+                    onClick={handleMatchCardClick}
                   />
                 </motion.div>
               ))}

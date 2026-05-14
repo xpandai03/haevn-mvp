@@ -158,7 +158,7 @@ export function ProfileCard({
             <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight">
               {nameHeading}
             </h3>
-            {formatDemographicsLine(profile) && (
+            {!isLocked && formatDemographicsLine(profile) && (
               <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60">
                 {formatDemographicsLine(profile)}
               </p>
@@ -174,7 +174,7 @@ export function ProfileCard({
             </span>
           </div>
 
-          {profile.signals && profile.signals.length > 0 && (
+          {!isLocked && profile.signals && profile.signals.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {profile.signals.slice(0, 3).map((signal) => (
                 <span
@@ -188,12 +188,14 @@ export function ProfileCard({
           )}
 
           <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-3">
-            {profile.topFactor}
+            {isLocked
+              ? 'Full match context is available to HAEVN+ members.'
+              : profile.topFactor}
           </p>
 
           {isLocked && (
             <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)]">
-              Upgrade to HAEVN+ to view photos, connect, and message.
+              Tap the card or upgrade below to unlock photos, profiles, and messaging.
             </p>
           )}
         </div>
@@ -225,12 +227,13 @@ export function ProfileCard({
           <h3 className="font-heading text-lg text-[color:var(--haevn-navy)] truncate">
             {nameHeading}
           </h3>
-          {formatDemographicsLine(profile) ? (
+          {formatDemographicsLine(profile) && !isLocked ? (
             <div className="flex items-start gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
               <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <span className="text-sm line-clamp-2">{formatDemographicsLine(profile)}</span>
             </div>
           ) : (
+            !isLocked &&
             (profile.city || profile.distance !== undefined) && (
               <div className="flex items-center gap-1 text-[color:var(--haevn-muted-fg)] mt-1">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
@@ -256,7 +259,9 @@ export function ProfileCard({
           </span>
         </div>
         <p className="text-sm text-[color:var(--haevn-charcoal)] leading-relaxed">
-          {profile.topFactor}
+          {isLocked
+            ? 'Full details are visible to HAEVN+ members.'
+            : profile.topFactor}
         </p>
       </div>
 

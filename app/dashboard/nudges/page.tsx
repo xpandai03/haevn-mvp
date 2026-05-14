@@ -172,7 +172,12 @@ export default function NudgesPage() {
                     topFactor: nudge.topFactor
                   }}
                   variant="nudge"
-                  onClick={handleProfileClick}
+                  isLocked={membershipTier === 'free'}
+                  onClick={(id) =>
+                    membershipTier === 'free'
+                      ? router.push('/onboarding/membership')
+                      : handleProfileClick(id)
+                  }
                   nudgedAt={nudge.nudgedAt}
                 />
               </div>
