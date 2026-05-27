@@ -80,7 +80,7 @@ function MessagesPageInner() {
   return (
     <div className="w-full">
       <header className="border-b border-[color:var(--haevn-border)] px-6 pb-6 pt-10 sm:px-10">
-        <div className="mx-auto max-w-3xl">
+        <div className="max-w-4xl">
           <p className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--haevn-teal)]">
             Inbox
           </p>
@@ -93,7 +93,7 @@ function MessagesPageInner() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-8 sm:px-10 sm:py-10">
+      <main className="max-w-4xl px-6 py-8 sm:px-10 sm:py-10">
         {partner && (
           <p className="mb-4 text-xs text-[color:var(--haevn-muted-fg)]">
             Context: partnership {partner}
