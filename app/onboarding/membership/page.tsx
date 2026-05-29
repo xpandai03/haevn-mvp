@@ -29,8 +29,8 @@ const tiers = [
   {
     id: 'plus',
     name: 'HAEVN Plus',
-    price: '$19.99',
-    period: 'per month',
+    price: 'One-time',
+    period: 'Full access',
     description: 'Full access to connections',
     features: [
       'Unlimited matches',
@@ -46,8 +46,8 @@ const tiers = [
   {
     id: 'select',
     name: 'HAEVN Select',
-    price: '$49.99',
-    period: 'per month',
+    price: 'One-time',
+    period: 'Premium access',
     description: 'Premium concierge experience',
     features: [
       'Everything in HAEVN Plus',
@@ -83,20 +83,9 @@ export default function MembershipPage() {
     setLoading(true)
 
     try {
-      // Membership is step 7 in the new flow
-      await flowController.markStepComplete(user.id, 7)
-
-      if (tierId !== 'free') {
-        // Paid tiers: payment surface is a stub (deleted) — Stripe to wire later.
-        // For now, route paid users directly to verification like free users.
-        toast({
-          title: `Welcome to HAEVN ${tierId === 'plus' ? 'Plus' : 'Select'}!`,
-          description: 'Payment will be collected after verification.',
-        })
-        setTimeout(() => {
-          router.push('/onboarding/verification')
-        }, 500)
-      } else {
+      // Membership is step 7 in the new flow.
+      if (tierId === 'free') {
+        await flowController.markStepComplete(user.id, 7)
         toast({
           title: 'Welcome to HAEVN Free!',
           description: 'You can upgrade anytime from your dashboard.',
@@ -106,7 +95,31 @@ export default function MembershipPage() {
         setTimeout(() => {
           router.push('/onboarding/verification')
         }, 500)
+        return
       }
+
+      // Paid tier — create a Lemonsqueezy checkout and redirect to pay.
+      const response = await fetch('/api/lemonsqueezy/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: tierId }),
+      })
+      const data = await response.json()
+
+      if (response.ok && data.checkoutUrl) {
+        // Mark step complete before leaving for the hosted checkout. The tier
+        // flip itself happens server-side via the webhook once payment clears.
+        await flowController.markStepComplete(user.id, 7)
+        window.location.href = data.checkoutUrl
+        return
+      }
+
+      toast({
+        title: 'Unable to start checkout',
+        description: data.error || 'Please try again.',
+        variant: 'destructive',
+      })
+      setLoading(false)
     } catch (error) {
       console.error('Error updating membership:', error)
       toast({
@@ -144,7 +157,7 @@ export default function MembershipPage() {
               textAlign: 'left'
             }}
           >
-            Select the plan that works best for you. You can upgrade or cancel anytime.
+            Select the plan that works best for you. HAEVN+ is a one-time payment for full access.
           </p>
         </div>
 
