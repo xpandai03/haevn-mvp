@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   title: 'HAEVN - Connect Authentically',
   description: 'A private community for couples and singles exploring ethical non-monogamy',
   generator: 'v0.app',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({
