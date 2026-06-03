@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, MessageCircle } from 'lucide-react'
+import { Loader2, MessageCircle, User } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth/context'
 import {
   getMyConversations,
@@ -135,7 +136,11 @@ function MessagesPageInner() {
         ) : (
           <div className="dash-card divide-y divide-[color:var(--haevn-border)] overflow-hidden">
             {conversations.map((convo) => {
+              const isFree = tier === 'free'
               const first = firstNameFromDisplayName(convo.displayName)
+              const displayName = isFree
+                ? `${first.charAt(0).toUpperCase()}***`
+                : first
               const preview = convo.lastMessage
                 ? formatConversationPreviewText(
                     convo.lastMessage.body,
@@ -148,20 +153,27 @@ function MessagesPageInner() {
                   ? formatConversationListTime(convo.matchedAt)
                   : ''
 
-              return (
-                <Link
-                  key={convo.handshakeId}
-                  href={`/chat/${convo.handshakeId}`}
-                  className="flex items-center gap-4 p-4 transition-colors hover:bg-[color:var(--haevn-dash-surface-alt)]"
-                >
+              const rowClass = cn(
+                'flex items-center gap-4 p-4 transition-colors',
+                isFree
+                  ? 'cursor-default opacity-60'
+                  : 'hover:bg-[color:var(--haevn-dash-surface-alt)]'
+              )
+
+              const inner = (
+                <>
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden border border-[color:var(--haevn-border)] bg-[color:var(--haevn-warm-gray)] keep-rounded">
-                    {convo.photoUrl ? (
+                    {!isFree && convo.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={convo.photoUrl}
                         alt=""
                         className="h-full w-full object-cover"
                       />
+                    ) : isFree ? (
+                      <div className="flex h-full w-full items-center justify-center text-[color:var(--haevn-charcoal)]/30">
+                        <User className="h-6 w-6" />
+                      </div>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center font-heading text-lg text-[color:var(--haevn-charcoal)]/50">
                         {first.charAt(0).toUpperCase()}
@@ -171,26 +183,46 @@ function MessagesPageInner() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="font-heading truncate text-sm font-semibold text-[color:var(--haevn-navy)]">
-                        {first}
+                        {displayName}
                       </h3>
-                      {timeLabel && (
+                      {!isFree && timeLabel && (
                         <span className="shrink-0 text-xs text-[color:var(--haevn-charcoal)]/45">
                           {timeLabel}
                         </span>
                       )}
                     </div>
                     <p className="mt-0.5 truncate text-sm text-[color:var(--haevn-charcoal)]/65">
-                      {convo.lastMessage?.isOwn ? 'You: ' : ''}
-                      {preview}
+                      {isFree ? (
+                        'Upgrade to HAEVN+ to message'
+                      ) : (
+                        <>
+                          {convo.lastMessage?.isOwn ? 'You: ' : ''}
+                          {preview}
+                        </>
+                      )}
                     </p>
                   </div>
-                  {convo.unreadCount > 0 && (
+                  {!isFree && convo.unreadCount > 0 && (
                     <div className="flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center bg-haevn-orange px-1.5 keep-rounded">
                       <span className="text-[10px] font-bold text-white">
                         {convo.unreadCount > 9 ? '9+' : convo.unreadCount}
                       </span>
                     </div>
                   )}
+                </>
+              )
+
+              return isFree ? (
+                <div key={convo.handshakeId} className={rowClass} aria-disabled>
+                  {inner}
+                </div>
+              ) : (
+                <Link
+                  key={convo.handshakeId}
+                  href={`/chat/${convo.handshakeId}`}
+                  className={rowClass}
+                >
+                  {inner}
                 </Link>
               )
             })}

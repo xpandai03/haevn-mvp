@@ -10,6 +10,7 @@
  *   - nudge      (compact horizontal card with nudge age)
  */
 
+import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -18,8 +19,8 @@ import { cn } from '@/lib/utils'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
 
-/** Compact photo band for match cards — uniform grid row height */
-const MATCH_PHOTO_H = 'h-[168px]'
+/** Portrait photo for match cards (matches the Emergent demo's 3/4 ratio) */
+const MATCH_PHOTO_H = 'aspect-[3/4]'
 
 export type ProfileCardVariant = 'match' | 'connection' | 'nudge'
 
@@ -41,6 +42,8 @@ export interface ProfileCardData {
   topFactor: string
   /** Written 2-3 line AI intro paragraph (preferred over topFactor when present) */
   intro?: string
+  /** "Where you might differ" contrast line (muted, below the intro) */
+  contrast?: string
   /** Optional supporting tags — Emergent "top signals" surface */
   signals?: string[]
 }
@@ -168,6 +171,7 @@ export function ProfileCard({
   onNudge,
   onMessage,
 }: ProfileCardProps) {
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
   const given = cardFirstName(profile)
   const displayAge =
     profile.age != null && profile.age > 0 ? profile.age : undefined
@@ -197,12 +201,23 @@ export function ProfileCard({
           onClick={() => onClick(profile.id)}
           className="flex flex-1 min-h-0 w-full flex-col overflow-hidden text-left"
         >
-          {/* Photo / silhouette — fixed height for uniform cards */}
+          {/* Photo / silhouette — portrait 3/4. Click expands (not navigate). */}
           <div className={cn('shrink-0 w-full overflow-hidden', MATCH_PHOTO_H)}>
             {isLocked || !profile.photo ? (
               <SilhouetteOverlay className={MATCH_PHOTO_H} />
             ) : (
-              <div className={cn('w-full overflow-hidden', MATCH_PHOTO_H)}>
+              <div
+                role="button"
+                tabIndex={-1}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpandedPhoto(profile.photo!)
+                }}
+                className={cn(
+                  'w-full overflow-hidden cursor-zoom-in',
+                  MATCH_PHOTO_H
+                )}
+              >
                 <img
                   src={profile.photo}
                   alt={profile.username}
@@ -279,6 +294,12 @@ export function ProfileCard({
               )}
             </div>
 
+            {!isLocked && profile.contrast && (
+              <p className="shrink-0 text-xs italic text-[color:var(--haevn-charcoal)]/40">
+                Where you might differ: {profile.contrast}
+              </p>
+            )}
+
             {isLocked && (
               <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
                 Tap the card or upgrade below to unlock photos, profiles, and messaging.
@@ -337,6 +358,34 @@ export function ProfileCard({
                 Connect
               </button>
             )}
+          </div>
+        )}
+
+        {/* Photo lightbox */}
+        {expandedPhoto && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+            onClick={() => setExpandedPhoto(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={expandedPhoto}
+              alt={profile.username}
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpandedPhoto(null)
+              }}
+              aria-label="Close"
+              className="absolute right-6 top-6 text-2xl text-white/70 transition-colors hover:text-white"
+            >
+              ✕
+            </button>
           </div>
         )}
       </div>

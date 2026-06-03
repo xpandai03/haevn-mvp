@@ -454,7 +454,7 @@ export default function ChatWithConnectionPage() {
                       hasImage && !hasPlainText ? 'p-1' : 'px-4 py-2.5'
                     } ${
                       isOwn
-                        ? 'border-transparent bg-haevn-orange text-white'
+                        ? 'border-transparent bg-haevn-navy text-white'
                         : 'border-[color:var(--haevn-border)] bg-white text-[color:var(--haevn-charcoal)]'
                     }`}
                   >
@@ -514,7 +514,7 @@ export default function ChatWithConnectionPage() {
             <div className="mt-3 flex gap-2">
               <Button
                 type="button"
-                className="flex-1 bg-haevn-orange text-white hover:bg-haevn-orange/90"
+                className="flex-1 bg-[color:var(--haevn-teal)] text-white hover:bg-[color:var(--haevn-teal-hover)]"
                 disabled={sending || uploading}
                 onClick={() => void handleShareMeetupSuggestion()}
               >

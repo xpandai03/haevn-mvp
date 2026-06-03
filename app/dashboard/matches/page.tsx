@@ -53,6 +53,26 @@ function buildIntro(match: ComputedMatchCard): string {
   return `${name} shares your strengths around ${factor.toLowerCase()}. With ${match.score}% alignment across key dimensions, this could be a meaningful connection.`
 }
 
+/** "Where you might differ" line, derived from the lowest-scoring dimension. */
+function buildContrast(
+  breakdown: Record<string, { score: number }>
+): string | undefined {
+  const labels: Record<string, string> = {
+    goals_expectations: 'goals and expectations',
+    structure_fit: 'relationship structure',
+    boundaries_comfort: 'boundaries and comfort',
+    sexual_energy: 'physical chemistry',
+    openness_curiosity: 'lifestyle and openness',
+  }
+  const entries = Object.entries(breakdown)
+  if (entries.length === 0) return undefined
+  const [lowKey] = entries.reduce(
+    (min, b) => (b[1].score < min[1].score ? b : min),
+    entries[0]
+  )
+  return `you may approach ${labels[lowKey] || lowKey} differently`
+}
+
 /** Pull up to 3 supporting signal tags from the breakdown */
 function getSignals(breakdown: Record<string, { score: number }>): string[] {
   const labels: Record<string, string> = {
@@ -269,7 +289,7 @@ export default function MatchesPage() {
   const visibleMatches = matches.slice(0, revealedCount)
 
   return (
-    <div className="w-full">
+    <div className="w-full min-h-screen bg-[#EEECEA]">
       {/* Header */}
       <header className="px-6 sm:px-10 pt-10 pb-6 border-b border-[color:var(--haevn-border)]">
         <div className="max-w-5xl mx-auto flex items-start justify-between gap-4">
@@ -400,6 +420,7 @@ export default function MatchesPage() {
                       compatibilityPercentage: match.score,
                       topFactor: getTopFactor(match.breakdown),
                       intro: buildIntro(match),
+                      contrast: buildContrast(match.breakdown),
                       signals: getSignals(match.breakdown),
                     }}
                     variant="match"
