@@ -10,6 +10,7 @@ import {
   haversineMiles,
 } from '@/lib/utils/matchCardDisplay'
 import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
+import { getHiddenMatchIds } from '@/lib/actions/hiddenMatches'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 
 // =============================================================================
@@ -166,6 +167,9 @@ export async function getComputedMatchCards(
     }
   }
 
+  // 1c. Fetch hidden (passed) matches still within their 30-day window for exclusion
+  const hiddenIds = await getHiddenMatchIds(currentPartnershipId)
+
   // 2. Deduplicate — keep only rows where we can identify the "other" partnership
   //    and filter by minimum tier, release_at, expires_at, and dismissed status
   const tierOrder = ['Platinum', 'Gold', 'Silver', 'Bronze'] as const
@@ -191,6 +195,9 @@ export async function getComputedMatchCards(
 
     // Filter out dismissed matches
     if (dismissedIds.has(otherId)) continue
+
+    // Filter out hidden (passed) matches within the 30-day window
+    if (hiddenIds.has(otherId)) continue
 
     // Filter by release_at (Match Monday) — only show if released or no release_at set
     if (m.release_at && m.release_at > now) continue

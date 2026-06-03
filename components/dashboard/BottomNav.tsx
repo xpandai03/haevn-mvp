@@ -10,36 +10,17 @@ import {
   Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useToast } from '@/hooks/use-toast'
 
 const TABS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
-  {
-    href: '/dashboard/meetups',
-    label: 'Meetups',
-    Icon: MapPin,
-  },
-  {
-    href: '#hidden',
-    label: 'Hidden',
-    Icon: Eye,
-    comingSoon: true,
-  },
+  { href: '/dashboard/hidden', label: 'Hidden', Icon: Eye },
+  { href: '/dashboard/meetups', label: 'Meetups', Icon: MapPin },
   { href: '/profile', label: 'Profile', Icon: UserIcon },
 ] as const
 
 export function BottomNav() {
   const pathname = usePathname() || ''
-  const { toast } = useToast()
-
-  const handleComingSoon = (label: string) => (e: React.MouseEvent) => {
-    e.preventDefault()
-    toast({
-      title: `${label} — coming soon`,
-      description: 'This feature is on the way.',
-    })
-  }
 
   return (
     <nav
@@ -51,23 +32,16 @@ export function BottomNav() {
       <div className="flex items-stretch justify-around h-16 max-w-lg mx-auto">
         {TABS.map((item) => {
           const { href, label, Icon } = item
-          const comingSoon = 'comingSoon' in item && item.comingSoon === true
           const active =
-            !comingSoon &&
-            (pathname === href || pathname.startsWith(`${href}/`))
+            pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
               key={label}
               href={href}
-              onClick={comingSoon ? handleComingSoon(label) : undefined}
               aria-current={active ? 'page' : undefined}
-              data-disabled={comingSoon ? 'true' : undefined}
               className={cn(
                 'flex flex-col items-center justify-center gap-1 min-w-[64px] px-3 transition-colors',
-                active
-                  ? 'text-[color:var(--haevn-gold)]'
-                  : 'text-[#4B5563]',
-                comingSoon && 'opacity-45'
+                active ? 'text-[color:var(--haevn-gold)]' : 'text-[#4B5563]'
               )}
             >
               <Icon size={22} strokeWidth={active ? 2 : 1.5} />

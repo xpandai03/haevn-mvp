@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Eye } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ProfileCard } from '@/components/dashboard/ProfileCard'
 import {
   getComputedMatchCards,
   type ComputedMatchCard,
 } from '@/lib/actions/computedMatchCards'
+import { getHiddenMatches, hideMatch } from '@/lib/actions/hiddenMatches'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useAuth } from '@/lib/auth/context'
+import { useToast } from '@/hooks/use-toast'
 import FullPageLoader from '@/components/ui/full-page-loader'
 
 /** Derive a "top factor" label from the highest-scoring category */
@@ -49,24 +53,28 @@ function getSignals(breakdown: Record<string, { score: number }>): string[] {
 
 export default function MatchesPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const [matches, setMatches] = useState<ComputedMatchCard[]>([])
   const [viewerTier, setViewerTier] = useState<'free' | 'plus'>('free')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [revealedCount, setRevealedCount] = useState(0)
+  const [hiddenCount, setHiddenCount] = useState(0)
 
   useEffect(() => {
     async function loadMatches() {
       if (authLoading || !user) return
       try {
         setLoading(true)
-        const [matchData, tier] = await Promise.all([
+        const [matchData, tier, hidden] = await Promise.all([
           getComputedMatchCards('Bronze'),
           getUserMembershipTier(),
+          getHiddenMatches(),
         ])
         setMatches(matchData)
         setViewerTier(tier)
+        setHiddenCount(hidden.length)
       } catch (err: any) {
         console.error('[Matches] Error:', err)
         setError(err.message || 'Failed to load matches')
@@ -76,6 +84,24 @@ export default function MatchesPage() {
     }
     loadMatches()
   }, [user, authLoading])
+
+  const handlePass = async (id: string) => {
+    // Optimistic: drop from the grid and bump the hidden count immediately.
+    const previous = matches
+    setMatches((prev) => prev.filter((m) => m.partnership.id !== id))
+    setHiddenCount((c) => c + 1)
+    const result = await hideMatch(id)
+    if (!result.success) {
+      // Roll back on failure.
+      setMatches(previous)
+      setHiddenCount((c) => Math.max(0, c - 1))
+      toast({
+        title: 'Could not hide match',
+        description: result.error || 'Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
 
   // Staggered reveal — one card every 700ms on initial load
   useEffect(() => {
@@ -90,16 +116,13 @@ export default function MatchesPage() {
 
   const isViewerFree = viewerTier === 'free'
 
-  const handleProfileClick = (id: string) => {
-    router.push(`/profiles/${id}`)
-  }
-
   const handleMatchCardClick = (id: string) => {
     if (isViewerFree) {
       router.push('/onboarding/membership')
       return
     }
-    handleProfileClick(id)
+    // HAEVN+ → bespoke match detail screen (not the generic profile view).
+    router.push(`/dashboard/matches/${id}`)
   }
 
   if (loading) return <FullPageLoader />
@@ -194,10 +217,24 @@ export default function MatchesPage() {
                         : undefined
                     }
                     onClick={handleMatchCardClick}
+                    onPass={!isViewerFree ? handlePass : undefined}
                   />
                 </motion.div>
               ))}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* Hidden matches link */}
+        {hiddenCount > 0 && (
+          <div className="mt-8 text-center">
+            <Link
+              href="/dashboard/hidden"
+              className="inline-flex items-center gap-2 text-sm text-[color:var(--haevn-muted-fg)] transition-colors hover:text-[color:var(--haevn-teal)]"
+            >
+              <Eye size={14} strokeWidth={1.5} />
+              {hiddenCount} hidden {hiddenCount === 1 ? 'match' : 'matches'}
+            </Link>
           </div>
         )}
       </main>

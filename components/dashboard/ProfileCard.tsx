@@ -13,7 +13,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { User, MapPin, MessageCircle, Lock } from 'lucide-react'
+import { User, MapPin, MessageCircle, Lock, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
@@ -65,6 +65,11 @@ export interface ProfileCardProps {
     state: ReadyToMeetUiState
     otherPartnershipId: string
   }
+  /**
+   * When provided on variant `match` (and not locked), renders a Pass (X)
+   * control that hides the match. Receives the profile id.
+   */
+  onPass?: (id: string) => void
 }
 
 function redactName(name: string) {
@@ -140,6 +145,7 @@ export function ProfileCard({
   nudgedAt,
   isLocked = false,
   readyToMeet,
+  onPass,
 }: ProfileCardProps) {
   const given = cardFirstName(profile)
   const displayAge =
@@ -151,7 +157,20 @@ export function ProfileCard({
   // --- MATCH variant: the flagship 3/4-photo architectural card --- //
   if (variant === 'match') {
     return (
-      <div className="dash-card group flex flex-col w-full h-full min-h-[460px] max-h-[520px] overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40">
+      <div className="dash-card group relative flex flex-col w-full h-full min-h-[460px] max-h-[520px] overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40">
+        {!isLocked && onPass && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onPass(profile.id)
+            }}
+            aria-label="Pass on this match"
+            className="keep-rounded absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center bg-white/90 text-red-400 shadow-sm transition-colors hover:bg-white hover:text-red-600"
+          >
+            <X className="h-4 w-4" strokeWidth={2} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onClick(profile.id)}

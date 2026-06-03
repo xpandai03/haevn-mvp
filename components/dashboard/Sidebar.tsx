@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
   Users as UsersIcon,
@@ -13,7 +13,6 @@ import {
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/lib/auth/context'
 
 interface SidebarProps {
@@ -25,17 +24,8 @@ interface SidebarProps {
 const NAV_LINKS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
-  {
-    href: '/dashboard/meetups',
-    label: 'Meetups',
-    Icon: MapPin,
-  },
-  {
-    href: '#hidden',
-    label: 'Hidden',
-    Icon: Eye,
-    comingSoon: true,
-  },
+  { href: '/dashboard/hidden', label: 'Hidden', Icon: Eye },
+  { href: '/dashboard/meetups', label: 'Meetups', Icon: MapPin },
   { href: '/profile', label: 'Profile', Icon: UserIcon },
 ] as const
 
@@ -45,8 +35,6 @@ export function Sidebar({
   isAdmin = false,
 }: SidebarProps) {
   const pathname = usePathname() || ''
-  const router = useRouter()
-  const { toast } = useToast()
   const { signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -60,14 +48,6 @@ export function Sidebar({
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [menuOpen])
-
-  const handleComingSoon = (label: string) => (e: React.MouseEvent) => {
-    e.preventDefault()
-    toast({
-      title: `${label} — coming soon`,
-      description: 'This feature is on the way.',
-    })
-  }
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -88,7 +68,7 @@ export function Sidebar({
   return (
     <aside
       data-testid="dash-sidebar"
-      className="hidden md:flex flex-col w-64 h-[calc(100vh-2.25rem)] fixed left-0 top-9 bg-white border-r border-[color:var(--haevn-border)] z-40"
+      className="hidden md:flex flex-col w-64 h-[calc(100vh-2.75rem)] fixed left-0 top-11 bg-white border-r border-[color:var(--haevn-border)] z-40"
     >
       {/* Logo */}
       <Link
@@ -110,21 +90,14 @@ export function Sidebar({
       <nav className="flex-1 px-3 space-y-1" aria-label="Primary">
         {NAV_LINKS.map((item) => {
           const { href, label, Icon } = item
-          const comingSoon = 'comingSoon' in item && item.comingSoon === true
           const active =
-            !comingSoon &&
-            (pathname === href || pathname.startsWith(`${href}/`))
+            pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
               key={label}
               href={href}
-              onClick={comingSoon ? handleComingSoon(label) : undefined}
               aria-current={active ? 'page' : undefined}
-              data-disabled={comingSoon ? 'true' : undefined}
-              className={cn(
-                'dash-nav-link text-sm',
-                active && 'font-medium'
-              )}
+              className={cn('dash-nav-link text-sm', active && 'font-medium')}
             >
               <Icon
                 size={18}
@@ -132,11 +105,6 @@ export function Sidebar({
                 className="shrink-0"
               />
               <span className="flex-1">{label}</span>
-              {comingSoon && (
-                <span className="text-[10px] tracking-wider uppercase text-[color:var(--haevn-muted-fg)]">
-                  Soon
-                </span>
-              )}
             </Link>
           )
         })}

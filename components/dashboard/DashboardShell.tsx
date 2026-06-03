@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { UpgradeBar } from './UpgradeBar'
+import { ContextBar } from './ContextBar'
 import { loadSidebarContext } from '@/lib/dashboard/loadSidebarContext'
 
 interface DashboardShellProps {
@@ -20,11 +21,15 @@ export async function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <div className="dash-layout min-h-screen">
-      {/* Sponsor bar — full-width, scrolls with the page. Visible to
-          every tier; placed above the sidebar/BottomNav/UpgradeBar. */}
-      <div className="w-full bg-black text-white text-center text-sm py-2 font-medium tracking-wide">
-        HAEVN
-      </div>
+      {/* Context bar — full-width, sticky. Shows who the user is viewing as
+          (free) or full-access status (HAEVN+). Replaces the old "HAEVN"
+          sponsor bar to match the Emergent demo. */}
+      <ContextBar
+        tier={ctx.tier}
+        firstName={ctx.firstName}
+        city={ctx.city}
+        intent={ctx.intent}
+      />
 
       <Sidebar tier={ctx.tier} userName={ctx.userName} isAdmin={ctx.isAdmin} />
 
