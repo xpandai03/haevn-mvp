@@ -35,7 +35,12 @@ export default async function AdminMatchingPage() {
             alt="HAEVN"
             className="h-10 sm:h-12"
           />
-          <div className="w-12" />
+          <a
+            href="/admin/import-users"
+            className="shrink-0 text-sm font-medium text-[#E29E0C] hover:text-[#C2850A]"
+          >
+            Import Users →
+          </a>
         </div>
       </header>
 
