@@ -4,9 +4,12 @@ export const MEETUP_MESSAGE_PREFIX = '__HAEVN_MEETUP:v1__'
 export type MeetupSuggestionPayload = {
   venue_name: string
   venue_type: string
+  /** Distance line — e.g. "You: ~1.0 mi · Alex: ~1.3 mi" */
   distance: string
   note: string
   emoji?: string
+  /** Optional helper line under the distances, e.g. "Roughly halfway…" */
+  subtitle?: string
 }
 
 export function encodeMeetupSuggestionMessage(payload: MeetupSuggestionPayload): string {

@@ -13,7 +13,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { User, MapPin, MessageCircle, Lock, X } from 'lucide-react'
+import { User, MapPin, MessageCircle, Lock, X, Check, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
@@ -39,6 +39,8 @@ export interface ProfileCardData {
   relationshipStructure?: string | null
   compatibilityPercentage: number
   topFactor: string
+  /** Written 2-3 line AI intro paragraph (preferred over topFactor when present) */
+  intro?: string
   /** Optional supporting tags — Emergent "top signals" surface */
   signals?: string[]
 }
@@ -70,6 +72,18 @@ export interface ProfileCardProps {
    * control that hides the match. Receives the profile id.
    */
   onPass?: (id: string) => void
+  /** Connection status for the match action row. */
+  connectionStatus?: 'none' | 'pending' | 'connected'
+  /** Handshake id (when connected) — used by the Message action. */
+  handshakeId?: string | null
+  /** True when the matched partnership is on the free plan (drives Nudge flow). */
+  matchIsFreeTier?: boolean
+  /** Locked (free-viewer) card: this match has nudged the viewer. */
+  hasNudgedYou?: boolean
+  /** Action callbacks for the match action row. */
+  onConnect?: (id: string) => void
+  onNudge?: (id: string) => void
+  onMessage?: (handshakeId: string) => void
 }
 
 function redactName(name: string) {
@@ -146,6 +160,13 @@ export function ProfileCard({
   isLocked = false,
   readyToMeet,
   onPass,
+  connectionStatus = 'none',
+  handshakeId,
+  matchIsFreeTier = false,
+  hasNudgedYou = false,
+  onConnect,
+  onNudge,
+  onMessage,
 }: ProfileCardProps) {
   const given = cardFirstName(profile)
   const displayAge =
@@ -157,7 +178,7 @@ export function ProfileCard({
   // --- MATCH variant: the flagship 3/4-photo architectural card --- //
   if (variant === 'match') {
     return (
-      <div className="dash-card group relative flex flex-col w-full h-full min-h-[460px] max-h-[520px] overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40">
+      <div className="dash-card group relative flex flex-col w-full h-full min-h-[500px] overflow-hidden transition-colors duration-200 hover:border-[color:var(--haevn-teal)]/40">
         {!isLocked && onPass && (
           <button
             type="button"
@@ -193,6 +214,18 @@ export function ProfileCard({
 
           {/* Body — fills remainder; overflow hidden keeps row height stable */}
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+            {/* Nudge-received banner (locked / free-viewer cards) */}
+            {isLocked && hasNudgedYou && (
+              <div className="-mx-4 -mt-4 mb-1 shrink-0 border-b border-[rgba(226,158,12,0.2)] bg-[rgba(226,158,12,0.1)] px-4 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--haevn-gold)]">
+                  Nudge received
+                </p>
+                <p className="mt-0.5 text-xs text-[color:var(--haevn-charcoal)]/60">
+                  This HAEVN+ member wants to connect with you. Upgrade to
+                  respond.
+                </p>
+              </div>
+            )}
             <div className="min-w-0 shrink-0">
               <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
                 {nameHeading}
@@ -226,24 +259,40 @@ export function ProfileCard({
               </div>
             )}
 
-            <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-2 min-h-0 mt-auto">
-              {isLocked
-                ? 'Full match context is available to HAEVN+ members.'
-                : profile.topFactor}
-            </p>
+            <div className="mt-auto min-h-0">
+              <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-3">
+                {isLocked
+                  ? 'Full match context is available to HAEVN+ members.'
+                  : profile.intro || profile.topFactor}
+              </p>
+              {isLocked && (
+                <button
+                  type="button"
+                  className="mt-1 text-xs text-[color:var(--haevn-teal)] hover:text-[color:var(--haevn-teal-hover)]"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClick(profile.id)
+                  }}
+                >
+                  Unlock to read more
+                </button>
+              )}
+            </div>
 
             {isLocked && (
               <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
                 Tap the card or upgrade below to unlock photos, profiles, and messaging.
               </p>
             )}
+          </div>
+        </button>
 
-            {!isLocked && readyToMeet && (
-              <div
-                className="mt-2 shrink-0 border-t border-[color:var(--haevn-border)] pt-3"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <p className="text-[10px] tracking-[0.14em] uppercase text-[color:var(--haevn-muted-fg)] mb-2">
+        {/* Footer (siblings of the clickable button — no nested buttons) */}
+        {!isLocked && (readyToMeet || connectionStatus || matchIsFreeTier) && (
+          <div className="shrink-0 space-y-3 border-t border-[color:var(--haevn-border)] p-4">
+            {readyToMeet && (
+              <div>
+                <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-[color:var(--haevn-muted-fg)]">
                   Meet IRL
                 </p>
                 <ReadyToMeetButton
@@ -252,8 +301,44 @@ export function ProfileCard({
                 />
               </div>
             )}
+
+            {/* Action row */}
+            {connectionStatus === 'connected' ? (
+              <button
+                type="button"
+                onClick={() => handshakeId && onMessage?.(handshakeId)}
+                className="flex w-full items-center justify-center gap-2 bg-[color:var(--haevn-teal)] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[color:var(--haevn-teal-hover)]"
+              >
+                <MessageCircle size={15} strokeWidth={2} /> Message
+              </button>
+            ) : connectionStatus === 'pending' ? (
+              <div className="flex w-full items-center justify-center gap-2 bg-[color:var(--haevn-dash-surface-alt)] py-2.5 text-sm font-medium text-[color:var(--haevn-muted-fg)]">
+                <Check size={15} strokeWidth={2} /> Request sent
+              </div>
+            ) : matchIsFreeTier ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onNudge?.(profile.id)}
+                  className="flex w-full items-center justify-center gap-2 bg-[color:var(--haevn-navy)] py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+                >
+                  <Bell size={15} strokeWidth={2} /> Nudge to Connect
+                </button>
+                <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--haevn-charcoal)]/60">
+                  {given} is on the free plan. Nudge to invite them to upgrade.
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onConnect?.(profile.id)}
+                className="haevn-btn-gold w-full text-sm"
+              >
+                Connect
+              </button>
+            )}
           </div>
-        </button>
+        )}
       </div>
     )
   }

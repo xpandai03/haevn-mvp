@@ -15,6 +15,11 @@ export function MeetupChatCard({ data }: { data: MeetupSuggestionPayload }) {
         <p className="mt-0.5 text-xs text-[color:var(--haevn-charcoal)]/70">
           {data.venue_type} · {data.distance}
         </p>
+        {data.subtitle && (
+          <p className="mt-0.5 text-[11px] italic text-[color:var(--haevn-muted-fg)]">
+            {data.subtitle}
+          </p>
+        )}
         <p className="mt-1 text-xs text-[color:var(--haevn-muted-fg)] leading-snug">
           {data.note}
         </p>

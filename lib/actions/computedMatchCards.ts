@@ -44,6 +44,11 @@ export interface ComputedMatchCard {
   saved: boolean
   /** Mutual "ready to meet" signal (see ready_to_meet_signals). */
   readyToMeet: ReadyToMeetUiState
+  /** Handshake/connection status with this match (drives card actions). */
+  connection: {
+    status: 'none' | 'pending' | 'connected'
+    handshakeId: string | null
+  }
 }
 
 /**
@@ -152,18 +157,34 @@ export async function getComputedMatchCards(
     return []
   }
 
-  // 1b. Fetch dismissed handshakes for exclusion (Item 4: permanent dismissal)
-  const { data: dismissedHandshakes } = await adminClient
+  // 1b. Fetch all handshakes involving the viewer — derive dismissed set
+  //     (for exclusion) and a connection-status map (for card actions).
+  const { data: viewerHandshakes } = await adminClient
     .from('handshakes')
-    .select('a_partnership, b_partnership')
+    .select('id, a_partnership, b_partnership, a_consent, b_consent, state')
     .or(`a_partnership.eq.${currentPartnershipId},b_partnership.eq.${currentPartnershipId}`)
-    .eq('state', 'dismissed')
 
   const dismissedIds = new Set<string>()
-  if (dismissedHandshakes) {
-    for (const h of dismissedHandshakes) {
-      if (h.a_partnership !== currentPartnershipId) dismissedIds.add(h.a_partnership)
-      if (h.b_partnership !== currentPartnershipId) dismissedIds.add(h.b_partnership)
+  const connectionMap = new Map<
+    string,
+    { status: 'none' | 'pending' | 'connected'; handshakeId: string | null }
+  >()
+  if (viewerHandshakes) {
+    for (const h of viewerHandshakes) {
+      const otherId =
+        h.a_partnership === currentPartnershipId
+          ? h.b_partnership
+          : h.a_partnership
+      if (h.state === 'dismissed') {
+        dismissedIds.add(otherId)
+        continue
+      }
+      const connected =
+        h.a_consent && h.b_consent && h.state === 'matched'
+      connectionMap.set(otherId, {
+        status: connected ? 'connected' : 'pending',
+        handshakeId: h.id,
+      })
     }
   }
 
@@ -383,6 +404,10 @@ export async function getComputedMatchCards(
       breakdown: parseBreakdown(match.breakdown),
       saved: match.saved,
       readyToMeet: 'none',
+      connection: connectionMap.get(match.otherPartnerId) || {
+        status: 'none',
+        handshakeId: null,
+      },
     })
   }
 

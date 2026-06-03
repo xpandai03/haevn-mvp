@@ -21,7 +21,7 @@ import {
 } from '@/lib/actions/computedMatchCards'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { hideMatch } from '@/lib/actions/hiddenMatches'
-import { sendNudge } from '@/lib/actions/nudges'
+import { sendHandshakeRequest } from '@/lib/actions/handshakes'
 import {
   getHandshakeIdForPartnerships,
   getMyPartnershipId,
@@ -74,6 +74,7 @@ export default function MatchDetailPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [handshakeId, setHandshakeId] = useState<string | null>(null)
   const [nudging, setNudging] = useState(false)
+  const [requested, setRequested] = useState(false)
 
   const isFree = tier === 'free'
 
@@ -136,9 +137,10 @@ export default function MatchDetailPage() {
 
   const handleConnect = async () => {
     setNudging(true)
-    const result = await sendNudge(matchId)
+    const result = await sendHandshakeRequest(matchId)
     setNudging(false)
     if (result.success) {
+      setRequested(true)
       toast({
         title: 'Connection request sent',
         description: `We let ${match?.partnership.first_name ?? 'them'} know you'd like to connect.`,
@@ -380,6 +382,10 @@ export default function MatchDetailPage() {
                 >
                   <MessageCircle size={16} strokeWidth={2} /> Message
                 </button>
+              ) : requested ? (
+                <div className="flex flex-1 items-center justify-center gap-2 bg-[color:var(--haevn-dash-surface-alt)] py-4 text-sm font-medium tracking-wide text-[color:var(--haevn-muted-fg)]">
+                  <Check size={16} strokeWidth={2} /> Request sent
+                </div>
               ) : (
                 <button
                   onClick={handleConnect}

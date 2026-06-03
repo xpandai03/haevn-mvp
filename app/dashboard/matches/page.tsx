@@ -11,6 +11,13 @@ import {
   type ComputedMatchCard,
 } from '@/lib/actions/computedMatchCards'
 import { getHiddenMatches, hideMatch } from '@/lib/actions/hiddenMatches'
+import { sendHandshakeRequest } from '@/lib/actions/handshakes'
+import { sendNudge, getReceivedNudges } from '@/lib/actions/nudges'
+import {
+  getCheckedInMatchIds,
+  submitCheckin,
+  type CheckinResponse,
+} from '@/lib/actions/checkins'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
@@ -32,6 +39,18 @@ function getTopFactor(breakdown: Record<string, { score: number }>): string {
     entries[0]
   )
   return `Top factor: ${labels[bestKey] || bestKey}`
+}
+
+/**
+ * Match intro prose for the card. Prefers the AI-generated connection summary;
+ * falls back to a templated 2-sentence blurb built from the score + top factor.
+ */
+function buildIntro(match: ComputedMatchCard): string {
+  const summary = match.partnership.connection_summary?.trim()
+  if (summary) return summary
+  const name = match.partnership.first_name || 'They'
+  const factor = getTopFactor(match.breakdown).replace(/^Top factor:\s*/i, '')
+  return `${name} shares your strengths around ${factor.toLowerCase()}. With ${match.score}% alignment across key dimensions, this could be a meaningful connection.`
 }
 
 /** Pull up to 3 supporting signal tags from the breakdown */
@@ -61,20 +80,38 @@ export default function MatchesPage() {
   const [error, setError] = useState<string | null>(null)
   const [revealedCount, setRevealedCount] = useState(0)
   const [hiddenCount, setHiddenCount] = useState(0)
+  const [nudgedYouIds, setNudgedYouIds] = useState<Set<string>>(new Set())
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set())
+  const [checkInDismissed, setCheckInDismissed] = useState(false)
 
   useEffect(() => {
     async function loadMatches() {
       if (authLoading || !user) return
       try {
         setLoading(true)
-        const [matchData, tier, hidden] = await Promise.all([
+        const [matchData, tier, hidden, checkedIn] = await Promise.all([
           getComputedMatchCards('Bronze'),
           getUserMembershipTier(),
           getHiddenMatches(),
+          getCheckedInMatchIds(),
         ])
         setMatches(matchData)
         setViewerTier(tier)
         setHiddenCount(hidden.length)
+        setCheckedInIds(new Set(checkedIn))
+
+        // Free viewers: figure out which matches have nudged them (for the
+        // "Nudge received" banner on locked cards).
+        if (tier === 'free') {
+          try {
+            const received = await getReceivedNudges()
+            setNudgedYouIds(
+              new Set(received.map((n) => n.senderPartnershipId))
+            )
+          } catch {
+            /* non-fatal */
+          }
+        }
       } catch (err: any) {
         console.error('[Matches] Error:', err)
         setError(err.message || 'Failed to load matches')
@@ -103,6 +140,78 @@ export default function MatchesPage() {
     }
   }
 
+  const setConnectionStatus = (
+    id: string,
+    status: 'none' | 'pending' | 'connected'
+  ) => {
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.partnership.id === id
+          ? { ...m, connection: { ...m.connection, status } }
+          : m
+      )
+    )
+  }
+
+  const handleConnect = async (id: string) => {
+    setConnectionStatus(id, 'pending') // optimistic
+    const result = await sendHandshakeRequest(id)
+    if (result.success) {
+      toast({
+        title: 'Request sent',
+        description: 'We let them know you’d like to connect.',
+      })
+    } else {
+      setConnectionStatus(id, 'none')
+      toast({
+        title: 'Could not send request',
+        description: result.error || 'Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleNudge = async (id: string) => {
+    setConnectionStatus(id, 'pending') // reuse pending visual ("Request sent")
+    const result = await sendNudge(id)
+    if (result.success) {
+      toast({ title: 'Nudge sent', description: 'They’ve been notified.' })
+    } else {
+      setConnectionStatus(id, 'none')
+      toast({
+        title: 'Could not nudge',
+        description: result.error || 'Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleMessage = (handshakeId: string) => {
+    router.push(`/chat/${handshakeId}`)
+  }
+
+  const handleCheckIn = async (id: string, response: CheckinResponse) => {
+    setCheckedInIds((prev) => new Set(prev).add(id))
+    const result = await submitCheckin(id, response)
+    if (result.success) {
+      toast({
+        title: 'Thanks for the feedback!',
+        description: 'We’ll use it to fine-tune your future matches.',
+      })
+    } else {
+      setCheckedInIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+      toast({
+        title: 'Could not save feedback',
+        description: result.error || 'Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   // Staggered reveal — one card every 700ms on initial load
   useEffect(() => {
     if (loading || matches.length === 0) return
@@ -117,13 +226,22 @@ export default function MatchesPage() {
   const isViewerFree = viewerTier === 'free'
 
   const handleMatchCardClick = (id: string) => {
-    if (isViewerFree) {
-      router.push('/onboarding/membership')
-      return
-    }
-    // HAEVN+ → bespoke match detail screen (not the generic profile view).
+    // Both tiers open the bespoke match detail screen. Free users see the
+    // redacted teaser there (silhouette + summaries + "Unlock this match")
+    // rather than a hard gate.
     router.push(`/dashboard/matches/${id}`)
   }
+
+  // Post-date check-in: first mutually ready-to-meet match without feedback yet.
+  const checkInMatch =
+    !isViewerFree && !checkInDismissed
+      ? matches.find(
+          (m) =>
+            m.readyToMeet === 'mutual' && !checkedInIds.has(m.partnership.id)
+        )
+      : undefined
+
+  const above80Count = matches.filter((m) => m.score >= 80).length
 
   if (loading) return <FullPageLoader />
 
@@ -173,6 +291,83 @@ export default function MatchesPage() {
 
       {/* Body */}
       <main className="max-w-5xl mx-auto px-6 sm:px-10 py-8 sm:py-12">
+        {/* Post-date check-in (mutual ready-to-meet) */}
+        {checkInMatch && (
+          <div className="dash-card mb-6 p-6">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[color:var(--haevn-muted-fg)]">
+              Post-date check-in
+            </p>
+            <p className="font-heading text-lg text-[color:var(--haevn-navy)]">
+              You and {checkInMatch.partnership.first_name} made plans to meet
+            </p>
+            <p className="mb-4 mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
+              How did it go? Your feedback helps us improve future matches.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <button
+                type="button"
+                onClick={() => handleCheckIn(checkInMatch.partnership.id, 'clicked')}
+                className="flex-1 border border-emerald-200 bg-emerald-50 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+              >
+                We clicked
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckIn(checkInMatch.partnership.id, 'okay')}
+                className="flex-1 border border-amber-200 bg-amber-50 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100"
+              >
+                It was okay
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckIn(checkInMatch.partnership.id, 'no_match')}
+                className="flex-1 border border-red-200 bg-red-50 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+              >
+                Not a match
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCheckInDismissed(true)}
+              className="mt-3 text-xs text-[color:var(--haevn-muted-fg)] underline underline-offset-2 hover:text-[color:var(--haevn-navy)]"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* System signal banner */}
+        {matches.length > 0 && (
+          <div className="dash-card mb-6 p-5">
+            <p className="font-heading text-base font-semibold text-[color:var(--haevn-navy)]">
+              {above80Count > 0 ? (
+                <>
+                  You currently have{' '}
+                  <span className="text-[color:var(--haevn-gold)]">
+                    {above80Count}{' '}
+                    {above80Count === 1 ? 'match' : 'matches'} above 80% alignment
+                  </span>
+                </>
+              ) : (
+                <>
+                  You have{' '}
+                  <span className="text-[color:var(--haevn-gold)]">
+                    {matches.length}{' '}
+                    {matches.length === 1 ? 'match' : 'matches'}
+                  </span>{' '}
+                  curated for you
+                </>
+              )}
+            </p>
+            <p className="mt-1 text-sm text-[color:var(--haevn-muted-fg)]">
+              New matches are evaluated weekly
+            </p>
+            <p className="mt-2 text-sm font-medium text-[color:var(--haevn-teal)]">
+              Click username to view full profile.
+            </p>
+          </div>
+        )}
+
         {matches.length === 0 ? (
           <EmptyMatchesState />
         ) : (
@@ -204,6 +399,7 @@ export default function MatchesPage() {
                         match.partnership.relationship_structure,
                       compatibilityPercentage: match.score,
                       topFactor: getTopFactor(match.breakdown),
+                      intro: buildIntro(match),
                       signals: getSignals(match.breakdown),
                     }}
                     variant="match"
@@ -216,8 +412,17 @@ export default function MatchesPage() {
                           }
                         : undefined
                     }
+                    connectionStatus={match.connection.status}
+                    handshakeId={match.connection.handshakeId}
+                    matchIsFreeTier={
+                      match.partnership.membership_tier === 'free'
+                    }
+                    hasNudgedYou={nudgedYouIds.has(match.partnership.id)}
                     onClick={handleMatchCardClick}
                     onPass={!isViewerFree ? handlePass : undefined}
+                    onConnect={!isViewerFree ? handleConnect : undefined}
+                    onNudge={!isViewerFree ? handleNudge : undefined}
+                    onMessage={!isViewerFree ? handleMessage : undefined}
                   />
                 </motion.div>
               ))}

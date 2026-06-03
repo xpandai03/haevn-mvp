@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Send, ImagePlus, MapPin } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, ImagePlus, MapPin, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/lib/auth/context'
@@ -21,12 +21,24 @@ import {
 } from '@/lib/chat/meetupMessage'
 
 /** Hardcoded midpoint-style suggestion until real geo + venue data ships. */
-const PLACEHOLDER_CHAT_MEETUP = {
+const PLACEHOLDER_CHAT_MEETUP_BASE = {
   venue_name: 'Blue Bottle Coffee',
   venue_type: 'Coffee',
-  distance: '2.3 miles from both of you',
   note: 'Based on your shared preference for coffee dates',
   emoji: '☕',
+}
+
+/**
+ * Build a meetup suggestion with per-user halfway distances. Distances are
+ * placeholder estimates (split around a ~2.3mi midpoint) until real geo ships.
+ */
+function buildMeetupSuggestion(matchDisplayName: string) {
+  const name = (matchDisplayName || 'them').split(' ')[0] || 'them'
+  return {
+    ...PLACEHOLDER_CHAT_MEETUP_BASE,
+    distance: `You: ~1.0 mi · ${name}: ~1.3 mi`,
+    subtitle: 'Roughly halfway between the two of you',
+  }
 }
 
 export default function ChatWithConnectionPage() {
@@ -43,6 +55,7 @@ export default function ChatWithConnectionPage() {
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [showMeetupSuggestion, setShowMeetupSuggestion] = useState(false)
+  const [icebreakers, setIcebreakers] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [myPartnershipId, setMyPartnershipId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -84,6 +97,20 @@ export default function ChatWithConnectionPage() {
         // Load messages using server action (admin client to bypass RLS)
         const msgs = await getMessagesForHandshake(connectionData.handshakeId)
         setMessages(msgs)
+
+        // Empty thread → fetch AI conversation starters (best effort)
+        if (msgs.length === 0) {
+          fetch('/api/ai/icebreakers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ handshakeId: connectionData.handshakeId }),
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (Array.isArray(d?.lines)) setIcebreakers(d.lines.slice(0, 3))
+            })
+            .catch(() => {})
+        }
 
         // Mark messages as read
         await markMessagesAsRead(connectionData.handshakeId, user.id)
@@ -145,7 +172,8 @@ export default function ChatWithConnectionPage() {
   const handleShareMeetupSuggestion = async () => {
     if (!connection || sending) return
     setSending(true)
-    const body = encodeMeetupSuggestionMessage(PLACEHOLDER_CHAT_MEETUP)
+    const payload = buildMeetupSuggestion(connection.partnership.display_name || '')
+    const body = encodeMeetupSuggestionMessage(payload)
     const result = await sendMessageAction(connection.handshakeId, body)
     if (result.error) {
       toast({
@@ -292,6 +320,9 @@ export default function ChatWithConnectionPage() {
   }
 
   const { partnership } = connection
+  const meetupPreview = buildMeetupSuggestion(partnership.display_name || '')
+  const matchFirstName =
+    (partnership.display_name || 'your match').split(' ')[0] || 'your match'
 
   // Get initials for avatar fallback
   const initials = partnership.display_name
@@ -336,16 +367,46 @@ export default function ChatWithConnectionPage() {
       {/* Messages Area */}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center border border-[color:var(--haevn-border)] bg-white">
-              <Send className="h-7 w-7 text-[color:var(--haevn-teal)]" strokeWidth={1.25} />
-            </div>
-            <p className="font-heading text-sm font-medium text-[color:var(--haevn-navy)]">
-              No messages yet
+          <div className="flex h-full flex-col items-center justify-center px-2 py-12 text-center">
+            <Avatar className="mb-4 h-14 w-14 border border-[color:var(--haevn-border)] keep-rounded">
+              {partnership.photo_url ? (
+                <AvatarImage src={partnership.photo_url} alt={matchFirstName} />
+              ) : (
+                <AvatarFallback className="bg-[color:var(--haevn-dash-surface-alt)] font-heading text-lg font-semibold text-[color:var(--haevn-navy)] keep-rounded">
+                  {initials}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <p className="font-heading text-lg font-semibold text-[color:var(--haevn-navy)]">
+              You matched with {matchFirstName}
             </p>
             <p className="mt-1 max-w-xs text-sm text-[color:var(--haevn-muted-fg)]">
-              Say hello to {partnership.display_name || 'your match'}.
+              Start the conversation — say something intentional.
             </p>
+
+            {icebreakers.length > 0 && (
+              <div className="mt-8 w-full max-w-sm text-left">
+                <p className="mb-3 flex items-center justify-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--haevn-muted-fg)]">
+                  <Sparkles className="h-3 w-3 text-[color:var(--haevn-gold)]" />
+                  Suggested opening lines
+                </p>
+                <div className="flex flex-col gap-2">
+                  {icebreakers.map((line, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setNewMessage(line)}
+                      className="rounded-[var(--radius)] border border-[color:var(--haevn-border)] bg-white px-4 py-3 text-left text-[13px] leading-relaxed text-[color:var(--haevn-charcoal)] transition-colors hover:border-[color:var(--haevn-teal)]/40 hover:bg-[#FFFCF5]"
+                    >
+                      {line}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-[color:var(--haevn-muted-fg)]">
+                  Based on your alignment with {matchFirstName}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -437,14 +498,16 @@ export default function ChatWithConnectionPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-heading text-sm font-semibold text-[color:var(--haevn-navy)]">
-                  {PLACEHOLDER_CHAT_MEETUP.emoji} {PLACEHOLDER_CHAT_MEETUP.venue_name}
+                  {meetupPreview.emoji} {meetupPreview.venue_name}
                 </p>
                 <p className="mt-0.5 text-xs text-[color:var(--haevn-charcoal)]/70">
-                  {PLACEHOLDER_CHAT_MEETUP.venue_type} ·{' '}
-                  {PLACEHOLDER_CHAT_MEETUP.distance}
+                  {meetupPreview.venue_type} · {meetupPreview.distance}
+                </p>
+                <p className="mt-0.5 text-[11px] italic text-[color:var(--haevn-charcoal)]/45">
+                  {meetupPreview.subtitle}
                 </p>
                 <p className="mt-1 text-xs text-[color:var(--haevn-charcoal)]/50">
-                  {PLACEHOLDER_CHAT_MEETUP.note}
+                  {meetupPreview.note}
                 </p>
               </div>
             </div>
