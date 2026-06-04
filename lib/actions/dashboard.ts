@@ -79,15 +79,29 @@ export async function getUserMembershipTier(): Promise<'free' | 'plus'> {
     // Get membership tier from partnership, not profiles
     const { data: membership } = await supabase
       .from('partnership_members')
-      .select('partnership:partnerships(membership_tier)')
+      .select('partnership:partnerships(membership_tier, membership_expires_at)')
       .eq('user_id', user.id)
       .order('role', { ascending: false }) // Prefer owner role
       .limit(1)
       .single()
 
-    const tier = (membership?.partnership as any)?.membership_tier
+    const partnership = (membership?.partnership as any) || {}
+    const tier = partnership.membership_tier
+    const expiresAt = partnership.membership_expires_at
+
     // Treat any non-free tier (plus, pro, select) as 'plus'
-    return tier && tier !== 'free' ? 'plus' : 'free'
+    const isPaid = tier && tier !== 'free'
+    if (!isPaid) return 'free'
+
+    // Read-time expiry enforcement: a paid tier whose membership_expires_at
+    // is in the past behaves as 'free' immediately — no cron required. Legacy
+    // paid rows with no expiry date keep their tier. A daily cleanup cron
+    // (/api/cron/downgrade-expired) syncs the DB so the badge matches.
+    if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+      return 'free'
+    }
+
+    return 'plus'
   } catch (error) {
     console.error('[getUserMembershipTier] Error:', error)
     return 'free'

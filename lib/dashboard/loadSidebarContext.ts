@@ -56,8 +56,13 @@ export async function loadSidebarContext(): Promise<SidebarContext> {
     // An earlier version of this file read `membership?.tier`, which was
     // always undefined and always rendered the sidebar as "Member".
     const rawTier = membership?.membership_tier
+    const expiresAt = membership?.membership_expires_at
+    // Read-time expiry: a paid tier past its expiry renders as "Member",
+    // matching getUserMembershipTier()'s gating so the badge can't claim
+    // HAEVN+ after the membership has lapsed.
+    const isExpired = !!expiresAt && new Date(expiresAt).getTime() < Date.now()
     const tier: SidebarContext['tier'] =
-      rawTier && rawTier !== 'free' ? 'plus' : 'free'
+      rawTier && rawTier !== 'free' && !isExpired ? 'plus' : 'free'
 
     return {
       authenticated: true,

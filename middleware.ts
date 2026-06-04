@@ -222,6 +222,12 @@ export async function middleware(request: NextRequest) {
             pathname.startsWith('/onboarding/verification/') ||
             pathname === '/onboarding/verification-complete'
 
+          // The membership/upgrade page lives under /onboarding/ but is also
+          // the upgrade surface for returning free users (e.g. clicking
+          // "Upgrade to Connect" on a locked match card). Those users HAVE
+          // completed onboarding — never bounce them away from it.
+          const isUpgradeRoute = pathname === '/onboarding/membership'
+
           console.log('[TRACE-MW] Onboarding completion check:', {
             hasPartnership: !!membership,
             completionPct: surveyData?.completion_pct,
@@ -232,7 +238,7 @@ export async function middleware(request: NextRequest) {
             error: surveyError?.message
           })
 
-          if (isComplete && !isVerificationRoute) {
+          if (isComplete && !isVerificationRoute && !isUpgradeRoute) {
             // User has completed onboarding, redirect to dashboard
             logOnboardingGate({
               email: user.email,
