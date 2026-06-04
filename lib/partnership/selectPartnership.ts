@@ -24,8 +24,6 @@ export interface SelectedPartnership {
   survey_reviewed: boolean
   joined_at: string
   membership_tier: 'free' | 'pro' | 'plus'
-  /** Paid-tier expiry; null for free/legacy rows. Used for read-time downgrade. */
-  membership_expires_at: string | null
   profile_state: 'draft' | 'pending' | 'live'
 }
 
@@ -57,7 +55,6 @@ export async function selectBestPartnership(
       partnerships!inner (
         id,
         membership_tier,
-        membership_expires_at,
         profile_state,
         updated_at
       )
@@ -102,7 +99,6 @@ export async function selectBestPartnership(
     survey_reviewed: selected.survey_reviewed || false,
     joined_at: selected.joined_at,
     membership_tier: partnership?.membership_tier || 'free',
-    membership_expires_at: partnership?.membership_expires_at ?? null,
     profile_state: partnership?.profile_state || 'draft'
   }
 

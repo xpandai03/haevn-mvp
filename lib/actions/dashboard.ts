@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import { isMembershipExpired } from '@/lib/partnership/membershipExpiry'
 
 /**
  * Get dashboard stats for the current user
@@ -76,19 +77,19 @@ export async function getUserMembershipTier(): Promise<'free' | 'plus'> {
   }
 
   try {
-    // Get membership tier from partnership, not profiles
+    // Get membership tier from partnership, not profiles. NOTE: this select
+    // intentionally reads only proven, always-present columns — membership
+    // expiry is checked separately (and defensively) below so a missing
+    // column can never break this shared lookup.
     const { data: membership } = await supabase
       .from('partnership_members')
-      .select('partnership:partnerships(membership_tier, membership_expires_at)')
+      .select('partnership_id, partnership:partnerships(membership_tier)')
       .eq('user_id', user.id)
       .order('role', { ascending: false }) // Prefer owner role
       .limit(1)
       .single()
 
-    const partnership = (membership?.partnership as any) || {}
-    const tier = partnership.membership_tier
-    const expiresAt = partnership.membership_expires_at
-
+    const tier = (membership?.partnership as any)?.membership_tier
     // Treat any non-free tier (plus, pro, select) as 'plus'
     const isPaid = tier && tier !== 'free'
     if (!isPaid) return 'free'
@@ -97,7 +98,8 @@ export async function getUserMembershipTier(): Promise<'free' | 'plus'> {
     // is in the past behaves as 'free' immediately — no cron required. Legacy
     // paid rows with no expiry date keep their tier. A daily cleanup cron
     // (/api/cron/downgrade-expired) syncs the DB so the badge matches.
-    if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+    // isMembershipExpired fails open, so this can never lock out a paid user.
+    if (await isMembershipExpired(supabase, (membership as any)?.partnership_id)) {
       return 'free'
     }
 

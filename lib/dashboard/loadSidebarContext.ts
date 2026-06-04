@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
+import { isMembershipExpired } from '@/lib/partnership/membershipExpiry'
 import { isAdminUser } from '@/lib/admin/allowlist'
 
 export interface SidebarContext {
@@ -56,13 +57,19 @@ export async function loadSidebarContext(): Promise<SidebarContext> {
     // An earlier version of this file read `membership?.tier`, which was
     // always undefined and always rendered the sidebar as "Member".
     const rawTier = membership?.membership_tier
-    const expiresAt = membership?.membership_expires_at
+    let tier: SidebarContext['tier'] =
+      rawTier && rawTier !== 'free' ? 'plus' : 'free'
     // Read-time expiry: a paid tier past its expiry renders as "Member",
     // matching getUserMembershipTier()'s gating so the badge can't claim
-    // HAEVN+ after the membership has lapsed.
-    const isExpired = !!expiresAt && new Date(expiresAt).getTime() < Date.now()
-    const tier: SidebarContext['tier'] =
-      rawTier && rawTier !== 'free' && !isExpired ? 'plus' : 'free'
+    // HAEVN+ after the membership has lapsed. Checked in isolation (and
+    // fail-open) so a missing membership_expires_at column can't break the
+    // sidebar — it just leaves the badge un-downgraded until migration 040.
+    if (
+      tier === 'plus' &&
+      (await isMembershipExpired(adminClient, membership?.partnership_id))
+    ) {
+      tier = 'free'
+    }
 
     return {
       authenticated: true,
