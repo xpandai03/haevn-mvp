@@ -15,16 +15,16 @@ export function initLemonSqueezy() {
  * Lemonsqueezy configuration sourced from env, with the live product variant
  * ids hardcoded as defaults so checkout works immediately without Vercel env
  * changes. Both HAEVN+ products are one-time payments:
- *   - plus6  → HAEVN+ 6 months  ($199)  variant 1106116
- *   - plus12 → HAEVN+ 12 months ($299)  variant 1106168
+ *   - plus6  → HAEVN+ 6 months  ($199)  variant 1732138
+ *   - plus12 → HAEVN+ 12 months ($299)  variant 1732215
  * Env vars still override the defaults when present.
  */
 export const LEMONSQUEEZY_CONFIG = {
   storeId: process.env.LEMONSQUEEZY_STORE_ID!,
   webhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET!,
   variants: {
-    plus6: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_6 || '1106116',
-    plus12: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_12 || '1106168',
+    plus6: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_6 || '1732138',
+    plus12: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_12 || '1732215',
   },
   /**
    * @deprecated Legacy single-variant env. Retained for back-compat; falls
@@ -33,7 +33,7 @@ export const LEMONSQUEEZY_CONFIG = {
   variantIdPlus:
     process.env.LEMONSQUEEZY_VARIANT_ID_PLUS ||
     process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_6 ||
-    '1106116',
+    '1732138',
 } as const
 
 /** Plan ids exposed to clients. */
