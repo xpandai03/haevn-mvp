@@ -62,6 +62,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment not configured' }, { status: 500 })
     }
 
+    // Pre-flight diagnostics — logs config presence (NOT secret values) and
+    // the exact identifiers used, so a 500 in the Vercel logs immediately
+    // shows whether it's a missing key, wrong store, or bad variant id.
+    const apiKey = process.env.LEMONSQUEEZY_API_KEY || ''
+    console.log('[Lemonsqueezy] Checkout attempt', {
+      plan,
+      variantId,
+      storeId: LEMONSQUEEZY_CONFIG.storeId,
+      apiKeyPresent: !!apiKey,
+      apiKeyLength: apiKey.length,
+      // Test-mode keys are prefixed with the mode; surface just the prefix so
+      // we can tell test vs live keys apart without leaking the secret.
+      apiKeyPrefix: apiKey ? apiKey.slice(0, 8) : null,
+      webhookSecretPresent: !!process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
+      partnershipId,
+    })
+
+    if (!apiKey) {
+      console.error('[Lemonsqueezy] LEMONSQUEEZY_API_KEY is not set')
+      return NextResponse.json({ error: 'Payment not configured' }, { status: 500 })
+    }
+
     // 4. Create the checkout.
     initLemonSqueezy()
 
@@ -88,13 +110,57 @@ export async function POST(request: NextRequest) {
     const checkoutUrl = checkout.data?.data?.attributes?.url
 
     if (!checkoutUrl) {
-      console.error('[Lemonsqueezy] Checkout creation failed:', checkout.error || checkout)
-      return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 })
+      // The SDK returns { data, error, statusCode } and does NOT throw on a
+      // 4xx — the real reason (e.g. "Variant not found", invalid store, bad
+      // API key) lives in checkout.error / statusCode. Serialize it fully so
+      // it's readable in the Vercel logs rather than "[object Object]".
+      const lsError = checkout.error as any
+      console.error('[Lemonsqueezy] Checkout creation failed', {
+        statusCode: checkout.statusCode,
+        errorMessage: lsError?.message,
+        // The JSON:API error body (array of { detail, ... }) is the goldmine.
+        errorBody: safeStringify(lsError?.cause ?? lsError),
+        rawError: safeStringify(lsError),
+        variantId,
+        storeId: LEMONSQUEEZY_CONFIG.storeId,
+      })
+      return NextResponse.json(
+        {
+          error: 'Failed to create checkout',
+          // Non-secret upstream detail to aid debugging from the client too.
+          detail: lsError?.message || `Lemonsqueezy returned status ${checkout.statusCode ?? 'unknown'}`,
+          statusCode: checkout.statusCode ?? null,
+        },
+        { status: 502 }
+      )
     }
 
+    console.log('[Lemonsqueezy] Checkout created', { variantId, hasUrl: true })
     return NextResponse.json({ checkoutUrl })
   } catch (err: any) {
-    console.error('[Lemonsqueezy] Checkout error:', err?.message)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[Lemonsqueezy] Checkout threw', {
+      message: err?.message,
+      name: err?.name,
+      cause: safeStringify(err?.cause),
+      stack: err?.stack,
+    })
+    return NextResponse.json(
+      { error: 'Internal server error', detail: err?.message || null },
+      { status: 500 }
+    )
+  }
+}
+
+/** JSON.stringify that won't throw on circular refs / odd shapes. */
+function safeStringify(value: unknown): string | null {
+  if (value == null) return null
+  try {
+    return typeof value === 'string' ? value : JSON.stringify(value)
+  } catch {
+    try {
+      return String(value)
+    } catch {
+      return null
+    }
   }
 }
