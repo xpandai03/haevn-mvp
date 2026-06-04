@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { UpgradeBar } from './UpgradeBar'
-import { ContextBar } from './ContextBar'
 import { loadSidebarContext } from '@/lib/dashboard/loadSidebarContext'
 
 interface DashboardShellProps {
@@ -21,15 +20,11 @@ export async function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <div className="dash-layout min-h-screen">
-      {/* Context bar — full-width, sticky. Shows who the user is viewing as
-          (free) or full-access status (HAEVN+). Replaces the old "HAEVN"
-          sponsor bar to match the Emergent demo. */}
-      <ContextBar
-        tier={ctx.tier}
-        firstName={ctx.firstName}
-        city={ctx.city}
-        intent={ctx.intent}
-      />
+      {/* Brand bar — simple, centered. Production design (the Emergent
+          "Viewing as …" / view-as-member toggle was removed). */}
+      <div className="w-full bg-black text-white text-center text-sm py-2 font-medium tracking-wide">
+        HAEVN
+      </div>
 
       <Sidebar tier={ctx.tier} userName={ctx.userName} isAdmin={ctx.isAdmin} />
 

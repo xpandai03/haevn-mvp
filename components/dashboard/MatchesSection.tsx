@@ -238,32 +238,12 @@ export function MatchesSection({
             <p className="text-sm text-gray-600 mb-6">
               Sending connection requests is a premium feature. Upgrade your membership to start connecting with your matches.
             </p>
-            <button
-              className="w-full h-11 bg-haevn-orange hover:bg-haevn-orange/90 text-white font-semibold rounded-full mb-3 transition-colors disabled:opacity-60"
-              disabled={upgrading}
-              onClick={async () => {
-                setUpgrading(true)
-                try {
-                  const res = await fetch('/api/lemonsqueezy/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan: 'plus_6' }),
-                  })
-                  const data = await res.json()
-                  if (res.ok && data.checkoutUrl) {
-                    window.location.href = data.checkoutUrl
-                    return
-                  }
-                  toast({ title: 'Unable to start checkout', description: data.error || 'Please try again.', variant: 'destructive' })
-                } catch {
-                  toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' })
-                } finally {
-                  setUpgrading(false)
-                }
-              }}
+            <Link
+              href="/onboarding/membership"
+              className="flex items-center justify-center w-full h-11 bg-haevn-orange hover:bg-haevn-orange/90 text-white font-semibold rounded-full mb-3 transition-colors"
             >
-              {upgrading ? 'Starting checkout…' : 'Upgrade Now'}
-            </button>
+              Upgrade Now
+            </Link>
             <button
               className="w-full h-11 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
               onClick={() => setShowUpgradeModal(false)}

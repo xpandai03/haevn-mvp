@@ -66,7 +66,8 @@ export function UpgradeBar({ tier, delayMs = 15_000 }: UpgradeBarProps) {
         </p>
         <Link
           href="/onboarding/membership"
-          className="hidden sm:inline-flex text-sm font-medium underline underline-offset-2 decoration-white/60 hover:decoration-white whitespace-nowrap"
+          data-testid="upgrade-link"
+          className="inline-flex shrink-0 items-center text-sm font-semibold underline underline-offset-2 decoration-white/70 hover:decoration-white whitespace-nowrap"
         >
           Upgrade
         </Link>

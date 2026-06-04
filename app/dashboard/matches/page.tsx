@@ -246,9 +246,12 @@ export default function MatchesPage() {
   const isViewerFree = viewerTier === 'free'
 
   const handleMatchCardClick = (id: string) => {
-    // Both tiers open the bespoke match detail screen. Free users see the
-    // redacted teaser there (silhouette + summaries + "Unlock this match")
-    // rather than a hard gate.
+    // Free viewers can't open a match — tapping a locked card drives the
+    // upgrade. Paid members open the bespoke match detail screen.
+    if (isViewerFree) {
+      router.push('/onboarding/membership')
+      return
+    }
     router.push(`/dashboard/matches/${id}`)
   }
 

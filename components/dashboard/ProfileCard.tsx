@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -171,6 +172,7 @@ export function ProfileCard({
   onNudge,
   onMessage,
 }: ProfileCardProps) {
+  const router = useRouter()
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
   const given = cardFirstName(profile)
   const displayAge =
@@ -242,10 +244,18 @@ export function ProfileCard({
               </div>
             )}
             <div className="min-w-0 shrink-0">
-              <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
-                {nameHeading}
-              </h3>
-              {!isLocked && formatDemographicsLine(profile) && (
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading text-xl text-[color:var(--haevn-navy)] leading-tight truncate">
+                  {nameHeading}
+                </h3>
+                {!matchIsFreeTier && (
+                  <span className="shrink-0 bg-haevn-orange px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                    HAEVN+
+                  </span>
+                )}
+              </div>
+              {/* Demographics — visible even on locked cards (the teaser). */}
+              {formatDemographicsLine(profile) && (
                 <p className="mt-1 text-sm text-[color:var(--haevn-charcoal)]/60 truncate">
                   {formatDemographicsLine(profile)}
                 </p>
@@ -261,7 +271,7 @@ export function ProfileCard({
               </span>
             </div>
 
-            {!isLocked && profile.signals && profile.signals.length > 0 && (
+            {profile.signals && profile.signals.length > 0 && (
               <div className="flex flex-wrap gap-1.5 min-h-0 max-h-[2.75rem] overflow-hidden">
                 {profile.signals.slice(0, 3).map((signal) => (
                   <span
@@ -275,10 +285,9 @@ export function ProfileCard({
             )}
 
             <div className="mt-auto min-h-0">
+              {/* AI intro — shown to free users too (truncated) as the teaser. */}
               <p className="text-[14px] text-[color:var(--haevn-charcoal)] leading-relaxed italic line-clamp-3">
-                {isLocked
-                  ? 'Full match context is available to HAEVN+ members.'
-                  : profile.intro || profile.topFactor}
+                {profile.intro || profile.topFactor}
               </p>
               {isLocked && (
                 <button
@@ -299,17 +308,24 @@ export function ProfileCard({
                 Where you might differ: {profile.contrast}
               </p>
             )}
-
-            {isLocked && (
-              <p className="text-[12px] text-[color:var(--haevn-muted-fg)] pt-2 border-t border-[color:var(--haevn-border)] shrink-0">
-                Tap the card or upgrade below to unlock photos, profiles, and messaging.
-              </p>
-            )}
           </div>
         </button>
 
         {/* Footer (siblings of the clickable button — no nested buttons) */}
-        {!isLocked && (readyToMeet || connectionStatus || matchIsFreeTier) && (
+        {isLocked ? (
+          <div className="shrink-0 border-t border-[color:var(--haevn-border)] p-4">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                router.push('/onboarding/membership')
+              }}
+              className="haevn-btn-gold flex w-full items-center justify-center gap-2 text-sm"
+            >
+              <Lock size={15} strokeWidth={2} /> Upgrade to Connect
+            </button>
+          </div>
+        ) : (readyToMeet || connectionStatus || matchIsFreeTier) ? (
           <div className="shrink-0 space-y-3 border-t border-[color:var(--haevn-border)] p-4">
             {readyToMeet && (
               <div>
@@ -359,7 +375,7 @@ export function ProfileCard({
               </button>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* Photo lightbox */}
         {expandedPhoto && (
