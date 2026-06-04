@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
+import { useAuth } from '@/lib/auth/context'
 
 /**
  * Lemonsqueezy redirects here after a successful payment (productOptions.redirectUrl).
@@ -11,21 +12,34 @@ import { Check } from 'lucide-react'
  */
 export default function UpgradeSuccessPage() {
   const router = useRouter()
+  const { refreshSession } = useAuth()
   const [countdown, setCountdown] = useState(5)
+
+  // Refresh the session so the dashboard's server-side tier read reflects the
+  // webhook's HAEVN+ flip (the webhook may land a beat after the redirect).
+  useEffect(() => {
+    refreshSession().catch(() => {})
+  }, [refreshSession])
+
+  const goToDashboard = () => {
+    router.refresh()
+    router.replace('/dashboard/matches')
+  }
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          router.replace('/dashboard/matches')
+          goToDashboard()
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="min-h-screen bg-haevn-navy flex items-center justify-center">
@@ -41,7 +55,7 @@ export default function UpgradeSuccessPage() {
           Redirecting to your matches in {countdown}...
         </p>
         <button
-          onClick={() => router.replace('/dashboard/matches')}
+          onClick={goToDashboard}
           className="mt-6 bg-haevn-orange text-white px-8 py-3 rounded-full font-medium hover:bg-haevn-orange/90 transition-colors"
         >
           View My Matches

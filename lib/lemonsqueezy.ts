@@ -12,24 +12,58 @@ export function initLemonSqueezy() {
 }
 
 /**
- * Lemonsqueezy configuration sourced from env.
- *
- * `variantIdPlus` maps the HAEVN+ membership package to a Lemonsqueezy product
- * variant. It is intentionally allowed to be empty until the product is created
- * in the Lemonsqueezy dashboard — the checkout route returns a clear error when
- * it is missing rather than failing silently.
+ * Lemonsqueezy configuration sourced from env, with the live product variant
+ * ids hardcoded as defaults so checkout works immediately without Vercel env
+ * changes. Both HAEVN+ products are one-time payments:
+ *   - plus6  → HAEVN+ 6 months  ($199)  variant 1106116
+ *   - plus12 → HAEVN+ 12 months ($299)  variant 1106168
+ * Env vars still override the defaults when present.
  */
 export const LEMONSQUEEZY_CONFIG = {
   storeId: process.env.LEMONSQUEEZY_STORE_ID!,
-  variantIdPlus: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS || '',
   webhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET!,
+  variants: {
+    plus6: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_6 || '1106116',
+    plus12: process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_12 || '1106168',
+  },
+  /**
+   * @deprecated Legacy single-variant env. Retained for back-compat; falls
+   * back to the 6-month variant so existing `{ tier: 'plus' }` callers work.
+   */
+  variantIdPlus:
+    process.env.LEMONSQUEEZY_VARIANT_ID_PLUS ||
+    process.env.LEMONSQUEEZY_VARIANT_ID_PLUS_6 ||
+    '1106116',
 } as const
 
-/** Maps a membership tier to its configured Lemonsqueezy variant id. */
+/** Plan ids exposed to clients. */
+export type LemonPlan = 'plus_6' | 'plus_12'
+
+/** Months of HAEVN+ access granted per plan. */
+export function accessMonthsForPlan(plan: string): number {
+  return plan === 'plus_12' ? 12 : 6
+}
+
+/** Maps a plan id to its configured Lemonsqueezy variant id ('' if unknown). */
+export function variantIdForPlan(plan: string): string {
+  switch (plan) {
+    case 'plus_12':
+      return LEMONSQUEEZY_CONFIG.variants.plus12
+    case 'plus_6':
+      return LEMONSQUEEZY_CONFIG.variants.plus6
+    default:
+      return ''
+  }
+}
+
+/**
+ * Back-compat: maps a membership tier to a variant id. `plus` resolves to the
+ * 6-month (Most Popular) product.
+ */
 export function variantIdForTier(tier: string): string {
   switch (tier) {
     case 'plus':
-      return LEMONSQUEEZY_CONFIG.variantIdPlus
+      return LEMONSQUEEZY_CONFIG.variants.plus6
     default:
       return ''
   }

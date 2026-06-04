@@ -17,9 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-/** Number of months of HAEVN+ access granted per purchase. */
-const ACCESS_MONTHS = 6
+import { accessMonthsForPlan } from '@/lib/lemonsqueezy'
 
 /**
  * Verify the Lemonsqueezy webhook signature.
@@ -91,9 +89,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, already_processed: true })
       }
 
-      // 4. Compute expiry.
+      // 4. Compute expiry from the selected plan (plus_6 → 6mo, plus_12 → 12mo).
+      const months = accessMonthsForPlan(customData.plan)
       const expiresAt = new Date()
-      expiresAt.setMonth(expiresAt.getMonth() + ACCESS_MONTHS)
+      expiresAt.setMonth(expiresAt.getMonth() + months)
 
       // 5. Flip membership tier.
       const { error: updateError } = await supabase

@@ -247,7 +247,7 @@ export function MatchesSection({
                   const res = await fetch('/api/lemonsqueezy/checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tier: 'plus' }),
+                    body: JSON.stringify({ plan: 'plus_6' }),
                   })
                   const data = await res.json()
                   if (res.ok && data.checkoutUrl) {

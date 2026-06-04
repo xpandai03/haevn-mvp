@@ -8,57 +8,63 @@ import { useAuth } from '@/lib/auth/context'
 import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
 import { useToast } from '@/hooks/use-toast'
 
-const tiers = [
+type PlanId = 'free' | 'plus_6' | 'plus_12'
+
+/** Benefits shared by both HAEVN+ products. */
+const PLUS_BENEFITS = [
+  'View full match profiles',
+  'Connect and message your matches',
+  'See detailed compatibility breakdowns',
+  'Access meetup recommendations',
+  'Ready to Meet signals',
+]
+
+interface PlanCard {
+  id: PlanId
+  name: string
+  badge?: string
+  price: string
+  priceSub: string
+  note?: string
+  features: string[]
+  cta: string
+  emphasized?: boolean
+}
+
+const PLANS: PlanCard[] = [
   {
     id: 'free',
-    name: 'HAEVN Free',
+    name: 'Free',
     price: '$0',
-    period: 'Forever',
-    description: 'Get started with basic features',
+    priceSub: 'Forever',
     features: [
-      'View compatibility scores',
-      'Limited daily matches',
-      'Basic profile'
+      'See your match count and compatibility scores',
+      'Build your profile and add photos',
+      'Upgrade anytime to unlock full access',
     ],
-    limitations: [
-      'No messaging',
-      'No photo sharing',
-      'No advanced filters'
-    ]
+    cta: 'Continue with Free',
   },
   {
-    id: 'plus',
-    name: 'HAEVN Plus',
-    price: 'One-time',
-    period: 'Full access',
-    description: 'Full access to connections',
-    features: [
-      'Unlimited matches',
-      'Send connections and nudges',
-      'Chat after connection',
-      'Share photos',
-      'Advanced filters',
-      'Priority support'
-    ],
-    limitations: [],
-    popular: true
+    id: 'plus_6',
+    name: 'HAEVN+',
+    badge: 'Most Popular',
+    price: '$199',
+    priceSub: 'for 6 months',
+    note: 'One-time payment',
+    features: PLUS_BENEFITS,
+    cta: 'Get HAEVN+ 6 Months',
+    emphasized: true,
   },
   {
-    id: 'select',
-    name: 'HAEVN Select',
-    price: 'One-time',
-    period: 'Premium access',
-    description: 'Premium concierge experience',
-    features: [
-      'Everything in HAEVN Plus',
-      'Verified badge',
-      'Concierge matchmaking',
-      'First access to new features',
-      'Exclusive events',
-      'Background verification'
-    ],
-    limitations: []
-  }
+    id: 'plus_12',
+    name: 'HAEVN+ Annual',
+    badge: 'Best Value',
+    price: '$299',
+    priceSub: 'for 12 months',
+    note: 'One-time payment · Save $99',
+    features: PLUS_BENEFITS,
+    cta: 'Get HAEVN+ 12 Months',
+  },
 ]
 
 export default function MembershipPage() {
@@ -66,49 +72,40 @@ export default function MembershipPage() {
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const flowController = getClientOnboardingFlowController()
-  const [selectedTier, setSelectedTier] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
 
   useEffect(() => {
-    if (authLoading) return // Wait for auth to finish loading
-    if (!user) {
-      router.push('/auth/login')
-    }
+    if (authLoading) return
+    if (!user) router.push('/auth/login')
   }, [user, authLoading, router])
 
-  const handleSelectTier = async (tierId: string) => {
-    if (!user) return
-
-    setSelectedTier(tierId)
-    setLoading(true)
+  const handleSelectPlan = async (plan: PlanId) => {
+    if (!user || loadingPlan) return
+    setLoadingPlan(plan)
 
     try {
-      // Membership is step 7 in the new flow.
-      if (tierId === 'free') {
+      // Free → mark membership step (7) complete and continue to verification.
+      if (plan === 'free') {
         await flowController.markStepComplete(user.id, 7)
         toast({
-          title: 'Welcome to HAEVN Free!',
+          title: 'Welcome to HAEVN',
           description: 'You can upgrade anytime from your dashboard.',
         })
-        // After membership, verification is the final gate before dashboard.
-        // It is skippable while FEATURE_FLAGS.requireVerification is false.
-        setTimeout(() => {
-          router.push('/onboarding/verification')
-        }, 500)
+        setTimeout(() => router.push('/onboarding/verification'), 400)
         return
       }
 
-      // Paid tier — create a Lemonsqueezy checkout and redirect to pay.
-      const response = await fetch('/api/lemonsqueezy/checkout', {
+      // Paid plan → create a Lemonsqueezy checkout and redirect to pay.
+      const res = await fetch('/api/lemonsqueezy/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier: tierId }),
+        body: JSON.stringify({ plan }),
       })
-      const data = await response.json()
+      const data = await res.json()
 
-      if (response.ok && data.checkoutUrl) {
-        // Mark step complete before leaving for the hosted checkout. The tier
-        // flip itself happens server-side via the webhook once payment clears.
+      if (res.ok && data.checkoutUrl) {
+        // Mark the step complete before leaving for hosted checkout. The tier
+        // flip happens server-side via the webhook once payment clears.
         await flowController.markStepComplete(user.id, 7)
         window.location.href = data.checkoutUrl
         return
@@ -119,15 +116,15 @@ export default function MembershipPage() {
         description: data.error || 'Please try again.',
         variant: 'destructive',
       })
-      setLoading(false)
+      setLoadingPlan(null)
     } catch (error) {
-      console.error('Error updating membership:', error)
+      console.error('[Membership] checkout error:', error)
       toast({
-        title: 'Error',
-        description: 'Failed to update membership. Please try again.',
-        variant: 'destructive'
+        title: 'Something went wrong',
+        description: 'Please try again.',
+        variant: 'destructive',
       })
-      setLoading(false)
+      setLoadingPlan(null)
     }
   }
 
@@ -143,161 +140,113 @@ export default function MembershipPage() {
               fontSize: '36px',
               lineHeight: '100%',
               letterSpacing: '-0.015em',
-              textAlign: 'left'
+              textAlign: 'left',
             }}
           >
             Choose your membership
           </h1>
           <p
             className="text-haevn-charcoal"
-            style={{
-              fontWeight: 300,
-              fontSize: '18px',
-              lineHeight: '120%',
-              textAlign: 'left'
-            }}
+            style={{ fontWeight: 300, fontSize: '18px', lineHeight: '120%' }}
           >
-            Select the plan that works best for you. HAEVN+ is a one-time payment for full access.
+            HAEVN+ is a one-time payment for full access — no recurring
+            subscription. Pick the length that works for you.
           </p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {tiers.map((tier) => (
-            <div
-              key={tier.id}
-              className={`relative bg-white rounded-3xl p-8 shadow-sm transition-all ${
-                selectedTier === tier.id ? 'ring-2 ring-haevn-teal' : ''
-              }`}
-            >
-              {tier.popular && (
-                <div className="absolute -top-3 left-8">
-                  <span
-                    className="bg-haevn-orange text-white px-4 py-1 rounded-full"
-                    style={{
-                      fontWeight: 500,
-                      fontSize: '12px'
-                    }}
-                  >
-                    Most popular
-                  </span>
-                </div>
-              )}
-
-              {/* Tier Name */}
-              <h3
-                className="font-heading text-haevn-navy mb-2"
-                style={{
-                  fontWeight: 700,
-                  fontSize: '24px',
-                  lineHeight: '100%',
-                  letterSpacing: '-0.015em',
-                  textAlign: 'left'
-                }}
+        <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
+          {PLANS.map((plan) => {
+            const isLoading = loadingPlan === plan.id
+            return (
+              <div
+                key={plan.id}
+                className={`relative flex flex-col rounded-3xl bg-white p-8 shadow-sm transition-all ${
+                  plan.emphasized
+                    ? 'border-2 border-haevn-orange shadow-md md:-mt-2 md:mb-2'
+                    : 'border border-gray-100'
+                }`}
               >
-                {tier.name}
-              </h3>
+                {plan.badge && (
+                  <div className="absolute -top-3 left-8">
+                    <span
+                      className={`rounded-full px-4 py-1 text-white ${
+                        plan.emphasized ? 'bg-haevn-orange' : 'bg-haevn-teal'
+                      }`}
+                      style={{ fontWeight: 500, fontSize: '12px' }}
+                    >
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
 
-              {/* Description */}
-              <p
-                className="text-haevn-charcoal mb-6"
-                style={{
-                  fontWeight: 300,
-                  fontSize: '14px',
-                  lineHeight: '120%',
-                  textAlign: 'left'
-                }}
-              >
-                {tier.description}
-              </p>
+                {/* Name */}
+                <h3
+                  className="font-heading text-haevn-navy mb-1"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '24px',
+                    lineHeight: '100%',
+                    letterSpacing: '-0.015em',
+                  }}
+                >
+                  {plan.name}
+                </h3>
 
-              {/* Price */}
-              <div className="mb-6">
-                <div className="flex items-baseline gap-1">
+                {/* Price */}
+                <div className="mb-1 mt-4 flex items-baseline gap-2">
                   <span
                     className="text-haevn-navy"
-                    style={{
-                      fontWeight: 700,
-                      fontSize: '36px',
-                      lineHeight: '100%'
-                    }}
+                    style={{ fontWeight: 700, fontSize: '40px', lineHeight: '100%' }}
                   >
-                    {tier.price}
+                    {plan.price}
                   </span>
                   <span
                     className="text-haevn-charcoal"
-                    style={{
-                      fontWeight: 300,
-                      fontSize: '14px'
-                    }}
+                    style={{ fontWeight: 300, fontSize: '14px' }}
                   >
-                    {tier.period}
+                    {plan.priceSub}
                   </span>
                 </div>
-              </div>
+                <p
+                  className="mb-6 min-h-[18px] text-haevn-charcoal/70"
+                  style={{ fontWeight: 400, fontSize: '13px' }}
+                >
+                  {plan.note || ' '}
+                </p>
 
-              {/* Features */}
-              <ul className="space-y-3 mb-6">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-haevn-teal flex-shrink-0 mt-0.5" />
-                    <span
-                      className="text-haevn-charcoal"
-                      style={{
-                        fontWeight: 300,
-                        fontSize: '14px',
-                        lineHeight: '120%',
-                        textAlign: 'left'
-                      }}
-                    >
-                      {feature}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Limitations */}
-              {tier.limitations.length > 0 && (
-                <ul className="space-y-2 mb-6 opacity-60">
-                  {tier.limitations.map((limitation) => (
-                    <li key={limitation} className="flex items-start gap-2">
+                {/* Features */}
+                <ul className="mb-8 space-y-3">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-haevn-teal" />
                       <span
-                        className="text-haevn-charcoal line-through"
-                        style={{
-                          fontWeight: 300,
-                          fontSize: '13px',
-                          lineHeight: '120%',
-                          textAlign: 'left'
-                        }}
+                        className="text-haevn-charcoal"
+                        style={{ fontWeight: 300, fontSize: '14px', lineHeight: '120%' }}
                       >
-                        {limitation}
+                        {feature}
                       </span>
                     </li>
                   ))}
                 </ul>
-              )}
 
-              {/* CTA Button */}
-              <Button
-                onClick={() => handleSelectTier(tier.id)}
-                disabled={loading}
-                className={`w-full rounded-full ${
-                  tier.popular
-                    ? 'bg-haevn-orange hover:opacity-90 text-white'
-                    : 'bg-white hover:bg-haevn-cream text-haevn-navy border-2 border-haevn-navy'
-                }`}
-                size="lg"
-                style={{
-                  fontWeight: 500,
-                  fontSize: '16px'
-                }}
-              >
-                {loading && selectedTier === tier.id
-                  ? 'Processing...'
-                  : `Choose ${tier.name}`}
-              </Button>
-            </div>
-          ))}
+                {/* CTA — pinned to bottom for even card heights */}
+                <Button
+                  onClick={() => handleSelectPlan(plan.id)}
+                  disabled={loadingPlan !== null}
+                  className={`mt-auto w-full rounded-full ${
+                    plan.emphasized
+                      ? 'bg-haevn-orange text-white hover:opacity-90'
+                      : 'border-2 border-haevn-navy bg-white text-haevn-navy hover:bg-haevn-cream'
+                  }`}
+                  size="lg"
+                  style={{ fontWeight: 500, fontSize: '16px' }}
+                >
+                  {isLoading ? 'Processing…' : plan.cta}
+                </Button>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

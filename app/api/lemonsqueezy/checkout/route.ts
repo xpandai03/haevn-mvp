@@ -7,13 +7,14 @@
  * embedded in the checkout custom data so the webhook can identify the buyer
  * when the order is paid.
  *
- * Body: { tier?: 'plus' | 'select', variantId?: string }
+ * Body: { plan?: 'plus_6' | 'plus_12', tier?: 'plus', variantId?: string }
+ *   `plan` is preferred; `tier: 'plus'` (legacy) maps to the 6-month plan.
  * Returns: { checkoutUrl: string } | { error: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createCheckout } from '@lemonsqueezy/lemonsqueezy.js'
-import { initLemonSqueezy, LEMONSQUEEZY_CONFIG, variantIdForTier } from '@/lib/lemonsqueezy'
+import { initLemonSqueezy, LEMONSQUEEZY_CONFIG, variantIdForPlan } from '@/lib/lemonsqueezy'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentPartnershipId } from '@/lib/actions/partnership'
 
@@ -40,17 +41,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No partnership found' }, { status: 400 })
     }
 
-    // 3. Determine the variant to purchase.
+    // 3. Determine the plan + variant to purchase.
     const body = await request.json().catch(() => ({}))
-    const tier = typeof body?.tier === 'string' ? body.tier : 'plus'
-    const variantId = body?.variantId || variantIdForTier(tier) || LEMONSQUEEZY_CONFIG.variantIdPlus
+    // Prefer explicit `plan`; fall back to legacy `tier: 'plus'` → 6-month plan.
+    const plan: string =
+      typeof body?.plan === 'string' && body.plan
+        ? body.plan
+        : body?.tier === 'plus' || !body?.tier
+          ? 'plus_6'
+          : ''
+    const variantId = body?.variantId || variantIdForPlan(plan)
 
     if (!variantId) {
-      console.error('[Lemonsqueezy] No variant id configured for tier:', tier)
-      return NextResponse.json(
-        { error: 'Product not configured. Please try again later.' },
-        { status: 500 }
-      )
+      console.error('[Lemonsqueezy] Invalid/unconfigured plan:', body?.plan ?? body?.tier)
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
 
     if (!LEMONSQUEEZY_CONFIG.storeId) {
@@ -70,7 +74,9 @@ export async function POST(request: NextRequest) {
           custom: {
             partnership_id: partnershipId,
             user_id: user.id,
-            tier,
+            // The webhook reads `plan` to set the correct access duration.
+            plan,
+            tier: 'plus',
           },
         },
         productOptions: {
