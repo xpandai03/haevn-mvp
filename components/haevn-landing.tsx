@@ -105,7 +105,7 @@ export default function HaevnLanding() {
             >
               By entering HAEVN, you agree to our{' '}
               <a
-                href="https://www.haevn.co/terms-of-service"
+                href="https://www.haevn.co/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-white transition-colors"
@@ -114,7 +114,7 @@ export default function HaevnLanding() {
               </a>
               . For details on how we honor and process your data, please see our{' '}
               <a
-                href="https://www.haevn.co/privacy-policy"
+                href="https://www.haevn.co/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-white transition-colors"
@@ -136,7 +136,7 @@ export default function HaevnLanding() {
             {/* Footer links row */}
             <div className="flex items-center justify-center gap-3 text-white/90">
               <a
-                href="https://www.haevn.co/terms-of-service"
+                href="https://www.haevn.co/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
@@ -149,7 +149,7 @@ export default function HaevnLanding() {
               </a>
               <span className="text-white/50">|</span>
               <a
-                href="https://www.haevn.co/privacy-policy"
+                href="https://www.haevn.co/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition-colors"

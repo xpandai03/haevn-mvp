@@ -296,7 +296,7 @@ export default function UpdatePasswordPage() {
         <footer className="pb-6 text-center">
           <div className="flex justify-center gap-6 text-sm">
             <a
-              href="https://haevn.co/terms"
+              href="https://www.haevn.co/terms"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
@@ -307,7 +307,7 @@ export default function UpdatePasswordPage() {
               Terms of Service
             </a>
             <a
-              href="https://haevn.co/privacy"
+              href="https://www.haevn.co/privacy"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/90 hover:text-white transition-colors"
