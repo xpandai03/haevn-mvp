@@ -9,6 +9,7 @@ import {
   checkAgeRangeConstraint,
   checkDistanceConstraint,
   checkRaceConstraint,
+  checkAttractionConstraint,
 } from './utils/constraints'
 
 // =============================================================================
@@ -291,6 +292,70 @@ console.log('\n=== RACE VARIABLE GATE ===\n')
   }
   const result = checkRaceConstraint(user, match)
   assert('"open_to_all" and "no_preference" synonyms → pass', result.passed === true)
+}
+
+// =============================================================================
+// GENDER / ORIENTATION ATTRACTION GATE TESTS
+// =============================================================================
+
+console.log('\n=== ATTRACTION GATE ===\n')
+
+// BLOCK: two straight men — each wants women, both are men
+{
+  const user: NormalizedAnswers = { Q2: 'man', Q3: ['straight'], Q6b: ['women'] }
+  const match: NormalizedAnswers = { Q2: 'man', Q3: ['straight'], Q6b: ['women'] }
+  const result = checkAttractionConstraint(user, match)
+  assert('Straight man ↔ straight man → BLOCK', result.passed === false)
+  assert('  blockedBy is attraction', result.blockedBy === 'attraction')
+}
+
+// PASS: straight man ↔ straight woman, mutual
+{
+  const user: NormalizedAnswers = { Q2: 'man', Q3: ['straight'], Q6b: ['women'] }
+  const match: NormalizedAnswers = { Q2: 'woman', Q3: ['straight'], Q6b: ['men'] }
+  const result = checkAttractionConstraint(user, match)
+  assert('Straight man ↔ straight woman (mutual) → PASS', result.passed === true)
+}
+
+// PASS: two bi men — each wants men (among others), both are men
+{
+  const user: NormalizedAnswers = { Q2: 'man', Q3: ['bi'], Q6b: ['men', 'women'] }
+  const match: NormalizedAnswers = { Q2: 'man', Q3: ['bi'], Q6b: ['men', 'women'] }
+  const result = checkAttractionConstraint(user, match)
+  assert('Bi man ↔ bi man (each wants men) → PASS', result.passed === true)
+}
+
+// PASS: Q6b = "all" means open to all genders, even straight-man ↔ straight-man shape
+{
+  const user: NormalizedAnswers = { Q2: 'man', Q3: ['straight'], Q6b: ['all'] }
+  const match: NormalizedAnswers = { Q2: 'man', Q3: ['straight'], Q6b: ['all'] }
+  const result = checkAttractionConstraint(user, match)
+  assert('Q6b="all" both sides → PASS (open to all genders)', result.passed === true)
+}
+
+// PASS: missing Q6b → skip (missing data = pass convention)
+{
+  const user: NormalizedAnswers = { Q2: 'man' }
+  const match: NormalizedAnswers = { Q2: 'man' }
+  const result = checkAttractionConstraint(user, match)
+  assert('Missing Q6b → PASS (skip)', result.passed === true)
+}
+
+// PASS: couples are skipped (one survey can't represent two genders)
+{
+  const user: NormalizedAnswers = { Q2: 'man', Q6b: ['women'] }
+  const match: NormalizedAnswers = { Q2: 'man', Q6b: ['women'] }
+  const result = checkAttractionConstraint(user, match, false, true)
+  assert('Either side is a couple → PASS (gate skipped)', result.passed === true)
+}
+
+// BLOCK: one-directional mismatch — straight woman wants men, matched to a woman
+{
+  const user: NormalizedAnswers = { Q2: 'woman', Q6b: ['men'] }
+  const match: NormalizedAnswers = { Q2: 'woman', Q6b: ['men', 'women'] }
+  const result = checkAttractionConstraint(user, match)
+  assert('One-way mismatch (straight woman ↔ woman) → BLOCK', result.passed === false)
+  assert('  blockedBy is attraction (one-way)', result.blockedBy === 'attraction')
 }
 
 // =============================================================================

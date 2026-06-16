@@ -313,6 +313,7 @@ export interface ConstraintResult {
     | 'language'
     | 'boundaries'
     | 'mutual_interest'
+    | 'attraction'
     | 'core_intent'
     | 'age_range'
     | 'distance'

@@ -158,6 +158,12 @@ export function checkConstraints(
   )
   if (!mutualResult.passed) return mutualResult
 
+  // 3b. Gender/orientation attraction — each must want the other's gender
+  const attractionResult = checkAttractionConstraint(
+    userAnswers, matchAnswers, userIsCouple, matchIsCouple
+  )
+  if (!attractionResult.passed) return attractionResult
+
   // 4. Couple permissions (Q6d)
   const coupleResult = checkCouplePermissionsConstraint(
     userAnswers, matchAnswers, userIsCouple, matchIsCouple
@@ -370,6 +376,111 @@ export function checkMutualInterestConstraint(
     }
   }
 
+  return { passed: true }
+}
+
+// =============================================================================
+// GENDER / ORIENTATION ATTRACTION CONSTRAINT
+// =============================================================================
+
+/**
+ * Map a Q2 gender-identity value → a canonical gender bucket comparable to the
+ * Q6b "who I want to meet" tokens. Covers every value present in the pool:
+ * man/tm→men, woman/tw→women, nb/gq→nb, oth→oth. Unknown values → null
+ * (unclassifiable → never used to block).
+ */
+const GENDER_BUCKET: Record<string, string> = {
+  man: 'men',
+  tm: 'men', // trans man
+  woman: 'women',
+  tw: 'women', // trans woman
+  nb: 'nb',
+  gq: 'nb', // genderqueer → enby umbrella
+  nonbinary: 'nb',
+  enby: 'nb',
+  oth: 'oth',
+  other: 'oth',
+}
+
+/** Q6b tokens that mean "open to all genders" → that direction passes. */
+const WANTED_OPEN_ALL = ['all', 'everyone', 'anyone', 'any']
+
+/** Q6b tokens → gender bucket they're open to. */
+const WANTED_BUCKET: Record<string, string> = {
+  men: 'men',
+  man: 'men',
+  women: 'women',
+  woman: 'women',
+  nb: 'nb',
+  nonbinary: 'nb',
+  enby: 'nb',
+  oth: 'oth',
+  other: 'oth',
+}
+
+function genderBucket(q2: unknown): string | null {
+  if (typeof q2 !== 'string') return null
+  return GENDER_BUCKET[q2.toLowerCase().trim()] ?? null
+}
+
+/**
+ * Does a viewer (with Q6b wanted-genders `wantedRaw`) want someone whose gender
+ * bucket is `targetBucket`? Biased toward PASS so we never wrongly block:
+ * empty/"all"/unenforceable/unclassifiable data all return true. Only a clear,
+ * stated gender preference that excludes the target returns false.
+ */
+function wantsGender(wantedRaw: string[], targetBucket: string | null): boolean {
+  const tokens = wantedRaw.map(v => v.toLowerCase().trim()).filter(Boolean)
+  if (tokens.length === 0) return true // no stated preference → skip
+  if (tokens.some(t => WANTED_OPEN_ALL.includes(t))) return true // open to all genders
+  if (targetBucket === null) return true // can't classify the target → don't block
+  const buckets = new Set(
+    tokens.map(t => WANTED_BUCKET[t]).filter((b): b is string => !!b)
+  )
+  if (buckets.size === 0) return true // only unmappable tokens (e.g. 'pns') → can't enforce
+  return buckets.has(targetBucket)
+}
+
+/**
+ * Gender/orientation attraction gate — mutually inclusive. Reads Q2 (gender) +
+ * Q6b (genders wanted): blocks unless User wants Match's gender AND Match wants
+ * User's gender. Missing / "all" / unenforceable data passes (matches the
+ * codebase "missing data = skip" convention), so it only blocks clear
+ * incompatibilities such as two straight men (each wants women, both are men).
+ *
+ * Couples: the engine carries a single survey (one Q2) per partnership, so a
+ * couple's two distinct genders can't be represented. To avoid wrongly blocking
+ * couples on one partner's gender, the gate is SKIPPED whenever either side is a
+ * couple. (Revisit if couple profiles gain per-partner gender data; today the
+ * pool has effectively no real couples.)
+ */
+export function checkAttractionConstraint(
+  userAnswers: NormalizedAnswers,
+  matchAnswers: NormalizedAnswers,
+  userIsCouple: boolean = false,
+  matchIsCouple: boolean = false
+): ConstraintResult {
+  if (userIsCouple || matchIsCouple) return { passed: true }
+
+  const userGender = genderBucket(userAnswers.Q2)
+  const matchGender = genderBucket(matchAnswers.Q2)
+  const userWants = asArray(userAnswers.Q6b)
+  const matchWants = asArray(matchAnswers.Q6b)
+
+  if (!wantsGender(userWants, matchGender)) {
+    return {
+      passed: false,
+      blockedBy: 'attraction',
+      reason: `User (wants ${userWants.join(', ') || 'unspecified'}) is not attracted to Match's gender (${matchAnswers.Q2 ?? 'unknown'})`,
+    }
+  }
+  if (!wantsGender(matchWants, userGender)) {
+    return {
+      passed: false,
+      blockedBy: 'attraction',
+      reason: `Match (wants ${matchWants.join(', ') || 'unspecified'}) is not attracted to User's gender (${userAnswers.Q2 ?? 'unknown'})`,
+    }
+  }
   return { passed: true }
 }
 
