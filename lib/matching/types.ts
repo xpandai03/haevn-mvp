@@ -41,6 +41,8 @@ export interface NormalizedAnswers {
   Q9a?: string[]
   /** Q6: Relationship style - ENM type (multi-select) */
   Q6?: string[]
+  /** Q6a: Connection type - solo/couple/pod/any structure openness (multi-select) */
+  Q6a?: string[]
   /** Q6b: Who they want to meet - solo/couple preference (multi-select) */
   Q6b?: string[]
   /** Q6c: Couple rules (multi-select, only if couple) */

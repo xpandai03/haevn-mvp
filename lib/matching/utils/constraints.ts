@@ -46,7 +46,7 @@ const OPEN_TO_SOLO = [
 ] as const
 
 /**
- * Q6b values that indicate openness to couples
+ * Q6a/Q6b values that indicate openness to couples (pods count as couples).
  */
 const OPEN_TO_COUPLE = [
   'couple',
@@ -55,7 +55,14 @@ const OPEN_TO_COUPLE = [
   'partnered',
   'open_to_couples',
   'open_to_pairs',
+  'pod',
+  'pods',
 ] as const
+
+/**
+ * Q6a/Q6b values that indicate openness to ANY structure (solos AND couples).
+ */
+const OPEN_TO_ANY = ['any', 'all', 'open_to_any', 'everyone'] as const
 
 /**
  * Activities/interests that can conflict with boundaries.
@@ -274,10 +281,41 @@ export function checkLanguageConstraint(
 // =============================================================================
 
 /**
+ * Solo/couple openness for one side, read from Q6a (q6a_connection_type — the
+ * canonical structure field: solo / couple / pod / any) with a fallback to Q6b
+ * (legacy data that stored structure tokens there). 'any'/'all' means open to
+ * both; 'pod' counts as a couple-type connection.
+ *
+ * hasSignal is false when neither field yields any structure token (e.g. Q6b
+ * holds only gender tokens like "men"/"women" and Q6a is absent) — in that case
+ * the constraint cannot be meaningfully enforced.
+ */
+function structureOpenness(answers: NormalizedAnswers): {
+  openToSolo: boolean
+  openToCouple: boolean
+  hasSignal: boolean
+} {
+  const tokens = [...asArray(answers.Q6a), ...asArray(answers.Q6b)].map(v =>
+    v.toLowerCase().trim()
+  )
+  if (tokens.length === 0) {
+    return { openToSolo: false, openToCouple: false, hasSignal: false }
+  }
+  const matches = (set: readonly string[]) =>
+    tokens.some(v => set.some(s => v.includes(s.toLowerCase())))
+
+  const anyOpen = matches(OPEN_TO_ANY)
+  const openToSolo = anyOpen || matches(OPEN_TO_SOLO)
+  const openToCouple = anyOpen || matches(OPEN_TO_COUPLE)
+  return { openToSolo, openToCouple, hasSignal: openToSolo || openToCouple }
+}
+
+/**
  * Check mutual interest constraint.
  *
- * Q6b: Who they want to meet (solo/couple)
- * Must be mutually inclusive - if User is a couple, Match must be open to couples.
+ * Reads solo/couple/pod openness from Q6a (q6a_connection_type), falling back to
+ * Q6b. Must be mutually inclusive — if User is a couple, Match must be open to
+ * couples, and vice versa.
  */
 export function checkMutualInterestConstraint(
   userAnswers: NormalizedAnswers,
@@ -285,22 +323,18 @@ export function checkMutualInterestConstraint(
   userIsCouple: boolean,
   matchIsCouple: boolean
 ): ConstraintResult {
-  const userWantsToMeet = asArray(userAnswers.Q6b).map(v => v.toLowerCase().trim())
-  const matchWantsToMeet = asArray(matchAnswers.Q6b).map(v => v.toLowerCase().trim())
+  const user = structureOpenness(userAnswers)
+  const match = structureOpenness(matchAnswers)
 
-  // If either hasn't answered, can't enforce constraint - allow match
-  if (userWantsToMeet.length === 0 || matchWantsToMeet.length === 0) {
+  // If either side has no structure signal at all (e.g. Q6b holds only gender
+  // tokens and Q6a is absent), the constraint can't be enforced — allow match.
+  if (!user.hasSignal || !match.hasSignal) {
     return { passed: true }
   }
 
   // Check if Match is open to User's type
   if (userIsCouple) {
-    // User is a couple - Match must be open to couples
-    const matchOpenToCouples = matchWantsToMeet.some(v =>
-      OPEN_TO_COUPLE.some(c => v.includes(c.toLowerCase()))
-    )
-
-    if (!matchOpenToCouples) {
+    if (!match.openToCouple) {
       return {
         passed: false,
         blockedBy: 'mutual_interest',
@@ -308,12 +342,7 @@ export function checkMutualInterestConstraint(
       }
     }
   } else {
-    // User is solo - Match must be open to solos
-    const matchOpenToSolos = matchWantsToMeet.some(v =>
-      OPEN_TO_SOLO.some(s => v.includes(s.toLowerCase()))
-    )
-
-    if (!matchOpenToSolos) {
+    if (!match.openToSolo) {
       return {
         passed: false,
         blockedBy: 'mutual_interest',
@@ -324,12 +353,7 @@ export function checkMutualInterestConstraint(
 
   // Check reverse: User must be open to Match's type
   if (matchIsCouple) {
-    // Match is a couple - User must be open to couples
-    const userOpenToCouples = userWantsToMeet.some(v =>
-      OPEN_TO_COUPLE.some(c => v.includes(c.toLowerCase()))
-    )
-
-    if (!userOpenToCouples) {
+    if (!user.openToCouple) {
       return {
         passed: false,
         blockedBy: 'mutual_interest',
@@ -337,12 +361,7 @@ export function checkMutualInterestConstraint(
       }
     }
   } else {
-    // Match is solo - User must be open to solos
-    const userOpenToSolos = userWantsToMeet.some(v =>
-      OPEN_TO_SOLO.some(s => v.includes(s.toLowerCase()))
-    )
-
-    if (!userOpenToSolos) {
+    if (!user.openToSolo) {
       return {
         passed: false,
         blockedBy: 'mutual_interest',
