@@ -129,6 +129,13 @@ const INTENT_MAP: Record<string, string> = {
   'learning_exploration': 'learning and exploration',
   'not sure yet': 'open exploration',
   'not_sure_yet': 'open exploration',
+  // Emergent import short codes (alias-only; same canonical labels as above).
+  'lt': 'long-term partnership',
+  'st': 'casual dating',
+  'play': 'play partner connection',
+  'fwb': 'casual dating',
+  'comm': 'social and community connection',
+  'poly_group': 'open exploration',
 }
 
 /**
@@ -165,6 +172,10 @@ const STRUCTURE_MAP: Record<string, string> = {
   'polyamorous': 'polyamorous',
   'open': 'open',
   'exploring': 'exploring relationship styles',
+  // Emergent import short codes (alias-only).
+  'mono': 'monogamous',
+  'poly': 'polyamorous',
+  'explore': 'exploring relationship styles',
 }
 
 const STATUS_MAP: Record<string, string> = {
@@ -178,6 +189,9 @@ const STATUS_MAP: Record<string, string> = {
   'solo poly': 'solo polyamorous',
   'solo_poly': 'solo polyamorous',
   'exploring': 'currently exploring',
+  // Emergent import short codes (alias-only).
+  'polycule': 'in a polycule',
+  'solopoly': 'solo polyamorous',
 }
 
 /**
@@ -224,12 +238,34 @@ export function mapSocialStyle(answers: NormalizedAnswers): string | undefined {
 
   // Use primary Q36 as the anchor
   const score = q36 ?? q36a
-  if (score === null) return undefined
+  if (score !== null) {
+    if (score <= 3) return 'Prefers one-on-one or small group settings'
+    if (score <= 5) return 'Comfortable in both social and quieter environments'
+    if (score <= 7) return 'Enjoys a mix of social and personal time'
+    return 'Enjoys active social environments and meeting new people'
+  }
 
-  if (score <= 3) return 'Prefers one-on-one or small group settings'
-  if (score <= 5) return 'Comfortable in both social and quieter environments'
-  if (score <= 7) return 'Enjoys a mix of social and personal time'
-  return 'Enjoys active social environments and meeting new people'
+  // normalizeAnswers maps numeric sliders → SOCIAL_5 labels
+  // (very_introverted…very_extroverted). Read the label when the numeric is gone.
+  return socialStyleFromLabel(asSingle(answers.Q36 as string | string[] | undefined))
+    ?? socialStyleFromLabel(asSingle(answers.Q36a as string | string[] | undefined))
+}
+
+/** SOCIAL_5 label → social-style descriptor (label-only handling, no refactor). */
+function socialStyleFromLabel(label: string | undefined): string | undefined {
+  switch (label?.toLowerCase().trim()) {
+    case 'very_introverted':
+    case 'introverted':
+      return 'Prefers one-on-one or small group settings'
+    case 'ambivert':
+      return 'Comfortable in both social and quieter environments'
+    case 'extroverted':
+      return 'Enjoys a mix of social and personal time'
+    case 'very_extroverted':
+      return 'Enjoys active social environments and meeting new people'
+    default:
+      return undefined
+  }
 }
 
 // =============================================================================
@@ -242,6 +278,10 @@ const CONFLICT_MAP: Record<string, string> = {
   'seek mediation or help': 'collaborative',
   'avoid if possible': 'conflict-avoidant',
   'it depends on the situation': 'adaptive',
+  // Emergent import short codes (alias-only).
+  'talk': 'direct',
+  'space': 'reflective',
+  'avoid': 'conflict-avoidant',
 }
 
 const PACE_MAP: Record<string, string> = {
@@ -334,6 +374,19 @@ export function mapLifestyleRhythm(answers: NormalizedAnswers): string | undefin
     return 'Enjoys a highly active and outgoing lifestyle'
   }
 
+  // normalizeAnswers maps the Q36 slider → SOCIAL_5 label; read it when numeric is gone.
+  switch (asSingle(answers.Q36 as string | string[] | undefined)?.toLowerCase().trim()) {
+    case 'very_introverted':
+    case 'introverted':
+      return 'Prefers a quieter, more relaxed rhythm'
+    case 'ambivert':
+      return 'Balanced between going out and staying in'
+    case 'extroverted':
+      return 'Leans toward an active and social lifestyle'
+    case 'very_extroverted':
+      return 'Enjoys a highly active and outgoing lifestyle'
+  }
+
   // Fallback: infer from substance and distance signals
   const isSober = substances.some(s => s.toLowerCase().includes('sober'))
   const isLocal = distance?.toLowerCase().includes('neighborhood')
@@ -353,6 +406,10 @@ const ATTACHMENT_VALUES: Record<string, string[]> = {
   'anxious': ['closeness', 'emotional connection'],
   'avoidant': ['independence', 'personal space'],
   'disorganized': ['understanding', 'patience'],
+  // Emergent import short codes (alias-only).
+  'sec': ['stability', 'emotional balance'],
+  'anx': ['closeness', 'emotional connection'],
+  'avoid': ['independence', 'personal space'],
 }
 
 /**
@@ -374,9 +431,12 @@ export function mapValues(answers: NormalizedAnswers): string[] {
     if (mapped) values.push(...mapped)
   }
 
-  // Q37: empathy slider — only add if strong signal (7+)
-  const empathy = parseSlider(asSingle(answers.Q37 as string | string[] | undefined))
-  if (empathy !== null && empathy >= 7) {
+  // Q37: empathy slider — only add if strong signal (7+). normalizeAnswers maps
+  // the numeric to an EMPATHY_6 label, so accept 'high'/'very_high' too.
+  const empathyRaw = asSingle(answers.Q37 as string | string[] | undefined)
+  const empathy = parseSlider(empathyRaw)
+  const empathyLabel = empathyRaw?.toLowerCase().trim()
+  if ((empathy !== null && empathy >= 7) || empathyLabel === 'high' || empathyLabel === 'very_high') {
     values.push('empathy')
   }
 
@@ -388,7 +448,11 @@ export function mapValues(answers: NormalizedAnswers): string[] {
 
   // Q9: intent can imply values
   const intents = asArray(answers.Q9).map(v => v.toLowerCase().trim())
-  if (intents.includes('long-term partnership') || intents.includes('long_term_partnership')) {
+  if (
+    intents.includes('long-term partnership') ||
+    intents.includes('long_term_partnership') ||
+    intents.includes('lt')
+  ) {
     if (!values.includes('intentional connection')) {
       values.push('intentional connection')
     }
@@ -441,11 +505,24 @@ export function mapInterests(answers: NormalizedAnswers): string[] {
     if (safe) interests.push(safe)
   }
 
-  // Q33: kink level → safe label
+  // Q33: kink signal → safe label. In-app stores an experience-level sentence
+  // (KINK_SAFE_MAP). Imports store an array of specific kinks — per policy we do
+  // NOT surface individual kinks; emit a single generic label instead.
   const kink = asSingle(answers.Q33 as string | string[] | undefined)
-  if (kink) {
-    const safe = KINK_SAFE_MAP[kink.toLowerCase().trim()]
-    if (safe && !interests.includes(safe)) interests.push(safe)
+  const kinkSafe = kink ? KINK_SAFE_MAP[kink.toLowerCase().trim()] : undefined
+  // Imports store short, space-free kink CODES (e.g. 'foot', 'bond'); in-app
+  // stores full sentences (handled by KINK_SAFE_MAP above or intentionally
+  // omitted). Only the code form triggers the generic label, and never the
+  // explicit opt-outs.
+  const KINK_NEGATIVE = new Set(['pns', 'none', 'no', 'na'])
+  const hasRealKink = asArray(answers.Q33)
+    .map((k) => k.toLowerCase().trim())
+    .some((k) => k && !k.includes(' ') && !KINK_NEGATIVE.has(k))
+  if (kinkSafe && !interests.includes(kinkSafe)) {
+    interests.push(kinkSafe)
+  } else if (hasRealKink && !interests.includes('open to exploration')) {
+    // Imports store an array of specific kinks — emit one generic label only.
+    interests.push('open to exploration')
   }
 
   // Q34: exploration slider — add if high (7+)
