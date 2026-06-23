@@ -202,6 +202,51 @@ export async function POST(request: NextRequest) {
         results.errors.push(`${mapped.email}: survey insert — ${surveyErr.message}`)
       }
 
+      // 5b. Fire-and-forget: generate AI summaries for the imported partnership
+      // (non-blocking, skip-if-present). Mirrors app/api/survey/save/route.ts so
+      // future imports populate connection_summary/haevn_insight without the
+      // backfill. Note: for large bulk imports the backfill remains the reliable
+      // path — a serverless function may return before all background calls finish.
+      ;(async () => {
+        try {
+          const { isFallbackInsight } = await import('@/lib/ai/fallbacks')
+          const { data: existingP } = await admin
+            .from('partnerships')
+            .select('haevn_insight, connection_summary')
+            .eq('id', partnershipId)
+            .single()
+          const insight = existingP?.haevn_insight as string | null | undefined
+          const summary = existingP?.connection_summary as string | null | undefined
+          if (insight?.trim() && !isFallbackInsight(insight) && summary?.trim()) {
+            return
+          }
+          const { normalizeAnswers } = await import('@/lib/matching/utils/normalizeAnswers')
+          const { buildSummaryInput } = await import('@/lib/ai/buildSummaryInput')
+          const { generateSummaries } = await import('@/lib/ai/generateSummaries')
+          const normalized = normalizeAnswers(mapped.answers as any)
+          const summaryInput = buildSummaryInput({
+            answers: normalized,
+            displayName: mapped.partnership.display_name || 'This user',
+          })
+          const result = await generateSummaries(summaryInput)
+          if (result.error) {
+            console.error('[import] AI summary unavailable (non-blocking):', result.error.code)
+            return
+          }
+          await admin
+            .from('partnerships')
+            .update({
+              connection_summary: result.connection_summary,
+              haevn_insight: result.haevn_insight,
+              summaries_version: 'v1',
+              summaries_generated_at: new Date().toISOString(),
+            })
+            .eq('id', partnershipId)
+        } catch (aiErr: any) {
+          console.error('[import] AI summary generation failed (non-blocking):', aiErr?.message)
+        }
+      })()
+
       // 6. Optional inline match computation (defaults off → Match Monday cron)
       if (computeMatches && mapped.partnership.profile_state === 'live') {
         try {
