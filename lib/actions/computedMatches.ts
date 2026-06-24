@@ -29,9 +29,13 @@ export async function getComputedMatchesForPartnership(
       queryFilter,
     })
 
+    // Matches only (>= 80). The 77–79 Recommendations band shares this table
+    // but must stay out of match-meant surfaces (profile, discovery); this
+    // preserves the exact pre-band behavior here.
     const { data: matches, error } = await adminClient
       .from('computed_matches')
       .select('partnership_a, partnership_b, score, tier')
+      .gte('score', 80)
       .or(queryFilter)
 
     // Log raw DB result BEFORE any processing

@@ -66,9 +66,11 @@ export async function POST() {
   // ── Step 3: Send notifications for unnotified matches ──
   console.log('[run-full-cycle] Step 3: Sending notifications...')
 
+  // Only notify about actual MATCHES (>= 80), not the 77–79 Recommendations band.
   const { data: unnotifiedRows } = await admin
     .from('computed_matches')
     .select('partnership_a')
+    .gte('score', 80)
     .lte('release_at', new Date().toISOString())
     .is('sms_notified_at', null)
 

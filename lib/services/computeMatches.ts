@@ -25,7 +25,14 @@ import {
 } from '@/lib/matching'
 
 const ENGINE_VERSION = '5cat-v6'
+// Matches cutoff: a pair is a "match" at >= 80. Kept for diagnostics/labels.
 const MIN_SCORE_THRESHOLD = 80
+// Storage floor: we ALSO retain the 77–79 "Recommendations" band so the
+// near-miss surface has data. Rows are stored with their real score/tier
+// (77–79 = Gold); the >=80 vs 77–79 split is enforced at READ time
+// (getComputedMatchCards default minScore=80 vs getRecommendationCards 77–79),
+// so band rows never leak into "Your Matches". Nothing below 77 is stored.
+const STORE_MIN_SCORE = 77
 
 /**
  * Get the next Monday at 8:00 AM Eastern (12:00 UTC) for Match Monday batching.
@@ -467,15 +474,17 @@ export async function computeMatchesForPartnership(
           continue
         }
 
-        // Skip if below minimum score threshold
-        if (result.overallScore < MIN_SCORE_THRESHOLD) {
+        // Skip only below the STORAGE floor (77). Pairs scoring 77–79 are
+        // retained for the Recommendations surface; 80+ are Matches. The split
+        // is enforced at read time, so storing the band does not affect Matches.
+        if (result.overallScore < STORE_MIN_SCORE) {
           pairDiagnostics.push({
             candidate: name,
             candidateId: candidate.id,
             score: result.overallScore,
             tier: result.tier,
             outcome: 'below-threshold',
-            reason: `Score ${result.overallScore} < ${MIN_SCORE_THRESHOLD}`,
+            reason: `Score ${result.overallScore} < ${STORE_MIN_SCORE} (storage floor)`,
             breakdown: result.categories,
           })
           continue

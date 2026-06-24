@@ -88,6 +88,8 @@ export interface ProfileCardProps {
   onConnect?: (id: string) => void
   onNudge?: (id: string) => void
   onMessage?: (handshakeId: string) => void
+  /** Label under the compatibility % (default "Match"; Recommendations pass "Recommendation"). */
+  scoreLabel?: string
 }
 
 function redactName(name: string) {
@@ -171,6 +173,7 @@ export function ProfileCard({
   onConnect,
   onNudge,
   onMessage,
+  scoreLabel = 'Match',
 }: ProfileCardProps) {
   const router = useRouter()
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
@@ -267,7 +270,7 @@ export function ProfileCard({
                 {profile.compatibilityPercentage}%
               </span>
               <span className="text-[11px] tracking-[0.14em] uppercase text-[color:var(--haevn-muted-fg)]">
-                Match
+                {scoreLabel}
               </span>
             </div>
 

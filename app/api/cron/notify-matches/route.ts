@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
 
   try {
     // Find all partnerships with unreleased-but-due matches that haven't been notified
+    // Only notify about actual MATCHES (>= 80). The 77–79 Recommendations band
+    // is stored in the same table but must not trigger "matches are ready" SMS.
     const { data: rows, error: queryError } = await supabase
       .from('computed_matches')
       .select('partnership_a')
+      .gte('score', 80)
       .lte('release_at', new Date().toISOString())
       .is('sms_notified_at', null)
 

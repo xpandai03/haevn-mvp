@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Users as UsersIcon,
+  Sparkles,
   MessageCircle,
   User as UserIcon,
   MapPin,
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils'
 
 const TABS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
+  { href: '/dashboard/recommendations', label: 'For You', Icon: Sparkles },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
   { href: '/dashboard/hidden', label: 'Hidden', Icon: Eye },
   { href: '/dashboard/meetups', label: 'Meetups', Icon: MapPin },

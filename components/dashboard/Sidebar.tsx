@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
   Users as UsersIcon,
+  Sparkles,
   MessageCircle,
   User as UserIcon,
   MapPin,
@@ -23,6 +24,7 @@ interface SidebarProps {
 
 const NAV_LINKS = [
   { href: '/dashboard/matches', label: 'Matches', Icon: UsersIcon },
+  { href: '/dashboard/recommendations', label: 'Recommendations', Icon: Sparkles },
   { href: '/messages', label: 'Messages', Icon: MessageCircle },
   { href: '/dashboard/hidden', label: 'Hidden', Icon: Eye },
   { href: '/dashboard/meetups', label: 'Meetups', Icon: MapPin },

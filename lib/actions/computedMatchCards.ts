@@ -112,6 +112,22 @@ function parseBreakdown(raw: any): Record<string, { score: number }> {
 // =============================================================================
 
 /**
+ * Resolve the inclusive score band for a card query. Pure + exported so the
+ * guard is unit-testable. Matches default to [80, ∞); Recommendations pass
+ * {minScore:77, maxScore:79}. This is the single source of the >=80 guard that
+ * keeps the 77–79 band out of "Your Matches".
+ */
+export function scoreBounds(opts: { minScore?: number; maxScore?: number } = {}): {
+  min: number
+  max: number
+} {
+  return {
+    min: opts.minScore ?? 80,
+    max: opts.maxScore ?? Number.POSITIVE_INFINITY,
+  }
+}
+
+/**
  * Fetch precomputed match cards from computed_matches table.
  *
  * This is the ONLY data source for match display in the UI.
@@ -119,11 +135,17 @@ function parseBreakdown(raw: any): Record<string, { score: number }> {
  *
  * @param minTier - Minimum tier to include (default: 'Bronze')
  * @param limit - Maximum number of matches to return (default: 50)
+ * @param opts.minScore - Inclusive lower score bound (default 80 — Matches only)
+ * @param opts.maxScore - Inclusive upper score bound (default none)
  */
 export async function getComputedMatchCards(
   minTier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze' = 'Bronze',
-  limit: number = 50
+  limit: number = 50,
+  opts: { minScore?: number; maxScore?: number } = {}
 ): Promise<ComputedMatchCard[]> {
+  // Score guard. Matches default to >= 80 so the 77–79 Recommendations band can
+  // NEVER leak into "Your Matches". Recommendations pass {minScore:77,maxScore:79}.
+  const { min: minScore, max: maxScore } = scoreBounds(opts)
   const adminClient = createAdminClient()
   const currentPartnershipId = await getCurrentPartnershipId()
 
@@ -145,10 +167,18 @@ export async function getComputedMatchCards(
   // 1. Fetch computed matches for this partnership (bidirectional)
   //    Filter by release_at (Match Monday) and expires_at (90-day expiry)
   const now = new Date().toISOString()
-  const { data: matches, error: matchError } = await adminClient
+  // Score band pushed into the query (not just the loop): the fetch is ordered
+  // by score desc and capped, so band rows must be selected at the DB level or a
+  // top-N fetch would return only the highest (>=80) rows and drop the band.
+  let matchQuery = adminClient
     .from('computed_matches')
     .select('partnership_a, partnership_b, score, tier, breakdown, release_at, expires_at, saved')
     .or(`partnership_a.eq.${currentPartnershipId},partnership_b.eq.${currentPartnershipId}`)
+    .gte('score', minScore)
+  if (Number.isFinite(maxScore)) {
+    matchQuery = matchQuery.lte('score', maxScore)
+  }
+  const { data: matches, error: matchError } = await matchQuery
     .order('score', { ascending: false })
     .limit(limit * 2) // Fetch extra since we have bidirectional rows
 
@@ -226,6 +256,9 @@ export async function getComputedMatchCards(
     // Filter by expires_at (90-day expiry) — saved matches bypass expiration
     if (!m.saved && m.expires_at && m.expires_at <= now) continue
 
+    // Defensive score-band guard (query already enforces it; belt-and-braces).
+    if (m.score < minScore || m.score > maxScore) continue
+
     // Filter by tier
     const resultTierIndex = tierOrder.indexOf(m.tier as any)
     if (resultTierIndex === -1 || resultTierIndex > minTierIndex) continue
@@ -241,8 +274,12 @@ export async function getComputedMatchCards(
 
   if (filteredMatches.length === 0) return []
 
+  // Cap to the requested limit (already score-desc ordered) — e.g. top 3 for
+  // Recommendations. Matches pass limit=50, so this is a no-op there.
+  const topMatches = filteredMatches.slice(0, limit)
+
   // 3. Fetch partner profile data in one query (+ geo + JSON for card demographics)
-  const partnerIds = filteredMatches.map(m => m.otherPartnerId)
+  const partnerIds = topMatches.map(m => m.otherPartnerId)
   const { data: partnerships } = await adminClient
     .from('partnerships')
     .select(
@@ -323,7 +360,7 @@ export async function getComputedMatchCards(
 
   // 5. Assemble results, sorted by score desc, limited
   const results: ComputedMatchCard[] = []
-  for (const match of filteredMatches) {
+  for (const match of topMatches) {
     const partner = partnershipMap.get(match.otherPartnerId)
     if (!partner) continue // Partner no longer exists or not live
 
@@ -468,4 +505,18 @@ export async function getComputedMatchCards(
   }
 
   return sliced
+}
+
+/**
+ * Fetch the viewer's Recommendation cards — near-miss profiles scoring 77–79
+ * (just below the 80 Matches cutoff), top 3 by score. Reuses the entire matches
+ * pipeline (release_at/expires_at gating, dismissed/hidden exclusion, handshake
+ * connection status, connection_summary, photos) — the ONLY differences are the
+ * score band [77, 79] and the limit of 3. Cards are labeled "Recommendations"
+ * in the UI; the data shape is identical to a match card.
+ *
+ * Inclusive band: 77 <= score <= 79. Exactly 80 stays in Matches.
+ */
+export async function getRecommendationCards(): Promise<ComputedMatchCard[]> {
+  return getComputedMatchCards('Bronze', 3, { minScore: 77, maxScore: 79 })
 }
