@@ -11,6 +11,9 @@ import {
 import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
 import { ZipControl } from './ZipControl'
+// Shared band definition — same source the member-facing readers use, so admin
+// figures equal what releases. Matches >= 80; Recommendations 77–79 inclusive.
+import { isMatchScore, isRecommendationScore } from '@/lib/matching/scoreBands'
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -101,40 +104,47 @@ const CATEGORY_LABELS: Record<string, string> = {
 interface UserCardData {
   partnershipId: string
   name: string
-  matchCount: number
-  closeCount: number
-  blockedCount: number
-  topCandidates: PairDiag[]
+  matchCount: number          // stored, score >= 80
+  recommendationCount: number // stored, 77–79 inclusive
+  belowBandCount: number      // < 77 near-misses — DIAGNOSTIC only, never a recommendation
+  blockedCount: number        // constraint-failed (or sub-50 noise)
+  matchCandidates: PairDiag[]      // top stored >= 80, score desc
+  recommendationCandidates: PairDiag[] // top stored 77–79, score desc
   detail: RecomputeDetail
 }
 
 function transformToCards(result: RecomputeResult): UserCardData[] {
   return result.details.map((d) => {
     const diags = d.pairDiagnostics || []
+    // Everything >= 77 is stored; split by SCORE into Matches vs Recommendations
+    // using the shared band helpers (single source of truth with member readers).
     const stored = diags.filter((p) => p.outcome === 'stored')
-    const close = diags.filter(
-      (p) => p.outcome !== 'stored' && p.outcome !== 'constraint-failed' && p.score >= 50
-    )
+    const matches = stored
+      .filter((p) => isMatchScore(p.score))
+      .sort((a, b) => b.score - a.score)
+    const recommendations = stored
+      .filter((p) => isRecommendationScore(p.score))
+      .sort((a, b) => b.score - a.score)
+    // Below-band diagnostic: scored but not stored (< 77), excluding gate fails
+    // and sub-50 noise. NEVER labeled a recommendation.
+    const belowBand = diags
+      .filter(
+        (p) => p.outcome !== 'stored' && p.outcome !== 'constraint-failed' && p.score >= 50
+      )
+      .sort((a, b) => b.score - a.score)
     const blocked = diags.filter(
       (p) => p.outcome === 'constraint-failed' || (p.outcome !== 'stored' && p.score < 50)
     )
 
-    // Top candidates: stored first, then by score desc, exclude 0%
-    const viable = diags
-      .filter((p) => p.score > 0)
-      .sort((a, b) => {
-        if (a.outcome === 'stored' && b.outcome !== 'stored') return -1
-        if (b.outcome === 'stored' && a.outcome !== 'stored') return 1
-        return b.score - a.score
-      })
-
     return {
       partnershipId: d.partnershipId,
       name: d.displayName || d.partnershipId.slice(0, 8),
-      matchCount: stored.length,
-      closeCount: close.length,
+      matchCount: matches.length,
+      recommendationCount: recommendations.length,
+      belowBandCount: belowBand.length,
       blockedCount: blocked.length,
-      topCandidates: viable.slice(0, 3),
+      matchCandidates: matches.slice(0, 3),
+      recommendationCandidates: recommendations.slice(0, 3),
       detail: d,
     }
   })
@@ -143,8 +153,11 @@ function transformToCards(result: RecomputeResult): UserCardData[] {
 function computeSummary(cards: UserCardData[], result: RecomputeResult) {
   const totalUsers = cards.length
   const withMatches = cards.filter((c) => c.matchCount > 0).length
-  const withClose = cards.filter((c) => c.closeCount > 0 && c.matchCount === 0).length
-  const noViable = totalUsers - withMatches - withClose
+  // "Recommendations only" = has 77–79 band but no >= 80 match.
+  const withRecommendations = cards.filter(
+    (c) => c.recommendationCount > 0 && c.matchCount === 0
+  ).length
+  const noViable = totalUsers - withMatches - withRecommendations
 
   // Best pair across all diagnostics
   let bestPair: { a: string; b: string; score: number } | null = null
@@ -156,7 +169,7 @@ function computeSummary(cards: UserCardData[], result: RecomputeResult) {
     }
   }
 
-  return { totalUsers, withMatches, withClose, noViable, bestPair, errors: result.errors }
+  return { totalUsers, withMatches, withRecommendations, noViable, bestPair, errors: result.errors }
 }
 
 // ─── Main Dashboard Component ───────────────────────────────────
@@ -476,8 +489,8 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
           />
           <SummaryCard
             icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
-            label="Close Matches Only"
-            value={summary.withClose}
+            label="Recommendations Only"
+            value={summary.withRecommendations}
             bg="bg-amber-50"
           />
           <SummaryCard
@@ -687,9 +700,14 @@ function UserCard({
         }`}>
           {card.matchCount} match{card.matchCount !== 1 ? 'es' : ''}
         </span>
-        {card.closeCount > 0 && (
+        {card.recommendationCount > 0 && (
           <span className="px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
-            {card.closeCount} close
+            {card.recommendationCount} rec{card.recommendationCount !== 1 ? 's' : ''}
+          </span>
+        )}
+        {card.belowBandCount > 0 && (
+          <span className="px-2 py-1 rounded-full font-medium bg-slate-100 text-slate-500">
+            {card.belowBandCount} below band
           </span>
         )}
         <span className="px-2 py-1 rounded-full font-medium bg-gray-100 text-gray-500">
@@ -697,18 +715,33 @@ function UserCard({
         </span>
       </div>
 
-      {/* Top candidates */}
-      {card.topCandidates.length > 0 && (
+      {/* Top Matches (>= 80) — visually distinct from Recommendations */}
+      {card.matchCandidates.length > 0 && (
         <div className="mt-3 space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">
-            Top candidates
+          <p className="text-[10px] uppercase tracking-wider text-green-600 font-medium">
+            Top matches
           </p>
-          {card.topCandidates.map((c, i) => (
+          {card.matchCandidates.map((c, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
               <span className="text-gray-700 truncate mr-2">{c.candidate}</span>
-              <span className={`font-semibold tabular-nums shrink-0 ${
-                c.score >= 80 ? 'text-green-700' : c.score >= 50 ? 'text-amber-700' : 'text-gray-500'
-              }`}>
+              <span className="font-semibold tabular-nums shrink-0 text-green-700">
+                {c.score}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Top Recommendations (77–79) — the near-miss band that releases Monday */}
+      {card.recommendationCandidates.length > 0 && (
+        <div className="mt-3 space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-amber-600 font-medium">
+            Top recommendations <span className="text-amber-400">(77–79)</span>
+          </p>
+          {card.recommendationCandidates.map((c, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="text-gray-700 truncate mr-2">{c.candidate}</span>
+              <span className="font-semibold tabular-nums shrink-0 text-amber-700">
                 {c.score}%
               </span>
             </div>
@@ -730,9 +763,17 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
   const [debugOpen, setDebugOpen] = useState(false)
   const diags = card.detail.pairDiagnostics || []
 
-  // Group diagnostics
-  const stored = diags.filter((p) => p.outcome === 'stored').sort((a, b) => b.score - a.score)
-  const close = diags
+  // Group diagnostics by score band (shared helpers — same as member readers).
+  const stored = diags.filter((p) => p.outcome === 'stored')
+  const matches = stored
+    .filter((p) => isMatchScore(p.score))
+    .sort((a, b) => b.score - a.score)
+  const recommendations = stored
+    .filter((p) => isRecommendationScore(p.score))
+    .sort((a, b) => b.score - a.score)
+  // Below band (< 77): scored near-misses that are NOT recommendations. Kept as
+  // a diagnostic for ops visibility — clearly labeled, never "recommendation".
+  const belowBand = diags
     .filter((p) => p.outcome !== 'stored' && p.outcome !== 'constraint-failed' && p.score >= 50)
     .sort((a, b) => b.score - a.score)
   const blocked = diags
@@ -758,19 +799,28 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
       </div>
 
       <div className="px-6 py-4 space-y-5">
-        {/* ── Matches ── */}
-        {stored.length > 0 && (
-          <Section title="Matches" count={stored.length} color="green">
-            {stored.map((p, i) => (
+        {/* ── Matches (>= 80) ── */}
+        {matches.length > 0 && (
+          <Section title="Matches" count={matches.length} color="green">
+            {matches.map((p, i) => (
               <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
           </Section>
         )}
 
-        {/* ── Close Matches ── */}
-        {close.length > 0 && (
-          <Section title="Close Matches" count={close.length} color="amber">
-            {close.map((p, i) => (
+        {/* ── Recommendations (77–79, releases on the Monday cycle) ── */}
+        {recommendations.length > 0 && (
+          <Section title="Recommendations (77–79)" count={recommendations.length} color="amber">
+            {recommendations.map((p, i) => (
+              <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
+            ))}
+          </Section>
+        )}
+
+        {/* ── Below band (< 77) — diagnostic only, NOT recommendations ── */}
+        {belowBand.length > 0 && (
+          <Section title="Below band (diagnostic, <77)" count={belowBand.length} color="gray" defaultCollapsed>
+            {belowBand.map((p, i) => (
               <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
           </Section>

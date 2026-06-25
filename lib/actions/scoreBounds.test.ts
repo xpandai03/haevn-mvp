@@ -4,7 +4,7 @@
  *
  * Run: npx tsx lib/actions/scoreBounds.test.ts
  */
-import { scoreBounds } from './computedMatchCards'
+import { scoreBounds, isMatchScore, isRecommendationScore } from '../matching/scoreBands'
 
 let passed = 0
 let failed = 0
@@ -39,6 +39,16 @@ assert('Recs INCLUDE 79 (upper inclusive)', included(79, REC) === true)
 assert('Recs EXCLUDE exactly 80 (stays in Matches)', included(80, REC) === false)
 assert('Recs EXCLUDE 76 (never stored/shown)', included(76, REC) === false)
 assert('Recs EXCLUDE 85', included(85, REC) === false)
+
+console.log('\n=== SHARED HELPERS (admin console + member readers) ===\n')
+
+assert('isMatchScore(80) true', isMatchScore(80) === true)
+assert('isMatchScore(79) false', isMatchScore(79) === false)
+assert('isRecommendationScore(77) true', isRecommendationScore(77) === true)
+assert('isRecommendationScore(79) true', isRecommendationScore(79) === true)
+assert('isRecommendationScore(80) false', isRecommendationScore(80) === false)
+assert('isRecommendationScore(76) false', isRecommendationScore(76) === false)
+assert('match and recommendation are mutually exclusive at 80', isMatchScore(80) && !isRecommendationScore(80))
 
 console.log(`\n${'='.repeat(50)}`)
 console.log(`RESULTS: ${passed} passed, ${failed} failed out of ${passed + failed}`)

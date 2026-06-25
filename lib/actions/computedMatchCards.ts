@@ -12,6 +12,7 @@ import {
 import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
 import { getHiddenMatchIds } from '@/lib/actions/hiddenMatches'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
+import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
 
 // =============================================================================
 // TYPES
@@ -111,21 +112,8 @@ function parseBreakdown(raw: any): Record<string, { score: number }> {
 // MAIN FUNCTION
 // =============================================================================
 
-/**
- * Resolve the inclusive score band for a card query. Pure + exported so the
- * guard is unit-testable. Matches default to [80, ∞); Recommendations pass
- * {minScore:77, maxScore:79}. This is the single source of the >=80 guard that
- * keeps the 77–79 band out of "Your Matches".
- */
-export function scoreBounds(opts: { minScore?: number; maxScore?: number } = {}): {
-  min: number
-  max: number
-} {
-  return {
-    min: opts.minScore ?? 80,
-    max: opts.maxScore ?? Number.POSITIVE_INFINITY,
-  }
-}
+// Score band single source of truth lives in lib/matching/scoreBands.ts
+// (imported above) so the admin console and these member readers can't drift.
 
 /**
  * Fetch precomputed match cards from computed_matches table.
@@ -518,5 +506,8 @@ export async function getComputedMatchCards(
  * Inclusive band: 77 <= score <= 79. Exactly 80 stays in Matches.
  */
 export async function getRecommendationCards(): Promise<ComputedMatchCard[]> {
-  return getComputedMatchCards('Bronze', 3, { minScore: 77, maxScore: 79 })
+  return getComputedMatchCards('Bronze', 3, {
+    minScore: REC_MIN_SCORE,
+    maxScore: REC_MAX_SCORE,
+  })
 }
