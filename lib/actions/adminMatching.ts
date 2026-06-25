@@ -466,3 +466,103 @@ export async function getAdminSummaryInput(
     return { summaryInput: null, fieldsPopulated: 0, error: err.message || 'Failed to build summary input' }
   }
 }
+
+/**
+ * Build the Matching Control Center breakdown from STORED computed_matches —
+ * with NO recompute. This is the on-load path so admins (incl. Rik, whose long
+ * synchronous recompute request gets dropped by his network) see the last
+ * completed run instantly. The console splits these by the shared score bands
+ * (Matches >=80, Recommendations 77-79). Only 'stored' outcomes exist here
+ * (computed_matches holds >=77); below-band/blocked diagnostics are available
+ * only from a live recompute. Read-only; admin-gated.
+ */
+export async function getStoredMatchBreakdown(): Promise<{
+  total: number
+  computed: number
+  errors: number
+  fromStored: true
+  details: Array<{
+    partnershipId: string
+    displayName: string | null
+    success: boolean
+    matchesComputed: number
+    pairDiagnostics: Array<{
+      candidate: string
+      candidateId: string
+      score: number
+      tier: string
+      outcome: 'stored'
+    }>
+  }>
+}> {
+  const empty = { total: 0, computed: 0, errors: 0, fromStored: true as const, details: [] }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user?.email || !isAdminUser(user.email)) return empty
+
+  const adminClient = await createAdminClient()
+  const { data: rows, error } = await adminClient
+    .from('computed_matches')
+    .select('partnership_a, partnership_b, score, tier')
+    .order('score', { ascending: false })
+  if (error || !rows || rows.length === 0) return empty
+
+  // Resolve names: display_name → owner profile full_name → id slice.
+  const ids = [
+    ...new Set(
+      rows.flatMap((r) => [r.partnership_a, r.partnership_b]).filter(Boolean) as string[]
+    ),
+  ]
+  const nameMap = new Map<string, string>()
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { data: parts } = await adminClient
+      .from('partnerships')
+      .select('id, display_name, owner_id')
+      .in('id', batch)
+    const missingOwners: Array<{ id: string; owner_id: string }> = []
+    for (const p of parts ?? []) {
+      if (p.display_name) nameMap.set(p.id, p.display_name)
+      else if (p.owner_id) missingOwners.push({ id: p.id, owner_id: p.owner_id })
+    }
+    if (missingOwners.length > 0) {
+      const { data: profs } = await adminClient
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', missingOwners.map((m) => m.owner_id))
+      const pf = new Map((profs ?? []).map((p) => [p.user_id, p.full_name]))
+      for (const m of missingOwners) {
+        const n = pf.get(m.owner_id)
+        if (n) nameMap.set(m.id, n)
+      }
+    }
+  }
+  const nameOf = (id: string) => nameMap.get(id) || id.slice(0, 8)
+
+  // Group by partnership_a — each partnership's own candidate list.
+  const byPartnership = new Map<
+    string,
+    Array<{ candidate: string; candidateId: string; score: number; tier: string; outcome: 'stored' }>
+  >()
+  for (const r of rows as Array<{ partnership_a: string; partnership_b: string; score: number; tier: string }>) {
+    const list = byPartnership.get(r.partnership_a) ?? []
+    list.push({
+      candidate: nameOf(r.partnership_b),
+      candidateId: r.partnership_b,
+      score: r.score,
+      tier: r.tier,
+      outcome: 'stored',
+    })
+    byPartnership.set(r.partnership_a, list)
+  }
+
+  const details = [...byPartnership.entries()].map(([pid, diags]) => ({
+    partnershipId: pid,
+    displayName: nameMap.get(pid) ?? null,
+    success: true,
+    matchesComputed: diags.length,
+    pairDiagnostics: diags.sort((a, b) => b.score - a.score),
+  }))
+
+  return { total: details.length, computed: rows.length, errors: 0, fromStored: true, details }
+}

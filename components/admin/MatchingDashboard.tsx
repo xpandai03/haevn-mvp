@@ -14,6 +14,7 @@ import { ZipControl } from './ZipControl'
 // Shared band definition — same source the member-facing readers use, so admin
 // figures equal what releases. Matches >= 80; Recommendations 77–79 inclusive.
 import { isMatchScore, isRecommendationScore } from '@/lib/matching/scoreBands'
+import { getStoredMatchBreakdown } from '@/lib/actions/adminMatching'
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -243,14 +244,29 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
     } catch {}
   }
 
-  // Restore cached recompute results on mount
+  // On mount: show the last completed run WITHOUT triggering a recompute.
+  // Prefer this browser's cached full-diagnostic run (from a prior manual
+  // Recompute); otherwise read the stored breakdown from computed_matches so
+  // admins always see data on load — the path that must work for Rik, whose
+  // long synchronous recompute request gets dropped by his network.
   React.useEffect(() => {
     loadSystemStatus()
     const cached = loadCachedResult()
     if (cached) {
       setRecomputeResult(cached.result)
       setRecomputedAt(cached.at)
+      return
     }
+    getStoredMatchBreakdown()
+      .then((stored) => {
+        if (stored && stored.details.length > 0) {
+          setRecomputeResult(stored as unknown as RecomputeResult)
+          setRecomputedAt('stored matches (last completed run)')
+        }
+      })
+      .catch(() => {
+        /* non-fatal — admin can still click Recompute */
+      })
   }, [])
 
   // Transform data

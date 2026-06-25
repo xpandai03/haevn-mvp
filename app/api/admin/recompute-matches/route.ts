@@ -11,6 +11,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
 
+// Full-pool recompute is long-running; match the cron's ceiling (the cron route
+// already sets this). The console no longer REQUIRES this request to show data
+// (it reads stored computed_matches on load) — this just makes the dev's manual
+// "Recompute All Matches" more tolerant.
+export const maxDuration = 300
+
 // Temporary GET handler to verify deployment build version (no auth required)
 export async function GET() {
   return NextResponse.json({
