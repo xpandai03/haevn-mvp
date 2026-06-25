@@ -14,46 +14,18 @@ import { ZipControl } from './ZipControl'
 // Shared band definition — same source the member-facing readers use, so admin
 // figures equal what releases. Matches >= 80; Recommendations 77–79 inclusive.
 import { isMatchScore, isRecommendationScore } from '@/lib/matching/scoreBands'
-import { getStoredMatchBreakdown } from '@/lib/actions/adminMatching'
-
-// ─── Types ──────────────────────────────────────────────────────
-
-interface PairDiag {
-  candidate: string
-  candidateId?: string
-  score: number
-  tier: string
-  outcome: string
-  reason?: string
-  breakdown?: any
-}
-
-interface RecomputeDetail {
-  partnershipId: string
-  displayName?: string | null
-  success: boolean
-  matchesComputed: number
-  candidatesEvaluated?: number
-  error?: string
-  pairDiagnostics?: PairDiag[]
-  upsertError?: string
-  _debug?: any
-}
-
-interface RecomputeResult {
-  total: number
-  computed: number
-  errors: number
-  details: RecomputeDetail[]
-  /**
-   * True when this breakdown was read from STORED computed_matches (on-load),
-   * not produced by a live recompute. On this path `details` only contains
-   * users WITH stored matches/recommendations — NOT the full evaluated pool —
-   * so the summary stats are labeled accordingly and "No Viable Matches"
-   * (which needs the full pool) is omitted.
-   */
-  fromStored?: boolean
-}
+import { getLatestConsoleSnapshot } from '@/lib/actions/adminMatching'
+// Shared render/transform path — same types + transformToCards + computeSummary
+// used to render the live recompute AND the persisted on-load snapshot, so they
+// can't diverge. `fromStored` distinguishes a replayed snapshot (capped
+// below-band/blocked drill-down) from a fresh live run.
+import {
+  type PairDiag,
+  type RecomputeResult,
+  type UserCardData,
+  transformToCards,
+  computeSummary,
+} from '@/lib/matching/consoleSnapshot'
 
 // ─── Human-readable labels ──────────────────────────────────────
 
@@ -108,77 +80,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   lifestyle: 'Lifestyle Fit',
 }
 
-// ─── Data transformations ───────────────────────────────────────
+// Data transforms (transformToCards / computeSummary) + types live in
+// lib/matching/consoleSnapshot.ts — imported above so the live recompute view
+// and the persisted on-load snapshot render through the exact same path.
 
-interface UserCardData {
-  partnershipId: string
-  name: string
-  matchCount: number          // stored, score >= 80
-  recommendationCount: number // stored, 77–79 inclusive
-  belowBandCount: number      // < 77 near-misses — DIAGNOSTIC only, never a recommendation
-  blockedCount: number        // constraint-failed (or sub-50 noise)
-  matchCandidates: PairDiag[]      // top stored >= 80, score desc
-  recommendationCandidates: PairDiag[] // top stored 77–79, score desc
-  detail: RecomputeDetail
-}
-
-function transformToCards(result: RecomputeResult): UserCardData[] {
-  return result.details.map((d) => {
-    const diags = d.pairDiagnostics || []
-    // Everything >= 77 is stored; split by SCORE into Matches vs Recommendations
-    // using the shared band helpers (single source of truth with member readers).
-    const stored = diags.filter((p) => p.outcome === 'stored')
-    const matches = stored
-      .filter((p) => isMatchScore(p.score))
-      .sort((a, b) => b.score - a.score)
-    const recommendations = stored
-      .filter((p) => isRecommendationScore(p.score))
-      .sort((a, b) => b.score - a.score)
-    // Below-band diagnostic: scored but not stored (< 77), excluding gate fails
-    // and sub-50 noise. NEVER labeled a recommendation.
-    const belowBand = diags
-      .filter(
-        (p) => p.outcome !== 'stored' && p.outcome !== 'constraint-failed' && p.score >= 50
-      )
-      .sort((a, b) => b.score - a.score)
-    const blocked = diags.filter(
-      (p) => p.outcome === 'constraint-failed' || (p.outcome !== 'stored' && p.score < 50)
-    )
-
-    return {
-      partnershipId: d.partnershipId,
-      name: d.displayName || d.partnershipId.slice(0, 8),
-      matchCount: matches.length,
-      recommendationCount: recommendations.length,
-      belowBandCount: belowBand.length,
-      blockedCount: blocked.length,
-      matchCandidates: matches.slice(0, 3),
-      recommendationCandidates: recommendations.slice(0, 3),
-      detail: d,
-    }
-  })
-}
-
-function computeSummary(cards: UserCardData[], result: RecomputeResult) {
-  const totalUsers = cards.length
-  const withMatches = cards.filter((c) => c.matchCount > 0).length
-  // "Recommendations only" = has 77–79 band but no >= 80 match.
-  const withRecommendations = cards.filter(
-    (c) => c.recommendationCount > 0 && c.matchCount === 0
-  ).length
-  const noViable = totalUsers - withMatches - withRecommendations
-
-  // Best pair across all diagnostics
-  let bestPair: { a: string; b: string; score: number } | null = null
-  for (const card of cards) {
-    for (const diag of card.detail.pairDiagnostics || []) {
-      if (!bestPair || diag.score > bestPair.score) {
-        bestPair = { a: card.name, b: diag.candidate, score: diag.score }
-      }
-    }
+/** Format a UTC ISO timestamp as Eastern, e.g. "Jun 25, 2026, 2:53 PM ET". */
+function formatRunAtET(iso: string): string {
+  try {
+    const s = new Date(iso).toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+    return `${s} ET`
+  } catch {
+    return iso
   }
-
-  return { totalUsers, withMatches, withRecommendations, noViable, bestPair, errors: result.errors }
 }
 
 // ─── Main Dashboard Component ───────────────────────────────────
@@ -252,24 +172,18 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
     } catch {}
   }
 
-  // On mount: show the last completed run WITHOUT triggering a recompute.
-  // Prefer this browser's cached full-diagnostic run (from a prior manual
-  // Recompute); otherwise read the stored breakdown from computed_matches so
-  // admins always see data on load — the path that must work for Rik, whose
-  // long synchronous recompute request gets dropped by his network.
+  // On mount: default view = the FULL last run, read from the persisted
+  // snapshot (written on every successful recompute, incl. the Monday cron).
+  // No recompute triggered — the path that must work for Rik. The snapshot
+  // carries the whole pool, so the tiles read the full 301/13/63/225 and all
+  // cards, identical to the post-recompute view. Null → "No runs yet".
   React.useEffect(() => {
     loadSystemStatus()
-    const cached = loadCachedResult()
-    if (cached) {
-      setRecomputeResult(cached.result)
-      setRecomputedAt(cached.at)
-      return
-    }
-    getStoredMatchBreakdown()
-      .then((stored) => {
-        if (stored && stored.details.length > 0) {
-          setRecomputeResult(stored as unknown as RecomputeResult)
-          setRecomputedAt('stored matches (last completed run)')
+    getLatestConsoleSnapshot()
+      .then((snap) => {
+        if (snap && snap.details && snap.details.length > 0) {
+          setRecomputeResult(snap)
+          setRecomputedAt(snap.runAt ? formatRunAtET(snap.runAt) : 'last completed run')
         }
       })
       .catch(() => {
@@ -309,7 +223,9 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
       const response = await fetch('/api/admin/recompute-matches', { method: 'POST' })
       const data = await response.json()
       if (data.success) {
-        const timestamp = new Date().toLocaleTimeString()
+        // Live result: the server already persisted the snapshot inside
+        // recomputeAllMatches, so a later fresh load replays this same run.
+        const timestamp = formatRunAtET(new Date().toISOString())
         setRecomputeResult(data.result)
         setRecomputedAt(timestamp)
         saveCachedResult(data.result, timestamp)
@@ -495,17 +411,15 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
         <>
         {recomputedAt && (
           <p className="text-xs text-gray-400 mb-2">
-            Results from recompute at {recomputedAt}. If you re-seeded users since then, click Recompute again.
+            Last run: {recomputedAt}. Click Recompute to refresh.
           </p>
         )}
-        <div className={`grid grid-cols-2 gap-4 ${recomputeResult?.fromStored ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
-          {/* On the stored-load path `details` is only users WITH stored results,
-              so "Users Evaluated" would falsely imply the pool is that small.
-              Label it for what it is; the full ~pool count is only known after a
-              live Recompute. */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {/* The snapshot carries the FULL evaluated pool, so on-load reads the
+              same four tiles as a live run (no reduced "with results" view). */}
           <SummaryCard
             icon={<Users className="h-5 w-5 text-slate-600" />}
-            label={recomputeResult?.fromStored ? 'Users With Results' : 'Users Evaluated'}
+            label="Users Evaluated"
             value={summary.totalUsers}
             bg="bg-white"
           />
@@ -521,17 +435,12 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             value={summary.withRecommendations}
             bg="bg-amber-50"
           />
-          {/* "No Viable Matches" needs the full evaluated pool, which stored data
-              doesn't carry — omit it on the stored-load path rather than show a
-              misleading 0. It returns after a live Recompute. */}
-          {!recomputeResult?.fromStored && (
-            <SummaryCard
-              icon={<XCircle className="h-5 w-5 text-red-500" />}
-              label="No Viable Matches"
-              value={summary.noViable}
-              bg="bg-red-50"
-            />
-          )}
+          <SummaryCard
+            icon={<XCircle className="h-5 w-5 text-red-500" />}
+            label="No Viable Matches"
+            value={summary.noViable}
+            bg="bg-red-50"
+          />
         </div>
         </>
       )}
@@ -620,11 +529,11 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
         </div>
       )}
 
-      {/* ── Empty State ── */}
+      {/* ── Empty State (no snapshot persisted yet — never fabricate numbers) ── */}
       {!recomputeResult && !recomputing && (
         <div className="text-center py-16 text-gray-400">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-40" />
-          <p className="text-lg font-medium text-gray-500">No data yet</p>
+          <p className="text-lg font-medium text-gray-500">No runs yet</p>
           <p className="text-sm mt-1">Click "Recompute All Matches" to evaluate all users</p>
         </div>
       )}
@@ -850,21 +759,32 @@ function DetailPanel({ card, onClose }: { card: UserCardData; onClose: () => voi
           </Section>
         )}
 
-        {/* ── Below band (< 77) — diagnostic only, NOT recommendations ── */}
-        {belowBand.length > 0 && (
-          <Section title="Below band (diagnostic, <77)" count={belowBand.length} color="gray" defaultCollapsed>
+        {/* ── Below band (< 77) — diagnostic only, NOT recommendations.
+            Count is the TRUE total; the list may be capped on the stored path. ── */}
+        {card.belowBandCount > 0 && (
+          <Section title="Below band (diagnostic, <77)" count={card.belowBandCount} color="gray" defaultCollapsed>
             {belowBand.map((p, i) => (
               <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
+            {belowBand.length < card.belowBandCount && (
+              <p className="text-[11px] text-gray-400 mt-2 italic">
+                Showing top {belowBand.length} of {card.belowBandCount}. The full below-band list comes from a live Recompute.
+              </p>
+            )}
           </Section>
         )}
 
-        {/* ── Blocked / Not Compatible ── */}
-        {blocked.length > 0 && (
-          <Section title="Not Compatible" count={blocked.length} color="gray" defaultCollapsed>
+        {/* ── Blocked / Not Compatible. Count is the TRUE total; list may be capped. ── */}
+        {card.blockedCount > 0 && (
+          <Section title="Not Compatible" count={card.blockedCount} color="gray" defaultCollapsed>
             {blocked.map((p, i) => (
               <CandidateRow key={i} diag={p} sourcePartnershipId={card.partnershipId} />
             ))}
+            {blocked.length < card.blockedCount && (
+              <p className="text-[11px] text-gray-400 mt-2 italic">
+                Showing top {blocked.length} of {card.blockedCount}. The full blocked list comes from a live Recompute.
+              </p>
+            )}
           </Section>
         )}
 

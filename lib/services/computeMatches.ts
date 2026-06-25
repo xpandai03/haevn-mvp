@@ -23,6 +23,7 @@ import {
   type RawAnswers,
   type CompatibilityTier,
 } from '@/lib/matching'
+import { buildConsoleSnapshot } from '@/lib/matching/consoleSnapshot'
 
 const ENGINE_VERSION = '5cat-v6'
 // Matches cutoff: a pair is a "match" at >= 80. Kept for diagnostics/labels.
@@ -743,6 +744,38 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
       triggered_by: 'admin_manual',
       metadata: { total: allPartnerships.length, computed: totalComputed, errors: totalErrors }
     }).then(() => {}, () => {}) // swallow errors — logging should never fail the operation
+
+    // Persist a bounded snapshot of THIS run so the admin console shows the full
+    // last run on load (no recompute required) — covers the Monday cron too.
+    // Success-only: details is non-empty here (fatal errors return early in the
+    // catch below), so a good snapshot is never overwritten by a partial run.
+    if (details.length > 0) {
+      try {
+        const snapshot = buildConsoleSnapshot(
+          { total: allPartnerships.length, computed: totalComputed, errors: totalErrors, details },
+          { runAt: new Date().toISOString(), triggeredBy: 'recompute' }
+        )
+        const { data: inserted } = await adminClient
+          .from('system_events')
+          .insert({
+            event_type: 'console_recompute_snapshot',
+            triggered_by: 'recompute',
+            metadata: snapshot,
+          })
+          .select('id')
+          .single()
+        // Keep a single latest snapshot row.
+        if (inserted?.id) {
+          await adminClient
+            .from('system_events')
+            .delete()
+            .eq('event_type', 'console_recompute_snapshot')
+            .neq('id', inserted.id)
+        }
+      } catch (snapErr) {
+        console.warn('[recomputeAllMatches] console snapshot persist skipped:', snapErr)
+      }
+    }
 
     return { total: allPartnerships.length, computed: totalComputed, errors: totalErrors, details }
   } catch (error: any) {
