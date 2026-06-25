@@ -45,6 +45,14 @@ interface RecomputeResult {
   computed: number
   errors: number
   details: RecomputeDetail[]
+  /**
+   * True when this breakdown was read from STORED computed_matches (on-load),
+   * not produced by a live recompute. On this path `details` only contains
+   * users WITH stored matches/recommendations — NOT the full evaluated pool —
+   * so the summary stats are labeled accordingly and "No Viable Matches"
+   * (which needs the full pool) is omitted.
+   */
+  fromStored?: boolean
 }
 
 // ─── Human-readable labels ──────────────────────────────────────
@@ -490,10 +498,14 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             Results from recompute at {recomputedAt}. If you re-seeded users since then, click Recompute again.
           </p>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 gap-4 ${recomputeResult?.fromStored ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
+          {/* On the stored-load path `details` is only users WITH stored results,
+              so "Users Evaluated" would falsely imply the pool is that small.
+              Label it for what it is; the full ~pool count is only known after a
+              live Recompute. */}
           <SummaryCard
             icon={<Users className="h-5 w-5 text-slate-600" />}
-            label="Users Evaluated"
+            label={recomputeResult?.fromStored ? 'Users With Results' : 'Users Evaluated'}
             value={summary.totalUsers}
             bg="bg-white"
           />
@@ -509,12 +521,17 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             value={summary.withRecommendations}
             bg="bg-amber-50"
           />
-          <SummaryCard
-            icon={<XCircle className="h-5 w-5 text-red-500" />}
-            label="No Viable Matches"
-            value={summary.noViable}
-            bg="bg-red-50"
-          />
+          {/* "No Viable Matches" needs the full evaluated pool, which stored data
+              doesn't carry — omit it on the stored-load path rather than show a
+              misleading 0. It returns after a live Recompute. */}
+          {!recomputeResult?.fromStored && (
+            <SummaryCard
+              icon={<XCircle className="h-5 w-5 text-red-500" />}
+              label="No Viable Matches"
+              value={summary.noViable}
+              bg="bg-red-50"
+            />
+          )}
         </div>
         </>
       )}
