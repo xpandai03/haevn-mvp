@@ -35,6 +35,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // 1b. VERIFICATION GATE (server-enforced — cannot be bypassed by the client).
+    //     ID verification is required before a paid upgrade. Reads the canonical
+    //     flag the Veriff webhook writes: profiles.verification_status. RLS lets
+    //     a user read their own profile, so the auth-scoped client suffices.
+    const { data: vProfile } = await supabase
+      .from('profiles')
+      .select('verification_status')
+      .eq('user_id', user.id)
+      // Explicit row type: the generated Supabase types don't yet include the
+      // veriff columns (added by migration 015), which would otherwise infer `never`.
+      .maybeSingle<{ verification_status: string | null }>()
+    if (vProfile?.verification_status !== 'approved') {
+      return NextResponse.json(
+        {
+          error: 'verification_required',
+          detail: 'ID verification is required before upgrading.',
+          redirectTo: '/onboarding/verification',
+        },
+        { status: 403 }
+      )
+    }
+
     // 2. Resolve the user's active partnership (multi-partnership safe).
     const { id: partnershipId, error: partnershipError } = await getCurrentPartnershipId()
     if (partnershipError || !partnershipId) {

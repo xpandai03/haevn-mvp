@@ -111,6 +111,17 @@ export default function MembershipPage() {
         return
       }
 
+      // Verification gate: the checkout endpoint requires ID verification first
+      // (server-enforced). Route the user into the existing Veriff flow.
+      if (res.status === 403 && data.error === 'verification_required') {
+        toast({
+          title: 'Verify your identity to upgrade',
+          description: 'HAEVN+ requires a quick ID check first.',
+        })
+        setTimeout(() => router.push(data.redirectTo || '/onboarding/verification'), 400)
+        return
+      }
+
       toast({
         title: 'Unable to start checkout',
         description: data.error || 'Please try again.',
