@@ -18,6 +18,14 @@ import { initLemonSqueezy, LEMONSQUEEZY_CONFIG, variantIdForPlan } from '@/lib/l
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentPartnershipId } from '@/lib/actions/partnership'
 
+// ID-verification gate toggle.
+// FALSE for this launch batch — Veriff is canceled, so requiring an approved
+// verification would block ALL upgrades with no way through (Rik approved
+// skipping ID verification for now). The gate logic below is preserved; flip
+// this back to TRUE once Veriff is resubscribed to re-enable verification at
+// upgrade. (The membership page's 403 handler auto-reactivates with it.)
+const REQUIRE_ID_VERIFICATION = false
+
 function appUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -39,22 +47,26 @@ export async function POST(request: NextRequest) {
     //     ID verification is required before a paid upgrade. Reads the canonical
     //     flag the Veriff webhook writes: profiles.verification_status. RLS lets
     //     a user read their own profile, so the auth-scoped client suffices.
-    const { data: vProfile } = await supabase
-      .from('profiles')
-      .select('verification_status')
-      .eq('user_id', user.id)
-      // Explicit row type: the generated Supabase types don't yet include the
-      // veriff columns (added by migration 015), which would otherwise infer `never`.
-      .maybeSingle<{ verification_status: string | null }>()
-    if (vProfile?.verification_status !== 'approved') {
-      return NextResponse.json(
-        {
-          error: 'verification_required',
-          detail: 'ID verification is required before upgrading.',
-          redirectTo: '/onboarding/verification',
-        },
-        { status: 403 }
-      )
+    //     DISABLED for this launch batch via REQUIRE_ID_VERIFICATION (see top of
+    //     file). Flip that flag to true to re-enable — logic below is unchanged.
+    if (REQUIRE_ID_VERIFICATION) {
+      const { data: vProfile } = await supabase
+        .from('profiles')
+        .select('verification_status')
+        .eq('user_id', user.id)
+        // Explicit row type: the generated Supabase types don't yet include the
+        // veriff columns (added by migration 015), which would otherwise infer `never`.
+        .maybeSingle<{ verification_status: string | null }>()
+      if (vProfile?.verification_status !== 'approved') {
+        return NextResponse.json(
+          {
+            error: 'verification_required',
+            detail: 'ID verification is required before upgrading.',
+            redirectTo: '/onboarding/verification',
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // 2. Resolve the user's active partnership (multi-partnership safe).
