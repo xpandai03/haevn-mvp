@@ -25,6 +25,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Magic-link (passwordless) login. The primary path for imported users, who
+  // have an auth identity (email_confirm:true) but no password and no Google.
+  const [magicLoading, setMagicLoading] = useState(false)
+  const [magicSent, setMagicSent] = useState(false)
   // True until we've confirmed there's no existing session. Prevents the
   // login form from flashing in front of a user who's already authenticated
   // (e.g. arriving from the OAuth callback in any code path).
@@ -248,6 +252,39 @@ export default function LoginPage() {
       console.error('[Login] Google OAuth exception:', err)
       setError('Google sign-in is not available yet. Please use email and password.')
       setGoogleLoading(false)
+    }
+  }
+
+  // Send a passwordless magic sign-in link. shouldCreateUser:false is REQUIRED:
+  // it logs the recipient into their EXISTING identity (imported users already
+  // have one) and never creates a new empty user. The link returns to
+  // /auth/callback, which exchanges the code into a session.
+  const handleMagicLink = async () => {
+    setError(null)
+    const target = email.trim()
+    if (!target) {
+      setError('Enter your email above, then request a sign-in link.')
+      return
+    }
+    setMagicLoading(true)
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: target,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (otpError) {
+        // Do not reveal whether the email exists; generic guidance only.
+        setError('We couldn’t send a sign-in link to that email. Check the address and try again.')
+        return
+      }
+      setMagicSent(true)
+    } catch {
+      setError('We couldn’t send a sign-in link right now. Please try again.')
+    } finally {
+      setMagicLoading(false)
     }
   }
 
@@ -560,6 +597,33 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
+
+            {/* Magic-link (passwordless) — primary path for imported users with
+                no password/Google. Sends a one-click sign-in link to their email. */}
+            {magicSent ? (
+              <p className="text-center text-sm text-haevn-teal pt-1" style={{ fontWeight: 400 }}>
+                Check your email for a sign-in link. It logs you straight in — no password needed.
+              </p>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full rounded-full text-haevn-teal hover:bg-haevn-teal/5"
+                size="lg"
+                disabled={magicLoading || loading || googleLoading}
+                onClick={handleMagicLink}
+                style={{ fontWeight: 500, fontSize: '15px' }}
+              >
+                {magicLoading ? (
+                  <>
+                    <HaevnLoader size={18} className="mr-2" />
+                    Sending link...
+                  </>
+                ) : (
+                  'Email me a sign-in link'
+                )}
+              </Button>
+            )}
 
             <div
               className="text-center text-haevn-charcoal pt-4"
