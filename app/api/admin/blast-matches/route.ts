@@ -69,13 +69,15 @@ export async function GET(request: NextRequest) {
     const { data: member } = await supabase
       .from('partnership_members').select('user_id').eq('partnership_id', partnershipId).limit(1).single()
 
-    // Live-market gate (matches the cron).
+    // Market gate — mirror the matches-display logic: ONLY an explicit
+    // 'waitlist' blocks. 'live' AND legacy null both see matches (the imported
+    // cohort is all null), so they must all be notifiable too.
     if (member) {
       const { data: profile } = await supabase
         .from('profiles').select('msa_status').eq('user_id', member.user_id).single()
-      if (profile?.msa_status !== 'live') {
+      if (profile?.msa_status === 'waitlist') {
         skipped++
-        results.push({ partnership: partnershipId, email: null, emailSent: false, smsSent: false, error: null, skippedReason: 'not_live_market' })
+        results.push({ partnership: partnershipId, email: null, emailSent: false, smsSent: false, error: null, skippedReason: 'waitlist' })
         if (!dry) await markNotified(supabase, partnershipId)
         continue
       }

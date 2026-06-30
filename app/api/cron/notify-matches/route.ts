@@ -61,8 +61,10 @@ export async function GET(request: NextRequest) {
           .eq('user_id', member.user_id)
           .single()
 
-        if (profile?.msa_status !== 'live') {
-          console.log(`[Cron notify-matches] Skip ${partnershipId}: not in live market`)
+        // Mirror the matches-display gate: only an explicit 'waitlist' blocks;
+        // 'live' and legacy null are both notifiable (imported cohort is null).
+        if (profile?.msa_status === 'waitlist') {
+          console.log(`[Cron notify-matches] Skip ${partnershipId}: waitlisted`)
           summary.skipped++
           await markNotified(supabase, partnershipId)
           continue
