@@ -6,8 +6,12 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import {
   Search, X, ChevronDown, ChevronRight, Users,
-  CheckCircle2, AlertTriangle, XCircle, Zap, Code, Settings, Clock, Rocket
+  CheckCircle2, AlertTriangle, XCircle, Zap, Code, Settings, Clock, Rocket,
+  Mail, MessageSquare
 } from 'lucide-react'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
 import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
 import { ZipControl } from './ZipControl'
@@ -159,6 +163,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showZipModal, setShowZipModal] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<NotificationEvent | null>(null)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [releasing, setReleasing] = useState(false)
   const [runningCycle, setRunningCycle] = useState(false)
@@ -373,9 +378,12 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
               const status = allFailed ? 'failed' : (smsFailed || emailFailed) ? 'partial' : 'sent'
 
               return (
-                <div
+                <button
                   key={i}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
+                  type="button"
+                  onClick={() => setSelectedNotification(n)}
+                  title="Click to see what was sent"
+                  className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-xs transition hover:brightness-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#008080] ${
                     status === 'failed' ? 'bg-red-50 border border-red-200' :
                     status === 'partial' ? 'bg-amber-50 border border-amber-200' :
                     'bg-green-50 border border-green-200'
@@ -396,10 +404,11 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
                     {smsFailed && <span className="text-red-500">SMS failed</span>}
                     {emailFailed && <span className="text-red-500">Email failed</span>}
                   </div>
-                  <span className="text-gray-400 flex-shrink-0 ml-2">
+                  <span className="flex items-center gap-1 text-gray-400 flex-shrink-0 ml-2">
                     {new Date(n.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    <ChevronRight className="h-3 w-3" />
                   </span>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -578,7 +587,150 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
 
       {/* ── Engine Documentation (preserved) ── */}
       <MatchingEngineOverview />
+
+      {/* ── Notification detail (what was sent) ── */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+      />
     </div>
+  )
+}
+
+// ─── Notification Detail Modal ──────────────────────────────────
+// Display-only. The literal sent body is NOT stored in system_events, so the
+// content below is RECONSTRUCTED from the approved templates in
+// lib/services/notifications.ts (that module is server-only — twilio/resend —
+// so it can't be imported here; these constants mirror it). Follow-up: extract
+// the copy to a shared client-safe module so this can't drift from the send
+// path, and/or persist the literal body on future sends to make this exact.
+// The per-user magic link is single-use/expired and never exposed — shown as a
+// labeled placeholder only.
+const SIGN_IN_PLACEHOLDER = '[per-user sign-in link]'
+const SMS_MATCH_TEXT =
+  `HAEVN: Your matches are ready. We've found people who align with you on HAEVN. ` +
+  `Tap to sign in (no password needed) and see who: ${SIGN_IN_PLACEHOLDER}`
+const EMAIL_MATCH_SUBJECT = 'You have new matches on HAEVN'
+
+function StatusBadge({ accepted }: { accepted: boolean }) {
+  return (
+    <span
+      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+        accepted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'
+      }`}
+    >
+      {accepted ? 'Accepted' : 'Failed'}
+    </span>
+  )
+}
+
+/** Faithful preview of the branded match email (mirrors EMAIL_TEMPLATES.match). */
+function EmailPreview() {
+  return (
+    <div className="rounded-lg border bg-[#EEECEA] p-3">
+      <div className="mx-auto max-w-sm rounded-lg border bg-white px-5 py-6 text-center">
+        <p className="font-serif tracking-[0.2em] text-[#1E2A4A] text-sm">HAEVN</p>
+        <h4 className="mt-3 font-serif text-lg text-[#1E2A4A]">Your matches are ready</h4>
+        <p className="mt-2 text-sm leading-relaxed text-gray-600">
+          We&apos;ve found people who align with you on HAEVN. Tap below to sign in
+          (no password needed) and see who.
+        </p>
+        <div className="mt-4">
+          <span className="inline-block rounded-full bg-[#008080] px-6 py-2.5 text-sm font-semibold text-white">
+            Sign in to HAEVN
+          </span>
+          <p className="mt-1 text-[10px] italic text-gray-400">{SIGN_IN_PLACEHOLDER}</p>
+        </div>
+        <p className="mt-5 text-[10px] text-gray-400">
+          HAEVN — Meaningful connections, intentionally.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function NotificationDetailModal({
+  notification,
+  onClose,
+}: {
+  notification: NotificationEvent | null
+  onClose: () => void
+}) {
+  const n = notification
+  const hasEmail = !!n?.email
+  const hasSms = !!n?.phone
+
+  return (
+    <Dialog open={!!n} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base">What was sent</DialogTitle>
+          <DialogDescription className="sr-only">
+            The exact content this recipient received
+          </DialogDescription>
+        </DialogHeader>
+
+        {n && (
+          <div className="space-y-4">
+            {/* Meta */}
+            <div className="grid grid-cols-[80px_1fr] gap-x-3 gap-y-1 text-sm">
+              <span className="text-gray-400">Recipient</span>
+              <span className="font-medium text-gray-800 break-all">
+                {n.email || n.phone || 'Unknown'}
+              </span>
+              <span className="text-gray-400">Type</span>
+              <span className="text-gray-700 capitalize">{n.notification_type}</span>
+              <span className="text-gray-400">Sent</span>
+              <span className="text-gray-700">{formatRunAtET(n.at)}</span>
+            </div>
+
+            {/* EMAIL */}
+            {hasEmail && (
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-800">Email</span>
+                  <StatusBadge accepted={!!n.email_sent} />
+                </div>
+                {n.email_error && (
+                  <p className="text-xs text-red-600 break-all">Error: {n.email_error}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  <span className="text-gray-400">Subject: </span>
+                  {EMAIL_MATCH_SUBJECT}
+                </p>
+                <EmailPreview />
+              </div>
+            )}
+
+            {/* SMS */}
+            {hasSms && (
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-800">SMS</span>
+                  <StatusBadge accepted={!!n.sms_sent} />
+                  <span className="text-xs text-gray-400">to {n.phone}</span>
+                </div>
+                {n.sms_error && (
+                  <p className="text-xs text-red-600 break-all">Error: {n.sms_error}</p>
+                )}
+                <blockquote className="rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap">
+                  {SMS_MATCH_TEXT}
+                </blockquote>
+              </div>
+            )}
+
+            {/* Reconstruction note */}
+            <p className="border-t pt-2 text-[11px] leading-relaxed text-gray-400">
+              Content is reconstructed from the approved template — the literal sent
+              body isn&apos;t stored. The per-user sign-in link is shown as a
+              placeholder; real links are single-use and never exposed here.
+            </p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
