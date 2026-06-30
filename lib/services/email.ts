@@ -1,6 +1,9 @@
 import { Resend } from 'resend'
 
-const FROM_ADDRESS = 'HAEVN <notifications@haevn.co>'
+// haevn.app is the Resend-verified sending domain. haevn.co was NOT verified
+// and 403'd every send ("domain is not verified"), so all notification email
+// silently failed. Must stay on a verified domain.
+const FROM_ADDRESS = 'HAEVN <notifications@haevn.app>'
 
 function getResendClient(): Resend | null {
   if (!process.env.RESEND_API_KEY) return null

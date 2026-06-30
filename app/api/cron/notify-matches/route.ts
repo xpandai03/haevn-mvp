@@ -38,21 +38,15 @@ export async function GET(request: NextRequest) {
     console.log(`[Cron notify-matches] ${partnershipIds.length} partnerships to notify`)
 
     for (const partnershipId of partnershipIds) {
-      // Get partnership phone
+      // Phone may be null — the imported cohort has no phone numbers, so EMAIL
+      // is the primary channel. We no longer skip no-phone recipients.
       const { data: partnership } = await supabase
         .from('partnerships')
         .select('id, phone')
         .eq('id', partnershipId)
         .single()
 
-      if (!partnership?.phone) {
-        console.log(`[Cron notify-matches] Skip ${partnershipId}: no phone`)
-        summary.skipped++
-        await markNotified(supabase, partnershipId)
-        continue
-      }
-
-      // Check if user is in a live market
+      // Resolve the owner (needed for the live-market gate, email, magic link).
       const { data: member } = await supabase
         .from('partnership_members')
         .select('user_id')
@@ -75,22 +69,31 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Get user email for email notification
+      // Owner email — the primary channel for this launch (all imported users
+      // have one; none have a phone).
       let userEmail: string | null = null
       if (member) {
         const { data: authUser } = await supabase.auth.admin.getUserById(member.user_id)
         userEmail = authUser?.user?.email || null
       }
 
-      // Per-user passwordless magic sign-in link (these users have no password,
-      // so a /dashboard link would dump them at a login wall). Requires the
-      // user's email to mint; if absent, fall back inside sendNotification.
+      // Unreachable on ANY channel — don't burn the notified flag so it can be
+      // retried if contact info is added later.
+      if (!partnership?.phone && !userEmail) {
+        console.log(`[Cron notify-matches] Skip ${partnershipId}: no phone AND no email`)
+        summary.skipped++
+        continue
+      }
+
+      // Per-user passwordless magic sign-in link (imported users have no
+      // password). Delivered in the email CTA (and SMS if a phone ever exists).
       const signInUrl = userEmail ? await buildSignInUrl(userEmail) : null
 
-      // Send via notification system (SMS + Email in parallel)
+      // Send via notification system. SMS only fires if a phone exists; email
+      // carries the branded magic link for the no-phone cohort.
       const result = await sendNotification({
         type: 'match',
-        phone: partnership.phone,
+        phone: partnership?.phone ?? null,
         email: userEmail,
         partnershipId,
         signInUrl: signInUrl ?? undefined,
