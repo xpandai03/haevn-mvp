@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendNotification } from '@/lib/services/notifications'
+import { sendNotification, buildSignInUrl } from '@/lib/services/notifications'
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
   const summary = { sent: 0, skipped: 0, errors: 0 }
 
   try {
-    // Find all partnerships with unreleased-but-due matches that haven't been notified
-    // Only notify about actual MATCHES (>= 80). The 77–79 Recommendations band
-    // is stored in the same table but must not trigger "matches are ready" SMS.
+    // Find all partnerships with released-but-un-notified results. Notify the
+    // full launch set: Matches (>= 80) AND Recommendations (77–79). Both bands
+    // get the "your matches are ready" SMS so all 87 recipients are covered.
     const { data: rows, error: queryError } = await supabase
       .from('computed_matches')
       .select('partnership_a')
-      .gte('score', 80)
+      .gte('score', 77)
       .lte('release_at', new Date().toISOString())
       .is('sms_notified_at', null)
 
@@ -82,12 +82,18 @@ export async function GET(request: NextRequest) {
         userEmail = authUser?.user?.email || null
       }
 
+      // Per-user passwordless magic sign-in link (these users have no password,
+      // so a /dashboard link would dump them at a login wall). Requires the
+      // user's email to mint; if absent, fall back inside sendNotification.
+      const signInUrl = userEmail ? await buildSignInUrl(userEmail) : null
+
       // Send via notification system (SMS + Email in parallel)
       const result = await sendNotification({
         type: 'match',
         phone: partnership.phone,
         email: userEmail,
         partnershipId,
+        signInUrl: signInUrl ?? undefined,
       })
 
       if (result.sms.sent || result.email.sent) {

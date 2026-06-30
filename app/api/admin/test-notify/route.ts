@@ -11,7 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import { sendNotification } from '@/lib/services/notifications'
+import { sendNotification, buildSignInUrl } from '@/lib/services/notifications'
 
 export const maxDuration = 60
 
@@ -42,20 +42,28 @@ export async function GET(request: NextRequest) {
   }
   const to = url.searchParams.get('to')
   const phone = url.searchParams.get('phone')
+  const magicfor = url.searchParams.get('magicfor') // email to mint a real magic sign-in link for
   if (!to && !phone) {
     return NextResponse.json({ error: 'provide ?to=<email> and/or ?phone=<+1...>' }, { status: 400 })
   }
+
+  // Mint a per-user magic sign-in link (mirrors the cron's real path) so the
+  // test SMS carries a working passwordless login, not a dead /dashboard link.
+  const signInUrl = magicfor ? await buildSignInUrl(magicfor) : undefined
 
   // Same call the real match notification uses — but to the admin's own contact.
   const result = await sendNotification({
     type: 'match',
     email: to || null,
     phone: phone || null,
+    signInUrl: signInUrl ?? undefined,
   })
 
   return NextResponse.json({
     resendApiKeyPresent: !!process.env.RESEND_API_KEY,
     fromAddress: 'HAEVN <notifications@haevn.co>',
+    magicLinkMintedFor: magicfor || null,
+    signInUrl: signInUrl || null,
     sms: { sent: result.sms.sent, error: serialize(result.sms.error) },
     email: { sent: result.email.sent, error: serialize(result.email.error) },
   })
