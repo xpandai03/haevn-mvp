@@ -176,6 +176,22 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
 
 // ─── Event Logging ──────────────────────────────────────────────
 
+/** Serialize provider errors to a readable string (Resend/Twilio errors are
+ *  plain objects that String() turns into "[object Object]"). */
+export function serializeNotifyError(err: unknown): string | null {
+  if (err == null) return null
+  if (typeof err === 'string') return err
+  try {
+    const o: any = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err as object)))
+    if (o?.message) {
+      return `${o.name || 'Error'}: ${o.message}${o.statusCode ? ` (${o.statusCode})` : ''}`
+    }
+    return JSON.stringify(o)
+  } catch {
+    return String(err)
+  }
+}
+
 async function logNotificationEvent(
   opts: NotificationOptions,
   result: { sms: { sent: boolean; error?: any }; email: { sent: boolean; error?: any } }
@@ -191,9 +207,9 @@ async function logNotificationEvent(
         phone: opts.phone ? `...${opts.phone.slice(-4)}` : null, // mask for privacy
         email: opts.email || null,
         sms_sent: result.sms.sent,
-        sms_error: result.sms.error ? String(result.sms.error) : null,
+        sms_error: serializeNotifyError(result.sms.error),
         email_sent: result.email.sent,
-        email_error: result.email.error ? String(result.email.error) : null,
+        email_error: serializeNotifyError(result.email.error),
       },
     })
   } catch (err) {
