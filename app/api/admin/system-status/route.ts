@@ -37,6 +37,7 @@ export async function GET() {
     lastComputeRes,
     lastReleaseRes,
     lastSmsRes,
+    lastNotifyRunRes,
     pendingRes,
     activeRes,
     expiredRes,
@@ -49,16 +50,30 @@ export async function GET() {
       .limit(1)
       .maybeSingle(),
 
-    admin.from('system_events')
-      .select('created_at, triggered_by, metadata')
-      .eq('event_type', 'match_release')
-      .order('created_at', { ascending: false })
+    // LAST RELEASE — derived from the data, not from an event. Previously this
+    // read the `match_release` system_event, which is only written by the notify
+    // cron; when notify no-op'd (0 new pairs) the tile silently showed the prior
+    // week. A release isn't an action — a row is released once release_at passes.
+    // So the truth is MAX(release_at) WHERE release_at <= now.
+    admin.from('computed_matches')
+      .select('release_at')
+      .lte('release_at', now)
+      .order('release_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
 
     admin.from('system_events')
       .select('created_at, triggered_by, metadata')
       .eq('event_type', 'sms_notify')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+
+    // LAST NOTIFY RUN — written on every notify-matches run (incl. 0-row), so a
+    // healthy no-op is visibly distinct from a failure.
+    admin.from('system_events')
+      .select('created_at, triggered_by, metadata')
+      .eq('event_type', 'notify_run')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -95,14 +110,19 @@ export async function GET() {
       ...((lastComputeRes.data.metadata as any) || {}),
     } : null,
 
-    lastRelease: lastReleaseRes.data ? {
-      at: lastReleaseRes.data.created_at,
-      ...((lastReleaseRes.data.metadata as any) || {}),
+    // Derived: the most recent release_at that has actually passed.
+    lastRelease: lastReleaseRes.data?.release_at ? {
+      at: lastReleaseRes.data.release_at,
     } : null,
 
     lastSmsNotification: lastSmsRes.data ? {
       at: lastSmsRes.data.created_at,
       ...((lastSmsRes.data.metadata as any) || {}),
+    } : null,
+
+    lastNotifyRun: lastNotifyRunRes.data ? {
+      at: lastNotifyRunRes.data.created_at,
+      ...((lastNotifyRunRes.data.metadata as any) || {}),
     } : null,
 
     nextRelease: getNextMondayUTC(),

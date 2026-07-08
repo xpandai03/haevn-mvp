@@ -124,10 +124,24 @@ interface NotificationEvent {
   partnership_id?: string | null
 }
 
+/** Written on EVERY notify-matches run — including a 0-eligible run, which is
+ *  healthy ("no user has a pair they haven't already been told about"). */
+interface NotifyRun {
+  at: string
+  eligible?: number
+  sent?: number
+  skipped?: number
+  errors?: number
+  reason?: 'no_new_pairs' | 'sent' | 'error'
+  detail?: string
+}
+
 interface SystemStatus {
   lastComputation: { at: string; triggeredBy: string; computed?: number } | null
-  lastRelease: { at: string; released?: number } | null
+  /** Derived from MAX(release_at) <= now — not from an event, so it can't go stale. */
+  lastRelease: { at: string } | null
   lastSmsNotification: { at: string; sent?: number } | null
+  lastNotifyRun: NotifyRun | null
   nextRelease: string
   pendingMatches: number
   activeMatches: number
@@ -312,7 +326,7 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div>
               <p className="text-gray-400 uppercase tracking-wide mb-0.5">Last Compute</p>
               <p className="text-gray-700 font-medium">
@@ -349,6 +363,22 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
                   return d > 0 ? `in ${d}d ${rh}h` : `in ${rh}h`
                 })()}
               </p>
+            </div>
+
+            {/* A 0-eligible run is healthy, not a failure — surfaced explicitly so a
+                silent no-op can't masquerade as a working (or broken) cron. */}
+            <div>
+              <p className="text-gray-400 uppercase tracking-wide mb-0.5">Last Notify Run</p>
+              <p className="text-gray-700 font-medium">
+                {systemStatus.lastNotifyRun
+                  ? new Date(systemStatus.lastNotifyRun.at).toLocaleString()
+                  : 'Never'}
+              </p>
+              {systemStatus.lastNotifyRun ? (
+                <NotifyRunSummary run={systemStatus.lastNotifyRun} />
+              ) : (
+                <p className="text-gray-400">No run logged yet</p>
+              )}
             </div>
           </div>
 
@@ -731,6 +761,33 @@ function NotificationDetailModal({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── Notify Run Summary ─────────────────────────────────────────
+// Distinguishes the three outcomes so an operator can tell "healthy no-op" from
+// "the cron broke". Before notify_run existed, a 0-row run wrote nothing at all.
+
+function NotifyRunSummary({ run }: { run: NotifyRun }) {
+  const { reason, sent = 0, eligible = 0, skipped = 0, errors = 0, detail } = run
+
+  if (reason === 'no_new_pairs') {
+    return <p className="text-gray-400">0 new pairs — nothing to notify</p>
+  }
+
+  if (reason === 'error') {
+    return (
+      <p className="text-red-600" title={detail || undefined}>
+        Failed{errors ? ` — ${errors} error${errors !== 1 ? 's' : ''}` : ''}
+      </p>
+    )
+  }
+
+  return (
+    <p className="text-green-600">
+      {sent} of {eligible} notified
+      {skipped > 0 && <span className="text-gray-400"> · {skipped} skipped</span>}
+    </p>
   )
 }
 
