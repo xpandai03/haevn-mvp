@@ -15,6 +15,7 @@ import {
 import { HaevnLoader } from '@/components/ui/haevn-loader'
 import { MatchingEngineOverview } from './MatchingEngineOverview'
 import { ZipControl } from './ZipControl'
+import { MarketControl } from './MarketControl'
 // Shared band definition — same source the member-facing readers use, so admin
 // figures equal what releases. Matches >= 80; Recommendations 77–79 inclusive.
 import { isMatchScore, isRecommendationScore } from '@/lib/matching/scoreBands'
@@ -561,10 +562,16 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
         )}
       </div>
 
-      {/* ZIP Settings (collapsible) */}
+      {/* ZIP / Market Settings (collapsible) */}
       {showZipModal && (
-        <div className="border rounded-xl bg-white p-4">
-          <ZipControl />
+        <div className="space-y-4">
+          {/* Market release gating — which cities are actually launched. */}
+          <div className="border rounded-xl bg-white p-4">
+            <MarketControl />
+          </div>
+          <div className="border rounded-xl bg-white p-4">
+            <ZipControl />
+          </div>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendNotification, buildSignInUrl } from '@/lib/services/notifications'
+import { getReleaseEligibility } from '@/lib/markets/releaseGate'
 
 /**
  * Why a run is being logged. A 0-eligible run is HEALTHY — it means no user has
@@ -17,6 +18,13 @@ interface NotifyRunLog {
   errors: number
   reason: NotifyReason
   detail?: string
+  /** City-gating audit: how many partnerships were withheld because their
+   *  market is not live (or their city didn't resolve -> fail closed). Never a
+   *  silent skip — this is the record that a pre-launch city was protected. */
+  excluded_non_live_market?: number
+  excluded_by_city?: Record<string, number>
+  /** Set when the market index could not be built: we failed CLOSED. */
+  gate_failed_closed?: boolean
 }
 
 /**
@@ -79,8 +87,45 @@ export async function GET(request: NextRequest) {
     }
 
     // Deduplicate partnership IDs
-    const partnershipIds = [...new Set(rows.map(r => r.partnership_a))]
-    console.log(`[Cron notify-matches] ${partnershipIds.length} partnerships to notify`)
+    const candidateIds = [...new Set(rows.map(r => r.partnership_a))]
+
+    // ── CITY GATE ────────────────────────────────────────────────────────────
+    // Only members in a LIVE market may be notified. Users are loaded for cities
+    // that haven't launched (Tampa/Portland) — notifying them is user-facing and
+    // hard to undo. Unresolved city => excluded (fail closed).
+    const gate = await getReleaseEligibility(candidateIds)
+    const partnershipIds = candidateIds.filter(id => gate.eligible.has(id))
+    const excludedCount = candidateIds.length - partnershipIds.length
+
+    if (!gate.ok) {
+      // Could not resolve markets (e.g. migration not applied). Send NOTHING.
+      console.error('[Cron notify-matches] FAIL CLOSED — market gate unavailable; notifying nobody.')
+      await logNotifyRun(supabase, {
+        eligible: 0, sent: 0, skipped: candidateIds.length, errors: 0,
+        reason: 'error', detail: 'market gate unavailable — failed closed',
+        excluded_non_live_market: candidateIds.length,
+        gate_failed_closed: true,
+      })
+      return NextResponse.json({ ...summary, skipped: candidateIds.length, message: 'market gate unavailable — failed closed' })
+    }
+
+    if (excludedCount > 0) {
+      console.log(
+        `[Cron notify-matches] CITY GATE withheld ${excludedCount} partnership(s) in non-live markets:`,
+        gate.excludedByCity
+      )
+    }
+    console.log(`[Cron notify-matches] ${partnershipIds.length} partnerships to notify (live markets only)`)
+
+    if (partnershipIds.length === 0) {
+      await logNotifyRun(supabase, {
+        eligible: 0, sent: 0, skipped: excludedCount, errors: 0,
+        reason: 'no_new_pairs',
+        excluded_non_live_market: excludedCount,
+        excluded_by_city: gate.excludedByCity,
+      })
+      return NextResponse.json({ ...summary, skipped: excludedCount, message: 'No live-market matches to notify' })
+    }
 
     for (const partnershipId of partnershipIds) {
       // Phone may be null — the imported cohort has no phone numbers, so EMAIL
@@ -173,6 +218,8 @@ export async function GET(request: NextRequest) {
       skipped: summary.skipped,
       errors: summary.errors,
       reason: summary.sent === 0 && summary.errors > 0 ? 'error' : 'sent',
+      excluded_non_live_market: excludedCount,
+      excluded_by_city: gate.excludedByCity,
     })
 
     return NextResponse.json(summary)
