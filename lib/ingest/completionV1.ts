@@ -31,6 +31,42 @@ import { mapEmergentSubmission, type EmergentSubmission, type MappedImport } fro
  */
 export const UNKNOWN_CITY = 'Unknown'
 
+/**
+ * partnerships.identity is a STRUCTURE field constrained to
+ * ('single','couple','throuple') by partnerships_identity_check — it is NOT
+ * gender.
+ *
+ * The shared mapper sets identity from q2_gender_identity ('man'/'woman'), which
+ * the constraint REJECTS. Because the importer applies these columns in one
+ * UPDATE, that single invalid value makes the whole statement fail — silently
+ * dropping display_name, phone AND profile_type with it (the failure is only
+ * console.warn'd). Measured on live data: 498/511 partnerships have a NULL
+ * display_name, 501/511 a NULL phone, and 508/511 sit at the DB's default
+ * profile_type='solo' — i.e. the enrich has been failing for essentially the
+ * entire imported cohort, which is why that cohort has no phone numbers.
+ *
+ * So we derive identity from the join type, exactly as scripts/seed-admin-users
+ * already does.
+ */
+function identityForType(t: 'solo' | 'couple' | 'pod'): 'single' | 'couple' | 'throuple' {
+  return t === 'couple' ? 'couple' : t === 'pod' ? 'throuple' : 'single'
+}
+
+/**
+ * Q0_JOIN -> profile_type. Returns null when absent OR unrecognized, so the
+ * caller can flag for review instead of silently mis-typing a couple as solo.
+ * (The shared mapper only understands 'couple'/'group' and silently defaults
+ * everything else to 'solo' — including a literal 'pod'.)
+ */
+export function profileTypeFromJoin(join: unknown): 'solo' | 'couple' | 'pod' | null {
+  const j = String(join ?? '').trim().toLowerCase()
+  if (!j) return null
+  if (j === 'couple' || j === 'duo') return 'couple'
+  if (j === 'group' || j === 'pod' || j === 'throuple' || j === 'triad') return 'pod'
+  if (j === 'solo' || j === 'single' || j === 'individual') return 'solo'
+  return null // unknown value -> review, never a guess
+}
+
 export interface CompletionV1 {
   event?: string
   event_id?: string
@@ -121,12 +157,14 @@ export function adaptCompletionV1(p: CompletionV1): AdaptResult {
   const cityFromPayload = String(loc.city ?? '').trim()
   const resolvedCity = cityFromPayload || UNKNOWN_CITY
 
-  // ── DEVIATION 2: Q0_JOIN. Absence must not silently mis-type couples. ──────
-  const hasJoin = raw != null && Object.prototype.hasOwnProperty.call(raw, 'Q0_JOIN')
-  const needsReview = !hasJoin
+  // ── DEVIATION 2: Q0_JOIN -> profile_type. Absence OR an unrecognized value
+  //    must not silently mis-type a couple as a single person. ───────────────
+  const joinType = profileTypeFromJoin(raw?.Q0_JOIN)
+  const needsReview = joinType === null
   const reviewReason = needsReview
-    ? "Q0_JOIN absent — profile_type defaulted to 'solo' and may be wrong (couple/pod mis-typed). Review before this member is matched."
+    ? `Q0_JOIN ${raw?.Q0_JOIN === undefined ? 'absent' : `unrecognized (${JSON.stringify(raw?.Q0_JOIN)})`} — profile_type fell back to 'solo' and may be wrong (couple/pod mis-typed). Review before this member is matched.`
     : undefined
+  const profileType: 'solo' | 'couple' | 'pod' = joinType ?? 'solo'
 
   return {
     ok: true,
@@ -137,6 +175,11 @@ export function adaptCompletionV1(p: CompletionV1): AdaptResult {
         ...mapped.partnership,
         city: resolvedCity,                       // override
         profile_state: 'live',                    // approved: survey.completed
+        profile_type: profileType,                // override (robust Q0_JOIN read)
+        // ── DEVIATION 3: identity must be the STRUCTURE value, never gender.
+        //    Gender here violates partnerships_identity_check and takes the
+        //    whole enrich UPDATE down with it (dropping phone + profile_type).
+        identity: identityForType(profileType),
         zip_code: loc.zip ? String(loc.zip).trim() : mapped.partnership.zip_code,
         state: loc.state ? String(loc.state).trim() : mapped.partnership.state,
         phone: p.identity?.mobile ?? mapped.partnership.phone,

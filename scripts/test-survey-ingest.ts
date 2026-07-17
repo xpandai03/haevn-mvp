@@ -151,9 +151,11 @@ async function main() {
   check('photo fetched into storage', ra.json?.photos_imported === 1, `imported=${ra.json?.photos_imported}`)
 
   if (ra.json?.member_id) {
-    const { data: part } = await sb.from('partnerships').select('city, phone, profile_state, membership_tier, profile_type').eq('id', ra.json.member_id).maybeSingle()
-    check('phone carried', (part as any)?.phone === '+15125550123', `got ${(part as any)?.phone}`)
-    check('Q0_JOIN=couple -> profile_type=couple', (part as any)?.profile_type === 'couple', `got ${(part as any)?.profile_type}`)
+    const { data: part } = await sb.from('partnerships').select('city, phone, profile_state, membership_tier, profile_type, identity, display_name').eq('id', ra.json.member_id).maybeSingle()
+    check('📞 phone carried (was dropping to null)', (part as any)?.phone === '+15125550123', `got ${(part as any)?.phone}`)
+    check('🚨 Q0_JOIN=couple -> profile_type=couple (was silently solo)', (part as any)?.profile_type === 'couple', `got ${(part as any)?.profile_type}`)
+    check("identity = structure value 'couple' (never gender)", (part as any)?.identity === 'couple', `got ${(part as any)?.identity}`)
+    check('display_name landed (proves enrich no longer fails)', !!(part as any)?.display_name, `got ${(part as any)?.display_name}`)
     check("profile_state='live', tier='free'", (part as any)?.profile_state === 'live' && (part as any)?.membership_tier === 'free')
     const { data: surv } = await sb.from('user_survey_responses').select('answers_json, completion_pct').eq('user_id', ra.json.user_id).maybeSingle()
     const A = (surv as any)?.answers_json ?? {}
@@ -201,7 +203,11 @@ async function main() {
   await track(re2.json)
   check('🚩 needs_review=true (NOT silently solo)', re2.json?.needs_review === true, `got ${re2.json?.needs_review}`)
 
-  const rmal = await post({ event: 'survey.completed', submission_id: randomUUID(), identity: { email: 'not-an-email' }, answers: {} })
+  // NOTE: the rejected path still writes an audit row, so its submission_id MUST
+  // be tracked or cleanup leaves an orphan (this is what drifted ingest_log 0->1).
+  const malformedId = randomUUID()
+  submissionIds.push(malformedId)
+  const rmal = await post({ event: 'survey.completed', submission_id: malformedId, identity: { email: 'not-an-email' }, answers: {} })
   check('malformed -> 400 (not silent 200)', rmal.status === 400, `got ${rmal.status}`)
 
   // ── (f) gating: prove withheld via the REAL gate, read back from the DB

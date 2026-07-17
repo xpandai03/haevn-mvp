@@ -282,42 +282,57 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
+    // One field set for BOTH insert and update. Writing the mandatory columns
+    // (phone, profile_type, identity, display_name) in the INSERT — rather than
+    // only in a follow-up enrich — means a later enrich failure can't silently
+    // cost us the phone. That two-step is exactly how the manual importer lost
+    // 501/511 phone numbers.
+    const partnershipFields = {
+      city: mapped.partnership.city, // the gate resolves off this
+      membership_tier: 'free' as const,
+      advocate_mode: false,
+      profile_state: mapped.partnership.profile_state,
+      display_name: mapped.partnership.display_name,
+      state: mapped.partnership.state,
+      zip_code: mapped.partnership.zip_code,
+      age: mapped.partnership.age,
+      identity: mapped.partnership.identity, // STRUCTURE value, never gender
+      phone: mapped.partnership.phone,
+      profile_type: mapped.partnership.profile_type,
+      orientation: mapped.partnership.orientation,
+      structure: mapped.partnership.structure,
+      intentions: mapped.partnership.intentions,
+    }
+
     let partnershipId = (existingPart as { id?: string } | null)?.id ?? null
     if (!partnershipId) {
       const { data: part, error: partErr } = await admin
         .from('partnerships')
-        .insert({
-          owner_id: userId,
-          city: mapped.partnership.city, // gate resolves off this
-          membership_tier: 'free',
-          advocate_mode: false,
-          profile_state: mapped.partnership.profile_state,
-        })
+        .insert({ owner_id: userId, ...partnershipFields })
         .select('id')
         .single()
       if (partErr || !part) throw new Error(`partnership insert: ${partErr?.message}`)
       partnershipId = part.id
+    } else {
+      // Existing partnership (same human, new submission) -> update in place.
+      const { error: updErr } = await admin
+        .from('partnerships')
+        .update(partnershipFields)
+        .eq('id', partnershipId)
+      if (updErr) throw new Error(`partnership update: ${updErr.message}`)
     }
 
-    // Enrich (same columns the manual importer sets).
-    const { error: enrichErr } = await admin
+    // Phone is mandatory (match notifications depend on it) — verify it actually
+    // landed rather than trusting the write. A silent drop here is precisely the
+    // failure that produced the phoneless cohort.
+    const { data: check } = await admin
       .from('partnerships')
-      .update({
-        display_name: mapped.partnership.display_name,
-        city: mapped.partnership.city,
-        state: mapped.partnership.state,
-        zip_code: mapped.partnership.zip_code,
-        age: mapped.partnership.age,
-        identity: mapped.partnership.identity,
-        phone: mapped.partnership.phone,
-        profile_type: mapped.partnership.profile_type,
-        profile_state: mapped.partnership.profile_state,
-        orientation: mapped.partnership.orientation,
-        structure: mapped.partnership.structure,
-        intentions: mapped.partnership.intentions,
-      })
+      .select('phone, profile_type')
       .eq('id', partnershipId)
-    if (enrichErr) console.warn('[ingest] partnership enrich (non-fatal):', enrichErr.message)
+      .maybeSingle()
+    if (mapped.partnership.phone && !(check as any)?.phone) {
+      throw new Error('phone failed to persist on partnership — refusing a phoneless ingest')
+    }
 
     // owner membership (idempotent)
     const { data: mem } = await admin
