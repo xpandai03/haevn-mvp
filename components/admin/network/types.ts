@@ -3,6 +3,8 @@ import type { Composition, MetricsResult, SnapshotPayload } from '@/lib/metrics/
 /** The /api/admin/network-metrics response shape (client contract). */
 export interface NetworkMetricsPayload {
   scopeLabel: string
+  /** When this payload was computed (ISO) — drives the freshness footer. */
+  generatedAt: string
   currentWeekEnding: string
   currentPriorWeekEnding: string
   selectedWeek: {

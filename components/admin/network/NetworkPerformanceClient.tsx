@@ -9,7 +9,30 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Info, RefreshCw } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowDownToLine,
+  Bell,
+  Camera,
+  CircleUser,
+  ClipboardCheck,
+  ClipboardList,
+  Download,
+  HeartCrack,
+  Info,
+  Link2,
+  ListFilter,
+  MessageCircle,
+  Percent,
+  RefreshCw,
+  Share2,
+  Sparkles,
+  Star,
+  ThumbsUp,
+  Users,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -18,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { HaevnLoader } from '@/components/ui/haevn-loader'
+import { useToast } from '@/hooks/use-toast'
 import {
   currentReportingWeek,
   formatReportingWeek,
@@ -33,20 +57,39 @@ import { CompositionChart } from './CompositionChart'
 const NETWORK = 'network'
 const AGE_ORDER = ['18-24', '25-34', '35-44', '45-54', '55+', 'unknown']
 
+// Per-card accent hexes (brand + a few distinct hues) so sparklines aren't all-teal.
+const TEAL = '#008080'
+const ORANGE = '#E29E0C'
+const NAVY = '#1E2A4A'
+const GREEN = '#388E3C'
+const BLUE = '#2F6DB5'
+const VIOLET = '#7C5CBF'
+
+function relativeTime(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000))
+  if (mins < 1) return 'moments'
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'}`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'}`
+  const days = Math.round(hrs / 24)
+  return `${days} day${days === 1 ? '' : 's'}`
+}
+
 export function NetworkPerformanceClient() {
+  const { toast } = useToast()
   const [scope, setScope] = useState<string>(NETWORK)
   const [weekEnding, setWeekEnding] = useState<string>(() => currentReportingWeek().weekEnding)
   const [markets, setMarkets] = useState<MarketOption[]>([])
   const [data, setData] = useState<NetworkMetricsPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [snapping, setSnapping] = useState(false)
 
   const weekOptions = useMemo(
     () => recentWeeks(8).map((w) => ({ value: w.weekEnding, label: formatReportingWeek(w) })),
     []
   )
 
-  // Live markets for the scope picker.
   useEffect(() => {
     let cancelled = false
     fetch('/api/admin/markets', { cache: 'no-store' })
@@ -84,8 +127,56 @@ export function NetworkPerformanceClient() {
     load()
   }, [load])
 
-  const scopeLabel =
-    scope === NETWORK ? 'Network (All Cities)' : scope
+  const runSnapshot = useCallback(async () => {
+    setSnapping(true)
+    try {
+      const res = await fetch('/api/admin/snapshot-network', { method: 'POST' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || body.ok === false) throw new Error(body.error || `Failed (${res.status})`)
+      toast({
+        title: 'Snapshot written',
+        description: `${body.written} row${body.written === 1 ? '' : 's'} for week ${body.weekEnding}.`,
+      })
+      await load()
+    } catch (e: any) {
+      toast({ title: 'Snapshot failed', description: e?.message || 'Unknown error', variant: 'destructive' })
+    } finally {
+      setSnapping(false)
+    }
+  }, [toast, load])
+
+  const exportMembers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/export-members?scope=${encodeURIComponent(scope)}`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Export failed (${res.status})`)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `haevn-members-${scope === NETWORK ? 'network' : 'market'}-${
+        data?.selectedWeek.weekEnding ?? 'export'
+      }.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      toast({ title: 'Export failed', description: e?.message || 'Unknown error', variant: 'destructive' })
+    }
+  }, [scope, data, toast])
+
+  const viewNeverMatched = useCallback(() => {
+    document.getElementById('never-matched-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    toast({ title: 'Never Matched', description: 'Filtered drill-downs arrive in the next phase.' })
+  }, [toast])
+
+  const scopeLabel = scope === NETWORK ? 'Network (All Cities)' : scope
+  const generatedAt = data?.generatedAt ?? data?.metrics.generatedAt
 
   return (
     <div className="space-y-6">
@@ -93,13 +184,13 @@ export function NetworkPerformanceClient() {
       <div className="rounded-xl border bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-haevn-navy">Network Performance</h1>
+            <h1 className="font-heading text-xl font-bold text-haevn-navy">Network Performance</h1>
             <p className="mt-0.5 text-sm text-gray-500">Network Health Overview</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Select value={scope} onValueChange={setScope}>
-              <SelectTrigger className="h-9 w-[220px] text-xs">
+              <SelectTrigger className="h-9 w-[210px] text-xs">
                 <SelectValue placeholder="Scope" />
               </SelectTrigger>
               <SelectContent>
@@ -113,7 +204,7 @@ export function NetworkPerformanceClient() {
             </Select>
 
             <Select value={weekEnding} onValueChange={setWeekEnding}>
-              <SelectTrigger className="h-9 w-[210px] text-xs">
+              <SelectTrigger className="h-9 w-[200px] text-xs">
                 <SelectValue placeholder="Reporting week" />
               </SelectTrigger>
               <SelectContent>
@@ -134,6 +225,15 @@ export function NetworkPerformanceClient() {
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
+
+            <button
+              onClick={runSnapshot}
+              disabled={snapping}
+              className="flex h-9 items-center gap-1.5 rounded-md bg-haevn-teal px-3 text-xs font-medium text-white transition hover:bg-haevn-teal/90 disabled:opacity-50"
+            >
+              <Camera className={`h-3.5 w-3.5 ${snapping ? 'animate-pulse' : ''}`} />
+              {snapping ? 'Saving…' : 'Run snapshot'}
+            </button>
           </div>
         </div>
 
@@ -141,8 +241,7 @@ export function NetworkPerformanceClient() {
           <p className="mt-3 border-t pt-3 text-xs text-gray-500">
             Viewing <span className="font-medium text-gray-700">{scopeLabel}</span>
             <span className="mx-2 text-gray-300">·</span>
-            Reporting week{' '}
-            <span className="font-medium text-gray-700">{data.selectedWeek.label}</span>
+            Reporting week <span className="font-medium text-gray-700">{data.selectedWeek.label}</span>
             <span className="ml-1 text-gray-400">(vs {data.selectedWeek.priorLabel})</span>
           </p>
         )}
@@ -191,35 +290,79 @@ export function NetworkPerformanceClient() {
 
       {data && data.metrics.partnershipsInScope > 0 && (
         <>
-          <Sections data={data} />
-          <footer className="rounded-xl border bg-haevn-gray-50 px-5 py-3 text-[11px] text-gray-500">
-            Data as of{' '}
-            {new Date(data.metrics.generatedAt).toLocaleString('en-US', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })}
-            <span className="mx-2 text-gray-300">·</span>
-            {scopeLabel}
-            <span className="mx-2 text-gray-300">·</span>
-            Reporting week {data.selectedWeek.label}
-          </footer>
+          <Sections data={data} onExport={exportMembers} onViewNeverMatched={viewNeverMatched} />
+          {generatedAt && (
+            <footer className="rounded-xl border bg-haevn-gray-50 px-5 py-3 text-[11px] leading-relaxed text-gray-500">
+              Data refreshed <span className="font-medium text-gray-600">{relativeTime(generatedAt)}</span> ago
+              <span className="mx-1.5 text-gray-300">·</span>
+              Current State metrics are live. Weekly Activity reflects the selected reporting week. WoW
+              compares to the immediately preceding reporting week.
+            </footer>
+          )}
         </>
       )}
     </div>
   )
 }
 
-// ── sections ──────────────────────────────────────────────────────────────────
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+// ── section header (numbered) ─────────────────────────────────────────────────
+function SectionHeader({
+  n,
+  title,
+  subtitle,
+  helper,
+}: {
+  n: number
+  title: string
+  subtitle: string
+  helper?: string
+}) {
   return (
-    <div className="mb-3">
-      <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
-      <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p>
+    <div className="mb-3 flex items-end justify-between gap-4">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-haevn-teal text-xs font-bold text-white">
+          {n}
+        </span>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
+          <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p>
+        </div>
+      </div>
+      {helper && <p className="hidden max-w-[280px] text-right text-[11px] text-gray-400 sm:block">{helper}</p>}
     </div>
   )
 }
 
-function Sections({ data }: { data: NetworkMetricsPayload }) {
+// ── card icon + accent maps ───────────────────────────────────────────────────
+const WEEKLY_META: Record<
+  keyof WeeklyMetrics,
+  { label: string; icon: LucideIcon; accent: string; footnote?: string }
+> = {
+  matchesGenerated: { label: 'Matches Generated', icon: Sparkles, accent: TEAL, footnote: 'Score ≥ 80 band' },
+  recommendationsGenerated: { label: 'Recommendations Generated', icon: ThumbsUp, accent: BLUE, footnote: 'Score 77–79 band' },
+  nudgesSent: { label: 'Nudges Sent', icon: Bell, accent: ORANGE },
+  readyToMeetSignals: { label: 'Ready to Meet Signals', icon: Zap, accent: GREEN },
+  newConnections: { label: 'New Connections', icon: Link2, accent: VIOLET },
+  conversationsStarted: { label: 'Conversations Started', icon: MessageCircle, accent: NAVY },
+}
+const WEEKLY_ORDER: Array<keyof WeeklyMetrics> = [
+  'matchesGenerated',
+  'recommendationsGenerated',
+  'nudgesSent',
+  'readyToMeetSignals',
+  'newConnections',
+  'conversationsStarted',
+]
+
+function Sections({
+  data,
+  onExport,
+  onViewNeverMatched,
+}: {
+  data: NetworkMetricsPayload
+  onExport: () => void
+  onViewNeverMatched: () => void
+}) {
   const snap = data.metrics.snapshot
   const sel = data.selectedWeek
   const surveyed = data.surveyedInScope
@@ -230,16 +373,6 @@ function Sections({ data }: { data: NetworkMetricsPayload }) {
   const free = snapshotMetric(data, 'membersFree')
   const noMatch = snapshotMetric(data, 'noCurrentMatch')
 
-  const weekly: Array<{ key: keyof WeeklyMetrics; label: string; footnote?: string }> = [
-    { key: 'matchesGenerated', label: 'Matches Generated', footnote: 'Score ≥ 80 band' },
-    { key: 'recommendationsGenerated', label: 'Recommendations Generated', footnote: 'Score 77–79 band' },
-    { key: 'nudgesSent', label: 'Nudges Sent' },
-    { key: 'readyToMeetSignals', label: 'Ready to Meet Signals' },
-    { key: 'newConnections', label: 'New Connections' },
-    { key: 'conversationsStarted', label: 'Conversations Started' },
-  ]
-
-  // Age keeps its natural (ordinal) order.
   const ageBuckets = [...data.composition.age].sort(
     (a, b) => AGE_ORDER.indexOf(a.bucket) - AGE_ORDER.indexOf(b.bucket)
   )
@@ -254,42 +387,55 @@ function Sections({ data }: { data: NetworkMetricsPayload }) {
     <div className="space-y-8">
       {/* Section 1 — Network Snapshot */}
       <section>
-        <SectionHeader title="Network Snapshot" subtitle="Cumulative current state, with week-over-week" />
+        <SectionHeader
+          n={1}
+          title="Network Snapshot"
+          subtitle="Cumulative current state"
+          helper="All metrics show week-over-week vs the prior reporting week."
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Total Members" {...totalMembers} tooltip={TOOLTIPS.totalMembers} />
-          <KpiCard label="Incomplete Surveys" {...incomplete} tooltip={TOOLTIPS.incompleteSurveys} />
-          <KpiCard label="Completed Surveys" {...completed} tooltip={TOOLTIPS.completedSurveys} />
-          <KpiCard label="Members (Free)" {...free} tooltip={TOOLTIPS.membersFree} />
-          <BlockedCard label="Plus Members" reason={(snap.plusMembers as BlockedMetric).reason} />
-          <BlockedCard label="Plus Conversion" reason={(snap.plusConversion as BlockedMetric).reason} />
+          <KpiCard label="Total Members" {...totalMembers} icon={Users} accent={TEAL} tooltip={TOOLTIPS.totalMembers} />
+          <KpiCard label="Incomplete Surveys" {...incomplete} icon={ClipboardList} accent={ORANGE} tooltip={TOOLTIPS.incompleteSurveys} />
+          <KpiCard label="Completed Surveys" {...completed} icon={ClipboardCheck} accent={GREEN} tooltip={TOOLTIPS.completedSurveys} />
+          <KpiCard label="Members (Free)" {...free} icon={CircleUser} accent={NAVY} tooltip={TOOLTIPS.membersFree} />
+          <BlockedCard label="Plus Members" icon={Star} reason={(snap.plusMembers as BlockedMetric).reason} />
+          <BlockedCard label="Plus Conversion" icon={Percent} reason={(snap.plusConversion as BlockedMetric).reason} />
           <KpiCard
+            id="never-matched-card"
             label="Never Matched"
             {...noMatch}
+            icon={HeartCrack}
+            accent={VIOLET}
             tooltip={TOOLTIPS.noCurrentMatch}
             footnote="Currently: no current match"
           />
-          <BlockedCard label="Meetup Shares" reason={(snap.meetupShares as BlockedMetric).reason} />
+          <BlockedCard label="Meetup Shares" icon={Share2} reason={(snap.meetupShares as BlockedMetric).reason} />
         </div>
       </section>
 
       {/* Section 2 — Weekly Activity */}
       <section>
         <SectionHeader
+          n={2}
           title="Weekly Activity"
           subtitle={`Reporting week ${sel.label}${sel.isCurrent ? ' (current)' : ''}`}
+          helper="These metrics reset each reporting week."
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {weekly.map((w) => {
-            const m = weeklyMetric(data, w.key)
+          {WEEKLY_ORDER.map((key) => {
+            const meta = WEEKLY_META[key]
+            const m = weeklyMetric(data, key)
             return (
               <KpiCard
-                key={w.key}
-                label={w.label}
+                key={key}
+                label={meta.label}
                 value={m.value}
                 prior={m.prior}
                 series={m.series}
-                tooltip={TOOLTIPS[w.key]}
-                footnote={m.value !== null ? w.footnote : undefined}
+                icon={meta.icon}
+                accent={meta.accent}
+                tooltip={TOOLTIPS[key]}
+                footnote={m.value !== null ? meta.footnote : undefined}
                 unavailableNote="No activity recorded for this reporting week."
               />
             )
@@ -299,8 +445,8 @@ function Sections({ data }: { data: NetworkMetricsPayload }) {
 
       {/* Section 3 — Network Composition */}
       <section>
-        <SectionHeader title="Network Composition" subtitle="Distributions across the member base (survey data)" />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SectionHeader n={3} title="Network Composition" subtitle="Distributions across the member base" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <CompositionChart
             title="Gender"
             variant="donut"
@@ -332,6 +478,31 @@ function Sections({ data }: { data: NetworkMetricsPayload }) {
             caption={coverage(ageBuckets)}
             tooltip="Age derived from survey birthdate, in brackets."
           />
+        </div>
+      </section>
+
+      {/* Quick actions */}
+      <section>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white px-5 py-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Quick actions</span>
+          <button
+            onClick={onExport}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Member List
+          </button>
+          <button
+            onClick={onViewNeverMatched}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            <ListFilter className="h-3.5 w-3.5" />
+            View Never Matched
+          </button>
+          <span className="ml-auto hidden items-center gap-1 text-[11px] text-gray-400 sm:flex">
+            <ArrowDownToLine className="h-3 w-3" />
+            CSV excludes all PII
+          </span>
         </div>
       </section>
     </div>

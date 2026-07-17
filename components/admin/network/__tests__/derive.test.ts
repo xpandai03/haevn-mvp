@@ -27,6 +27,7 @@ function makePayload(opts: {
   } = opts
   return {
     scopeLabel: 'network',
+    generatedAt: '2026-07-18T00:00:00.000Z',
     currentWeekEnding: '2026-07-18',
     currentPriorWeekEnding: '2026-07-11',
     selectedWeek: {

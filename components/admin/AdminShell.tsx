@@ -104,14 +104,12 @@ function NavList({ active, onNavigate }: { active: NavKey; onNavigate?: () => vo
 function SidebarInner({ active, onNavigate }: { active: NavKey; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center gap-2 border-b px-5 py-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-haevn-teal text-sm font-bold text-white">
-          H
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold text-haevn-navy">HAEVN Admin</p>
-          <p className="text-[10px] uppercase tracking-wide text-gray-400">Console</p>
-        </div>
+      <div className="border-b px-5 py-4">
+        <Link href="/admin/network-performance" onClick={onNavigate} className="inline-block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/haevn-logo-with-icon.svg" alt="HAEVN" className="h-8 w-auto" />
+        </Link>
+        <p className="mt-1.5 text-[10px] uppercase tracking-wide text-gray-400">Admin Console</p>
       </div>
       <NavList active={active} onNavigate={onNavigate} />
     </div>

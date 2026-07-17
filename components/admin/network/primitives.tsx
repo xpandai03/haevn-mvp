@@ -89,10 +89,13 @@ export function WowDelta({
  */
 export function Sparkline({
   series,
+  color = '#008080',
   width = 72,
   height = 22,
 }: {
   series: number[]
+  /** CSS color for the line + dot (per-card accent). Defaults to haevn-teal. */
+  color?: string
   width?: number
   height?: number
 }) {
@@ -102,7 +105,7 @@ export function Sparkline({
   if (pts.length <= 1) {
     return (
       <svg width={width} height={height} className="mt-1 opacity-70" aria-hidden="true">
-        <circle cx={pad + 2} cy={height / 2} r={2} className="fill-haevn-teal" />
+        <circle cx={pad + 2} cy={height / 2} r={2} style={{ fill: color }} />
       </svg>
     )
   }
@@ -125,12 +128,12 @@ export function Sparkline({
       <polyline
         points={d}
         fill="none"
-        className="stroke-haevn-teal"
+        style={{ stroke: color }}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <circle cx={lx} cy={ly} r={1.8} className="fill-haevn-teal" />
+      <circle cx={lx} cy={ly} r={1.8} style={{ fill: color }} />
     </svg>
   )
 }
