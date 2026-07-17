@@ -13,6 +13,7 @@ import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
 import { getHiddenMatchIds } from '@/lib/actions/hiddenMatches'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
+import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket } from '@/lib/markets/releaseGate'
 
 // =============================================================================
 // TYPES
@@ -152,6 +153,31 @@ export async function getComputedMatchCards(
     }
   }
 
+  // 0b. CITY GATE (the leak-proof point) ─────────────────────────────────────
+  //     Release is PASSIVE: a row becomes visible the instant release_at <= now,
+  //     with no cron involved. So gating only the crons leaks — a row written
+  //     with release_at = next Monday self-releases when Monday arrives. This is
+  //     the only place that cannot leak.
+  //
+  //     If the VIEWER's market is not live (Tampa/Portland pre-launch) they are
+  //     not "released" and must not see matches. Unresolved city => not live
+  //     (fail closed).
+  //
+  //     MODE C (default): rows released before the grandfather instant stay
+  //     visible — the Jun 29 blast already showed/emailed them. Anything
+  //     releasing after is gated, so no NEW pre-launch release can occur.
+  //     MODE B: flip HIDE_ALL_NON_LIVE in releaseGate.ts -> fully dark.
+  const marketIdx = await loadMarketIndex()
+  const { data: viewerPartnership } = await adminClient
+    .from('partnerships')
+    .select('city')
+    .eq('id', currentPartnershipId)
+    .maybeSingle()
+  const viewerMarketLive = isCityLive(
+    (viewerPartnership as { city?: string | null } | null)?.city,
+    marketIdx
+  )
+
   // 1. Fetch computed matches for this partnership (bidirectional)
   //    Filter by release_at (Match Monday) and expires_at (90-day expiry)
   const now = new Date().toISOString()
@@ -240,6 +266,10 @@ export async function getComputedMatchCards(
 
     // Filter by release_at (Match Monday) — only show if released or no release_at set
     if (m.release_at && m.release_at > now) continue
+
+    // CITY GATE: viewer's market not live -> only grandfathered rows (MODE C)
+    // remain visible; nothing new ever releases to a pre-launch city.
+    if (!viewerMarketLive && !isRowVisibleForNonLiveMarket(m.release_at)) continue
 
     // Filter by expires_at (90-day expiry) — saved matches bypass expiration
     if (!m.saved && m.expires_at && m.expires_at <= now) continue

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
+import { getReleaseEligibility } from '@/lib/markets/releaseGate'
 
 // Long-running: iterates every live partnership and computes pairwise
 // compatibility. 300s is the Pro-plan max; Hobby caps lower but this
@@ -56,14 +57,44 @@ export async function GET(request: NextRequest) {
   todayNoonUtc.setUTCHours(12, 0, 0, 0)
   const todayNoonUtcIso = todayNoonUtc.toISOString()
 
-  const { data: releasedRows, error: releaseError } = await admin
-    .from('computed_matches')
-    .update({ release_at: todayNoonUtcIso })
-    .gte('computed_at', runStartedAt.toISOString())
-    .gt('release_at', todayNoonUtcIso)
-    .select('id')
+  // ── CITY GATE ──────────────────────────────────────────────────────────────
+  // Only pull rows forward for members in a LIVE market. Rows for non-live
+  // markets (Tampa/Portland pre-launch) keep their future release_at and are
+  // never surfaced this cycle. Unresolved city => excluded (fail closed).
+  // NOTE: this gates RELEASE only — every partnership was still computed above.
+  const gate = await getReleaseEligibility()
+  const eligibleIds = [...gate.eligible]
 
-  const releasedCount = releasedRows?.length ?? 0
+  let releasedCount = 0
+  let releaseError: { message: string } | null = null
+
+  if (!gate.ok) {
+    releaseError = { message: 'market gate unavailable — failed closed, released nothing' }
+    console.error('[Cron recompute-matches] FAIL CLOSED — market gate unavailable; released nothing.')
+  } else if (eligibleIds.length === 0) {
+    console.warn('[Cron recompute-matches] No live-market partnerships — released nothing.')
+  } else {
+    // Chunk the IN() list — eligible can be in the hundreds.
+    const CHUNK = 200
+    for (let i = 0; i < eligibleIds.length; i += CHUNK) {
+      const { data: rows, error } = await admin
+        .from('computed_matches')
+        .update({ release_at: todayNoonUtcIso })
+        .gte('computed_at', runStartedAt.toISOString())
+        .gt('release_at', todayNoonUtcIso)
+        .in('partnership_a', eligibleIds.slice(i, i + CHUNK))
+        .select('id')
+      if (error) { releaseError = error; break }
+      releasedCount += rows?.length ?? 0
+    }
+    const withheld = Object.values(gate.excludedByCity).reduce((s, n) => s + n, 0)
+    if (withheld > 0) {
+      console.log(
+        `[Cron recompute-matches] CITY GATE withheld ${withheld} partnership(s) in non-live markets from release:`,
+        gate.excludedByCity
+      )
+    }
+  }
 
   if (releaseError) {
     console.error('[Cron recompute-matches] Release update failed:', releaseError)
@@ -80,6 +111,10 @@ export async function GET(request: NextRequest) {
     errors: recomputeResult.errors,
     rows_released_today: releasedCount,
     release_at: todayNoonUtcIso,
+    // City-gating audit — exclusions are never silent.
+    excluded_non_live_market: Object.values(gate.excludedByCity).reduce((s, n) => s + n, 0),
+    excluded_by_city: gate.excludedByCity,
+    gate_failed_closed: !gate.ok,
     started_at: runStartedAt.toISOString(),
     finished_at: new Date().toISOString(),
   }
