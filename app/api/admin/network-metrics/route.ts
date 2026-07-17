@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       scopeLabel: metrics.scopeLabel,
+      generatedAt: metrics.generatedAt,
       // Snapshot WoW compares live-now vs one week ago, independent of the week
       // selector (the Snapshot section is always cumulative-current).
       currentWeekEnding: current.weekEnding,
