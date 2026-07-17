@@ -74,3 +74,47 @@ export function priorWeek(week: ReportingWeek): ReportingWeek {
 export function weekEnding(date: Date): string {
   return weekOf(date).weekEnding
 }
+
+/**
+ * Rebuild a ReportingWeek from a week-ending 'YYYY-MM-DD' string (the Saturday).
+ * Noon UTC anchor keeps it inside the intended calendar day.
+ */
+export function weekFromEnding(weekEndingStr: string): ReportingWeek {
+  return weekOf(new Date(`${weekEndingStr}T12:00:00.000Z`))
+}
+
+/** The `n` most recent reporting weeks, current first (index 0). */
+export function recentWeeks(n: number, now: Date = new Date()): ReportingWeek[] {
+  const out: ReportingWeek[] = []
+  let w = currentReportingWeek(now)
+  for (let i = 0; i < n; i++) {
+    out.push(w)
+    w = priorWeek(w)
+  }
+  return out
+}
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+/**
+ * Human range for a reporting week, e.g. "June 29 – July 5, 2026". Collapses a
+ * shared month ("July 12 – 18, 2026") and spans a year boundary when needed
+ * ("December 27, 2026 – January 2, 2027"). All UTC.
+ */
+export function formatReportingWeek(week: ReportingWeek): string {
+  const s = week.start
+  const e = week.end
+  const sM = MONTHS[s.getUTCMonth()]
+  const eM = MONTHS[e.getUTCMonth()]
+  const sD = s.getUTCDate()
+  const eD = e.getUTCDate()
+  const sY = s.getUTCFullYear()
+  const eY = e.getUTCFullYear()
+
+  if (sY !== eY) return `${sM} ${sD}, ${sY} – ${eM} ${eD}, ${eY}`
+  if (s.getUTCMonth() === e.getUTCMonth()) return `${sM} ${sD} – ${eD}, ${eY}`
+  return `${sM} ${sD} – ${eM} ${eD}, ${eY}`
+}
