@@ -65,6 +65,41 @@ function verifySignature(rawBody: string, signatureHeader: string | null, timest
   return null
 }
 
+/**
+ * EMAIL DEDUP — does a partnership already exist for this email?
+ *
+ * The submission_id check (survey_ingest_log PK) only catches submissions this
+ * receiver has seen. But ~511 partnerships were created BEFORE the webhook (the
+ * manual import) and have NO survey_ingest_log row and NO submission_id — so a
+ * backfill or re-completion for one of them would slip past the submission_id
+ * check. Email is the only key that catches them: verified 512/512 owners have a
+ * unique email in both profiles and auth, 1:1 with partnerships, no shares/nulls.
+ *
+ * We resolve email -> profile(s) -> owned partnership. Case-insensitive; the
+ * incoming email is already normalized (lowercased/trimmed by the mapper).
+ * Returns the existing partnership (id + owner) or null.
+ */
+async function findPartnershipByEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string
+): Promise<{ id: string; owner_id: string } | null> {
+  // profiles.email is the reliable, populated store (matches auth exactly).
+  const { data: profs } = await admin
+    .from('profiles')
+    .select('user_id')
+    .ilike('email', email) // no wildcards => case-insensitive equality
+  const ownerIds = (profs ?? []).map((p: { user_id: string }) => p.user_id).filter(Boolean)
+  if (ownerIds.length === 0) return null
+
+  const { data: part } = await admin
+    .from('partnerships')
+    .select('id, owner_id')
+    .in('owner_id', ownerIds)
+    .limit(1)
+    .maybeSingle()
+  return (part as { id: string; owner_id: string } | null) ?? null
+}
+
 /** Audit every ingest. Never throws — logging must not fail an ingest. */
 async function logIngest(
   admin: ReturnType<typeof createAdminClient>,
@@ -225,6 +260,44 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       )
     }
+  }
+
+  // 4b. EMAIL DEDUP — before creating anything, treat an email that already
+  //     belongs to a partnership as a duplicate. This is what catches the ~511
+  //     pre-webhook / manual-import users (no submission_id). DEFAULT = no-op:
+  //     we do NOT create and do NOT overwrite the existing user's data (their
+  //     city drives gating; a blind update could silently change eligibility).
+  try {
+    const existingByEmail = await findPartnershipByEmail(admin, email)
+    if (existingByEmail) {
+      console.log(`[ingest] duplicate by email: ${email} -> existing partnership ${existingByEmail.id}`)
+      await admin
+        .from('survey_ingest_log')
+        .update({
+          result: 'duplicate' as IngestResult,
+          reason: 'email_exists',
+          user_id: existingByEmail.owner_id,
+          partnership_id: existingByEmail.id,
+        })
+        .eq('submission_id', submissionId)
+      return NextResponse.json({
+        status: 'duplicate',
+        dedupe: 'email_exists',
+        submission_id: submissionId,
+        member_id: existingByEmail.id,
+        user_id: existingByEmail.owner_id,
+      })
+    }
+  } catch (e: any) {
+    // A dedup-lookup failure must FAIL CLOSED (5xx), never fall through to create
+    // — failing open here is exactly how a duplicate user would be born.
+    console.error('[ingest] email dedup lookup failed:', e?.message)
+    await logIngest(admin, {
+      submission_id: submissionId, event_id: payload.event_id ?? null,
+      result: 'error' as IngestResult, reason: `email dedup lookup failed: ${e?.message}`,
+      email, duration_ms: Date.now() - startedAt,
+    })
+    return NextResponse.json({ error: 'server_error', detail: 'dedup lookup failed' }, { status: 503 })
   }
 
   // 5. Create (or adopt) the user.
