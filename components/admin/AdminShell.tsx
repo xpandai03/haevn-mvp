@@ -18,6 +18,7 @@ import {
   FileText,
   FileBarChart,
   Settings,
+  SlidersHorizontal,
   Wrench,
   Menu,
 } from 'lucide-react'
@@ -82,11 +83,19 @@ function NavList({ active, onNavigate }: { active: NavKey; onNavigate?: () => vo
         )
       })}
 
-      {/* Tools area — visually reserved for later phases. */}
+      {/* Tools area. */}
       <div className="mt-6 border-t pt-4">
         <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
           Tools
         </p>
+        <Link
+          href="/admin/matching"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+        >
+          <SlidersHorizontal className="h-4 w-4 shrink-0" />
+          Matching Ops
+        </Link>
         <div
           aria-disabled="true"
           title="Coming soon"
