@@ -116,7 +116,7 @@ export function Sidebar({
       {isAdmin && (
         <div className="px-3 pb-2 pt-2 border-t border-[color:var(--haevn-border)]">
           <Link
-            href="/admin/matching"
+            href="/admin/network-performance"
             aria-current={
               pathname.startsWith('/admin') ? 'page' : undefined
             }
