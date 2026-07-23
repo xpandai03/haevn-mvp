@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/snapshot-network",
       "schedule": "0 23 * * 6"
+    },
+    {
+      "path": "/api/cron/renotify",
+      "schedule": "0 16 * * 1"
     }
   ]
 }
