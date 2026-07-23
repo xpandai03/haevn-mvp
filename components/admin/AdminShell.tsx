@@ -9,6 +9,7 @@
 
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   BarChart3,
   Users,
@@ -24,7 +25,14 @@ import {
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
-type NavKey = 'network-performance'
+type NavKey = 'network-performance' | 'matches'
+
+/** Which nav item the current path maps to (null = none / a non-nav admin route). */
+function deriveActive(pathname: string): NavKey | null {
+  if (pathname.startsWith('/admin/matches')) return 'matches'
+  if (pathname.startsWith('/admin/network-performance')) return 'network-performance'
+  return null
+}
 
 interface NavItem {
   key: string
@@ -37,14 +45,14 @@ const PRIMARY_NAV: NavItem[] = [
   { key: 'network-performance', label: 'Network Performance', icon: BarChart3, href: '/admin/network-performance' },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'surveys', label: 'Surveys', icon: ClipboardList },
-  { key: 'matches', label: 'Matches', icon: Sparkles },
+  { key: 'matches', label: 'Matches', icon: Sparkles, href: '/admin/matches' },
   { key: 'connections', label: 'Connections', icon: Link2 },
   { key: 'content', label: 'Content', icon: FileText },
   { key: 'reports', label: 'Reports', icon: FileBarChart },
   { key: 'settings', label: 'Settings', icon: Settings },
 ]
 
-function NavList({ active, onNavigate }: { active: NavKey; onNavigate?: () => void }) {
+function NavList({ active, onNavigate }: { active: NavKey | null; onNavigate?: () => void }) {
   return (
     <nav className="flex-1 space-y-1 px-3 py-4">
       {PRIMARY_NAV.map((item) => {
@@ -53,14 +61,18 @@ function NavList({ active, onNavigate }: { active: NavKey; onNavigate?: () => vo
         const base =
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition'
 
-        if (isActive && item.href) {
+        // Any item with an href is a real link (active-styled when current), so
+        // built pages navigate between each other. Others stay reserved/disabled.
+        if (item.href) {
           return (
             <Link
               key={item.key}
               href={item.href}
               onClick={onNavigate}
-              aria-current="page"
-              className={`${base} bg-haevn-teal/10 text-haevn-teal`}
+              aria-current={isActive ? 'page' : undefined}
+              className={`${base} ${
+                isActive ? 'bg-haevn-teal/10 text-haevn-teal' : 'text-gray-600 hover:bg-gray-50'
+              }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {item.label}
@@ -110,7 +122,7 @@ function NavList({ active, onNavigate }: { active: NavKey; onNavigate?: () => vo
   )
 }
 
-function SidebarInner({ active, onNavigate }: { active: NavKey; onNavigate?: () => void }) {
+function SidebarInner({ active, onNavigate }: { active: NavKey | null; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-white">
       <div className="border-b px-5 py-4">
@@ -125,14 +137,9 @@ function SidebarInner({ active, onNavigate }: { active: NavKey; onNavigate?: () 
   )
 }
 
-export function AdminShell({
-  active,
-  children,
-}: {
-  active: NavKey
-  children: ReactNode
-}) {
+export function AdminShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const active = deriveActive(usePathname() ?? '')
 
   return (
     <div className="min-h-screen bg-haevn-cream">
