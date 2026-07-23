@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
 import { getReleaseEligibility } from '@/lib/markets/releaseGate'
+import { captureMatchHistoryToDb } from '@/lib/services/matchHistory'
 
 // Long-running: iterates every live partnership and computes pairwise
 // compatibility. 300s is the Pro-plan max; Hobby caps lower but this
@@ -104,12 +105,32 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // ── MATCH HISTORY CAPTURE (fail-safe) ───────────────────────────────────────
+  // Append this run's computed_matches set to match_history (idempotent). NEVER
+  // affects the release above — captureMatchHistoryToDb never throws, and this is
+  // additionally wrapped. Runs AFTER the release-override so released_at is final.
+  let historyCaptured = 0
+  let historyError: string | null = null
+  try {
+    const runDate = runStartedAt.toISOString().slice(0, 10)
+    const hist = await captureMatchHistoryToDb(admin, runDate)
+    historyCaptured = hist.captured
+    historyError = hist.error ?? null
+    if (historyError) console.error('[Cron recompute-matches] match_history capture error (non-fatal):', historyError)
+    else console.log(`[Cron recompute-matches] match_history captured ${historyCaptured} rows for ${runDate}`)
+  } catch (e: any) {
+    historyError = e?.message ?? String(e)
+    console.error('[Cron recompute-matches] match_history capture threw (non-fatal):', historyError)
+  }
+
   // Observability row — same shape convention as notify-matches uses.
   const metadata = {
     partnerships_total: recomputeResult.total,
     partnerships_computed: recomputeResult.computed,
     errors: recomputeResult.errors,
     rows_released_today: releasedCount,
+    history_captured: historyCaptured,
+    history_error: historyError,
     release_at: todayNoonUtcIso,
     // City-gating audit — exclusions are never silent.
     excluded_non_live_market: Object.values(gate.excludedByCity).reduce((s, n) => s + n, 0),
