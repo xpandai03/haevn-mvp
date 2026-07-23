@@ -137,10 +137,14 @@ export function MatchesClient() {
           <div>
             <h1 className="font-heading text-xl font-bold text-haevn-navy">Matches</h1>
             <p className="mt-0.5 text-sm text-gray-500">
-              Current match set · computed {fmtDate(data?.lastComputedAt ?? null)}
+              Current match set · unique pairs · computed {fmtDate(data?.lastComputedAt ?? null)}
               <span className="ml-2 text-xs text-gray-400">
-                (rewritten each Monday — this is the live set, not history)
+                (rewritten each Monday — live set, not history)
               </span>
+            </p>
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              Counted as unique pairs (each match once). The dashboard&apos;s &ldquo;Matches Generated&rdquo;
+              counts per member, so it reads about 2×.
             </p>
           </div>
           <button

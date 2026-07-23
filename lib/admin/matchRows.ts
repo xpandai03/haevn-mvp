@@ -78,6 +78,29 @@ export function marketDisplay(marketA: string | null, marketB: string | null): s
 
 // ── filter / sort / paginate / counts ────────────────────────────────────────
 
+/**
+ * Collapse mirrored rows to one per unordered pair. computed_matches stores every
+ * pair BOTH directions (A×B and B×A, same score); a human means one match. The
+ * survivor is deterministic: the row whose partnershipA < partnershipB (canonical
+ * orientation), so its inspect link is stable. Run BEFORE filter/sort/count so the
+ * counts strip reports unique pairs.
+ */
+export function dedupePairs(rows: MatchRow[]): MatchRow[] {
+  const byPair = new Map<string, MatchRow>()
+  for (const r of rows) {
+    const key = r.partnershipA < r.partnershipB
+      ? `${r.partnershipA}|${r.partnershipB}`
+      : `${r.partnershipB}|${r.partnershipA}`
+    const existing = byPair.get(key)
+    if (!existing) { byPair.set(key, r); continue }
+    // prefer the canonical (A < B) orientation deterministically
+    if (r.partnershipA < r.partnershipB && !(existing.partnershipA < existing.partnershipB)) {
+      byPair.set(key, r)
+    }
+  }
+  return [...byPair.values()]
+}
+
 export function filterRows(rows: MatchRow[], f: MatchFilters): MatchRow[] {
   const q = f.search?.trim().toLowerCase()
   return rows.filter((r) => {

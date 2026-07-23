@@ -6,6 +6,7 @@ import {
   bandOf,
   releaseStatusOf,
   shortName,
+  dedupePairs,
   filterRows,
   sortRows,
   paginate,
@@ -35,7 +36,9 @@ export async function GET(request: NextRequest) {
   const nowIso = new Date().toISOString()
 
   try {
-    const rows = await buildRows(admin, nowIso)
+    // One row per unordered pair (computed_matches mirrors every pair). Dedup
+    // BEFORE filter/sort/count so counts reflect unique pairs.
+    const rows = dedupePairs(await buildRows(admin, nowIso))
 
     const filtered = filterRows(rows, {
       search: p.get('search') ?? undefined,
