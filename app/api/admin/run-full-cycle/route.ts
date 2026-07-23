@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
 import { recomputeAllMatches } from '@/lib/services/computeMatches'
 import { sendNotification } from '@/lib/services/notifications'
+import { captureMatchHistoryToDb } from '@/lib/services/matchHistory'
 
 /**
  * POST /api/admin/run-full-cycle
@@ -132,6 +133,15 @@ export async function POST() {
     } else {
       results.notify.errors++
     }
+  }
+
+  // ── Match history capture (fail-safe — never affects the cycle above) ──
+  try {
+    const hist = await captureMatchHistoryToDb(admin, new Date().toISOString().slice(0, 10))
+    ;(results as any).history = { captured: hist.captured, error: hist.error ?? null }
+    console.log(`[run-full-cycle] match_history captured ${hist.captured} rows`)
+  } catch (e: any) {
+    console.error('[run-full-cycle] match_history capture threw (non-fatal):', e?.message ?? e)
   }
 
   // ── Log system events ──
