@@ -5,7 +5,7 @@
  */
 import {
   bandOf, releaseStatusOf, shortName, marketDisplay,
-  filterRows, sortRows, paginate, computeCounts,
+  filterRows, sortRows, paginate, computeCounts, dedupePairs,
   type MatchRow,
 } from '../matchRows'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
@@ -97,6 +97,29 @@ eq(sortRows(rows, 'name', 'asc')[0].nameA, 'Alex C.', 'name asc first = Alex')
   eq(c.released, 2, 'counts: released')
   eq(c.notified, 2, 'counts: notified')
   eq(c.connected, 1, 'counts: connected (handshake only, not passed)')
+}
+
+// ── dedupePairs (mirrored A×B / B×A → one canonical row) ─────────────────────
+{
+  const AB = row({ id: 'ab', partnershipA: 'aaa', partnershipB: 'zzz', score: 88 })
+  const BA = row({ id: 'ba', partnershipA: 'zzz', partnershipB: 'aaa', score: 88 })
+  // both input orders → the canonical (A < B) row survives, exactly one row
+  const d1 = dedupePairs([AB, BA])
+  eq(d1.length, 1, 'mirrored pair → one row')
+  eq(d1[0].id, 'ab', 'canonical (partnershipA < partnershipB) survives')
+  const d2 = dedupePairs([BA, AB])
+  eq(d2.length, 1, 'input order independent → still one row')
+  eq(d2[0].id, 'ab', 'deterministic: canonical survives regardless of order')
+}
+{
+  // counts halve consistently: 2 mirrored pairs (4 rows) → 2 unique
+  const mk = (a: string, b: string, id: string, score: number) =>
+    row({ id, partnershipA: a, partnershipB: b, score, band: bandOf(score) })
+  const rows4 = [mk('a', 'b', '1', 90), mk('b', 'a', '2', 90), mk('c', 'd', '3', 78), mk('d', 'c', '4', 78)]
+  const deduped = dedupePairs(rows4)
+  eq(deduped.length, 2, 'four mirrored rows → two unique pairs')
+  const c = computeCounts(deduped)
+  eq([c.matches, c.recommendations], [1, 1], 'counts over unique pairs (1 match / 1 rec, not 2/2)')
 }
 
 report('matchRows')

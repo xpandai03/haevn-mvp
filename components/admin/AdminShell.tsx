@@ -15,84 +15,39 @@ import {
   Users,
   ClipboardList,
   Sparkles,
-  Link2,
-  FileText,
-  FileBarChart,
-  Settings,
   SlidersHorizontal,
-  Wrench,
   Menu,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { PRIMARY_NAV, TOOLS_NAV, deriveActive, type NavKey } from '@/lib/admin/adminNav'
 
-type NavKey = 'network-performance' | 'matches' | 'users'
-
-/** Which nav item the current path maps to (null = none / a non-nav admin route). */
-function deriveActive(pathname: string): NavKey | null {
-  if (pathname.startsWith('/admin/matches')) return 'matches'
-  if (pathname.startsWith('/admin/users')) return 'users'
-  if (pathname.startsWith('/admin/network-performance')) return 'network-performance'
-  return null
+/** key → icon (kept out of the pure nav config so it stays testable). */
+const ICONS: Record<NavKey, typeof BarChart3> = {
+  'network-performance': BarChart3,
+  users: Users,
+  matches: Sparkles,
+  surveys: ClipboardList,
 }
-
-interface NavItem {
-  key: string
-  label: string
-  icon: typeof BarChart3
-  href?: string
-}
-
-const PRIMARY_NAV: NavItem[] = [
-  { key: 'network-performance', label: 'Network Performance', icon: BarChart3, href: '/admin/network-performance' },
-  { key: 'users', label: 'Users', icon: Users, href: '/admin/users' },
-  { key: 'surveys', label: 'Surveys', icon: ClipboardList },
-  { key: 'matches', label: 'Matches', icon: Sparkles, href: '/admin/matches' },
-  { key: 'connections', label: 'Connections', icon: Link2 },
-  { key: 'content', label: 'Content', icon: FileText },
-  { key: 'reports', label: 'Reports', icon: FileBarChart },
-  { key: 'settings', label: 'Settings', icon: Settings },
-]
 
 function NavList({ active, onNavigate }: { active: NavKey | null; onNavigate?: () => void }) {
   return (
     <nav className="flex-1 space-y-1 px-3 py-4">
       {PRIMARY_NAV.map((item) => {
-        const Icon = item.icon
+        const Icon = ICONS[item.key]
         const isActive = item.key === active
-        const base =
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition'
-
-        // Any item with an href is a real link (active-styled when current), so
-        // built pages navigate between each other. Others stay reserved/disabled.
-        if (item.href) {
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={isActive ? 'page' : undefined}
-              className={`${base} ${
-                isActive ? 'bg-haevn-teal/10 text-haevn-teal' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
-            </Link>
-          )
-        }
-
-        // Reserved / coming-soon — not a link, not clickable.
         return (
-          <div
+          <Link
             key={item.key}
-            aria-disabled="true"
-            title="Coming soon"
-            className={`${base} cursor-not-allowed text-gray-400`}
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive ? 'bg-haevn-teal/10 text-haevn-teal' : 'text-gray-600 hover:bg-gray-50'
+            }`}
           >
-            <Icon className="h-4 w-4 shrink-0 opacity-60" />
-            <span>{item.label}</span>
-            <span className="ml-auto text-[10px] uppercase tracking-wide text-gray-300">soon</span>
-          </div>
+            <Icon className="h-4 w-4 shrink-0" />
+            {item.label}
+          </Link>
         )
       })}
 
@@ -102,22 +57,13 @@ function NavList({ active, onNavigate }: { active: NavKey | null; onNavigate?: (
           Tools
         </p>
         <Link
-          href="/admin/matching"
+          href={TOOLS_NAV.href}
           onClick={onNavigate}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
-          Matching Ops
+          {TOOLS_NAV.label}
         </Link>
-        <div
-          aria-disabled="true"
-          title="Coming soon"
-          className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400"
-        >
-          <Wrench className="h-4 w-4 shrink-0 opacity-60" />
-          <span>Utilities</span>
-          <span className="ml-auto text-[10px] uppercase tracking-wide text-gray-300">soon</span>
-        </div>
       </div>
     </nav>
   )
