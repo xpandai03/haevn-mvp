@@ -3,11 +3,12 @@ import { requireAdminPage } from '@/lib/admin/requireAdmin'
 import { AdminShell } from '@/components/admin/AdminShell'
 
 /**
- * Route-group layout — wraps ONLY the Network Performance dashboard (not the
- * existing /admin pages, which keep their own inline gates this PR). Gates once
- * here so the page component stays presentational.
+ * Route-group layout for the AdminShell pages (Network Performance + Matches).
+ * The other legacy /admin pages keep their own inline gates. Gates once here so
+ * the page components stay presentational; AdminShell derives the active nav item
+ * from the pathname.
  */
-export default async function NetworkAdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminShellLayout({ children }: { children: ReactNode }) {
   await requireAdminPage()
-  return <AdminShell active="network-performance">{children}</AdminShell>
+  return <AdminShell>{children}</AdminShell>
 }
