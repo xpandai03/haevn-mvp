@@ -53,6 +53,7 @@ import { snapshotMetric, weeklyMetric } from './derive'
 import { TOOLTIPS } from './tooltips'
 import { KpiCard, BlockedCard } from './cards'
 import { CompositionChart } from './CompositionChart'
+import { EngagementStrip } from './EngagementStrip'
 
 const NETWORK = 'network'
 const AGE_ORDER = ['18-24', '25-34', '35-44', '45-54', '55+', 'unknown']
@@ -442,6 +443,9 @@ function Sections({
           })}
         </div>
       </section>
+
+      {/* Engagement — un-numbered, between Weekly (2) and Composition (3) */}
+      <EngagementStrip data={data} />
 
       {/* Section 3 — Network Composition */}
       <section>

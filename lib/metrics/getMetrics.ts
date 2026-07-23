@@ -13,11 +13,13 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MATCH_MIN_SCORE, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
-import type { ReportingWeek } from './reportingWeek'
+import { currentReportingWeek, type ReportingWeek } from './reportingWeek'
 import { resolvePartnershipScope, userIdsForPartnerships } from './scope'
+import { getLastSignInMap } from './authLogins'
 import type {
   Composition,
   CompositionBucket,
+  EngagementMetrics,
   MetricsResult,
   Scope,
   SnapshotMetrics,
@@ -63,13 +65,20 @@ export async function getMetrics(args: {
   const startIso = week.start.toISOString()
   const endIso = week.end.toISOString()
 
+  // activeThisWeek is only computable live for the CURRENT week (last_sign_in_at
+  // holds only the latest sign-in) — past weeks come from snapshots.
+  const isCurrentWeek = week.weekEnding === currentReportingWeek().weekEnding
+
   // ── Snapshot section ──────────────────────────────────────────────────────
   const snapshotP = resolveSnapshot(admin, scopeIds)
 
   // ── Weekly section ────────────────────────────────────────────────────────
   const weeklyP = resolveWeekly(admin, scopeIds, scopeUserIds, startIso, endIso)
 
-  const [snapshot, weekly] = await Promise.all([snapshotP, weeklyP])
+  // ── Engagement section ────────────────────────────────────────────────────
+  const engagementP = resolveEngagement(admin, scopeIds, startIso, endIso, isCurrentWeek)
+
+  const [snapshot, weekly, engagement] = await Promise.all([snapshotP, weeklyP, engagementP])
 
   const partnershipsInScope = scopeIds === null ? snapshot.totalMembers : scopeIds.size
 
@@ -80,7 +89,77 @@ export async function getMetrics(args: {
     partnershipsInScope,
     snapshot,
     weekly,
+    engagement,
     generatedAt: new Date().toISOString(),
+  }
+}
+
+// ── Engagement (login) ───────────────────────────────────────────────────────
+
+/** A partnership has "logged in" if ANY member has ever signed in. */
+export function partnershipLoggedInEver(
+  memberIds: string[],
+  lastSignIn: Map<string, string | null>
+): boolean {
+  return memberIds.some((u) => !!lastSignIn.get(u))
+}
+
+/** A partnership is "active in week" if ANY member signed in within [start, end]. */
+export function partnershipActiveInWeek(
+  memberIds: string[],
+  lastSignIn: Map<string, string | null>,
+  startIso: string,
+  endIso: string
+): boolean {
+  return memberIds.some((u) => {
+    const t = lastSignIn.get(u)
+    return !!t && t >= startIso && t <= endIso
+  })
+}
+
+async function resolveEngagement(
+  admin: Admin,
+  scopeIds: Set<string> | null,
+  startIso: string,
+  endIso: string,
+  isCurrentWeek: boolean
+): Promise<EngagementMetrics> {
+  const [lastSignIn, members, partnerships] = await Promise.all([
+    getLastSignInMap(admin),
+    admin.from('partnership_members').select('partnership_id, user_id').limit(100000),
+    admin.from('partnerships').select('id').limit(100000),
+  ])
+
+  const membersByP = new Map<string, string[]>()
+  for (const m of (members.data ?? []) as { partnership_id: string; user_id: string }[]) {
+    const a = membersByP.get(m.partnership_id) ?? []
+    a.push(m.user_id)
+    membersByP.set(m.partnership_id, a)
+  }
+
+  let loggedInEverPartnerships = 0
+  let activeThisWeekPartnerships = 0
+  let totalPartnerships = 0
+  const everPeople = new Set<string>()
+
+  for (const p of (partnerships.data ?? []) as { id: string }[]) {
+    if (!inScope(p.id, scopeIds)) continue
+    totalPartnerships++
+    const mem = membersByP.get(p.id) ?? []
+    if (partnershipLoggedInEver(mem, lastSignIn)) {
+      loggedInEverPartnerships++
+      for (const u of mem) if (lastSignIn.get(u)) everPeople.add(u)
+    }
+    if (isCurrentWeek && partnershipActiveInWeek(mem, lastSignIn, startIso, endIso)) {
+      activeThisWeekPartnerships++
+    }
+  }
+
+  return {
+    loggedInEverPartnerships,
+    loggedInEverPeople: everPeople.size,
+    totalPartnerships,
+    activeThisWeekPartnerships: isCurrentWeek ? activeThisWeekPartnerships : null,
   }
 }
 

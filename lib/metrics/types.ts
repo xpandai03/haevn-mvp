@@ -75,6 +75,36 @@ export interface Composition {
   age: CompositionBucket[]
 }
 
+/**
+ * Engagement — are members entering the app? Partnership-level (a partnership is
+ * "logged in" if ANY member has), with the person count for the tooltip.
+ */
+export interface EngagementMetrics {
+  /** Partnerships with ≥1 member who has ever signed in. */
+  loggedInEverPartnerships: number
+  /** People (users) who have ever signed in — person framing for the tooltip. */
+  loggedInEverPeople: number
+  /** Partnerships in scope (denominator). */
+  totalPartnerships: number
+  /**
+   * Partnerships with ≥1 member who signed in during the reporting week.
+   * null = a PAST week: not computable live (last_sign_in_at holds only the
+   * latest sign-in) — comes from snapshots instead.
+   */
+  activeThisWeekPartnerships: number | null
+}
+
+/** Latest re-notify run summary (network-wide) — the PR #8 admin GET shape. */
+export interface RenotifyStatus {
+  runDate: string
+  dryRun: boolean | null
+  total: number
+  sent: { sms: number; email: number }
+  suppressed: { login_detected: number; cap_reached: number }
+  failures: number
+  byVariant: { has_phone: number; no_phone: number }
+}
+
 /** The full result of getMetrics for one scope + week. */
 export interface MetricsResult {
   scope: Scope
@@ -89,11 +119,17 @@ export interface MetricsResult {
   partnershipsInScope: number
   snapshot: SnapshotMetrics
   weekly: WeeklyMetrics
+  engagement: EngagementMetrics
   /** ISO timestamp the metrics were computed. */
   generatedAt: string
 }
 
-/** Shape persisted to network_snapshots.metrics (jsonb). */
+/**
+ * Shape persisted to network_snapshots.metrics (jsonb). `engagement` and
+ * `definitionsVersion` are additive (PR #9): rows written before this PR lack
+ * them — readers must treat absent `engagement` as "no data" and absent
+ * `definitionsVersion` as 1.
+ */
 export interface SnapshotPayload {
   scopeLabel: string
   weekEnding: string
@@ -101,5 +137,7 @@ export interface SnapshotPayload {
   snapshot: SnapshotMetrics
   weekly: WeeklyMetrics
   composition: Composition
+  engagement?: EngagementMetrics
+  definitionsVersion?: number
   generatedAt: string
 }

@@ -38,6 +38,34 @@ export function snapshotMetric(
   return { value, prior, series }
 }
 
+/**
+ * Engagement metric current + prior + sparkline. TOLERANT of snapshot rows written
+ * before PR #9 (no `engagement` key) — those are filtered out of the series and
+ * ignored for prior, so old rows never break the sparkline or fake a zero.
+ * `loggedInEverPartnerships` is cumulative (WoW vs last week's snapshot);
+ * `activeThisWeekPartnerships` is week-scoped and may be null on a past week.
+ */
+export function engagementMetric(
+  data: NetworkMetricsPayload,
+  key: 'loggedInEverPartnerships' | 'activeThisWeekPartnerships'
+): DerivedMetric {
+  const cur = data.metrics.engagement[key]
+  const value = typeof cur === 'number' ? cur : null
+
+  const priorRow = data.history.find((h) => h.snapshot_date === data.currentPriorWeekEnding)
+  const priorVal = priorRow?.metrics.engagement?.[key]
+  const prior = typeof priorVal === 'number' ? priorVal : null
+
+  const series = data.history
+    .map((h) => h.metrics.engagement?.[key])
+    .filter((v): v is number => typeof v === 'number')
+  const newest = data.history[data.history.length - 1]
+  if (value !== null && (!newest || newest.snapshot_date !== data.currentWeekEnding)) {
+    series.push(value)
+  }
+  return { value, prior, series }
+}
+
 export function weeklyMetric(
   data: NetworkMetricsPayload,
   key: keyof WeeklyMetrics

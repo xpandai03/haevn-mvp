@@ -13,6 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { loadMarketIndex } from '@/lib/markets/releaseGate'
 import { currentReportingWeek, type ReportingWeek } from './reportingWeek'
 import { getComposition, getMetrics } from './getMetrics'
+import { SNAPSHOT_DEFINITIONS_VERSION } from './definitionsVersion'
 import type { Scope, SnapshotPayload } from './types'
 
 export interface SnapshotScopeOutcome {
@@ -61,6 +62,8 @@ export async function runNetworkSnapshot(opts?: {
         snapshot: metrics.snapshot,
         weekly: metrics.weekly,
         composition,
+        engagement: metrics.engagement,
+        definitionsVersion: SNAPSHOT_DEFINITIONS_VERSION,
         generatedAt: metrics.generatedAt,
       }
 
