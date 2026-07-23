@@ -25,11 +25,12 @@ import {
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
-type NavKey = 'network-performance' | 'matches'
+type NavKey = 'network-performance' | 'matches' | 'users'
 
 /** Which nav item the current path maps to (null = none / a non-nav admin route). */
 function deriveActive(pathname: string): NavKey | null {
   if (pathname.startsWith('/admin/matches')) return 'matches'
+  if (pathname.startsWith('/admin/users')) return 'users'
   if (pathname.startsWith('/admin/network-performance')) return 'network-performance'
   return null
 }
@@ -43,7 +44,7 @@ interface NavItem {
 
 const PRIMARY_NAV: NavItem[] = [
   { key: 'network-performance', label: 'Network Performance', icon: BarChart3, href: '/admin/network-performance' },
-  { key: 'users', label: 'Users', icon: Users },
+  { key: 'users', label: 'Users', icon: Users, href: '/admin/users' },
   { key: 'surveys', label: 'Surveys', icon: ClipboardList },
   { key: 'matches', label: 'Matches', icon: Sparkles, href: '/admin/matches' },
   { key: 'connections', label: 'Connections', icon: Link2 },
