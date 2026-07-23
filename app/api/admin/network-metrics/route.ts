@@ -10,7 +10,7 @@ import {
   priorWeek,
   weekFromEnding,
 } from '@/lib/metrics/reportingWeek'
-import type { Scope } from '@/lib/metrics/types'
+import type { RenotifyStatus, Scope } from '@/lib/metrics/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const prior = priorWeek(week)
 
   try {
-    const [metrics, composition, history, surveyedInScope] = await Promise.all([
+    const [metrics, composition, history, surveyedInScope, renotifyStatus] = await Promise.all([
       getMetrics({ scope, week }),
       // Composition degrades independently: if the RPC is missing (migration 045
       // not applied) the charts render "No data" rather than 500ing the page.
@@ -47,6 +47,9 @@ export async function GET(request: NextRequest) {
       }),
       getSnapshotHistory(scope, 12),
       countSurveyedInScope(scope),
+      // Latest re-notify run (network-wide, not scope-dependent). Degrades to null
+      // if renotify_log is absent (migration 047 not applied) — card shows "no runs".
+      getRenotifyStatus().catch(() => null),
     ])
 
     return NextResponse.json({
@@ -69,6 +72,7 @@ export async function GET(request: NextRequest) {
       composition,
       surveyedInScope,
       history,
+      renotifyStatus,
     })
   } catch (err: any) {
     console.error('[network-metrics] failed:', err?.message ?? err)
@@ -77,6 +81,43 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * Latest re-notify run summary (network-wide). Reuses the PR #8 admin GET query
+ * shape. Returns null when there are no runs (or renotify_log is absent).
+ */
+async function getRenotifyStatus(): Promise<RenotifyStatus | null> {
+  const admin = createAdminClient()
+  const { data: latest, error } = await admin
+    .from('renotify_log')
+    .select('run_date')
+    .order('run_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !latest) return null
+
+  const runDate = latest.run_date
+  const { data: rows } = await admin.from('renotify_log').select('*').eq('run_date', runDate)
+  const status: RenotifyStatus = {
+    runDate,
+    dryRun: (rows?.[0] as any)?.dry_run ?? null,
+    total: rows?.length ?? 0,
+    sent: { sms: 0, email: 0 },
+    suppressed: { login_detected: 0, cap_reached: 0 },
+    failures: 0,
+    byVariant: { has_phone: 0, no_phone: 0 },
+  }
+  for (const r of (rows ?? []) as any[]) {
+    if (r.sms_status === 'sent') status.sent.sms++
+    if (r.email_status === 'sent') status.sent.email++
+    if (r.suppressed_reason === 'login_detected') status.suppressed.login_detected++
+    if (r.suppressed_reason === 'cap_reached') status.suppressed.cap_reached++
+    if (r.sms_status === 'failed' || r.email_status === 'failed') status.failures++
+    if (r.variant === 'has_phone') status.byVariant.has_phone++
+    else if (r.variant === 'no_phone') status.byVariant.no_phone++
+  }
+  return status
 }
 
 /** Survey responses in scope — denominator for the intent (multi-select) caption. */

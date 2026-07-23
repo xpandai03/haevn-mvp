@@ -1,4 +1,4 @@
-import type { Composition, MetricsResult, SnapshotPayload } from '@/lib/metrics/types'
+import type { Composition, MetricsResult, RenotifyStatus, SnapshotPayload } from '@/lib/metrics/types'
 
 /** The /api/admin/network-metrics response shape (client contract). */
 export interface NetworkMetricsPayload {
@@ -24,6 +24,8 @@ export interface NetworkMetricsPayload {
     market_name: string | null
     metrics: SnapshotPayload
   }>
+  /** Latest re-notify run (network-wide), or null if none / table absent. */
+  renotifyStatus: RenotifyStatus | null
 }
 
 /** Market option from /api/admin/markets (only is_live ones are offered). */
