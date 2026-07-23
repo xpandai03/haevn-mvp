@@ -64,7 +64,7 @@ export async function getMetrics(args: {
   const endIso = week.end.toISOString()
 
   // ── Snapshot section ──────────────────────────────────────────────────────
-  const snapshotP = resolveSnapshot(admin, scopeIds, scopeUserIds)
+  const snapshotP = resolveSnapshot(admin, scopeIds)
 
   // ── Weekly section ────────────────────────────────────────────────────────
   const weeklyP = resolveWeekly(admin, scopeIds, scopeUserIds, startIso, endIso)
@@ -86,8 +86,7 @@ export async function getMetrics(args: {
 
 async function resolveSnapshot(
   admin: Admin,
-  scopeIds: Set<string> | null,
-  scopeUserIds: Set<string> | null
+  scopeIds: Set<string> | null
 ): Promise<SnapshotMetrics> {
   const [totalMembers, membersFree, surveys, matchedSet] = await Promise.all([
     // totalMembers — partnerships in scope
@@ -102,11 +101,10 @@ async function resolveSnapshot(
           q.eq('membership_tier', 'free')
         ),
 
-    // surveys — person-level (profiles.survey_complete).
-    // OPEN QUESTION: profiles.survey_complete (boolean col) can disagree with a
-    // completion_pct>=100 derivation used elsewhere (loadDashboardData.ts). Using
-    // the boolean column for v1; revisit once product picks the source of truth.
-    surveyCounts(admin, scopeUserIds),
+    // surveys — RESOLVED (PR #6): keyed to completion_pct >= 100 (partnership
+    // unit), not profiles.survey_complete. The boolean lagged because only the
+    // webhook path set it; see docs/investigations/survey-count-reconciliation.md.
+    surveyCounts(admin, scopeIds),
 
     // matched partnership ids (from computed_matches, any score/time) — for noCurrentMatch
     matchedPartnershipIds(admin),
@@ -279,29 +277,61 @@ async function matchedPartnershipIds(admin: Admin): Promise<Set<string>> {
 }
 
 /** completed / incomplete survey counts, person-level, scoped to users. */
+/**
+ * Survey-completeness boundary — the SINGLE source of truth for the metric,
+ * resolved by docs/investigations/survey-count-reconciliation.md (PR #6):
+ * completion_pct >= 100 is "complete" (path-independent, no webhook lag), and
+ * survey_reviewed does NOT gate it. Kept as pure exported helpers so the market
+ * path and the tests share one definition.
+ */
+export const SURVEY_COMPLETE_MIN_PCT = 100
+
+/** Survey is complete (finished). */
+export function isSurveyComplete(pct: number | null | undefined): boolean {
+  return pct != null && pct >= SURVEY_COMPLETE_MIN_PCT
+}
+
+/** Survey is started-but-unfinished (1–99). "Never started" (0/null) is neither. */
+export function isSurveyStarted(pct: number | null | undefined): boolean {
+  return pct != null && pct >= 1 && pct < SURVEY_COMPLETE_MIN_PCT
+}
+
+/**
+ * Completed / incomplete surveys, keyed to the member unit (partnership) via
+ * user_survey_responses.completion_pct. Completed = completion_pct >= 100;
+ * incomplete = started-but-unfinished (1–99); "never started" (no row, or pct
+ * 0/null) is intentionally in NEITHER bucket (flagged in the investigation for a
+ * future product decision). Replaces the old profiles.survey_complete boolean,
+ * which lagged because only the webhook path set it (see PR #6).
+ */
 async function surveyCounts(
   admin: Admin,
-  scopeUserIds: Set<string> | null
+  scopeIds: Set<string> | null
 ): Promise<{ complete: number; incomplete: number }> {
-  if (scopeUserIds === null) {
+  if (scopeIds === null) {
     const [complete, incomplete] = await Promise.all([
-      headCount(admin, 'profiles', (q) => q.eq('survey_complete', true)),
-      headCount(admin, 'profiles', (q) => q.eq('survey_complete', false)),
+      headCount(admin, 'user_survey_responses', (q) =>
+        q.gte('completion_pct', SURVEY_COMPLETE_MIN_PCT)
+      ),
+      headCount(admin, 'user_survey_responses', (q) =>
+        q.gte('completion_pct', 1).lt('completion_pct', SURVEY_COMPLETE_MIN_PCT)
+      ),
     ])
     return { complete, incomplete }
   }
-  if (scopeUserIds.size === 0) return { complete: 0, incomplete: 0 }
-  // Fetch the (small) profiles table once and intersect.
+  if (scopeIds.size === 0) return { complete: 0, incomplete: 0 }
+  // user_survey_responses is 1:1 with partnerships (partnership_id populated);
+  // fetch the small table once and bucket by partnership scope.
   const { data } = await admin
-    .from('profiles')
-    .select('user_id, survey_complete')
+    .from('user_survey_responses')
+    .select('partnership_id, completion_pct')
     .limit(100000)
   let complete = 0
   let incomplete = 0
-  for (const r of (data ?? []) as { user_id: string; survey_complete: boolean | null }[]) {
-    if (!scopeUserIds.has(r.user_id)) continue
-    if (r.survey_complete) complete++
-    else incomplete++
+  for (const r of (data ?? []) as { partnership_id: string | null; completion_pct: number | null }[]) {
+    if (!r.partnership_id || !scopeIds.has(r.partnership_id)) continue
+    if (isSurveyComplete(r.completion_pct)) complete++
+    else if (isSurveyStarted(r.completion_pct)) incomplete++
   }
   return { complete, incomplete }
 }
