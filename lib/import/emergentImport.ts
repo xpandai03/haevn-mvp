@@ -379,7 +379,11 @@ export function mapEmergentSubmission(s: EmergentSubmission): MappedImport {
       full_name: fullName,
       city: market || 'Austin',
       msa_status: 'live',
-      survey_complete: submitted && completionPct >= 100,
+      // De-forked (PR #6): key the boolean on completion alone, not the unstored
+      // `submitted` flag. `submitted && pct>=100` was the original cause of the
+      // 346 pre-webhook records stuck false. Matches the webhook path, which sets
+      // survey_complete=true on completion (lib/ingest/completionV1.ts).
+      survey_complete: completionPct >= 100,
     },
   }
 }

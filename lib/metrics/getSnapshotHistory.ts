@@ -5,6 +5,13 @@
  * The network row is stored with market_name IS NULL; a market row with
  * market_name = the exact market_name. History is returned oldest→newest so the
  * UI can draw a left-to-right sparkline and pick the prior-week row by date.
+ *
+ * DEFINITION-CHANGE CAVEAT (PR #6): snapshots captured before the survey-count
+ * fix hold completedSurveys/incompleteSurveys on the OLD boolean basis (~122/506);
+ * post-fix rows are on completion_pct (~467/152). Snapshots are immutable, so the
+ * WoW delta for those two metrics shows ONE artificial jump the week the fix lands.
+ * Not a data error — expected and pre-explained. (Proposed follow-up: a
+ * `definitionsVersion` field in the snapshot JSONB so readers can detect the break.)
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
