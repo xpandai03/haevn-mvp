@@ -7,7 +7,7 @@
 import { config } from 'dotenv'
 config({ path: '.env.local', quiet: true } as any)
 
-import { resolveVariant, isNeverLoggedIn, isEligible, type AudienceEntry } from '../audience'
+import { resolveVariant, isNeverLoggedIn, isEligible, isNotifiedOncePrior, type AudienceEntry } from '../audience'
 import { processAudience, MAX_RENOTIFY_SENDS, type Sender, type RenotifyLogRow } from '../runReNotify'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
 
@@ -27,6 +27,26 @@ ok(!isEligible({ released: false, notifiedOnce: true, liveMarket: true, neverLog
 ok(!isEligible({ released: true, notifiedOnce: false, liveMarket: true, neverLoggedIn: true }), 'never-notified → excluded (existing flow owns it)')
 ok(!isEligible({ released: true, notifiedOnce: true, liveMarket: false, neverLoggedIn: true }), 'non-live market → excluded')
 ok(!isEligible({ released: true, notifiedOnce: true, liveMarket: true, neverLoggedIn: false }), 'someone logged in → excluded')
+
+// ── notified-once PRIOR-DAY floor (the same-Monday double-tap fix) ────────────
+// Run day = 2026-07-27; its UTC midnight is the floor.
+const DAY_START = '2026-07-27T00:00:00.000Z'
+ok(isNotifiedOncePrior('2026-07-20T14:00:00.000Z', DAY_START), 'prior Monday notify → notified-once (re-notify target)')
+ok(!isNotifiedOncePrior('2026-07-27T14:00:05.000Z', DAY_START), 'SAME-day 14:00 notify → NOT notified-once (no same-day re-hit)')
+ok(!isNotifiedOncePrior('2026-07-27T00:00:00.000Z', DAY_START), 'exactly run-day midnight → excluded (strict <)')
+ok(!isNotifiedOncePrior(null, DAY_START), 'never notified → not notified-once')
+
+// End-to-end audience decision over two synthetic partnerships (same logic
+// buildAudience applies): a same-day-notified never-logger is ABSENT while a
+// prior-week non-engager REMAINS. Both released, live-market, never-logged-in.
+{
+  const priorWeek = isEligible({ released: true, liveMarket: true, neverLoggedIn: true,
+    notifiedOnce: isNotifiedOncePrior('2026-07-20T14:00:00.000Z', DAY_START) })
+  const sameDay = isEligible({ released: true, liveMarket: true, neverLoggedIn: true,
+    notifiedOnce: isNotifiedOncePrior('2026-07-27T14:00:00.000Z', DAY_START) })
+  ok(priorWeek, 'prior-week non-engager → IN re-notify audience')
+  ok(!sameDay, 'same-day-notified never-logger → ABSENT from re-notify audience')
+}
 
 // ── Part B: processAudience core ─────────────────────────────────────────────
 function spySender(opts?: { emailOk?: boolean; smsOk?: boolean; url?: string | null }): Sender & {
