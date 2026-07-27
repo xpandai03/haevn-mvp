@@ -35,6 +35,14 @@ const MIN_SCORE_THRESHOLD = 80
 // so band rows never leak into "Your Matches". Nothing below 77 is stored.
 const STORE_MIN_SCORE = 77
 
+// Soft wall-clock budget for a full recompute. Both callers (cron +
+// run-full-cycle) run under Vercel's 300s hard cap; we stop iterating at 270s
+// and record progress-at-death, leaving ~30s for the caller's release phase +
+// terminal event. This turns a silent hard-kill into a logged partial. The real
+// fix (hoisted ctx, below) keeps a full run well under this — the budget is a
+// backstop, not the plan.
+const RECOMPUTE_SOFT_BUDGET_MS = 270_000
+
 /**
  * Get the next Monday at 8:00 AM Eastern (12:00 UTC) for Match Monday batching.
  * Matches computed before Monday are held invisible until then.
@@ -89,6 +97,12 @@ export interface RecomputeAllResult {
   total: number
   computed: number
   errors: number
+  /** Partnerships actually iterated this run (== total when completed). */
+  processed?: number
+  /** True only if every live partnership was processed (no soft-budget/abort). */
+  completed?: boolean
+  /** Wall-clock of the run in ms (context build + loop). */
+  durationMs?: number
   _debug?: any // TEMPORARY: debug data embedded in response
   details: Array<{
     partnershipId: string
@@ -101,6 +115,186 @@ export interface RecomputeAllResult {
     upsertError?: string
     _debug?: any // TEMPORARY: per-partnership debug data
   }>
+}
+
+// =============================================================================
+// SHARED RECOMPUTE CONTEXT (the (a+) fix)
+// =============================================================================
+//
+// The invariant dataset for a full recompute — the entire live base, unchanged
+// during the batch. computeMatchesForPartnership normally re-fetches all of this
+// on EVERY call (~6 full-table reads × N partnerships), which is the O(N)
+// full-scan that timed out the Monday cron. buildRecomputeContext loads it ONCE;
+// computeMatchesForPartnership derives its per-partnership inputs from it.
+//
+// PARITY: this changes only HOW inputs are loaded, never WHAT is computed. The
+// same rows feed the same scoring pipeline (calculateCompatibilityFromRaw) with
+// the same per-partnership selection semantics. See docs/plans/recompute-timeout-fix.md.
+
+export interface PartnershipRow {
+  id: string
+  profile_type: string | null
+  city: string | null
+  msa: string | null
+  display_name: string | null
+  latitude: number | null
+  longitude: number | null
+}
+
+export interface RecomputeContext {
+  /** All live partnerships, in fetch order — the candidate iteration order. */
+  livePartnerships: PartnershipRow[]
+  /** Live partnership by id (covers self + every candidate). */
+  partnershipsById: Map<string, PartnershipRow>
+  /** partnership_id → member user_ids, over the FULL live set INCLUDING self. */
+  membersByPartnership: Map<string, string[]>
+  /** user_id → survey row, over every live member (self + candidates). */
+  surveyByUser: Map<string, { user_id: string; answers_json: any; completion_pct: number }>
+  /** partnership_id → resolved display name (diagnostics/labels only). */
+  nameByPartnership: Map<string, string>
+  /** partnership_id → set of handshake-excluded partnership ids. */
+  handshakesByPartnership: Map<string, Set<string>>
+}
+
+/**
+ * Build the invariant recompute dataset once. Read-only; safe to call against
+ * production. Mirrors — exactly — the columns and shapes that
+ * computeMatchesForPartnership fetches per call, so ctx-derived inputs are
+ * byte-identical to the per-call fetches.
+ */
+export async function buildRecomputeContext(
+  adminClient: ReturnType<typeof createAdminClient>
+): Promise<RecomputeContext> {
+  // Live partnerships — SAME columns computeMatchesForPartnership selects (L162/L241).
+  const { data: partnerships, error } = await adminClient
+    .from('partnerships')
+    .select('id, profile_type, city, msa, display_name, latitude, longitude')
+    .eq('profile_state', 'live')
+  if (error || !partnerships) {
+    throw new Error(`buildRecomputeContext: partnerships fetch failed: ${error?.message || 'unknown'}`)
+  }
+  const livePartnerships = partnerships as PartnershipRow[]
+  const partnershipsById = new Map(livePartnerships.map(p => [p.id, p]))
+  const partnershipIds = livePartnerships.map(p => p.id)
+
+  // Chunked `.in()` — one query over the whole base blows the request URL length
+  // limit (a ~500-id list is ~19KB; PostgREST rejects it). Chunking returns the
+  // identical row SET and is what makes this scale past the current base.
+  const IN_CHUNK = 150
+  async function fetchInChunks<T>(
+    ids: string[],
+    run: (slice: string[]) => PromiseLike<{ data: T[] | null }>
+  ): Promise<T[]> {
+    const out: T[] = []
+    for (let i = 0; i < ids.length; i += IN_CHUNK) {
+      const { data } = await run(ids.slice(i, i + IN_CHUNK))
+      if (data) out.push(...data)
+    }
+    return out
+  }
+
+  // Members for the FULL live set — INCLUDING each partnership itself. The
+  // per-call path fetches self's members (L180) separately from candidates'
+  // (L272); ctx must cover both so a partnership's own members resolve when it
+  // is the "current" one.
+  const membersByPartnership = new Map<string, string[]>()
+  const allMemberUserIds: string[] = []
+  if (partnershipIds.length > 0) {
+    const members = await fetchInChunks<{ partnership_id: string; user_id: string }>(
+      partnershipIds,
+      slice => adminClient.from('partnership_members').select('partnership_id, user_id').in('partnership_id', slice)
+    )
+    for (const m of members) {
+      const arr = membersByPartnership.get(m.partnership_id) || []
+      arr.push(m.user_id)
+      membersByPartnership.set(m.partnership_id, arr)
+      allMemberUserIds.push(m.user_id)
+    }
+  }
+
+  // Surveys for every live member (self + candidates).
+  const surveyByUser = new Map<string, { user_id: string; answers_json: any; completion_pct: number }>()
+  if (allMemberUserIds.length > 0) {
+    const surveys = await fetchInChunks<{ user_id: string; answers_json: any; completion_pct: number }>(
+      allMemberUserIds,
+      slice => adminClient.from('user_survey_responses').select('user_id, answers_json, completion_pct').in('user_id', slice)
+    )
+    for (const s of surveys) surveyByUser.set(s.user_id, s)
+  }
+
+  // Name map (diagnostics/labels only — never feeds scoring or stored rows):
+  // display_name → profiles.full_name → auth email. Single listUsers page,
+  // matching the per-call path exactly.
+  const nameByPartnership = new Map<string, string>()
+  const profileNameMap = new Map<string, string>()
+  if (allMemberUserIds.length > 0) {
+    const profiles = await fetchInChunks<{ user_id: string; full_name: string | null }>(
+      allMemberUserIds,
+      slice => adminClient.from('profiles').select('user_id, full_name').in('user_id', slice)
+    )
+    for (const p of profiles) if (p.full_name) profileNameMap.set(p.user_id, p.full_name)
+  }
+  const emailMap = new Map<string, string>()
+  const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+  if (authData?.users) for (const u of authData.users) if (u.email) emailMap.set(u.id, u.email)
+  for (const p of livePartnerships) {
+    if (p.display_name) { nameByPartnership.set(p.id, p.display_name); continue }
+    for (const uid of membersByPartnership.get(p.id) || []) {
+      const name = profileNameMap.get(uid) || emailMap.get(uid)
+      if (name) { nameByPartnership.set(p.id, name); break }
+    }
+  }
+
+  // Handshakes — build the full exclusion adjacency once. For any partnership X,
+  // handshakesByPartnership.get(X) is every partnership handshake-linked to X,
+  // identical to the per-call `.or(a.eq.X,b.eq.X)` → "other side" set.
+  const handshakesByPartnership = new Map<string, Set<string>>()
+  const addExcl = (a: string, b: string) => {
+    const s = handshakesByPartnership.get(a) || new Set<string>()
+    s.add(b)
+    handshakesByPartnership.set(a, s)
+  }
+  const { data: handshakes } = await adminClient
+    .from('handshakes')
+    .select('a_partnership, b_partnership')
+  if (handshakes) {
+    for (const h of handshakes) {
+      if (!h.a_partnership || !h.b_partnership) continue
+      if (h.a_partnership !== h.b_partnership) {
+        addExcl(h.a_partnership, h.b_partnership)
+        addExcl(h.b_partnership, h.a_partnership)
+      }
+    }
+  }
+
+  return {
+    livePartnerships,
+    partnershipsById,
+    membersByPartnership,
+    surveyByUser,
+    nameByPartnership,
+    handshakesByPartnership,
+  }
+}
+
+/**
+ * Best-effort progress-at-death breadcrumb. Fires the instant a run stops short
+ * (soft budget or exception) so a partial recompute can never be silent — even
+ * if the caller is later killed during its release phase. Never throws.
+ */
+async function emitRecomputeFailed(
+  adminClient: ReturnType<typeof createAdminClient>,
+  progress: Record<string, any>
+) {
+  try {
+    await adminClient.from('system_events').insert({
+      event_type: 'match_recompute_failed',
+      triggered_by: 'recompute',
+      metadata: { ...progress, at: new Date().toISOString() },
+    })
+  } catch (e) {
+    console.error('[recomputeAllMatches] failed to emit match_recompute_failed:', e)
+  }
 }
 
 // =============================================================================
@@ -136,10 +330,17 @@ async function updateRunStatus(
  */
 export async function computeMatchesForPartnership(
   partnershipId: string,
-  runId: string | null = null
+  runId: string | null = null,
+  ctx?: RecomputeContext
 ): Promise<ComputeMatchesResult> {
-  console.log(`🔥 COMPUTE-FOR-PARTNERSHIP ENTERED — BUILD=2026-03-30T1 id=${partnershipId} engine=${ENGINE_VERSION}`)
-  console.log(`[computeMatches] BUILD_MARKER=2026-03-02T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
+  // In batch mode (ctx present) every invariant read below is served from the
+  // in-memory context — zero per-partnership full-table scans. Without ctx the
+  // single-partnership callers (survey/save, import-users, computedMatchCards)
+  // fetch exactly as before. Scoring is identical in both paths.
+  if (!ctx) {
+    console.log(`🔥 COMPUTE-FOR-PARTNERSHIP ENTERED — BUILD=2026-03-30T1 id=${partnershipId} engine=${ENGINE_VERSION}`)
+    console.log(`[computeMatches] BUILD_MARKER=2026-03-02T1 ENTERED id=${partnershipId} engine=${ENGINE_VERSION}`)
+  }
 
   const adminClient = createAdminClient()
   let matchesComputed = 0
@@ -157,11 +358,19 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     // 1. Fetch current partnership
     // =========================================================================
-    const { data: currentPartnership, error: currentError } = await adminClient
-      .from('partnerships')
-      .select('id, profile_type, city, msa, display_name, latitude, longitude')
-      .eq('id', partnershipId)
-      .single()
+    let currentPartnership: PartnershipRow | null
+    let currentError: { message?: string } | null = null
+    if (ctx) {
+      currentPartnership = ctx.partnershipsById.get(partnershipId) ?? null
+    } else {
+      const res = await adminClient
+        .from('partnerships')
+        .select('id, profile_type, city, msa, display_name, latitude, longitude')
+        .eq('id', partnershipId)
+        .single()
+      currentPartnership = (res.data as PartnershipRow | null) ?? null
+      currentError = res.error
+    }
 
     if (currentError || !currentPartnership) {
       const errMsg = `Partnership not found: ${currentError?.message || 'Unknown error'}`
@@ -177,10 +386,12 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     // 2. Fetch current partnership's survey answers
     // =========================================================================
-    const { data: currentMembers } = await adminClient
-      .from('partnership_members')
-      .select('user_id')
-      .eq('partnership_id', partnershipId)
+    const currentMembers = ctx
+      ? (ctx.membersByPartnership.get(partnershipId) || []).map(user_id => ({ user_id }))
+      : (await adminClient
+          .from('partnership_members')
+          .select('user_id')
+          .eq('partnership_id', partnershipId)).data
 
     if (!currentMembers || currentMembers.length === 0) {
       const errMsg = `Partnership has no members (id=${partnershipId})`
@@ -194,10 +405,17 @@ export async function computeMatchesForPartnership(
     }
 
     const currentMemberIds = currentMembers.map(m => m.user_id)
-    const { data: currentSurveys } = await adminClient
-      .from('user_survey_responses')
-      .select('user_id, answers_json, completion_pct')
-      .in('user_id', currentMemberIds)
+    // ctx: derive self's surveys from the shared map in member order — same
+    // "first completed survey wins" selection the per-call `.in()` + `.find()`
+    // makes (and the same the live Connections view uses).
+    const currentSurveys = ctx
+      ? currentMemberIds
+          .map(uid => ctx.surveyByUser.get(uid))
+          .filter((s): s is NonNullable<typeof s> => !!s)
+      : (await adminClient
+          .from('user_survey_responses')
+          .select('user_id, answers_json, completion_pct')
+          .in('user_id', currentMemberIds)).data
 
     console.log(`[computeMatches] Survey lookup: members=${currentMemberIds.length} surveys=${currentSurveys?.length ?? 0} completed=${currentSurveys?.filter(s => s.completion_pct >= 100 && s.answers_json).length ?? 0}`)
 
@@ -236,11 +454,19 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     // 3. Fetch ALL candidate partnerships (live, with display_name)
     // =========================================================================
-    const { data: allPartnerships, error: partnershipsError } = await adminClient
-      .from('partnerships')
-      .select('id, profile_type, city, msa, display_name, latitude, longitude')
-      .neq('id', partnershipId)
-      .eq('profile_state', 'live')
+    let allPartnerships: PartnershipRow[] | null
+    let partnershipsError: { message?: string } | null = null
+    if (ctx) {
+      allPartnerships = ctx.livePartnerships.filter(p => p.id !== partnershipId)
+    } else {
+      const res = await adminClient
+        .from('partnerships')
+        .select('id, profile_type, city, msa, display_name, latitude, longitude')
+        .neq('id', partnershipId)
+        .eq('profile_state', 'live')
+      allPartnerships = (res.data as PartnershipRow[] | null) ?? null
+      partnershipsError = res.error
+    }
 
     if (partnershipsError) {
       const errMsg = `Failed to fetch partnerships: ${partnershipsError.message}`
@@ -269,119 +495,104 @@ export async function computeMatchesForPartnership(
     // =========================================================================
     // 4. Fetch ALL candidate members in one query
     // =========================================================================
-    const { data: allMembers } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id, user_id')
-      .in('partnership_id', candidateIds)
-
-    const membersByPartnership = new Map<string, string[]>()
+    // Candidate members map + name map + surveys + handshakes. In batch mode all
+    // of this is served from the shared ctx (no per-partnership reads); the
+    // membersByPartnership map covers the full live set but the scoring loop only
+    // reads candidate ids, so including self is harmless.
+    let allMembers: { partnership_id: string; user_id: string }[] | null = null
+    let membersByPartnership: Map<string, string[]>
     const allMemberUserIds: string[] = []
-    if (allMembers) {
-      for (const m of allMembers) {
-        const arr = membersByPartnership.get(m.partnership_id) || []
-        arr.push(m.user_id)
-        membersByPartnership.set(m.partnership_id, arr)
-        allMemberUserIds.push(m.user_id)
+    if (ctx) {
+      membersByPartnership = ctx.membersByPartnership
+    } else {
+      const res = await adminClient
+        .from('partnership_members')
+        .select('partnership_id, user_id')
+        .in('partnership_id', candidateIds)
+      allMembers = res.data
+      membersByPartnership = new Map<string, string[]>()
+      if (allMembers) {
+        for (const m of allMembers) {
+          const arr = membersByPartnership.get(m.partnership_id) || []
+          arr.push(m.user_id)
+          membersByPartnership.set(m.partnership_id, arr)
+          allMemberUserIds.push(m.user_id)
+        }
       }
     }
 
-    // ===== STEP 1: Log raw inputs =====
-    console.log(`[DEBUG-STEP1] candidateIds count: ${candidateIds.length}`)
-    console.log(`[DEBUG-STEP1] allMembers count: ${allMembers?.length ?? 'NULL'}`)
-    console.log(`[DEBUG-STEP1] allMemberUserIds: ${JSON.stringify(allMemberUserIds)}`)
-    console.log(`[DEBUG-STEP1] membersByPartnership keys: ${JSON.stringify([...membersByPartnership.keys()].map(k => k.slice(0, 8)))}`)
-
     // =========================================================================
-    // 4b. Build candidate name map for diagnostics (display_name → full_name → email)
+    // 4b. Candidate name map for diagnostics (display_name → full_name → email)
     // =========================================================================
-    const candidateNameMap = new Map<string, string>()
-    if (allMemberUserIds.length > 0) {
-      const { data: memberProfiles, error: profilesError } = await adminClient
-        .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', allMemberUserIds)
+    let candidateNameMap: Map<string, string>
+    if (ctx) {
+      candidateNameMap = ctx.nameByPartnership
+    } else {
+      candidateNameMap = new Map<string, string>()
+      if (allMemberUserIds.length > 0) {
+        const { data: memberProfiles } = await adminClient
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', allMemberUserIds)
+        const profileNameMap = new Map(memberProfiles?.map(p => [p.user_id, p.full_name]) || [])
 
-      // ===== STEP 2: Log profiles query result =====
-      console.log(`[DEBUG-STEP2] profiles query error: ${JSON.stringify(profilesError)}`)
-      console.log(`[DEBUG-STEP2] profiles result count: ${memberProfiles?.length ?? 'NULL'}`)
-      console.log(`[DEBUG-STEP2] profiles data: ${JSON.stringify(memberProfiles?.map(p => ({ uid: p.user_id.slice(0, 8), name: p.full_name })))}`)
-
-      const profileNameMap = new Map(memberProfiles?.map(p => [p.user_id, p.full_name]) || [])
-
-      // Also fetch auth emails as final fallback
-      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
-      const authEmailMap = new Map<string, string>()
-      if (authData?.users) {
-        for (const u of authData.users) {
-          if (u.email) authEmailMap.set(u.id, u.email)
-        }
-      }
-
-      // ===== STEP 3: Log auth users result =====
-      console.log(`[DEBUG-STEP3] auth users count: ${authData?.users?.length ?? 'NULL'}`)
-      console.log(`[DEBUG-STEP3] authEmailMap size: ${authEmailMap.size}`)
-      console.log(`[DEBUG-STEP3] authEmailMap entries: ${JSON.stringify(Object.fromEntries([...authEmailMap.entries()].map(([k, v]) => [k.slice(0, 8), v])))}`)
-
-      // Map partnership_id → best available name
-      for (const [pid, userIds] of membersByPartnership) {
-        // Check display_name first (from allPartnerships)
-        const partnership = allPartnerships.find(p => p.id === pid)
-
-        // ===== STEP 4: Log each mapping attempt =====
-        console.log(`[DEBUG-STEP4] pid=${pid.slice(0, 8)}: display_name=${JSON.stringify(partnership?.display_name)}, userIds=${JSON.stringify(userIds.map(u => u.slice(0, 8)))}`)
-        for (const uid of userIds) {
-          console.log(`[DEBUG-STEP4]   uid=${uid.slice(0, 8)}: profileNameMap.get=${JSON.stringify(profileNameMap.get(uid))}, authEmailMap.get=${JSON.stringify(authEmailMap.get(uid))}`)
+        const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+        const authEmailMap = new Map<string, string>()
+        if (authData?.users) {
+          for (const u of authData.users) {
+            if (u.email) authEmailMap.set(u.id, u.email)
+          }
         }
 
-        if (partnership?.display_name) {
-          candidateNameMap.set(pid, partnership.display_name)
-          continue
-        }
-        // Then profiles.full_name, then auth email
-        for (const uid of userIds) {
-          const name = profileNameMap.get(uid) || authEmailMap.get(uid)
-          if (name) {
-            candidateNameMap.set(pid, name)
-            break
+        for (const [pid, userIds] of membersByPartnership) {
+          const partnership = allPartnerships.find(p => p.id === pid)
+          if (partnership?.display_name) {
+            candidateNameMap.set(pid, partnership.display_name)
+            continue
+          }
+          for (const uid of userIds) {
+            const name = profileNameMap.get(uid) || authEmailMap.get(uid)
+            if (name) {
+              candidateNameMap.set(pid, name)
+              break
+            }
           }
         }
       }
+    }
+
+    // =========================================================================
+    // 5. Candidate surveys
+    // =========================================================================
+    let surveyByUser: Map<string, { user_id?: string; answers_json: any; completion_pct: number }>
+    if (ctx) {
+      surveyByUser = ctx.surveyByUser
     } else {
-      console.log(`[DEBUG-STEP1] ⚠️ allMemberUserIds is EMPTY — skipping name resolution entirely`)
-    }
-
-    // ===== STEP 5: Final candidateNameMap =====
-    console.log(`[DEBUG-STEP5] candidateNameMap size: ${candidateNameMap.size}`)
-    console.log(`[DEBUG-STEP5] candidateNameMap: ${JSON.stringify(Object.fromEntries([...candidateNameMap.entries()].map(([k, v]) => [k.slice(0, 8), v])))}`)
-
-    // =========================================================================
-    // 5. Fetch ALL candidate surveys in one query
-    // =========================================================================
-    const { data: allSurveys } = await adminClient
-      .from('user_survey_responses')
-      .select('user_id, answers_json, completion_pct')
-      .in('user_id', allMemberUserIds)
-
-    const surveyByUser = new Map<string, { answers_json: any; completion_pct: number }>()
-    if (allSurveys) {
-      for (const s of allSurveys) {
-        surveyByUser.set(s.user_id, s)
-      }
+      surveyByUser = new Map()
+      const { data: allSurveys } = await adminClient
+        .from('user_survey_responses')
+        .select('user_id, answers_json, completion_pct')
+        .in('user_id', allMemberUserIds)
+      if (allSurveys) for (const s of allSurveys) surveyByUser.set(s.user_id, s)
     }
 
     // =========================================================================
-    // 6. Fetch existing handshakes for exclusion
+    // 6. Existing handshakes for exclusion
     // =========================================================================
-    const { data: handshakes } = await adminClient
-      .from('handshakes')
-      .select('a_partnership, b_partnership')
-      .or(`a_partnership.eq.${partnershipId},b_partnership.eq.${partnershipId}`)
-
-    const excludedIds = new Set<string>()
-    if (handshakes) {
-      for (const h of handshakes) {
-        if (h.a_partnership !== partnershipId) excludedIds.add(h.a_partnership)
-        if (h.b_partnership !== partnershipId) excludedIds.add(h.b_partnership)
+    let excludedIds: Set<string>
+    if (ctx) {
+      excludedIds = ctx.handshakesByPartnership.get(partnershipId) || new Set<string>()
+    } else {
+      const { data: handshakes } = await adminClient
+        .from('handshakes')
+        .select('a_partnership, b_partnership')
+        .or(`a_partnership.eq.${partnershipId},b_partnership.eq.${partnershipId}`)
+      excludedIds = new Set<string>()
+      if (handshakes) {
+        for (const h of handshakes) {
+          if (h.a_partnership !== partnershipId) excludedIds.add(h.a_partnership)
+          if (h.b_partnership !== partnershipId) excludedIds.add(h.b_partnership)
+        }
       }
     }
 
@@ -409,7 +620,6 @@ export async function computeMatchesForPartnership(
       candidatesEvaluated++
 
       const name = candidate.display_name || candidateNameMap.get(candidate.id) || candidate.id.slice(0, 8)
-      console.log(`[DIAG-NAME] candidate ${candidate.id.slice(0, 8)}: display_name=${JSON.stringify(candidate.display_name)}, candidateNameMap.get=${JSON.stringify(candidateNameMap.get(candidate.id))}, resolved=${JSON.stringify(name)}`)
 
       // Skip if handshake exists (pending, matched, or dismissed)
       if (excludedIds.has(candidate.id)) {
@@ -457,8 +667,6 @@ export async function computeMatchesForPartnership(
           currentIsCouple,
           matchIsCouple
         )
-
-        console.log(`[PAIR-RESULT] ${currentPartnership.display_name} vs ${name}: score=${result.overallScore} tier=${result.tier} constraints=${result.constraints.passed}`)
 
         // Skip if constraints failed
         if (!result.constraints.passed) {
@@ -576,13 +784,17 @@ export async function computeMatchesForPartnership(
         ? `${errors} scoring errors`
         : undefined
 
-    // Log system event (survey completion trigger)
-    await adminClient.from('system_events').insert({
-      event_type: 'match_compute',
-      triggered_by: 'survey_complete',
-      partnership_id: partnershipId,
-      metadata: { computed: matchesComputed, evaluated: candidatesEvaluated, errors }
-    }).then(() => {}, () => {})
+    // Log system event (survey completion trigger). Skipped in batch mode: the
+    // full recompute emits ONE summary event instead of N per-partnership rows
+    // (write-churn trim), and system-status still reads the batch summary.
+    if (!ctx) {
+      await adminClient.from('system_events').insert({
+        event_type: 'match_compute',
+        triggered_by: 'survey_complete',
+        partnership_id: partnershipId,
+        metadata: { computed: matchesComputed, evaluated: candidatesEvaluated, errors }
+      }).then(() => {}, () => {})
+    }
 
     return {
       success: true,
@@ -592,7 +804,9 @@ export async function computeMatchesForPartnership(
       error: errorMsg,
       pairDiagnostics,
       upsertError: upsertErrorMsg,
-      _debug: {
+      // Heavy diagnostics only in single-partnership mode. In batch this would
+      // be N× the full member map — pure bloat in the returned details[].
+      _debug: ctx ? undefined : {
         build: '2026-03-30T3',
         candidateNameMapSize: candidateNameMap.size,
         candidateNameMapEntries: Object.fromEntries([...candidateNameMap.entries()].map(([k, v]) => [k.slice(0, 8), v])),
@@ -622,99 +836,65 @@ export async function computeMatchesForPartnership(
  * Recompute matches for all live partnerships.
  */
 export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
-  console.log(`🔥 RECOMPUTE-ALL ENTERED — computeMatches.ts BUILD=2026-03-30T1 engine=${ENGINE_VERSION}`)
-  console.log(`[recomputeAllMatches] BUILD_MARKER=2026-03-02T1 engine=${ENGINE_VERSION}`)
+  console.log(`[recomputeAllMatches] START engine=${ENGINE_VERSION}`)
   const adminClient = createAdminClient()
   const details: RecomputeAllResult['details'] = []
+  const runStart = Date.now()
+
+  // ── Build the invariant dataset ONCE (the (a+) fix) ──
+  let ctx: RecomputeContext
+  try {
+    ctx = await buildRecomputeContext(adminClient)
+  } catch (err: any) {
+    console.error('[recomputeAllMatches] Failed to build context:', err)
+    await emitRecomputeFailed(adminClient, {
+      reason: 'context_build_failed',
+      processed: 0,
+      total: 0,
+      error: err?.message || String(err),
+      elapsed_ms: Date.now() - runStart,
+    })
+    return { total: 0, computed: 0, errors: 0, processed: 0, completed: false, details: [] }
+  }
+
+  const live = ctx.livePartnerships
+  const total = live.length
+  const ctxMs = Date.now() - runStart
+  console.log(`[recomputeAllMatches] ${total} live partnerships; context built in ${ctxMs}ms`)
+
+  let totalComputed = 0
+  let totalErrors = 0
+  let processed = 0
+  let stoppedEarly = false
+  let lastPartnershipId: string | null = null
 
   try {
-    const { data: allPartnerships, error } = await adminClient
-      .from('partnerships')
-      .select('id, display_name')
-      .eq('profile_state', 'live')
-
-    if (error || !allPartnerships) {
-      console.error('[recomputeAllMatches] Failed to fetch partnerships:', error)
-      return { total: 0, computed: 0, errors: 0, details: [] }
-    }
-
-    // Build a name lookup map: partnership_id → resolved name
-    // Fallback chain: display_name → profiles.full_name → email
-    const partnershipIds = allPartnerships.map(p => p.id)
-    const { data: allMembers } = await adminClient
-      .from('partnership_members')
-      .select('partnership_id, user_id')
-      .in('partnership_id', partnershipIds)
-
-    const nameMap = new Map<string, string>()
-    if (allMembers && allMembers.length > 0) {
-      const memberUserIds = allMembers.map(m => m.user_id)
-
-      // Get names from profiles
-      const { data: profiles } = await adminClient
-        .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', memberUserIds)
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || [])
-
-      // Get emails from auth.users for fallback
-      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
-      const emailMap = new Map<string, string>()
-      if (authData?.users) {
-        for (const u of authData.users) {
-          if (u.email) emailMap.set(u.id, u.email)
-        }
+    for (let i = 0; i < live.length; i++) {
+      // Soft-budget backstop: stop before the hard 300s kill so we can record
+      // progress-at-death and let the caller release what did compute.
+      if (Date.now() - runStart > RECOMPUTE_SOFT_BUDGET_MS) {
+        stoppedEarly = true
+        console.error(
+          `[recomputeAllMatches] SOFT BUDGET hit at ${processed}/${total} after ${Date.now() - runStart}ms — stopping before hard timeout`
+        )
+        break
       }
 
-      for (const m of allMembers) {
-        if (nameMap.has(m.partnership_id)) continue
-        const name = profileMap.get(m.user_id) || emailMap.get(m.user_id) || null
-        if (name) nameMap.set(m.partnership_id, name)
-      }
-    }
+      const partnership = live[i]
+      lastPartnershipId = partnership.id
+      const resolvedName = partnership.display_name || ctx.nameByPartnership.get(partnership.id) || null
 
-    // ===== DIAGNOSTIC LOGS (TEMPORARY) =====
-    console.log(`[DIAG] allPartnerships count: ${allPartnerships.length}`)
-    console.log(`[DIAG] allMembers count: ${allMembers?.length ?? 'null'}`)
-    console.log(`[DIAG] nameMap size: ${nameMap.size}`)
-    console.log(`[DIAG] nameMap entries:`, JSON.stringify(Object.fromEntries(nameMap)))
-    for (const p of allPartnerships) {
-      console.log(`[DIAG] partnership ${p.id.slice(0, 8)}: display_name=${JSON.stringify(p.display_name)}, nameMap.get=${JSON.stringify(nameMap.get(p.id))}`)
-    }
-    // ===== END DIAGNOSTIC LOGS =====
-
-    console.log(`[recomputeAllMatches] Starting: ${allPartnerships.length} live partnerships`)
-    for (const p of allPartnerships) {
-      const name = p.display_name || nameMap.get(p.id) || null
-      console.log(`[recomputeAllMatches]   queued: ${name} (${p.id})`)
-    }
-
-    let totalComputed = 0
-    let totalErrors = 0
-
-    for (let i = 0; i < allPartnerships.length; i++) {
-      const partnership = allPartnerships[i]
-      const resolvedName = partnership.display_name || nameMap.get(partnership.id) || null
-      console.log(`[recomputeAllMatches] >>> LOOP ${i + 1}/${allPartnerships.length}: ${resolvedName} (${partnership.id})`)
-
-      const result = await computeMatchesForPartnership(partnership.id)
-
-      console.log(`[recomputeAllMatches] <<< LOOP ${i + 1} result: success=${result.success} matches=${result.matchesComputed} evaluated=${result.candidatesEvaluated} errors=${result.errors} error=${result.error || 'none'}`)
-
+      const result = await computeMatchesForPartnership(partnership.id, null, ctx)
+      processed++
       totalComputed += result.matchesComputed
       totalErrors += result.errors
 
-      // Resolve pair diagnostic candidate names using the nameMap
+      // Resolve pair diagnostic candidate names using the shared name map.
       const resolvedDiagnostics = result.pairDiagnostics?.map(pd => {
-        // pd.candidate is either a display_name or a short ID (8 chars)
-        // If it looks like a short ID, try to resolve it via nameMap
         if (pd.candidate && pd.candidate.length === 8 && !pd.candidate.includes(' ')) {
-          // Find the full partnership ID that starts with this short ID
-          const fullId = partnershipIds.find(id => id.startsWith(pd.candidate))
-          if (fullId) {
-            const resolved = nameMap.get(fullId)
-            if (resolved) return { ...pd, candidate: resolved }
-          }
+          const full = live.find(p => p.id.startsWith(pd.candidate))
+          const resolved = full && ctx.nameByPartnership.get(full.id)
+          if (resolved) return { ...pd, candidate: resolved }
         }
         return pd
       })
@@ -728,58 +908,79 @@ export async function recomputeAllMatches(): Promise<RecomputeAllResult> {
         error: result.error,
         pairDiagnostics: resolvedDiagnostics,
         upsertError: result.upsertError,
-        _debug: result._debug,
       })
     }
-
-    // ===== DIAGNOSTIC LOG (TEMPORARY) =====
-    console.log(`[DIAG-FINAL] details payload:`, JSON.stringify(details.map(d => ({ id: d.partnershipId.slice(0, 8), displayName: d.displayName, pairCount: d.pairDiagnostics?.length }))))
-    // ===== END DIAGNOSTIC LOG =====
-
-    console.log(`[recomputeAllMatches] DONE: ${totalComputed} matches across ${allPartnerships.length} partnerships, ${totalErrors} errors`)
-
-    // Log system event
-    await adminClient.from('system_events').insert({
-      event_type: 'match_compute',
-      triggered_by: 'admin_manual',
-      metadata: { total: allPartnerships.length, computed: totalComputed, errors: totalErrors }
-    }).then(() => {}, () => {}) // swallow errors — logging should never fail the operation
-
-    // Persist a bounded snapshot of THIS run so the admin console shows the full
-    // last run on load (no recompute required) — covers the Monday cron too.
-    // Success-only: details is non-empty here (fatal errors return early in the
-    // catch below), so a good snapshot is never overwritten by a partial run.
-    if (details.length > 0) {
-      try {
-        const snapshot = buildConsoleSnapshot(
-          { total: allPartnerships.length, computed: totalComputed, errors: totalErrors, details },
-          { runAt: new Date().toISOString(), triggeredBy: 'recompute' }
-        )
-        const { data: inserted } = await adminClient
-          .from('system_events')
-          .insert({
-            event_type: 'console_recompute_snapshot',
-            triggered_by: 'recompute',
-            metadata: snapshot,
-          })
-          .select('id')
-          .single()
-        // Keep a single latest snapshot row.
-        if (inserted?.id) {
-          await adminClient
-            .from('system_events')
-            .delete()
-            .eq('event_type', 'console_recompute_snapshot')
-            .neq('id', inserted.id)
-        }
-      } catch (snapErr) {
-        console.warn('[recomputeAllMatches] console snapshot persist skipped:', snapErr)
-      }
-    }
-
-    return { total: allPartnerships.length, computed: totalComputed, errors: totalErrors, details }
-  } catch (error: any) {
-    console.error('[recomputeAllMatches] Fatal error:', error)
-    return { total: 0, computed: 0, errors: 0, details: [] }
+  } catch (err: any) {
+    // A single-partnership fatal is caught inside computeMatchesForPartnership;
+    // this only fires if the loop itself throws. Record progress-at-death.
+    console.error('[recomputeAllMatches] Loop error:', err)
+    await emitRecomputeFailed(adminClient, {
+      reason: 'loop_exception',
+      processed,
+      total,
+      last_partnership_id: lastPartnershipId,
+      error: err?.message || String(err),
+      elapsed_ms: Date.now() - runStart,
+    })
+    return { total, computed: totalComputed, errors: totalErrors, processed, completed: false, details }
   }
+
+  const durationMs = Date.now() - runStart
+  const completed = !stoppedEarly
+  console.log(
+    `[recomputeAllMatches] DONE processed=${processed}/${total} computed=${totalComputed} errors=${totalErrors} completed=${completed} ${durationMs}ms`
+  )
+
+  // Progress-at-death breadcrumb: if we stopped short of the full base, record a
+  // failure event NOW — before returning to the caller — so a partial run can
+  // never be silent even if the caller is killed during its release phase.
+  if (!completed) {
+    await emitRecomputeFailed(adminClient, {
+      reason: 'soft_budget',
+      processed,
+      total,
+      last_partnership_id: lastPartnershipId,
+      elapsed_ms: durationMs,
+    })
+  }
+
+  // Summary event — ONE row per run (system-status reads the latest match_compute
+  // for its "last computation" tile). Replaces the removed per-partnership rows.
+  await adminClient.from('system_events').insert({
+    event_type: 'match_compute',
+    triggered_by: 'admin_manual',
+    metadata: { total, computed: totalComputed, errors: totalErrors, processed, completed, duration_ms: durationMs },
+  }).then(() => {}, () => {}) // swallow errors — logging should never fail the operation
+
+  // Persist a bounded snapshot of THIS run so the admin console shows the full
+  // last run on load (no recompute required) — covers the Monday cron too.
+  if (details.length > 0) {
+    try {
+      const snapshot = buildConsoleSnapshot(
+        { total, computed: totalComputed, errors: totalErrors, details },
+        { runAt: new Date().toISOString(), triggeredBy: 'recompute' }
+      )
+      const { data: inserted } = await adminClient
+        .from('system_events')
+        .insert({
+          event_type: 'console_recompute_snapshot',
+          triggered_by: 'recompute',
+          metadata: snapshot,
+        })
+        .select('id')
+        .single()
+      // Keep a single latest snapshot row.
+      if (inserted?.id) {
+        await adminClient
+          .from('system_events')
+          .delete()
+          .eq('event_type', 'console_recompute_snapshot')
+          .neq('id', inserted.id)
+      }
+    } catch (snapErr) {
+      console.warn('[recomputeAllMatches] console snapshot persist skipped:', snapErr)
+    }
+  }
+
+  return { total, computed: totalComputed, errors: totalErrors, processed, completed, durationMs, details }
 }

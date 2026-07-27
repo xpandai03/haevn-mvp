@@ -39,7 +39,17 @@ export async function GET(request: NextRequest) {
   try {
     recomputeResult = await recomputeAllMatches()
   } catch (error: any) {
+    // recomputeAllMatches catches internally, but if it ever throws we must not
+    // exit silently — record a terminal failure event before returning.
     console.error('[Cron recompute-matches] recomputeAllMatches threw:', error)
+    await createAdminClient()
+      .from('system_events')
+      .insert({
+        event_type: 'match_recompute_failed',
+        triggered_by: 'cron',
+        metadata: { reason: 'compute_threw', error: error?.message || String(error), at: new Date().toISOString() },
+      })
+      .then(() => {}, () => {})
     return NextResponse.json(
       { error: error?.message || 'recomputeAllMatches threw', stage: 'compute' },
       { status: 500 }
@@ -47,7 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   console.log(
-    `[Cron recompute-matches] Compute done: total=${recomputeResult.total} computed=${recomputeResult.computed} errors=${recomputeResult.errors}`
+    `[Cron recompute-matches] Compute done: processed=${recomputeResult.processed ?? recomputeResult.total}/${recomputeResult.total} computed=${recomputeResult.computed} errors=${recomputeResult.errors} completed=${recomputeResult.completed !== false}`
   )
 
   // Pull every row written during this run forward so it releases
@@ -126,6 +136,10 @@ export async function GET(request: NextRequest) {
   // Observability row — same shape convention as notify-matches uses.
   const metadata = {
     partnerships_total: recomputeResult.total,
+    partnerships_processed: recomputeResult.processed ?? recomputeResult.total,
+    // completed=false means the run stopped short (soft budget / abort) and did
+    // NOT cover the full base — the signal that would have caught Jul 27 silently.
+    completed: recomputeResult.completed !== false,
     partnerships_computed: recomputeResult.computed,
     errors: recomputeResult.errors,
     rows_released_today: releasedCount,

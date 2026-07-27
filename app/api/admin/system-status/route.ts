@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
+import { assessRecompute } from '@/lib/services/recomputeHealth'
 
 /** Next Monday at 8 AM Eastern (12:00 UTC). */
 function getNextMondayUTC(): string {
@@ -42,6 +43,9 @@ export async function GET() {
     activeRes,
     expiredRes,
     recentNotificationsRes,
+    lastRecomputeRes,
+    lastRecomputeFailureRes,
+    liveCountRes,
   ] = await Promise.all([
     admin.from('system_events')
       .select('created_at, triggered_by, metadata')
@@ -101,6 +105,31 @@ export async function GET() {
       .eq('event_type', 'notification_sent')
       .order('created_at', { ascending: false })
       .limit(20),
+
+    // LAST RECOMPUTE (Match Monday) — the cron's terminal summary. metadata
+    // carries partnerships_total/processed + `completed`. This is the
+    // completeness surface: a silent under-run (like Jul 27) shows up as
+    // completed=false or processed < live count, visible the same hour.
+    admin.from('system_events')
+      .select('created_at, triggered_by, metadata')
+      .eq('event_type', 'match_recompute')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+
+    // LAST RECOMPUTE FAILURE — progress-at-death breadcrumb (soft budget /
+    // exception). Present when a run stopped short.
+    admin.from('system_events')
+      .select('created_at, triggered_by, metadata')
+      .eq('event_type', 'match_recompute_failed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+
+    // Live partnership count — the denominator to compare processed against.
+    admin.from('partnerships')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_state', 'live'),
   ])
 
   return NextResponse.json({
@@ -126,6 +155,22 @@ export async function GET() {
     } : null,
 
     nextRelease: getNextMondayUTC(),
+
+    // Recompute completeness surface. `completed:false` or processed < live is a
+    // silent-under-run alarm — never let a Monday partial pass unseen again.
+    lastRecompute: lastRecomputeRes.data ? {
+      at: lastRecomputeRes.data.created_at,
+      triggeredBy: lastRecomputeRes.data.triggered_by,
+      ...assessRecompute((lastRecomputeRes.data.metadata as any) || {}, liveCountRes.count ?? null),
+    } : null,
+
+    lastRecomputeFailure: lastRecomputeFailureRes.data ? {
+      at: lastRecomputeFailureRes.data.created_at,
+      triggeredBy: lastRecomputeFailureRes.data.triggered_by,
+      ...((lastRecomputeFailureRes.data.metadata as any) || {}),
+    } : null,
+
+    livePartnerships: liveCountRes.count ?? 0,
 
     pendingMatches: pendingRes.count ?? 0,
     activeMatches: activeRes.count ?? 0,
