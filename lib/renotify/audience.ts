@@ -4,10 +4,13 @@
  * Eligible partnership (member unit) =
  *   released      : a computed_matches row with release_at <= now
  *                   (the notify pipeline's own definition, notify-matches:67)
- *   AND notified-once : sms_notified_at IS NOT NULL on a released row
+ *   AND notified-once : sms_notified_at set on a released row, on a PRIOR day
  *                   (the durable "already notified" marker — survives the weekly
  *                    recompute; partitions cleanly from the existing flow, which
- *                    owns sms_notified_at IS NULL / never-notified → no double-cover)
+ *                    owns sms_notified_at IS NULL / never-notified → no double-cover).
+ *                   The prior-DAY floor is load-bearing: the 14:00 notify sets
+ *                   sms_notified_at, so without it the 16:00 re-notify would re-hit
+ *                   everyone notified that same Monday (the same-day double-tap).
  *   AND never-logged-in : every member's auth.users.last_sign_in_at IS NULL
  *   AND live-market : partnership.city resolves to a live market (reuses releaseGate)
  * Suppression (login re-check at send time, cap) is applied later in runReNotify.
@@ -37,6 +40,20 @@ export function resolveVariant(phone: string | null | undefined): RenotifyVarian
 export function isNeverLoggedIn(memberUserIds: string[], loggedIn: Set<string>): boolean {
   if (memberUserIds.length === 0) return false // no members → can't notify anyone
   return memberUserIds.every((u) => !loggedIn.has(u))
+}
+
+/**
+ * "Notified-once" for re-notify = notified on a PRIOR day (strictly before the
+ * run day's UTC midnight). A same-day notify (the 14:00 cron sets
+ * sms_notified_at) must NOT make a partnership re-notify-eligible at 16:00 — that
+ * is the same-Monday double-tap. Prior-week non-engagers keep an earlier
+ * sms_notified_at and still qualify.
+ */
+export function isNotifiedOncePrior(
+  smsNotifiedAt: string | null | undefined,
+  dayStartIso: string
+): boolean {
+  return !!smsNotifiedAt && smsNotifiedAt < dayStartIso
 }
 
 /** The full partnership-level predicate (release/notify/login/market already resolved). */
@@ -87,6 +104,11 @@ export async function buildAudience(
   now: Date = new Date()
 ): Promise<AudienceEntry[]> {
   const nowIso = now.toISOString()
+  // UTC midnight of the run day — the floor that keeps today's notifies out of
+  // today's re-notify audience (the same-Monday double-tap fix).
+  const dayStart = new Date(now)
+  dayStart.setUTCHours(0, 0, 0, 0)
+  const dayStartIso = dayStart.toISOString()
 
   const [cm, members, profiles, partnerships, marketIdx] = await Promise.all([
     fetchAll(admin, 'computed_matches', 'partnership_a, release_at, sms_notified_at'),
@@ -102,7 +124,9 @@ export async function buildAudience(
   for (const r of cm as { partnership_a: string; release_at: string | null; sms_notified_at: string | null }[]) {
     if (r.release_at && r.release_at <= nowIso) {
       released.add(r.partnership_a)
-      if (r.sms_notified_at) notifiedOnce.add(r.partnership_a)
+      // Prior-day floor: a partnership notified earlier TODAY (14:00) is NOT
+      // "notified-once" for tonight's re-notify — that was the double-tap.
+      if (isNotifiedOncePrior(r.sms_notified_at, dayStartIso)) notifiedOnce.add(r.partnership_a)
     }
   }
 
