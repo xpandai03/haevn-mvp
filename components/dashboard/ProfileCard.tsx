@@ -19,6 +19,7 @@ import { User, MapPin, MessageCircle, Lock, X, Check, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
+import type { PairState } from '@/lib/connections/pairState'
 
 /** Portrait photo for match cards (matches the Emergent demo's 3/4 ratio) */
 const MATCH_PHOTO_H = 'aspect-[3/4]'
@@ -90,12 +91,109 @@ export interface ProfileCardProps {
   onMessage?: (handshakeId: string) => void
   /** Label under the compatibility % (default "Match"; Recommendations pass "Recommendation"). */
   scoreLabel?: string
+  /**
+   * Recommendation accept-flow footer (recommendations surface only). When set,
+   * REPLACES the tier-gated footer — free members get Proceed/Pass too (the gate
+   * is on reveal, not on proceeding). Identity is never exposed here.
+   */
+  recAccept?: {
+    otherPartnershipId: string
+    state: PairState
+    /** viewer's tier grants reveal/messaging (membership_tier !== 'free'). */
+    viewerCanAccess: boolean
+  }
+  /** Proceed action for the rec accept flow (records a rec-band ready-to-meet). */
+  onProceed?: (otherPartnershipId: string) => void
 }
 
 function redactName(name: string) {
   if (!name) return '—'
   const first = name.trim().charAt(0)
   return first ? `${first.toUpperCase()}***` : '—'
+}
+
+/**
+ * Recommendation accept-flow footer. Renders per viewer-relative PairState.
+ * Never reveals identity. Free members get Proceed/Pass (gate is on reveal).
+ */
+function RecAcceptFooter({
+  state,
+  viewerCanAccess,
+  onProceed,
+  onPass,
+  onActivate,
+}: {
+  state: PairState
+  viewerCanAccess: boolean
+  onProceed: () => void
+  onPass: () => void
+  onActivate: () => void
+}) {
+  const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn() }
+
+  if (state === 'connected') {
+    return viewerCanAccess ? (
+      <div className="flex w-full items-center justify-center gap-2 bg-[color:var(--haevn-teal)]/10 py-2.5 text-sm font-medium text-[color:var(--haevn-teal)]">
+        <Check size={15} strokeWidth={2} /> Connected
+      </div>
+    ) : (
+      // connected_unrevealed — connected, but identity/messaging withheld until upgrade.
+      <div>
+        <button type="button" onClick={stop(onActivate)} className="haevn-btn-gold flex w-full items-center justify-center gap-2 text-sm">
+          <Lock size={15} strokeWidth={2} /> Activate HAEVN+ to reveal
+        </button>
+        <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--haevn-charcoal)]/60">
+          You&rsquo;re connected. Activate HAEVN+ to see who and start messaging.
+        </p>
+      </div>
+    )
+  }
+
+  if (state === 'waiting') {
+    return (
+      <div className="flex w-full items-center justify-center gap-2 bg-[color:var(--haevn-dash-surface-alt)] py-2.5 text-sm font-medium text-[color:var(--haevn-muted-fg)]">
+        <Check size={15} strokeWidth={2} /> Waiting to connect
+      </div>
+    )
+  }
+
+  if (state === 'declined_by_me') {
+    return (
+      <div className="flex w-full items-center justify-center py-2.5 text-sm font-medium text-[color:var(--haevn-muted-fg)]">
+        Passed
+      </div>
+    )
+  }
+
+  // 'their_turn' — counterpart proceeded (viewer was notified). One proceed = connect.
+  if (state === 'their_turn') {
+    return (
+      <div>
+        <p className="mb-2 text-center text-[11px] leading-relaxed text-[color:var(--haevn-teal)]">
+          Someone you were recommended is open to connecting.
+        </p>
+        <button type="button" onClick={stop(onProceed)} className="haevn-btn-gold w-full text-sm">
+          Proceed to connect
+        </button>
+      </div>
+    )
+  }
+
+  // 'none' (and 'expired' safety) — offer Proceed / Pass to everyone.
+  return (
+    <div className="flex gap-2">
+      <button type="button" onClick={stop(onProceed)} className="haevn-btn-gold flex-1 text-sm">
+        Proceed
+      </button>
+      <button
+        type="button"
+        onClick={stop(onPass)}
+        className="flex-1 border border-[color:var(--haevn-border)] py-2.5 text-sm font-medium text-[color:var(--haevn-muted-fg)] transition-colors hover:bg-[color:var(--haevn-dash-surface-alt)]"
+      >
+        Pass
+      </button>
+    </div>
+  )
 }
 
 function cardFirstName(profile: ProfileCardData): string {
@@ -174,6 +272,8 @@ export function ProfileCard({
   onNudge,
   onMessage,
   scoreLabel = 'Match',
+  recAccept,
+  onProceed,
 }: ProfileCardProps) {
   const router = useRouter()
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
@@ -315,7 +415,17 @@ export function ProfileCard({
         </button>
 
         {/* Footer (siblings of the clickable button — no nested buttons) */}
-        {isLocked ? (
+        {recAccept ? (
+          <div className="shrink-0 border-t border-[color:var(--haevn-border)] p-4">
+            <RecAcceptFooter
+              state={recAccept.state}
+              viewerCanAccess={recAccept.viewerCanAccess}
+              onProceed={() => onProceed?.(recAccept.otherPartnershipId)}
+              onPass={() => onPass?.(profile.id)}
+              onActivate={() => router.push('/onboarding/membership')}
+            />
+          </div>
+        ) : isLocked ? (
           <div className="shrink-0 border-t border-[color:var(--haevn-border)] p-4">
             <button
               type="button"

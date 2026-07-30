@@ -9,7 +9,8 @@ import {
   type ComputedMatchCard,
 } from '@/lib/actions/computedMatchCards'
 import { hideMatch } from '@/lib/actions/hiddenMatches'
-import { sendHandshakeRequest } from '@/lib/actions/handshakes'
+import { getRecAcceptStates } from '@/lib/actions/recAccept'
+import type { PairState } from '@/lib/connections/pairState'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
@@ -60,6 +61,7 @@ export default function RecommendationsPage() {
   const { user, loading: authLoading } = useAuth()
   const [recs, setRecs] = useState<ComputedMatchCard[]>([])
   const [viewerTier, setViewerTier] = useState<'free' | 'plus'>('free')
+  const [pairStates, setPairStates] = useState<Record<string, PairState>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,12 +70,14 @@ export default function RecommendationsPage() {
       if (authLoading || !user) return
       try {
         setLoading(true)
-        const [recData, tier] = await Promise.all([
+        const [recData, tier, states] = await Promise.all([
           getRecommendationCards(),
           getUserMembershipTier(),
+          getRecAcceptStates(),
         ])
         setRecs(recData)
         setViewerTier(tier)
+        setPairStates(states)
       } catch (err: any) {
         console.error('[Recommendations] Error:', err)
         setError(err.message || 'Failed to load recommendations')
@@ -86,29 +90,38 @@ export default function RecommendationsPage() {
 
   const isViewerFree = viewerTier === 'free'
 
-  const setConnectionStatus = (
-    id: string,
-    status: 'none' | 'pending' | 'connected'
-  ) => {
-    setRecs((prev) =>
-      prev.map((r) =>
-        r.partnership.id === id
-          ? { ...r, connection: { ...r.connection, status } }
-          : r
-      )
-    )
-  }
-
-  const handleConnect = async (id: string) => {
-    setConnectionStatus(id, 'pending') // optimistic
-    const result = await sendHandshakeRequest(id)
-    if (result.success) {
-      toast({ title: 'Request sent', description: 'We let them know you’d like to connect.' })
-    } else {
-      setConnectionStatus(id, 'none')
+  // Proceed on a blind recommendation (records a rec-band ready-to-meet signal).
+  // First proceed notifies the counterpart; the mutual proceed creates the
+  // connection — both handled server-side. Free members can proceed (the gate is
+  // on reveal, not on proceeding).
+  const handleProceed = async (otherId: string) => {
+    const prev = pairStates[otherId] || 'none'
+    // Optimistic: none → waiting; their_turn → connected (this proceed makes it mutual).
+    setPairStates((p) => ({ ...p, [otherId]: prev === 'their_turn' ? 'connected' : 'waiting' }))
+    try {
+      const res = await fetch('/api/matches/ready-to-meet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otherPartnershipId: otherId, band: 'rec' }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not proceed')
+      // Reconcile with the server's authoritative state.
+      const next: PairState =
+        data.state === 'mutual' ? 'connected' : data.state === 'viewer_ready' ? 'waiting' : prev
+      setPairStates((p) => ({ ...p, [otherId]: next }))
       toast({
-        title: 'Could not send request',
-        description: result.error || 'Please try again.',
+        title: next === 'connected' ? 'You’re connected' : 'Noted',
+        description:
+          next === 'connected'
+            ? 'You both proceeded — this is now a connection.'
+            : 'If they proceed too, you’ll connect.',
+      })
+    } catch (err: any) {
+      setPairStates((p) => ({ ...p, [otherId]: prev })) // revert
+      toast({
+        title: 'Could not proceed',
+        description: err?.message || 'Please try again.',
         variant: 'destructive',
       })
     }
@@ -207,12 +220,15 @@ export default function RecommendationsPage() {
                     variant="match"
                     scoreLabel="Recommendation"
                     isLocked={isViewerFree}
-                    connectionStatus={rec.connection.status}
-                    handshakeId={rec.connection.handshakeId}
                     matchIsFreeTier={rec.partnership.membership_tier === 'free'}
                     onClick={handleCardClick}
-                    onPass={!isViewerFree ? handlePass : undefined}
-                    onConnect={!isViewerFree ? handleConnect : undefined}
+                    onPass={handlePass}
+                    onProceed={handleProceed}
+                    recAccept={{
+                      otherPartnershipId: rec.partnership.id,
+                      state: pairStates[rec.partnership.id] || 'none',
+                      viewerCanAccess: !isViewerFree,
+                    }}
                   />
                 </motion.div>
               ))}
