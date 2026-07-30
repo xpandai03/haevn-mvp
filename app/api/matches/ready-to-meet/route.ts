@@ -193,12 +193,20 @@ export async function POST(request: NextRequest) {
     const { partnership_smaller, partnership_larger } =
       canonicalPartnershipPair(viewerPartnershipId, otherPartnershipId)
 
-    const { error: insertErr } = await admin.from('ready_to_meet_signals').insert({
+    const baseRow = {
       partnership_smaller,
       partnership_larger,
       signaller_partnership_id: viewerPartnershipId,
-      band_at_signal: band, // NULL for the matches button → unchanged behavior
-    })
+    }
+    let insertErr = (await admin
+      .from('ready_to_meet_signals')
+      .insert({ ...baseRow, band_at_signal: band })).error // NULL for the matches button
+    // Deploy-safety: if migration 050 hasn't landed yet, the column is unknown
+    // (PostgREST schema-cache error). Fall back to the pre-050 insert so neither
+    // the matches button nor rec proceed regress on a code-before-migration deploy.
+    if (insertErr && (insertErr.code === 'PGRST204' || /band_at_signal/.test(insertErr.message || ''))) {
+      insertErr = (await admin.from('ready_to_meet_signals').insert(baseRow)).error
+    }
 
     const isDuplicate = insertErr?.code === '23505'
     if (insertErr && !isDuplicate) {
