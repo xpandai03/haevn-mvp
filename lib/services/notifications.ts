@@ -22,6 +22,9 @@ const SMS_TEMPLATES = {
     `HAEVN: Your matches are ready. We've found people who align with you on HAEVN. Tap to sign in (no password needed) and see who: ${signInUrl}`,
   message: (senderName: string) =>
     `${senderName} sent you a message on HAEVN. Log in to reply: ${BASE_URL}/chat`,
+  // BLIND — no name, no photo, no score. PROVISIONAL copy (client may reword).
+  connection_interest: (signInUrl: string) =>
+    `HAEVN: someone you were recommended is open to connecting. Tap to sign in (no password needed) and take a look: ${signInUrl}`,
 }
 
 const EMAIL_TEMPLATES = {
@@ -61,12 +64,31 @@ const EMAIL_TEMPLATES = {
       </div>
     `,
   }),
+  // BLIND — reveals no identity. PROVISIONAL copy (client may reword).
+  connection_interest: (signInUrl: string) => ({
+    subject: 'Someone is open to connecting on HAEVN',
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="color: #0F2A4A; margin-bottom: 16px;">Someone you were recommended is open to connecting</h2>
+        <p style="color: #4a5568; line-height: 1.6;">
+          One of your recommendations is willing to meet. Take a look and decide if you'd like to connect too.
+        </p>
+        <a href="${signInUrl}"
+           style="display: inline-block; margin-top: 20px; padding: 12px 28px; background: #008080; color: white; text-decoration: none; border-radius: 24px; font-weight: 500;">
+          Sign in to HAEVN
+        </a>
+        <p style="color: #a0aec0; font-size: 12px; margin-top: 32px;">
+          HAEVN — Meaningful connections, intentionally.
+        </p>
+      </div>
+    `,
+  }),
 }
 
 // ─── Core Dispatcher ────────────────────────────────────────────
 
 interface NotificationOptions {
-  type: 'match' | 'message'
+  type: 'match' | 'message' | 'connection_interest'
   phone?: string | null
   email?: string | null
   senderName?: string
@@ -124,12 +146,16 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   const smsBody =
     opts.type === 'match'
       ? SMS_TEMPLATES.match(matchSignInUrl)
-      : SMS_TEMPLATES.message(senderName)
+      : opts.type === 'connection_interest'
+        ? SMS_TEMPLATES.connection_interest(matchSignInUrl)
+        : SMS_TEMPLATES.message(senderName)
 
   const emailTemplate =
     opts.type === 'match'
       ? EMAIL_TEMPLATES.match(matchSignInUrl)
-      : EMAIL_TEMPLATES.message(senderName)
+      : opts.type === 'connection_interest'
+        ? EMAIL_TEMPLATES.connection_interest(matchSignInUrl)
+        : EMAIL_TEMPLATES.message(senderName)
 
   // Send in parallel
   const promises: Promise<void>[] = []

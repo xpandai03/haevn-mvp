@@ -52,6 +52,10 @@ const fmtDate = (iso: string | null) =>
 const CONNECTION_LABEL: Record<string, string> = {
   connected: 'Connected',
   conversation: 'Conversation',
+  mutual: 'Mutual',
+  one_side_accepted: 'One-side accepted',
+  declined: 'Declined',
+  // legacy
   ready_to_meet: 'Ready to meet',
   passed: 'Passed',
 }
@@ -164,6 +168,8 @@ export function MatchesClient() {
             <Count label="recommendations" n={data.counts.recommendations} />
             <Count label="released" n={data.counts.released} />
             <Count label="notified" n={data.counts.notified} />
+            <Count label="one-side accepted" n={data.counts.oneSideAccepted} />
+            <Count label="mutual" n={data.counts.mutual} />
             <Count label="connected" n={data.counts.connected} />
             <span className="ml-auto text-gray-400">{data.total.toLocaleString()} in view</span>
           </div>

@@ -9,7 +9,16 @@ import { MATCH_MIN_SCORE, REC_MIN_SCORE } from '@/lib/matching/scoreBands'
 
 export type Band = 'match' | 'rec' | 'below'
 export type ReleaseStatus = 'pending' | 'released'
-export type Connection = 'connected' | 'conversation' | 'passed' | 'ready_to_meet' | null
+export type Connection =
+  | 'connected'
+  | 'conversation'
+  | 'one_side_accepted'
+  | 'mutual'
+  | 'declined'
+  // legacy values kept for type-compat with any cached client bundle
+  | 'passed'
+  | 'ready_to_meet'
+  | null
 
 export interface MatchRow {
   id: string
@@ -161,16 +170,23 @@ export interface MatchCounts {
   released: number
   notified: number
   connected: number
+  oneSideAccepted: number
+  mutual: number
 }
 
 export function computeCounts(rows: MatchRow[]): MatchCounts {
-  const c: MatchCounts = { matches: 0, recommendations: 0, released: 0, notified: 0, connected: 0 }
+  const c: MatchCounts = {
+    matches: 0, recommendations: 0, released: 0, notified: 0, connected: 0,
+    oneSideAccepted: 0, mutual: 0,
+  }
   for (const r of rows) {
     if (r.band === 'match') c.matches++
     else if (r.band === 'rec') c.recommendations++
     if (r.releaseStatus === 'released') c.released++
     if (r.notified) c.notified++
     if (r.connection === 'connected') c.connected++
+    if (r.connection === 'one_side_accepted') c.oneSideAccepted++
+    if (r.connection === 'mutual') c.mutual++
   }
   return c
 }

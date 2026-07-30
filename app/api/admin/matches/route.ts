@@ -95,7 +95,7 @@ async function buildRows(admin: Admin, nowIso: string): Promise<MatchRow[]> {
       fetchAll(admin, 'handshakes', 'a_partnership, b_partnership'),
       fetchAll(admin, 'conversations', 'participant1_id, participant2_id'),
       fetchAll(admin, 'hidden_matches', 'partnership_id, match_partnership_id'),
-      fetchAll(admin, 'ready_to_meet_signals', 'partnership_smaller, partnership_larger'),
+      fetchAll(admin, 'ready_to_meet_signals', 'partnership_smaller, partnership_larger, signaller_partnership_id'),
     ])
 
   // partnership → display name ("First L.") from the first member's profile full_name
@@ -131,16 +131,22 @@ async function buildRows(admin: Admin, nowIso: string): Promise<MatchRow[]> {
   for (const h of hidden as { partnership_id: string; match_partnership_id: string }[]) {
     passed.add(pairKey(h.partnership_id, h.match_partnership_id))
   }
-  const readyToMeet = new Set<string>()
-  for (const r of rtm as { partnership_smaller: string; partnership_larger: string }[]) {
-    readyToMeet.add(pairKey(r.partnership_smaller, r.partnership_larger))
+  // Signaller count per pair → distinguish one-side accepted vs mutual.
+  const rtmSignallers = new Map<string, Set<string>>()
+  for (const r of rtm as { partnership_smaller: string; partnership_larger: string; signaller_partnership_id: string }[]) {
+    const k = pairKey(r.partnership_smaller, r.partnership_larger)
+    const set = rtmSignallers.get(k) ?? new Set<string>()
+    set.add(r.signaller_partnership_id)
+    rtmSignallers.set(k, set)
   }
   const connectionOf = (a: string, b: string): Connection => {
     const k = pairKey(a, b)
     if (connected.has(k)) return 'connected'
     if (conversation.has(k)) return 'conversation'
-    if (readyToMeet.has(k)) return 'ready_to_meet'
-    if (passed.has(k)) return 'passed'
+    const sig = rtmSignallers.get(k)?.size ?? 0
+    if (sig >= 2) return 'mutual'
+    if (sig === 1) return 'one_side_accepted'
+    if (passed.has(k)) return 'declined'
     return null
   }
 
