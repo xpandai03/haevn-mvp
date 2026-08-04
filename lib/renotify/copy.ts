@@ -16,7 +16,8 @@ export function renotifySms(signInUrl: string): string {
 /** Email — subject + HTML. `askForPhone` adds the add-a-number line (no-phone variant). */
 export function renotifyEmail(
   signInUrl: string,
-  variant: RenotifyVariant
+  variant: RenotifyVariant,
+  unsubUrl?: string
 ): { subject: string; html: string } {
   const askForPhone = variant === 'no_phone'
   const phoneLine = askForPhone
@@ -44,6 +45,13 @@ export function renotifyEmail(
       You're receiving this because you have matches you haven't viewed yet.
       This link signs you in and stops these reminders.
     </p>
+    ${unsubUrl
+      ? `<p style="margin:12px 0 0;font-size:12px;color:#9C9C91;">
+           Don't want these weekly reminders?
+           <a href="${unsubUrl}" style="color:#9C9C91;text-decoration:underline;">Unsubscribe</a>.
+           You'll still be notified about genuinely new matches.
+         </p>`
+      : ''}
   </div>`.trim()
 
   return { subject: 'Your HAEVN matches are waiting', html }

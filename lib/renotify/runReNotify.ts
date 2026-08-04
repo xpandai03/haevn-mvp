@@ -15,6 +15,7 @@ import { sendSMS } from '@/lib/services/twilio'
 import { sendEmail } from '@/lib/services/email'
 import { buildSignInUrl } from '@/lib/services/notifications'
 import { buildAudience, getLoggedInUserIds, type AudienceEntry } from './audience'
+import { makeUnsubToken } from '@/lib/suppression/unsubToken'
 import { renotifyEmail, renotifySms } from './copy'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -25,7 +26,12 @@ export const MAX_RENOTIFY_SENDS = 8
 /** Injectable so tests can spy and assert dry-run calls nothing. */
 export interface Sender {
   sendSMS: (to: string, body: string) => Promise<{ success: boolean; error?: any }>
-  sendEmail: (to: string, subject: string, html: string) => Promise<{ success: boolean; error?: any }>
+  sendEmail: (
+    to: string,
+    subject: string,
+    html: string,
+    opts?: { scope?: 'renotify' | 'all_noncritical' | 'critical'; headers?: Record<string, string> }
+  ) => Promise<{ success: boolean; error?: any; suppressed?: boolean }>
   buildSignInUrl: (email: string) => Promise<string | null>
 }
 
@@ -39,7 +45,7 @@ export interface RenotifyRowResult {
   channels: string[]
   smsStatus: ChannelStatus
   emailStatus: ChannelStatus
-  suppressedReason: 'login_detected' | 'cap_reached' | null
+  suppressedReason: 'login_detected' | 'cap_reached' | 'email_suppressed' | null
   sendCount: number
 }
 
@@ -48,7 +54,7 @@ export interface RenotifyResult {
   dryRun: boolean
   eligible: number
   sent: { sms: number; email: number }
-  suppressed: { login_detected: number; cap_reached: number }
+  suppressed: { login_detected: number; cap_reached: number; email_suppressed: number }
   failures: number
   rows: RenotifyRowResult[]
 }
@@ -62,7 +68,7 @@ export interface RenotifyLogRow {
   channels_attempted: string[]
   sms_status: ChannelStatus
   email_status: ChannelStatus
-  suppressed_reason: 'login_detected' | 'cap_reached' | null
+  suppressed_reason: 'login_detected' | 'cap_reached' | 'email_suppressed' | null
   send_count: number
 }
 
@@ -87,16 +93,18 @@ export async function processAudience(params: {
   priorSendCount: Map<string, number>
   /** partnerships already really-sent this run_date — skipped (idempotency). */
   alreadySent: Set<string>
+  /** per-recipient one-click unsubscribe URL (re-notify only). */
+  unsubUrlFor?: (email: string) => string | null
   log: (row: RenotifyLogRow) => Promise<void>
 }): Promise<RenotifyResult> {
-  const { audience, sender, dryRun, runDate, priorSendCount, alreadySent, log } = params
+  const { audience, sender, dryRun, runDate, priorSendCount, alreadySent, unsubUrlFor, log } = params
 
   const result: RenotifyResult = {
     runDate,
     dryRun,
     eligible: audience.length,
     sent: { sms: 0, email: 0 },
-    suppressed: { login_detected: 0, cap_reached: 0 },
+    suppressed: { login_detected: 0, cap_reached: 0, email_suppressed: 0 },
     failures: 0,
     rows: [],
   }
@@ -106,7 +114,7 @@ export async function processAudience(params: {
     if (alreadySent.has(entry.partnershipId)) continue
 
     const sendCount = priorSendCount.get(entry.partnershipId) ?? 0
-    const row = await processEntry(sender, entry, dryRun, sendCount)
+    const row = await processEntry(sender, entry, dryRun, sendCount, unsubUrlFor)
 
     await log({
       partnership_id: entry.partnershipId,
@@ -135,7 +143,8 @@ async function processEntry(
   sender: Sender,
   entry: AudienceEntry,
   dryRun: boolean,
-  sendCount: number
+  sendCount: number,
+  unsubUrlFor?: (email: string) => string | null
 ): Promise<RenotifyRowResult> {
   // ── send-time suppression: cap ──
   if (sendCount >= MAX_RENOTIFY_SENDS) {
@@ -165,8 +174,16 @@ async function processEntry(
       for (const email of entry.memberEmails) {
         const url = await sender.buildSignInUrl(email)
         if (!url) { anyFail = true; continue }
-        const { subject, html } = renotifyEmail(url, entry.variant)
-        const r = await sender.sendEmail(email, subject, html)
+        // Per-recipient one-click unsubscribe (footer link + RFC 8058 headers).
+        const unsubUrl = unsubUrlFor?.(email) || undefined
+        const { subject, html } = renotifyEmail(url, entry.variant, unsubUrl)
+        const headers = unsubUrl
+          ? {
+              'List-Unsubscribe': `<${unsubUrl}>, <mailto:unsubscribe@haevn.app>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            }
+          : undefined
+        const r = await sender.sendEmail(email, subject, html, { scope: 'renotify', headers })
         r.success ? (anyOk = true) : (anyFail = true)
       }
       emailStatus = anyOk ? 'sent' : anyFail ? 'failed' : 'skipped'
@@ -221,8 +238,29 @@ export async function runReNotify(opts?: {
 
   // Login snapshot at job start (= send time for this single Monday run).
   const loggedIn = await getLoggedInUserIds(admin)
-  const audience = await buildAudience(admin, loggedIn, now)
+  const { audience, emailSuppressed } = await buildAudience(admin, loggedIn, now)
   const partnershipIds = audience.map((a) => a.partnershipId)
+
+  const logRow = async (row: RenotifyLogRow) => {
+    // Promote-only audit; upsert keeps one row per (partnership, run_date).
+    await admin.from('renotify_log').upsert(row, { onConflict: 'partnership_id,run_date' })
+  }
+
+  // Record partnerships dropped because every member email is suppressed, so
+  // they appear in the readout (mirrors login_detected / cap_reached).
+  for (const pid of emailSuppressed) {
+    await logRow({
+      partnership_id: pid, run_date: runDate, dry_run: dryRun, variant: null,
+      channels_attempted: [], sms_status: null, email_status: null,
+      suppressed_reason: 'email_suppressed', send_count: 0,
+    })
+  }
+
+  // Per-recipient one-click unsubscribe URL for the re-notify footer/headers.
+  const unsubSecret = process.env.UNSUBSCRIBE_SECRET || ''
+  const unsubBase = 'https://www.haevn.app'
+  const unsubUrlFor = (email: string): string | null =>
+    unsubSecret ? `${unsubBase}/api/unsubscribe?token=${encodeURIComponent(makeUnsubToken(email, unsubSecret))}` : null
 
   // Prior REAL sends per partnership (cap) + already-sent this run (idempotency).
   const priorSendCount = new Map<string, number>()
@@ -241,16 +279,17 @@ export async function runReNotify(opts?: {
     }
   }
 
-  return processAudience({
+  const result = await processAudience({
     audience,
     sender,
     dryRun,
     runDate,
     priorSendCount,
     alreadySent,
-    log: async (row) => {
-      // Promote-only audit; upsert keeps one row per (partnership, run_date).
-      await admin.from('renotify_log').upsert(row, { onConflict: 'partnership_id,run_date' })
-    },
+    unsubUrlFor,
+    log: logRow,
   })
+  // Surface the audience-level email suppressions in the result totals.
+  result.suppressed.email_suppressed = emailSuppressed.length
+  return result
 }
