@@ -18,6 +18,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadMarketIndex, isCityLive } from '@/lib/markets/releaseGate'
+import { getRenotifySuppressedEmails } from '@/lib/suppression/emailSuppressions'
 import type { RenotifyVariant } from './copy'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -116,11 +117,18 @@ async function fetchAll(admin: Admin, table: string, cols: string): Promise<any[
   return out
 }
 
+export interface BuildAudienceResult {
+  audience: AudienceEntry[]
+  /** Partnership ids dropped because EVERY member email is suppressed (logged
+   *  as suppressed_reason='email_suppressed'). */
+  emailSuppressed: string[]
+}
+
 export async function buildAudience(
   admin: Admin,
   loggedIn: Set<string>,
   now: Date = new Date()
-): Promise<AudienceEntry[]> {
+): Promise<BuildAudienceResult> {
   const nowIso = now.toISOString()
   // UTC midnight of the run day — the floor that keeps today's notifies out of
   // today's re-notify audience (the same-Monday double-tap fix).
@@ -128,12 +136,13 @@ export async function buildAudience(
   dayStart.setUTCHours(0, 0, 0, 0)
   const dayStartIso = dayStart.toISOString()
 
-  const [cm, members, profiles, partnerships, marketIdx] = await Promise.all([
+  const [cm, members, profiles, partnerships, marketIdx, suppressedEmails] = await Promise.all([
     fetchAll(admin, 'computed_matches', 'partnership_a, release_at, sms_notified_at'),
     fetchAll(admin, 'partnership_members', 'partnership_id, user_id'),
     fetchAll(admin, 'profiles', 'user_id, email'),
     fetchAll(admin, 'partnerships', 'id, city, phone'),
     loadMarketIndex(true),
+    getRenotifySuppressedEmails(admin),
   ])
 
   // released; and per partnership, whether it has a prior-day and/or same-day
@@ -166,6 +175,7 @@ export async function buildAudience(
   )
 
   const audience: AudienceEntry[] = []
+  const emailSuppressed: string[] = []
   for (const p of partnerships as { id: string; city: string | null; phone: string | null }[]) {
     const memberIds = membersByP.get(p.id) ?? []
     const eligible = isEligible({
@@ -176,9 +186,16 @@ export async function buildAudience(
     })
     if (!eligible) continue
 
-    const memberEmails = memberIds
+    const allEmails = memberIds
       .map((u) => emailByUser.get(u))
       .filter((e): e is string => !!e && e.includes('@'))
+    // Drop suppressed addresses. If a partnership HAD emails but every one is
+    // suppressed, record it as email_suppressed (visible in the readout).
+    const memberEmails = allEmails.filter((e) => !suppressedEmails.has(e.toLowerCase()))
+    if (allEmails.length > 0 && memberEmails.length === 0) {
+      emailSuppressed.push(p.id)
+      continue
+    }
 
     audience.push({
       partnershipId: p.id,
@@ -187,5 +204,5 @@ export async function buildAudience(
       memberEmails,
     })
   }
-  return audience
+  return { audience, emailSuppressed }
 }

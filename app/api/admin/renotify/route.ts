@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdminRoute } from '@/lib/admin/requireAdmin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runReNotify } from '@/lib/renotify/runReNotify'
+import { getSuppressionCounts } from '@/lib/suppression/emailSuppressions'
 
 /**
  * Admin visibility + manual dry-run trigger for the re-notify engine.
@@ -38,7 +39,7 @@ export async function GET() {
     dryRun: (rows?.[0] as any)?.dry_run ?? null,
     total: rows?.length ?? 0,
     sent: { sms: 0, email: 0 },
-    suppressed: { login_detected: 0, cap_reached: 0 },
+    suppressed: { login_detected: 0, cap_reached: 0, email_suppressed: 0 },
     failures: 0,
     byVariant: { has_phone: 0, no_phone: 0 },
   }
@@ -47,12 +48,17 @@ export async function GET() {
     if (r.email_status === 'sent') summary.sent.email++
     if (r.suppressed_reason === 'login_detected') summary.suppressed.login_detected++
     if (r.suppressed_reason === 'cap_reached') summary.suppressed.cap_reached++
+    if (r.suppressed_reason === 'email_suppressed') summary.suppressed.email_suppressed++
     if (r.sms_status === 'failed' || r.email_status === 'failed') summary.failures++
     if (r.variant === 'has_phone') summary.byVariant.has_phone++
     else if (r.variant === 'no_phone') summary.byVariant.no_phone++
   }
 
-  return NextResponse.json({ latestRun: summary })
+  // Standing suppression list totals (bounce/complaint/unsubscribe), independent
+  // of any single run — the deliverability/compliance surface.
+  const emailSuppressions = await getSuppressionCounts(admin)
+
+  return NextResponse.json({ latestRun: summary, emailSuppressions })
 }
 
 export async function POST() {

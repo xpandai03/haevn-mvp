@@ -1,6 +1,7 @@
 import { sendSMS } from './twilio'
 import { sendEmail } from './email'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendScopeForNotificationType } from '@/lib/suppression/scope'
 
 // ─── Base URL (never hardcode a domain) ────────────────────────
 
@@ -175,10 +176,15 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
     )
   }
 
-  // Email
+  // Email — tag the send scope from the notification type so the suppression
+  // guard applies correctly: connection_interest nudges are 'all_noncritical'
+  // (a complaint suppresses them); match/message stay 'critical' (never
+  // suppressed — they carry the sign-in link and are the core service).
   if (opts.email) {
     promises.push(
-      sendEmail(opts.email, emailTemplate.subject, emailTemplate.html)
+      sendEmail(opts.email, emailTemplate.subject, emailTemplate.html, {
+        scope: sendScopeForNotificationType(opts.type),
+      })
         .then((r) => {
           result.email.sent = r.success
           if (!r.success) result.email.error = r.error
