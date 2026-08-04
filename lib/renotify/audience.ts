@@ -43,17 +43,35 @@ export function isNeverLoggedIn(memberUserIds: string[], loggedIn: Set<string>):
 }
 
 /**
- * "Notified-once" for re-notify = notified on a PRIOR day (strictly before the
- * run day's UTC midnight). A same-day notify (the 14:00 cron sets
- * sms_notified_at) must NOT make a partnership re-notify-eligible at 16:00 — that
- * is the same-Monday double-tap. Prior-week non-engagers keep an earlier
- * sms_notified_at and still qualify.
+ * True iff this single sms_notified_at timestamp is on a PRIOR day (strictly
+ * before the run day's UTC midnight). Row-level building block for
+ * isNotifiedOnceForRenotify below.
  */
 export function isNotifiedOncePrior(
   smsNotifiedAt: string | null | undefined,
   dayStartIso: string
 ): boolean {
   return !!smsNotifiedAt && smsNotifiedAt < dayStartIso
+}
+
+/**
+ * "Notified-once" for re-notify, at the PARTNERSHIP level.
+ *
+ * A partnership qualifies iff it was notified on a prior day AND was NOT notified
+ * at all today. The `AND NOT same-day` clause is load-bearing: a partnership
+ * notified in a prior week that ALSO gets a NEW match notified today (14:00) has
+ * BOTH a prior-day row and a same-day row — the first fix (row-level prior check
+ * only) let the prior-day row keep it re-notify-eligible while the 14:00 notify
+ * already messaged it, producing the same-Monday double-tap (Aug 3: 8 of 65).
+ * Excluding any partnership notified today, regardless of prior history, closes
+ * that gap. A same-day notify is redundant to re-notify anyway; the partnership
+ * is caught next Monday.
+ */
+export function isNotifiedOnceForRenotify(
+  hasPriorDayNotify: boolean,
+  hasSameDayNotify: boolean
+): boolean {
+  return hasPriorDayNotify && !hasSameDayNotify
 }
 
 /** The full partnership-level predicate (release/notify/login/market already resolved). */
@@ -118,16 +136,23 @@ export async function buildAudience(
     loadMarketIndex(true),
   ])
 
-  // released + notified-once, per partnership_a
+  // released; and per partnership, whether it has a prior-day and/or same-day
+  // notified row. notified-once = prior-day AND NOT same-day (see helper).
   const released = new Set<string>()
-  const notifiedOnce = new Set<string>()
+  const priorDayNotify = new Set<string>()
+  const sameDayNotify = new Set<string>()
   for (const r of cm as { partnership_a: string; release_at: string | null; sms_notified_at: string | null }[]) {
     if (r.release_at && r.release_at <= nowIso) {
       released.add(r.partnership_a)
-      // Prior-day floor: a partnership notified earlier TODAY (14:00) is NOT
-      // "notified-once" for tonight's re-notify — that was the double-tap.
-      if (isNotifiedOncePrior(r.sms_notified_at, dayStartIso)) notifiedOnce.add(r.partnership_a)
+      if (r.sms_notified_at) {
+        if (r.sms_notified_at < dayStartIso) priorDayNotify.add(r.partnership_a)
+        else sameDayNotify.add(r.partnership_a)
+      }
     }
+  }
+  const notifiedOnce = new Set<string>()
+  for (const p of priorDayNotify) {
+    if (isNotifiedOnceForRenotify(true, sameDayNotify.has(p))) notifiedOnce.add(p)
   }
 
   const membersByP = new Map<string, string[]>()

@@ -7,7 +7,7 @@
 import { config } from 'dotenv'
 config({ path: '.env.local', quiet: true } as any)
 
-import { resolveVariant, isNeverLoggedIn, isEligible, isNotifiedOncePrior, type AudienceEntry } from '../audience'
+import { resolveVariant, isNeverLoggedIn, isEligible, isNotifiedOncePrior, isNotifiedOnceForRenotify, type AudienceEntry } from '../audience'
 import { processAudience, MAX_RENOTIFY_SENDS, type Sender, type RenotifyLogRow } from '../runReNotify'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
 
@@ -36,16 +36,23 @@ ok(!isNotifiedOncePrior('2026-07-27T14:00:05.000Z', DAY_START), 'SAME-day 14:00 
 ok(!isNotifiedOncePrior('2026-07-27T00:00:00.000Z', DAY_START), 'exactly run-day midnight → excluded (strict <)')
 ok(!isNotifiedOncePrior(null, DAY_START), 'never notified → not notified-once')
 
-// End-to-end audience decision over two synthetic partnerships (same logic
-// buildAudience applies): a same-day-notified never-logger is ABSENT while a
-// prior-week non-engager REMAINS. Both released, live-market, never-logged-in.
+// ── notified-once PARTNERSHIP-LEVEL (prior-day AND NOT same-day) ──────────────
+// The Aug 3 gap: a partnership with BOTH a prior-week row and a same-day row was
+// wrongly kept eligible (got notify at 14:00 AND re-notify at 16:00).
+ok(isNotifiedOnceForRenotify(true, false), 'prior-week only → eligible')
+ok(!isNotifiedOnceForRenotify(true, true), 'MIXED history (prior-week + same-day) → EXCLUDED (the Aug 3 double-tap fix)')
+ok(!isNotifiedOnceForRenotify(false, true), 'same-day only → excluded')
+ok(!isNotifiedOnceForRenotify(false, false), 'never notified → excluded')
+
+// End-to-end audience decision over three synthetic partnerships (same logic
+// buildAudience applies). All released, live-market, never-logged-in.
 {
-  const priorWeek = isEligible({ released: true, liveMarket: true, neverLoggedIn: true,
-    notifiedOnce: isNotifiedOncePrior('2026-07-20T14:00:00.000Z', DAY_START) })
-  const sameDay = isEligible({ released: true, liveMarket: true, neverLoggedIn: true,
-    notifiedOnce: isNotifiedOncePrior('2026-07-27T14:00:00.000Z', DAY_START) })
-  ok(priorWeek, 'prior-week non-engager → IN re-notify audience')
-  ok(!sameDay, 'same-day-notified never-logger → ABSENT from re-notify audience')
+  const elig = (hasPrior: boolean, hasSameDay: boolean) =>
+    isEligible({ released: true, liveMarket: true, neverLoggedIn: true,
+      notifiedOnce: isNotifiedOnceForRenotify(hasPrior, hasSameDay) })
+  ok(elig(true, false), 'prior-week non-engager → IN re-notify audience')
+  ok(!elig(false, true), 'same-day-notified never-logger → ABSENT')
+  ok(!elig(true, true), 'mixed-history (Aug 3 case: prior-week + new match today) → ABSENT (no double-tap)')
 }
 
 // ── Part B: processAudience core ─────────────────────────────────────────────
