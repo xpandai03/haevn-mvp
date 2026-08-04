@@ -20,6 +20,8 @@ export function ZipControl() {
   const [zips, setZips] = useState<ZipEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [newZip, setNewZip] = useState('')
+  const [newMsa, setNewMsa] = useState('')
+  const [newCity, setNewCity] = useState('')
   const [adding, setAdding] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [removingZip, setRemovingZip] = useState<string | null>(null)
@@ -50,15 +52,22 @@ export function ZipControl() {
       const res = await fetch('/api/admin/zips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zip_code: zip }),
+        body: JSON.stringify({
+          zip_code: zip,
+          msa_name: newMsa.trim() || undefined, // omit → server defaults to 'Manual'
+          city: newCity.trim() || undefined,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
         setNewZip('')
+        setNewMsa('')
+        setNewCity('')
         await fetchZips()
-        toast({ title: 'Added', description: `ZIP ${zip} added` })
+        toast({ title: 'Added', description: `ZIP ${zip}${data.msa_name ? ` → ${data.msa_name}` : ''}` })
       } else {
-        toast({ title: 'Error', description: data.error, variant: 'destructive' })
+        // Duplicates return a clear 409 message here (not a silent success / 500).
+        toast({ title: 'Could not add ZIP', description: data.error || 'Please try again.', variant: 'destructive' })
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to add ZIP', variant: 'destructive' })
@@ -131,12 +140,26 @@ export function ZipControl() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add single ZIP */}
-        <div className="flex gap-2">
+        {/* Add single ZIP — with its MSA (so it maps to a real market, not 'Manual') */}
+        <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Enter 5-digit ZIP"
+            placeholder="5-digit ZIP"
             value={newZip}
             onChange={(e) => setNewZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddZip()}
+            className="max-w-[120px]"
+          />
+          <Input
+            placeholder="MSA name (e.g. Tampa)"
+            value={newMsa}
+            onChange={(e) => setNewMsa(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddZip()}
+            className="max-w-[200px]"
+          />
+          <Input
+            placeholder="City (optional)"
+            value={newCity}
+            onChange={(e) => setNewCity(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddZip()}
             className="max-w-[160px]"
           />
@@ -158,7 +181,8 @@ export function ZipControl() {
         </div>
 
         <p className="text-xs text-gray-500">
-          CSV: one ZIP per line, or comma-separated. Only 5-digit codes are imported.
+          Single add: enter a ZIP and its MSA (leave MSA blank for &ldquo;Manual&rdquo;). CSV: one ZIP
+          per line or comma-separated (5-digit codes only). Duplicates are reported, not silently dropped.
         </p>
 
         {/* ZIP list */}
@@ -170,6 +194,7 @@ export function ZipControl() {
               <div key={z.zip_code} className="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50">
                 <div>
                   <span className="font-mono font-medium">{z.zip_code}</span>
+                  {z.msa_name && <span className="text-gray-600 ml-2">{z.msa_name}</span>}
                   {z.city && <span className="text-gray-500 ml-2">{z.city}</span>}
                   {z.county && <span className="text-gray-400 ml-1">({z.county})</span>}
                 </div>

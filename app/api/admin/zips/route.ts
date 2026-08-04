@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminUser } from '@/lib/admin/allowlist'
+import { isValidZip, buildZipRow, classifyZipInsert } from '@/lib/admin/zips'
 
 async function verifyAdmin() {
   const supabase = await createClient()
@@ -72,26 +73,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ added: lines.length, zips: lines })
   }
 
-  // Single ZIP add
-  const zip = (body.zip_code || '').trim()
-  if (!/^\d{5}$/.test(zip)) {
+  // Single ZIP add — a plain INSERT (not upsert-ignore) so a duplicate returns a
+  // CLEAR 409 instead of silently claiming success. MSA/city/county are honored
+  // so the client can self-serve a real market (e.g. Portland/Tampa), not 'Manual'.
+  const row = buildZipRow(body)
+  if (!isValidZip(row.zip_code)) {
     return NextResponse.json({ error: 'ZIP code must be 5 digits' }, { status: 400 })
   }
 
-  const { error } = await admin
-    .from('msa_allowed_zips')
-    .upsert({
-      zip_code: zip,
-      msa_name: body.msa_name || 'Manual',
-      city: body.city || '',
-      county: body.county || '',
-    }, { onConflict: 'zip_code', ignoreDuplicates: true })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  const { error } = await admin.from('msa_allowed_zips').insert(row)
+  const result = classifyZipInsert(error, row.zip_code)
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message }, { status: result.status })
   }
 
-  return NextResponse.json({ added: 1, zip })
+  return NextResponse.json({ added: 1, zip: row.zip_code, msa_name: row.msa_name })
 }
 
 /**

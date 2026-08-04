@@ -117,6 +117,52 @@ export function partnershipActiveInWeek(
   })
 }
 
+/**
+ * Pure engagement counting. Split out so the person-count invariant is testable:
+ * `loggedInEverPeople` counts ONLY signed-in members of COUNTED partnerships —
+ * a signed-in auth user who isn't in any counted partnership (admin/test account)
+ * is never counted, so "N partnerships (M people)" describes one population.
+ */
+export function computeEngagement(
+  partnershipIds: string[],
+  membersByP: Map<string, string[]>,
+  lastSignIn: Map<string, string | null>,
+  scopeIds: Set<string> | null,
+  week: { startIso: string; endIso: string } | null
+): {
+  loggedInEverPartnerships: number
+  loggedInEverPeople: number
+  totalPartnerships: number
+  activeThisWeekPartnerships: number | null
+} {
+  let loggedInEverPartnerships = 0
+  let activeThisWeekPartnerships = 0
+  let totalPartnerships = 0
+  const everPeople = new Set<string>()
+
+  for (const id of partnershipIds) {
+    if (!inScope(id, scopeIds)) continue
+    totalPartnerships++
+    const mem = membersByP.get(id) ?? []
+    if (partnershipLoggedInEver(mem, lastSignIn)) {
+      loggedInEverPartnerships++
+      // Only members of THIS counted partnership who signed in — never a
+      // signed-in user outside the counted set.
+      for (const u of mem) if (lastSignIn.get(u)) everPeople.add(u)
+    }
+    if (week && partnershipActiveInWeek(mem, lastSignIn, week.startIso, week.endIso)) {
+      activeThisWeekPartnerships++
+    }
+  }
+
+  return {
+    loggedInEverPartnerships,
+    loggedInEverPeople: everPeople.size,
+    totalPartnerships,
+    activeThisWeekPartnerships: week ? activeThisWeekPartnerships : null,
+  }
+}
+
 async function resolveEngagement(
   admin: Admin,
   scopeIds: Set<string> | null,
@@ -137,29 +183,20 @@ async function resolveEngagement(
     membersByP.set(m.partnership_id, a)
   }
 
-  let loggedInEverPartnerships = 0
-  let activeThisWeekPartnerships = 0
-  let totalPartnerships = 0
-  const everPeople = new Set<string>()
-
-  for (const p of (partnerships.data ?? []) as { id: string }[]) {
-    if (!inScope(p.id, scopeIds)) continue
-    totalPartnerships++
-    const mem = membersByP.get(p.id) ?? []
-    if (partnershipLoggedInEver(mem, lastSignIn)) {
-      loggedInEverPartnerships++
-      for (const u of mem) if (lastSignIn.get(u)) everPeople.add(u)
-    }
-    if (isCurrentWeek && partnershipActiveInWeek(mem, lastSignIn, startIso, endIso)) {
-      activeThisWeekPartnerships++
-    }
-  }
+  const partnershipIds = (partnerships.data ?? []).map((p: { id: string }) => p.id)
+  const counts = computeEngagement(
+    partnershipIds,
+    membersByP,
+    lastSignIn,
+    scopeIds,
+    isCurrentWeek ? { startIso, endIso } : null
+  )
 
   return {
-    loggedInEverPartnerships,
-    loggedInEverPeople: everPeople.size,
-    totalPartnerships,
-    activeThisWeekPartnerships: isCurrentWeek ? activeThisWeekPartnerships : null,
+    loggedInEverPartnerships: counts.loggedInEverPartnerships,
+    loggedInEverPeople: counts.loggedInEverPeople,
+    totalPartnerships: counts.totalPartnerships,
+    activeThisWeekPartnerships: counts.activeThisWeekPartnerships,
   }
 }
 
