@@ -1,6 +1,8 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { isAdminUser } from '@/lib/admin/allowlist'
+/**
+ * Match Inspection — pairwise debug view (?a=…&b=…). Gate + shell from the
+ * (tools) layout; presentational.
+ */
+import { requireAdminPage } from '@/lib/admin/requireAdmin'
 import { MatchInspectionView } from '@/components/admin/MatchInspectionView'
 
 export default async function MatchInspectionPage({
@@ -8,16 +10,8 @@ export default async function MatchInspectionPage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user?.email || !isAdminUser(user.email)) {
-    redirect('/account-details')
-  }
-
-  const params = await searchParams
-  const a = params.a
-  const b = params.b
+  await requireAdminPage()
+  const { a, b } = await searchParams
 
   if (!a || !b) {
     return (
@@ -26,6 +20,5 @@ export default async function MatchInspectionPage({
       </div>
     )
   }
-
   return <MatchInspectionView partnershipA={a} partnershipB={b} />
 }
