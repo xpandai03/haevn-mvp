@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifySvixSignature } from '@/lib/suppression/svix'
+import { verifySvixSignatureDetailed } from '@/lib/suppression/svix'
 import { recordSuppression } from '@/lib/suppression/emailSuppressions'
 
 export const dynamic = 'force-dynamic'
@@ -26,19 +26,24 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
-  if (
-    !verifySvixSignature({
-      secret: process.env.RESEND_WEBHOOK_SECRET || '',
-      headers: {
-        svixId: request.headers.get('svix-id'),
-        svixTimestamp: request.headers.get('svix-timestamp'),
-        svixSignature: request.headers.get('svix-signature'),
-      },
-      rawBody,
-    })
-  ) {
-    console.error('[Resend webhook] Invalid signature — rejected, no write')
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  const svixId = request.headers.get('svix-id')
+  const verify = verifySvixSignatureDetailed({
+    secret: process.env.RESEND_WEBHOOK_SECRET || '',
+    headers: {
+      svixId,
+      svixTimestamp: request.headers.get('svix-timestamp'),
+      svixSignature: request.headers.get('svix-signature'),
+    },
+    rawBody,
+  })
+  if (!verify.ok) {
+    // Distinct reason codes so a 401 is diagnosable from the logs without
+    // guessing: timestamp_stale (retry past tolerance) vs signature_mismatch
+    // (wrong secret / tampered) vs missing/bad_secret (config).
+    console.error(
+      `[Resend webhook] REJECTED reason=${verify.reason} svix_id=${svixId ?? 'none'} staleSec=${verify.staleSec ?? 'n/a'} — no write`
+    )
+    return NextResponse.json({ error: 'Invalid signature', reason: verify.reason }, { status: 401 })
   }
 
   let payload: any
