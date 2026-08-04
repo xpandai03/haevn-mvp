@@ -5,7 +5,7 @@
 import {
   scopeForReason, escalateScope, scopeBlocks, sendScopeForNotificationType,
 } from '../scope'
-import { verifySvixSignature, signSvix } from '../svix'
+import { verifySvixSignature, verifySvixSignatureDetailed, signSvix, DEFAULT_SVIX_TOLERANCE_SEC } from '../svix'
 import { makeUnsubToken, verifyUnsubToken } from '../unsubToken'
 import { recordSuppression, isEmailSuppressed, getRenotifySuppressedEmails } from '../emailSuppressions'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
@@ -46,12 +46,28 @@ ok(!verifySvixSignature({ secret: SECRET, headers: { svixId: id, svixTimestamp: 
   'bad signature → rejected')
 ok(!verifySvixSignature({ secret: SECRET, headers: { svixId: id, svixTimestamp: tsNow, svixSignature: goodSig }, rawBody: body + 'x', nowSec: now }),
   'tampered body → rejected')
-ok(!verifySvixSignature({ secret: SECRET, headers: { svixId: id, svixTimestamp: String(now - 10000), svixSignature: signSvix(SECRET, id, String(now - 10000), body) }, rawBody: body, nowSec: now }),
-  'stale timestamp (>5min) → rejected (replay guard)')
+// Tolerance is now 24h (bounded). A retry within 24h with a VALID sig passes;
+// only truly stale (>24h) rejects — so Svix's late retries aren't dropped.
+const t2h = String(now - 7200)
+ok(verifySvixSignature({ secret: SECRET, headers: { svixId: id, svixTimestamp: t2h, svixSignature: signSvix(SECRET, id, t2h, body) }, rawBody: body, nowSec: now }),
+  '2h-old retry with valid sig → ACCEPTED (24h tolerance lets late retries through)')
+const tStale = String(now - (DEFAULT_SVIX_TOLERANCE_SEC + 3600)) // 25h
+ok(!verifySvixSignature({ secret: SECRET, headers: { svixId: id, svixTimestamp: tStale, svixSignature: signSvix(SECRET, id, tStale, body) }, rawBody: body, nowSec: now }),
+  '25h-old timestamp → rejected (bounded, not unbounded)')
 ok(!verifySvixSignature({ secret: '', headers: { svixId: id, svixTimestamp: tsNow, svixSignature: goodSig }, rawBody: body, nowSec: now }),
   'no secret (unregistered) → rejected (fails closed)')
 ok(!verifySvixSignature({ secret: SECRET, headers: { svixId: null, svixTimestamp: tsNow, svixSignature: goodSig }, rawBody: body, nowSec: now }),
   'missing svix-id header → rejected')
+
+// ── DETAILED reason codes (the instrumentation that settles the 401 question) ──
+eq(verifySvixSignatureDetailed({ secret: SECRET, headers: { svixId: id, svixTimestamp: tsNow, svixSignature: goodSig }, rawBody: body, nowSec: now }).reason, 'ok', 'valid → reason ok')
+eq(verifySvixSignatureDetailed({ secret: SECRET, headers: { svixId: id, svixTimestamp: tsNow, svixSignature: 'v1,deadbeef' }, rawBody: body, nowSec: now }).reason, 'signature_mismatch', 'wrong sig, fresh ts → signature_mismatch (points at the secret)')
+{
+  const r = verifySvixSignatureDetailed({ secret: SECRET, headers: { svixId: id, svixTimestamp: tStale, svixSignature: signSvix(SECRET, id, tStale, body) }, rawBody: body, nowSec: now })
+  eq(r.reason, 'timestamp_stale', '25h-old valid sig → timestamp_stale (points at tolerance/retry, NOT the secret)')
+  ok((r.staleSec ?? 0) > DEFAULT_SVIX_TOLERANCE_SEC, 'staleSec surfaced on stale reject')
+}
+eq(verifySvixSignatureDetailed({ secret: '', headers: { svixId: id, svixTimestamp: tsNow, svixSignature: goodSig }, rawBody: body, nowSec: now }).reason, 'missing', 'no secret → reason missing')
 
 // ── Part C: unsubscribe token ────────────────────────────────────────────────
 const USECRET = 'unsub-secret-xyz'
