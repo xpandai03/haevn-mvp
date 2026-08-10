@@ -3,8 +3,10 @@
  *
  * The observability guarantee: a run that stopped short of the full base is
  * NEVER silent — assessRecompute flags underRun from either the explicit
- * `completed:false` signal or processed < live count. This is the check that
- * would have caught Jul 27 2026 (140/518, hard-killed) the same hour.
+ * `completed:false` signal or processed < the run's OWN base (partnerships_total).
+ * This is the check that would have caught Jul 27 2026 (140/518) the same hour —
+ * WITHOUT a false alarm when a partnership goes live after the run (Aug 10 2026:
+ * 578/578 complete, 579 live now).
  */
 import { assessRecompute } from '../recomputeHealth'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
@@ -36,14 +38,35 @@ function main() {
     ok(h.underRun, 'stopped-short run IS an under-run (explicit flag)')
   }
 
-  // ── under-run detected by processed < live even if completed flag missing ──
+  // ── under-run detected by processed < total even if completed flag missing ──
   {
     const h = assessRecompute(
       { partnerships_total: 519, partnerships_processed: 300 }, // older event, no `completed`
       519,
     )!
     ok(h.completed, 'absent completed flag treated as completed…')
-    ok(h.underRun, '…but processed < live still flags under-run')
+    ok(h.underRun, '…but processed < total still flags under-run')
+  }
+
+  // ── MID-WEEK SIGNUP (the Aug 10 fix): complete run, but a partnership went
+  //    live AFTER it → current live > processed. Must NOT be a false under-run. ──
+  {
+    const h = assessRecompute(
+      { partnerships_total: 578, partnerships_processed: 578, completed: true }, // 578/578 at run time
+      579, // one joined after 12:01
+    )!
+    ok(!h.underRun, 'mid-week signup (live 579 > processed 578, run complete) → NOT under-run')
+    eq(h.partnershipsProcessed, 578, 'processed surfaced')
+    eq(h.liveCount, 579, 'current live count still surfaced for display')
+  }
+
+  // ── a run whose OWN base was under-covered still fires, regardless of current live ──
+  {
+    const h = assessRecompute(
+      { partnerships_total: 578, partnerships_processed: 500, completed: true }, // processed < own total
+      560, // even if current live is lower than total
+    )!
+    ok(h.underRun, 'processed 500 < own total 578 → under-run (caught independent of current live)')
   }
 
   // ── legacy event with no processed count: fall back to total, not a false alarm ──

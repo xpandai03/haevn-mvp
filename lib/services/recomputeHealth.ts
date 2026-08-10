@@ -28,7 +28,9 @@ export interface RecomputeHealth {
   rowsReleasedToday: number | null
   finishedAt: string | null
   liveCount: number | null
-  /** True when the run stopped short OR processed fewer than the live base. */
+  /** True when the run stopped short (completed=false) OR processed fewer than
+   *  its OWN at-run-time base (processed < partnerships_total). A mid-week
+   *  signup that lifts the CURRENT live count above `processed` does NOT trip it. */
   underRun: boolean
 }
 
@@ -42,11 +44,18 @@ export function assessRecompute(
   const processed = meta.partnerships_processed ?? total
   const live = liveCount ?? null
   // `completed === false` is an explicit stop-short signal. Absent (older
-  // events) we treat it as completed and lean on the processed<live check.
+  // events) we treat it as completed and lean on the processed<total check.
   const completed = meta.completed !== false
+  // Compare processed against the run's OWN at-run-time base (partnerships_total,
+  // which the recompute records as the live count when it started) — NOT the
+  // CURRENT live count. A partnership that goes live AFTER the run (a normal
+  // mid-week signup) makes current-live > processed and would trip a FALSE
+  // under-run; it's picked up next Monday and is not a failure. A genuine partial
+  // run reports processed < total from within the same run, and a hard stop sets
+  // completed=false — both still caught.
   const underRun =
     meta.completed === false ||
-    (live != null && processed != null && processed < live)
+    (total != null && processed != null && processed < total)
   return {
     completed,
     partnershipsTotal: total,
