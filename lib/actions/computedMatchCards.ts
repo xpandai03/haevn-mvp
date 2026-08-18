@@ -11,6 +11,8 @@ import {
 } from '@/lib/utils/matchCardDisplay'
 import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
 import { getHiddenMatchIds } from '@/lib/actions/hiddenMatches'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { redactMatchPartnership } from '@/lib/matches/redactMatchCard'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
 import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket } from '@/lib/markets/releaseGate'
@@ -54,7 +56,12 @@ export interface ComputedMatchCard {
 }
 
 /**
- * Map engine category names to MatchProfileView display keys.
+ * @deprecated Stale five-section relabeling that also flattens the engine
+ * breakdown to score-only (drops `subScores`). The `connection→boundaries_comfort`
+ * and `lifestyle→openness_curiosity` names are semantically wrong. The match-card
+ * rebuild reads the RAW `computed_matches.breakdown` array directly and maps it to
+ * the canonical five design sections in `lib/matches/sectionMapping.ts` (PR-B, see
+ * docs/plans/match-card-redesign.md). Do NOT adopt this map in new code.
  */
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   intent: 'goals_expectations',
@@ -137,6 +144,11 @@ export async function getComputedMatchCards(
   const { min: minScore, max: maxScore } = scoreBounds(opts)
   const adminClient = createAdminClient()
   const currentPartnershipId = await getCurrentPartnershipId()
+
+  // Viewer entitlement — identical predicate to the client's `isViewerFree`
+  // (getUserMembershipTier, expiry-aware) so a paid viewer's payload is
+  // byte-identical to before and only free viewers get redacted below.
+  const viewerIsFree = (await getUserMembershipTier()) === 'free'
 
   // 0. Gate: only show matches if user is in a live market
   const authClient = await createClient()
@@ -437,23 +449,33 @@ export async function getComputedMatchCards(
 
     const first_name = firstNameFromDisplayName(partner.display_name)
 
+    const fullPartnership = {
+      id: partner.id,
+      display_name: partner.display_name,
+      short_bio: partner.short_bio,
+      connection_summary: (partner as any).connection_summary || null,
+      identity: partner.identity || 'Unknown',
+      city: partner.city || 'Unknown',
+      age: resolvedAge,
+      photo_url: photoMap.get(partner.id),
+      membership_tier: normalizedTier,
+      first_name,
+      gender,
+      sexuality,
+      relationship_structure,
+      distance_miles,
+    }
+
+    // SERVER-SIDE REDACTION — the reveal gate, enforced before the payload
+    // leaves the server (see lib/matches/redactMatchCard.ts). Masking used to be
+    // client-only (ProfileCard isLocked), so a free viewer's browser received the
+    // real name + photo URL and could read them straight off the wire. Free
+    // viewers now get only the first initial + non-identifying demographics; paid
+    // viewers are returned unchanged.
+    const partnership = redactMatchPartnership(fullPartnership, viewerIsFree)
+
     results.push({
-      partnership: {
-        id: partner.id,
-        display_name: partner.display_name,
-        short_bio: partner.short_bio,
-        connection_summary: (partner as any).connection_summary || null,
-        identity: partner.identity || 'Unknown',
-        city: partner.city || 'Unknown',
-        age: resolvedAge,
-        photo_url: photoMap.get(partner.id),
-        membership_tier: normalizedTier,
-        first_name,
-        gender,
-        sexuality,
-        relationship_structure,
-        distance_miles,
-      },
+      partnership,
       score: match.score,
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',
       breakdown: parseBreakdown(match.breakdown),
