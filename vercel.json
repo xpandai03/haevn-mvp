@@ -21,6 +21,10 @@
     {
       "path": "/api/cron/renotify",
       "schedule": "0 16 * * 1"
+    },
+    {
+      "path": "/api/cron/meetup-feed",
+      "schedule": "0 8 * * *"
     }
   ]
 }
