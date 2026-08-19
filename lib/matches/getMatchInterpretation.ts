@@ -39,6 +39,12 @@ export interface MatchInterpretationResult {
 export interface GetInterpretationOpts {
   /** Skip cache read + write (used by the QA sample route). */
   noCache?: boolean
+  /**
+   * Cache-read only — on a miss/stale, return degraded (deterministic sections)
+   * WITHOUT calling the model. Used by the card LIST so a page render never blocks
+   * on N generations; the breakdown route + warm cron do the actual generation.
+   */
+  cacheOnly?: boolean
 }
 
 export async function getMatchInterpretation(
@@ -78,6 +84,11 @@ export async function getMatchInterpretation(
     if (cached && cached.engine_version === engineVersion && String(cached.source_computed_at) === sourceComputedAt) {
       return { sections, matchScore, payload: cached.payload as MatchInterpretation, degraded: false, source: 'cache' }
     }
+  }
+
+  // Cache-only callers (the list) never generate synchronously — degrade on a miss.
+  if (opts.cacheOnly) {
+    return { sections, matchScore, payload: null, degraded: true, source: 'degraded' }
   }
 
   // 3. Generate. Gather both members' survey + display name + viewer membership + nudge.

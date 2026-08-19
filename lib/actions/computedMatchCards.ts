@@ -13,6 +13,7 @@ import { canonicalPartnershipPair } from '@/lib/utils/partnershipPair'
 import { getHiddenMatchIds } from '@/lib/actions/hiddenMatches'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { redactMatchPartnership } from '@/lib/matches/redactMatchCard'
+import { parseSections, type Section } from '@/lib/matches/sectionMapping'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
 import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket } from '@/lib/markets/releaseGate'
@@ -44,6 +45,12 @@ export interface ComputedMatchCard {
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
   /** Category breakdown keyed by display key (goals_expectations, etc.) */
   breakdown: Record<string, { score: number }>
+  /**
+   * The five design sections parsed from the RAW engine breakdown (score + band +
+   * displayName + subScores). This is the vocabulary + data the redesigned card
+   * and breakdown view render — NOT the stale `breakdown` map above.
+   */
+  sections: Section[]
   /** Whether this match has been saved for later */
   saved: boolean
   /** Mutual "ready to meet" signal (see ready_to_meet_signals). */
@@ -479,6 +486,7 @@ export async function getComputedMatchCards(
       score: match.score,
       tier: match.tier as 'Platinum' | 'Gold' | 'Silver' | 'Bronze',
       breakdown: parseBreakdown(match.breakdown),
+      sections: parseSections(match.breakdown),
       saved: match.saved,
       readyToMeet: 'none',
       connection: connectionMap.get(match.otherPartnerId) || {
