@@ -12,6 +12,9 @@ import type { RawAnswers } from '@/lib/matching/types'
 import type { InterpretationModelInput, InterpretationSectionInput } from '@/lib/ai/prompts/matchInterpretation'
 import type { Section } from './sectionMapping'
 
+/** Engine reasons that denote UNKNOWN (unanswered) data — never a difference. */
+const UNKNOWN_REASON = /not specified|unspecified|have not specified|not answered|no data|unknown/i
+
 export interface BuildInterpretationInputParams {
   viewerAnswers: Record<string, unknown>
   viewerDisplayName: string | null
@@ -38,13 +41,18 @@ export function buildInterpretationInput(p: BuildInterpretationInputParams): Int
   const sections: InterpretationSectionInput[] = p.sections
     .slice()
     .sort((a, b) => a.order - b.order)
-    .map((s) => ({
-      category: s.displayName,
-      classification: s.band.label,
-      score: s.score,
-      coverage: s.coverage,
-      engineReasons: s.subScores.map((ss) => ss.reason).filter((r) => r && r.trim().length > 0),
-    }))
+    .map((s) => {
+      const signals: string[] = []
+      const unknowns: string[] = []
+      for (const ss of s.subScores) {
+        const reason = (ss.reason || '').trim()
+        if (!reason) continue
+        // An unanswered/"not specified" signal is UNKNOWN, not a difference.
+        if (!ss.matched || UNKNOWN_REASON.test(reason)) unknowns.push(reason)
+        else signals.push(reason)
+      }
+      return { category: s.displayName, classification: s.band.label, score: s.score, coverage: s.coverage, signals, unknowns }
+    })
 
   return { viewer, match, matchScore: p.matchScore, sections, nudged: p.nudged, membership: p.membership }
 }

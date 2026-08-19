@@ -40,13 +40,21 @@ export type ValidationResult =
   | { ok: false; errors: string[] }
 
 const isNonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
-const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string')
+const strArr = (v: unknown, cap: number): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, cap) : []
 
 /**
- * Validate a parsed object against the interpretation contract. Returns typed
- * value on success or a list of human-readable errors on failure. Length limits
- * from the AI doc are checked as SOFT warnings (logged, not rejected) so a
- * slightly-long sentence never blanks a card; structural violations are hard.
+ * Validate + NORMALIZE a parsed interpretation.
+ *
+ * HARD-fail only on what would break the render: not an object; the five sections
+ * missing/miscounted/mis-named or missing overview; the required prose fields
+ * (match_summary, executive_summary, strongest_reason, haevn_assessment); < 3
+ * strongest_areas or conversation_starters. Everything the AI doc marks omittable
+ * — `interpretation` ("omit if nothing useful"), `differences`/`alignments`
+ * ("[] if none"), `classification` (echoed, app ignores), `most_meaningful_difference`,
+ * and the nudge teaser — is COERCED to a safe default, never rejected. This keeps
+ * a doc-compliant response (which legitimately omits a field) from spuriously
+ * degrading a whole card. Length limits are soft (not enforced here).
  */
 export function validateMatchInterpretation(obj: unknown): ValidationResult {
   const errors: string[] = []
@@ -56,55 +64,61 @@ export function validateMatchInterpretation(obj: unknown): ValidationResult {
   if (!isNonEmptyString(o.match_summary)) errors.push('match_summary missing/empty')
   if (!isNonEmptyString(o.executive_summary)) errors.push('executive_summary missing/empty')
 
-  // strongest_areas — exactly 3 {category, summary}
-  if (!Array.isArray(o.strongest_areas) || o.strongest_areas.length !== 3) {
-    errors.push('strongest_areas must have exactly 3 items')
-  } else {
-    o.strongest_areas.forEach((a, i) => {
-      const it = a as Record<string, unknown>
-      if (!isNonEmptyString(it?.category)) errors.push(`strongest_areas[${i}].category missing`)
-      if (!isNonEmptyString(it?.summary)) errors.push(`strongest_areas[${i}].summary missing`)
-    })
-  }
+  // strongest_areas — need at least 3 usable {category, summary}; take the first 3.
+  const rawAreas = Array.isArray(o.strongest_areas) ? o.strongest_areas : []
+  const areas = rawAreas
+    .map((a) => a as Record<string, unknown>)
+    .filter((a) => isNonEmptyString(a?.category) && isNonEmptyString(a?.summary))
+    .slice(0, 3)
+    .map((a) => ({ category: a.category as string, summary: a.summary as string }))
+  if (areas.length < 3) errors.push('strongest_areas needs 3 usable {category, summary} items')
 
-  // nudge highlights — exactly 3 strings (rendered only in nudged state)
-  if (!isStringArray(o.nudge_compatibility_highlights) || o.nudge_compatibility_highlights.length !== 3) {
-    errors.push('nudge_compatibility_highlights must be 3 strings')
-  }
-
-  // sections — exactly 5, exact category names, in order
-  if (!Array.isArray(o.sections) || o.sections.length !== 5) {
+  // sections — exactly 5, exact names + overview are hard; the rest coerces.
+  const rawSections = Array.isArray(o.sections) ? o.sections : []
+  const sections: MatchInterpretation['sections'] = []
+  if (rawSections.length !== 5) {
     errors.push('sections must have exactly 5 items')
   } else {
-    o.sections.forEach((s, i) => {
+    rawSections.forEach((s, i) => {
       const sec = s as Record<string, unknown>
       const expected = SECTION_DISPLAY_NAMES[i]
       if (sec?.category !== expected) errors.push(`sections[${i}].category must be "${expected}" (got "${String(sec?.category)}")`)
       if (!isNonEmptyString(sec?.overview)) errors.push(`sections[${i}].overview missing`)
-      if (!isStringArray(sec?.alignments) || (sec.alignments as string[]).length > 3)
-        errors.push(`sections[${i}].alignments must be ≤3 strings`)
-      if (!isStringArray(sec?.differences) || (sec.differences as string[]).length > 2)
-        errors.push(`sections[${i}].differences must be ≤2 strings`)
-      if (typeof sec?.interpretation !== 'string') errors.push(`sections[${i}].interpretation must be a string`)
-      if (typeof sec?.classification !== 'string') errors.push(`sections[${i}].classification must be a string`)
+      sections.push({
+        category: expected,
+        classification: typeof sec?.classification === 'string' ? sec.classification : '',
+        overview: typeof sec?.overview === 'string' ? sec.overview : '',
+        alignments: strArr(sec?.alignments, 3),
+        differences: strArr(sec?.differences, 2),
+        interpretation: typeof sec?.interpretation === 'string' ? sec.interpretation : '', // omit is valid
+      })
     })
   }
 
   // synthesis
-  const w = o.what_haevn_thinks_you_should_know as Record<string, unknown> | undefined
-  if (!w || typeof w !== 'object') {
-    errors.push('what_haevn_thinks_you_should_know missing')
-  } else {
-    if (!isNonEmptyString(w.strongest_reason)) errors.push('what_haevn…strongest_reason missing')
-    if (typeof w.most_meaningful_difference !== 'string') errors.push('what_haevn…most_meaningful_difference must be a string')
-    if (!isNonEmptyString(w.haevn_assessment)) errors.push('what_haevn…haevn_assessment missing')
-  }
+  const w = (o.what_haevn_thinks_you_should_know ?? {}) as Record<string, unknown>
+  if (typeof w !== 'object') errors.push('what_haevn_thinks_you_should_know missing')
+  if (!isNonEmptyString(w.strongest_reason)) errors.push('what_haevn…strongest_reason missing')
+  if (!isNonEmptyString(w.haevn_assessment)) errors.push('what_haevn…haevn_assessment missing')
 
-  // conversation starters — 3–5
-  if (!isStringArray(o.conversation_starters) || o.conversation_starters.length < 3 || o.conversation_starters.length > 5) {
-    errors.push('conversation_starters must be 3–5 strings')
-  }
+  // conversation starters — need at least 3; keep up to 5.
+  const starters = strArr(o.conversation_starters, 5)
+  if (starters.length < 3) errors.push('conversation_starters needs at least 3 strings')
 
   if (errors.length) return { ok: false, errors }
-  return { ok: true, value: obj as unknown as MatchInterpretation }
+
+  const value: MatchInterpretation = {
+    match_summary: o.match_summary as string,
+    executive_summary: o.executive_summary as string,
+    strongest_areas: areas,
+    nudge_compatibility_highlights: strArr(o.nudge_compatibility_highlights, 3),
+    sections,
+    what_haevn_thinks_you_should_know: {
+      strongest_reason: w.strongest_reason as string,
+      most_meaningful_difference: typeof w.most_meaningful_difference === 'string' ? w.most_meaningful_difference : '',
+      haevn_assessment: w.haevn_assessment as string,
+    },
+    conversation_starters: starters,
+  }
+  return { ok: true, value }
 }
