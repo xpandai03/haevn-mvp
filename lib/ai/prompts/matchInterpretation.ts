@@ -20,8 +20,10 @@ export interface InterpretationSectionInput {
   score: number
   /** 0–1 coverage; low coverage → "limited data" framing, not invented prose. */
   coverage: number | null
-  /** Deterministic engine subScore reasons — the only supported signal set. */
-  engineReasons: string[]
+  /** Real, answered engine signals (aligned or differing) — the supported set. */
+  signals: string[]
+  /** Unanswered/"not specified" signals — UNKNOWN, never to be cited as differences. */
+  unknowns: string[]
 }
 
 export interface InterpretationModelInput {
@@ -88,7 +90,7 @@ OUTPUT: Return ONLY a single valid JSON object (no markdown, no prose outside th
   "conversation_starters": [string, …]     // 3–5 topics generated FROM this analysis (not generic icebreakers), each ≤12 words, natural, never surveilling
 }
 
-Use the provided category classifications and scores exactly. If a category's data coverage is low, prefer "limited data" framing over invented detail. Treat any signal marked unanswered/unknown as unknown — never as a difference.`
+Use the provided category classifications and scores exactly. If a category's data coverage is low, prefer "limited data" framing over invented detail. Each category provides SIGNALS (answered, supported) and UNKNOWNS (unanswered / "not specified"). UNKNOWNS are missing information — NEVER list an unknown as a difference and never phrase "X not specified" as a difference; if it matters at all, it is at most an open question, otherwise omit it. Only SIGNALS may support alignments or differences.`
 
 /** Build the user message carrying both members' data + engine results. */
 export function buildMatchInterpretationMessage(input: InterpretationModelInput): string {
@@ -108,7 +110,8 @@ export function buildMatchInterpretationMessage(input: InterpretationModelInput)
     lines.push(
       `- ${s.category}: score=${s.score}, classification="${s.classification}"` +
         (s.coverage != null ? `, coverage=${s.coverage.toFixed(2)}` : '') +
-        (s.engineReasons.length ? `, signals=[${s.engineReasons.map((r) => `"${r}"`).join(', ')}]` : '')
+        (s.signals.length ? `, signals=[${s.signals.map((r) => `"${r}"`).join(', ')}]` : '') +
+        (s.unknowns.length ? `, unknowns=[${s.unknowns.map((r) => `"${r}"`).join(', ')}]` : '')
     )
   }
   return lines.join('\n')

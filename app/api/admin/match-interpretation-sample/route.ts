@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
       result: gen.result,
       degraded: !gen.result,
       error: gen.error,
+      // Surface the model's raw text even when validation rejects it, so copy is
+      // reviewable on a degradation instead of lost.
+      raw: gen.result ? undefined : gen.raw,
       usage: gen.usage,
     })
   }

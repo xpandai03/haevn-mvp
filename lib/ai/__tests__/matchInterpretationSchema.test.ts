@@ -55,21 +55,52 @@ const bad = (mut: (o: any) => void, msg: string) => {
 bad((o) => (o.match_summary = ''), 'empty match_summary rejected')
 bad((o) => (o.sections = o.sections.slice(0, 4)), '4 sections rejected')
 bad((o) => (o.sections[3].category = 'Bedroom Vibes'), 'wrong section category name rejected')
-bad((o) => (o.sections[0].alignments = ['a', 'b', 'c', 'd']), '>3 alignments rejected')
-bad((o) => (o.sections[0].differences = ['a', 'b', 'c']), '>2 differences rejected')
-bad((o) => (o.strongest_areas = o.strongest_areas.slice(0, 2)), 'strongest_areas !=3 rejected')
-bad((o) => (o.nudge_compatibility_highlights = ['only', 'two']), 'nudge highlights !=3 rejected')
+bad((o) => (o.sections[0].overview = ''), 'empty section overview rejected')
+bad((o) => (o.strongest_areas = o.strongest_areas.slice(0, 2)), '<3 strongest_areas rejected')
 bad((o) => (o.conversation_starters = ['one', 'two']), '<3 conversation_starters rejected')
-bad((o) => (o.conversation_starters = ['1', '2', '3', '4', '5', '6']), '>5 conversation_starters rejected')
 bad((o) => delete o.what_haevn_thinks_you_should_know, 'missing synthesis rejected')
 bad((o) => (o.what_haevn_thinks_you_should_know.haevn_assessment = ''), 'empty haevn_assessment rejected')
 eq(validateMatchInterpretation(null).ok, false, 'null rejected')
-eq(validateMatchInterpretation('{}').ok, false, 'string rejected')
+eq(validateMatchInterpretation('{}' as unknown).ok, false, 'string rejected')
 
-// ── differences:[] is allowed (never manufactured) ──
+// ── COERCION: doc-omittable fields must NOT reject (the bug the real samples caught) ──
 {
-  const r = validateMatchInterpretation(validInterp())
-  ok(r.ok, 'empty differences arrays are valid')
+  const o: any = validInterp()
+  delete o.sections[4].interpretation // model legitimately omits "if nothing useful"
+  const r = validateMatchInterpretation(o)
+  ok(r.ok, 'omitted section.interpretation is coerced, not rejected')
+  if (r.ok) eq(r.value.sections[4].interpretation, '', 'omitted interpretation → ""')
+}
+{
+  const o: any = validInterp()
+  delete o.sections[0].differences
+  delete o.sections[0].alignments
+  const r = validateMatchInterpretation(o)
+  ok(r.ok, 'omitted differences/alignments coerced to []')
+  if (r.ok) eq(r.value.sections[0].differences, [], 'omitted differences → []')
+}
+{
+  const o: any = validInterp()
+  o.sections[0].alignments = ['a', 'b', 'c', 'd', 'e']
+  o.sections[0].differences = ['x', 'y', 'z']
+  const r = validateMatchInterpretation(o)
+  ok(r.ok, 'over-cap alignments/differences coerced, not rejected')
+  if (r.ok) {
+    eq(r.value.sections[0].alignments.length, 3, 'alignments capped to 3')
+    eq(r.value.sections[0].differences.length, 2, 'differences capped to 2')
+  }
+}
+{
+  const o: any = validInterp()
+  delete o.nudge_compatibility_highlights
+  const r = validateMatchInterpretation(o)
+  ok(r.ok, 'omitted nudge highlights coerced to [] (only rendered in nudged state)')
+}
+{
+  const o: any = validInterp()
+  o.strongest_areas = [...o.strongest_areas, { category: 'Practical Fit', summary: 'extra' }]
+  const r = validateMatchInterpretation(o)
+  ok(r.ok && r.value.strongest_areas.length === 3, '4 strongest_areas → sliced to 3')
 }
 
 report('ai/matchInterpretationSchema')
