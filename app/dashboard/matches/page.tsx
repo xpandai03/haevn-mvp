@@ -22,6 +22,10 @@ import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
 import FullPageLoader from '@/components/ui/full-page-loader'
+import { MatchCard } from '@/components/matches/MatchCard'
+import { getCardInterpretations } from '@/lib/matches/getMatchCardData'
+import { overallBadge } from '@/lib/matches/sectionMapping'
+import type { MatchInterpretation } from '@/lib/ai/matchInterpretationSchema'
 
 /** Derive a "top factor" label from the highest-scoring category */
 function getTopFactor(breakdown: Record<string, { score: number }>): string {
@@ -103,6 +107,7 @@ export default function MatchesPage() {
   const [nudgedYouIds, setNudgedYouIds] = useState<Set<string>>(new Set())
   const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set())
   const [checkInDismissed, setCheckInDismissed] = useState(false)
+  const [interps, setInterps] = useState<Record<string, MatchInterpretation | null>>({})
 
   useEffect(() => {
     async function loadMatches() {
@@ -119,6 +124,12 @@ export default function MatchesPage() {
         setViewerTier(tier)
         setHiddenCount(hidden.length)
         setCheckedInIds(new Set(checkedIn))
+
+        // Cache-only AI interpretations for the visible cards (never blocks; cards
+        // fall back to deterministic copy until warm/breakdown fills the cache).
+        getCardInterpretations(matchData.map((m) => m.partnership.id))
+          .then(setInterps)
+          .catch(() => {})
 
         // Free viewers: figure out which matches have nudged them (for the
         // "Nudge received" banner on locked cards).
@@ -407,46 +418,37 @@ export default function MatchesPage() {
                     ease: [0.22, 1, 0.36, 1],
                   }}
                 >
-                  <ProfileCard
-                    profile={{
-                      id: match.partnership.id,
-                      photo: match.partnership.photo_url || undefined,
-                      username: match.partnership.display_name || 'User',
-                      firstName: match.partnership.first_name,
-                      age: match.partnership.age,
-                      city: match.partnership.city,
-                      distance: match.partnership.distance_miles,
-                      gender: match.partnership.gender,
-                      sexuality: match.partnership.sexuality,
-                      relationshipStructure:
-                        match.partnership.relationship_structure,
-                      compatibilityPercentage: match.score,
-                      topFactor: getTopFactor(match.breakdown),
-                      intro: buildIntro(match),
-                      contrast: buildContrast(match.breakdown),
-                      signals: getSignals(match.breakdown),
-                    }}
-                    variant="match"
-                    isLocked={isViewerFree}
-                    readyToMeet={
+                  <MatchCard
+                    matchId={match.partnership.id}
+                    score={match.score}
+                    sections={match.sections}
+                    interpretation={interps[match.partnership.id] ?? null}
+                    state={
                       !isViewerFree
-                        ? {
-                            state: match.readyToMeet,
-                            otherPartnershipId: match.partnership.id,
-                          }
-                        : undefined
+                        ? 'unlocked'
+                        : nudgedYouIds.has(match.partnership.id)
+                          ? 'nudged'
+                          : 'standard'
                     }
-                    connectionStatus={match.connection.status}
-                    handshakeId={match.connection.handshakeId}
-                    matchIsFreeTier={
-                      match.partnership.membership_tier === 'free'
-                    }
-                    hasNudgedYou={nudgedYouIds.has(match.partnership.id)}
-                    onClick={handleMatchCardClick}
-                    onPass={!isViewerFree ? handlePass : undefined}
-                    onConnect={!isViewerFree ? handleConnect : undefined}
-                    onNudge={!isViewerFree ? handleNudge : undefined}
-                    onMessage={!isViewerFree ? handleMessage : undefined}
+                    badge={overallBadge(match.score)}
+                    identity={{
+                      nameToken: match.partnership.first_name,
+                      age: match.partnership.age,
+                      photoUrl: match.partnership.photo_url ?? null,
+                      city: match.partnership.city,
+                      distanceMiles: match.partnership.distance_miles,
+                      demographics:
+                        [
+                          match.partnership.gender,
+                          match.partnership.sexuality,
+                          match.partnership.relationship_structure,
+                          match.partnership.distance_miles != null
+                            ? `${match.partnership.distance_miles} miles away`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || null,
+                    }}
                   />
                 </motion.div>
               ))}

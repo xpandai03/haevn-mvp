@@ -37,7 +37,7 @@ function buildIntro(rec: ComputedMatchCard): string {
   if (summary) return summary
   const name = rec.partnership.first_name || 'They'
   const factor = getTopFactor(rec.breakdown).replace(/^Top factor:\s*/i, '')
-  return `${name} shares your strengths around ${factor.toLowerCase()}. At ${rec.score}% alignment, they're just below your match threshold — worth a look.`
+  return `${name} aligns strongly with you around ${factor.toLowerCase()}. There's one meaningful difference worth weighing — we're putting it in your hands to decide.`
 }
 
 function getSignals(breakdown: Record<string, { score: number }>): string[] {
@@ -173,14 +173,14 @@ export default function RecommendationsPage() {
       <header className="px-6 sm:px-10 pt-10 pb-6 border-b border-[color:var(--haevn-border)]">
         <div className="max-w-5xl mx-auto">
           <p className="text-[11px] tracking-[0.22em] uppercase text-[color:var(--haevn-teal)]">
-            Just below your matches
+            Worth a closer look
           </p>
           <h1 className="font-heading text-3xl sm:text-4xl text-[color:var(--haevn-navy)] mt-2 leading-tight">
             Recommendations
           </h1>
           <p className="text-sm text-[color:var(--haevn-muted-fg)] mt-2">
-            Near-miss profiles scoring just below your match threshold. We surface up to three
-            each week — worth a second look.
+            People you align with strongly, each with one meaningful difference worth weighing.
+            We surface up to three a week and put the call in your hands.
           </p>
         </div>
       </header>
@@ -250,7 +250,7 @@ function EmptyRecommendationsState() {
         No recommendations this week.
       </h2>
       <p className="text-base text-[color:var(--haevn-muted-fg)] leading-relaxed mt-4">
-        Recommendations are near-miss profiles just below your match threshold. When the network
+        Recommendations are people you align with strongly, each with one meaningful difference worth weighing. When the network
         surfaces some for you, they&rsquo;ll appear here — refreshed on the weekly cycle alongside
         your matches.
       </p>

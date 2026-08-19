@@ -25,6 +25,10 @@
     {
       "path": "/api/cron/meetup-feed",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/warm-interpretations",
+      "schedule": "0 13 * * 1"
     }
   ]
 }
