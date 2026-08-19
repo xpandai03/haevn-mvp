@@ -103,4 +103,17 @@ eq(validateMatchInterpretation('{}' as unknown).ok, false, 'string rejected')
   ok(r.ok && r.value.strongest_areas.length === 3, '4 strongest_areas → sliced to 3')
 }
 
+// ── DETERMINISTIC unknowns filter: "not specified" never survives as a difference ──
+{
+  const o: any = validInterp()
+  o.sections[4].differences = ['Lifestyle importance not specified', 'Different schedules']
+  o.sections[4].alignments = ['Cultural preferences unspecified', 'Compatible privacy levels']
+  const r = validateMatchInterpretation(o)
+  ok(r.ok, 'unknown-phrased entries do not fail validation')
+  if (r.ok) {
+    eq(r.value.sections[4].differences, ['Different schedules'], 'unknown-phrased difference stripped, real one kept')
+    eq(r.value.sections[4].alignments, ['Compatible privacy levels'], 'unknown-phrased alignment stripped, real one kept')
+  }
+}
+
 report('ai/matchInterpretationSchema')

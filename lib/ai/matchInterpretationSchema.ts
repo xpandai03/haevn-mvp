@@ -44,6 +44,17 @@ const strArr = (v: unknown, cap: number): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, cap) : []
 
 /**
+ * Deterministic guard: an unanswered ("not specified") datum is UNKNOWN, never a
+ * difference or alignment (AI-doc rule 5). We don't feed these strings to the
+ * model, but this filter guarantees none survive even if the model invents one.
+ */
+const UNKNOWN_PHRASE = /not specified|unspecified|not answered|no data|not provided|not disclosed|unknown/i
+const dropUnknowns = (v: unknown, cap: number): string[] =>
+  strArr(v, cap + 3)
+    .filter((s) => !UNKNOWN_PHRASE.test(s))
+    .slice(0, cap)
+
+/**
  * Validate + NORMALIZE a parsed interpretation.
  *
  * HARD-fail only on what would break the render: not an object; the five sections
@@ -88,8 +99,8 @@ export function validateMatchInterpretation(obj: unknown): ValidationResult {
         category: expected,
         classification: typeof sec?.classification === 'string' ? sec.classification : '',
         overview: typeof sec?.overview === 'string' ? sec.overview : '',
-        alignments: strArr(sec?.alignments, 3),
-        differences: strArr(sec?.differences, 2),
+        alignments: dropUnknowns(sec?.alignments, 3),
+        differences: dropUnknowns(sec?.differences, 2),
         interpretation: typeof sec?.interpretation === 'string' ? sec.interpretation : '', // omit is valid
       })
     })

@@ -90,7 +90,9 @@ OUTPUT: Return ONLY a single valid JSON object (no markdown, no prose outside th
   "conversation_starters": [string, …]     // 3–5 topics generated FROM this analysis (not generic icebreakers), each ≤12 words, natural, never surveilling
 }
 
-Use the provided category classifications and scores exactly. If a category's data coverage is low, prefer "limited data" framing over invented detail. Each category provides SIGNALS (answered, supported) and UNKNOWNS (unanswered / "not specified"). UNKNOWNS are missing information — NEVER list an unknown as a difference and never phrase "X not specified" as a difference; if it matters at all, it is at most an open question, otherwise omit it. Only SIGNALS may support alignments or differences.`
+Use the provided category classifications and scores exactly. Interpret ONLY within the five engine categories and their supplied SIGNALS. Do NOT introduce observations drawn from demographics — age, location, gender, or similar — or from anything outside the supplied category signals; demographics are already shown on the card, so re-surfacing them (for example an age gap) as a "difference" adds judgment, not information. If a category's coverage is low or a signal is absent, treat it as unknown: prefer "limited data" framing and NEVER phrase missing data (e.g. "X not specified") as a difference. Only real, answered signals may support an alignment or a difference.
+
+LENGTH IS A HARD REQUIREMENT, not a suggestion. Write each field to the FULL range and do not under-write: match_summary 35–55 words; executive_summary 45–70 words; each section overview 25–45 words; haevn_assessment 90–140 words.`
 
 /** Build the user message carrying both members' data + engine results. */
 export function buildMatchInterpretationMessage(input: InterpretationModelInput): string {
@@ -107,11 +109,14 @@ export function buildMatchInterpretationMessage(input: InterpretationModelInput)
   lines.push('')
   lines.push('CATEGORY_RESULTS (engine-supplied — use scores + classifications exactly):')
   for (const s of input.sections) {
+    // Only real signals are fed to the model. Unknown/"not specified" reasons are
+    // deliberately NOT sent (the model parrots them into differences otherwise);
+    // limited coverage is conveyed by the coverage number + unanswered_signals count.
     lines.push(
       `- ${s.category}: score=${s.score}, classification="${s.classification}"` +
         (s.coverage != null ? `, coverage=${s.coverage.toFixed(2)}` : '') +
         (s.signals.length ? `, signals=[${s.signals.map((r) => `"${r}"`).join(', ')}]` : '') +
-        (s.unknowns.length ? `, unknowns=[${s.unknowns.map((r) => `"${r}"`).join(', ')}]` : '')
+        (s.unknowns.length ? `, unanswered_signals=${s.unknowns.length}` : '')
     )
   }
   return lines.join('\n')
