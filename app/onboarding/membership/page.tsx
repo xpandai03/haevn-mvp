@@ -1,265 +1,110 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import MembershipPlans from './MembershipPlans'
+import { getPromoConfig } from '@/lib/promo/config'
+import { decideEligibility } from '@/lib/promo/eligibility'
+import { loadMemberPromoContext } from '@/lib/promo/memberContext'
+import { emitCtaClicked } from '@/lib/promo/events'
+import { normalizeTier } from '@/lib/partnership/tier'
+import { UNKNOWN_SOURCE } from '@/lib/promo/constants'
+import { createClient } from '@/lib/supabase/server'
+import { OnboardingFlowController } from '@/lib/onboarding/flow'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Check } from 'lucide-react'
-import { useAuth } from '@/lib/auth/context'
-import { getClientOnboardingFlowController } from '@/lib/onboarding/client-flow'
-import { useToast } from '@/hooks/use-toast'
+export const dynamic = 'force-dynamic'
 
-type PlanId = 'free' | 'plus_6' | 'plus_12'
+/**
+ * THE CHOKE POINT.
+ *
+ * All 22 member-facing upgrade CTAs already route here, so promo-vs-paid is
+ * decided in exactly one place and NO CTA is edited by this PR. The existing paid
+ * page is untouched — it is now the `MembershipPlans` client component this
+ * server component renders when the member is not eligible.
+ *
+ * Eligible members are redirected to /founding-member. Everyone else — paid
+ * members, members outside an enabled market, members with no resolvable market,
+ * and everyone at all when the flag is off — sees exactly what they see today.
+ *
+ * Attribution without touching 22 files: `?src=` when a CTA passes one, else the
+ * referer path, else 'unknown'. upgrade_cta_clicked is emitted on EVERY arrival
+ * regardless of outcome, because the client's CTA-click number is the
+ * denominator of the activation rate and must not be filtered by eligibility.
+ *
+ * Onboarding traffic is excluded: /onboarding/membership is also step 9 of the
+ * signup flow (lib/onboarding/flow.ts, client-flow.ts, db/onboarding.ts). A
+ * member being walked through signup has not expressed upgrade intent. Those
+ * three callers pass no marker and are NOT edited by this PR, so instead we ask
+ * the flow controller where the member's resume step is: if it is still this
+ * page, they are mid-onboarding, and both the redirect and the event are
+ * suppressed. `?flow=onboarding` is also honoured if a caller ever sets it.
+ */
+export default async function MembershipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ src?: string; flow?: string }>
+}) {
+  const params = await searchParams
 
-/** Benefits shared by both HAEVN+ products. */
-const PLUS_BENEFITS = [
-  'View full match profiles',
-  'Connect and message your matches',
-  'See detailed compatibility breakdowns',
-  'Access meetup recommendations',
-  'Ready to Meet signals',
-]
+  // Onboarding progression is not upgrade intent: render the plans, log nothing.
+  if (params.flow === 'onboarding' || (await isMidOnboarding())) return <MembershipPlans />
 
-interface PlanCard {
-  id: PlanId
-  name: string
-  badge?: string
-  price: string
-  priceSub: string
-  note?: string
-  features: string[]
-  cta: string
-  emphasized?: boolean
-}
+  const cfg = getPromoConfig()
+  const ctx = await loadMemberPromoContext()
 
-const PLANS: PlanCard[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: '$0',
-    priceSub: 'Forever',
-    features: [
-      'See your match count and compatibility scores',
-      'Build your profile and add photos',
-      'Upgrade anytime to unlock full access',
-    ],
-    cta: 'Continue with Free',
-  },
-  {
-    id: 'plus_6',
-    name: 'HAEVN+',
-    badge: 'Most Popular',
-    price: '$199',
-    priceSub: 'for 6 months',
-    note: 'One-time payment',
-    features: PLUS_BENEFITS,
-    cta: 'Get HAEVN+ 6 Months',
-    emphasized: true,
-  },
-  {
-    id: 'plus_12',
-    name: 'HAEVN+ Annual',
-    badge: 'Best Value',
-    price: '$299',
-    priceSub: 'for 12 months',
-    note: 'One-time payment · Save $99',
-    features: PLUS_BENEFITS,
-    cta: 'Get HAEVN+ 12 Months',
-  },
-]
-
-export default function MembershipPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const { toast } = useToast()
-  const flowController = getClientOnboardingFlowController()
-  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null)
-
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) router.push('/auth/login')
-  }, [user, authLoading, router])
-
-  const handleSelectPlan = async (plan: PlanId) => {
-    if (!user || loadingPlan) return
-    setLoadingPlan(plan)
-
+  // Source: explicit param wins, then the referring path, then unknown. The
+  // referer is a PATH only — never a full URL with query, so nothing leaks.
+  let src = params.src?.trim() || ''
+  if (!src) {
     try {
-      // Free → mark membership step (7) complete and continue to verification.
-      if (plan === 'free') {
-        await flowController.markStepComplete(user.id, 7)
-        toast({
-          title: 'Welcome to HAEVN',
-          description: 'You can upgrade anytime from your dashboard.',
-        })
-        setTimeout(() => router.push('/onboarding/verification'), 400)
-        return
-      }
-
-      // Paid plan → create a Lemonsqueezy checkout and redirect to pay.
-      const res = await fetch('/api/lemonsqueezy/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      })
-      const data = await res.json()
-
-      if (res.ok && data.checkoutUrl) {
-        // Mark the step complete before leaving for hosted checkout. The tier
-        // flip happens server-side via the webhook once payment clears.
-        await flowController.markStepComplete(user.id, 7)
-        window.location.href = data.checkoutUrl
-        return
-      }
-
-      // Verification gate: the checkout endpoint requires ID verification first
-      // (server-enforced). Route the user into the existing Veriff flow.
-      if (res.status === 403 && data.error === 'verification_required') {
-        toast({
-          title: 'Verify your identity to upgrade',
-          description: 'HAEVN+ requires a quick ID check first.',
-        })
-        setTimeout(() => router.push(data.redirectTo || '/onboarding/verification'), 400)
-        return
-      }
-
-      toast({
-        title: 'Unable to start checkout',
-        description: data.error || 'Please try again.',
-        variant: 'destructive',
-      })
-      setLoadingPlan(null)
-    } catch (error) {
-      console.error('[Membership] checkout error:', error)
-      toast({
-        title: 'Something went wrong',
-        description: 'Please try again.',
-        variant: 'destructive',
-      })
-      setLoadingPlan(null)
+      const ref = (await headers()).get('referer')
+      src = ref ? new URL(ref).pathname : ''
+    } catch {
+      src = ''
     }
   }
+  const source = src || UNKNOWN_SOURCE
 
-  return (
-    <div className="survey-layout min-h-screen flex flex-col items-center justify-center p-6 bg-haevn-cream">
-      <div className="w-full max-w-6xl">
-        {/* Header */}
-        <div className="mb-10">
-          <h1
-            className="font-heading text-haevn-navy mb-3"
-            style={{
-              fontWeight: 700,
-              fontSize: '36px',
-              lineHeight: '100%',
-              letterSpacing: '-0.015em',
-              textAlign: 'left',
-            }}
-          >
-            Choose your membership
-          </h1>
-          <p
-            className="text-haevn-charcoal"
-            style={{ fontWeight: 300, fontSize: '18px', lineHeight: '120%' }}
-          >
-            HAEVN+ is a one-time payment for full access — no recurring
-            subscription. Pick the length that works for you.
-          </p>
-        </div>
+  const decision = decideEligibility({
+    cfg,
+    tier: ctx?.tier,
+    plusSource: ctx?.plusSource,
+    marketSlug: ctx?.marketSlug,
+    marketDisplayName: ctx?.marketDisplayName,
+  })
 
-        {/* Pricing Cards */}
-        <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
-          {PLANS.map((plan) => {
-            const isLoading = loadingPlan === plan.id
-            return (
-              <div
-                key={plan.id}
-                className={`relative flex flex-col rounded-3xl bg-white p-8 shadow-sm transition-all ${
-                  plan.emphasized
-                    ? 'border-2 border-haevn-orange shadow-md md:-mt-2 md:mb-2'
-                    : 'border border-gray-100'
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-8">
-                    <span
-                      className={`rounded-full px-4 py-1 text-white ${
-                        plan.emphasized ? 'bg-haevn-orange' : 'bg-haevn-teal'
-                      }`}
-                      style={{ fontWeight: 500, fontSize: '12px' }}
-                    >
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+  // Fire-and-forget: analytics must never delay or break the member's path.
+  void emitCtaClicked(ctx?.partnershipId ?? null, {
+    src: source,
+    path: '/onboarding/membership',
+    tier: normalizeTier(ctx?.tier),
+    market: ctx?.marketSlug ?? null,
+    eligible: decision.eligible,
+    reason: decision.eligible ? null : decision.reason,
+  })
 
-                {/* Name */}
-                <h3
-                  className="font-heading text-haevn-navy mb-1"
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '24px',
-                    lineHeight: '100%',
-                    letterSpacing: '-0.015em',
-                  }}
-                >
-                  {plan.name}
-                </h3>
+  if (decision.eligible) {
+    redirect(`/founding-member?src=${encodeURIComponent(source)}`)
+  }
 
-                {/* Price */}
-                <div className="mb-1 mt-4 flex items-baseline gap-2">
-                  <span
-                    className="text-haevn-navy"
-                    style={{ fontWeight: 700, fontSize: '40px', lineHeight: '100%' }}
-                  >
-                    {plan.price}
-                  </span>
-                  <span
-                    className="text-haevn-charcoal"
-                    style={{ fontWeight: 300, fontSize: '14px' }}
-                  >
-                    {plan.priceSub}
-                  </span>
-                </div>
-                <p
-                  className="mb-6 min-h-[18px] text-haevn-charcoal/70"
-                  style={{ fontWeight: 400, fontSize: '13px' }}
-                >
-                  {plan.note || ' '}
-                </p>
+  // Everyone else: the existing page, byte-for-byte.
+  return <MembershipPlans />
+}
 
-                {/* Features */}
-                <ul className="mb-8 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-haevn-teal" />
-                      <span
-                        className="text-haevn-charcoal"
-                        style={{ fontWeight: 300, fontSize: '14px', lineHeight: '120%' }}
-                      >
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA — pinned to bottom for even card heights */}
-                <Button
-                  onClick={() => handleSelectPlan(plan.id)}
-                  disabled={loadingPlan !== null}
-                  className={`mt-auto w-full rounded-full ${
-                    plan.emphasized
-                      ? 'bg-haevn-orange text-white hover:opacity-90'
-                      : 'border-2 border-haevn-navy bg-white text-haevn-navy hover:bg-haevn-cream'
-                  }`}
-                  size="lg"
-                  style={{ fontWeight: 500, fontSize: '16px' }}
-                >
-                  {isLoading ? 'Processing…' : plan.cta}
-                </Button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
+/**
+ * True when the member's resume step IS this page — i.e. they are being walked
+ * through signup rather than asking to upgrade. Fails OPEN (returns false, so
+ * the member is treated as having upgrade intent) because a controller error
+ * must not silently hide the offer from an eligible member.
+ */
+async function isMidOnboarding(): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return false
+    const resume = await new OnboardingFlowController(supabase).getResumeStep(user.id)
+    return resume === '/onboarding/membership'
+  } catch {
+    return false
+  }
 }

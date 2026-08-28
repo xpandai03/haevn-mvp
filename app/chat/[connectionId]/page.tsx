@@ -19,6 +19,8 @@ import {
   encodeMeetupSuggestionMessage,
   parseMeetupSuggestionMessage,
 } from '@/lib/chat/meetupMessage'
+import { getMessagingOpen } from '@/lib/actions/messaging'
+import { MessagingClosed } from '@/components/chat/MessagingClosed'
 
 /** Hardcoded midpoint-style suggestion until real geo + venue data ships. */
 const PLACEHOLDER_CHAT_MEETUP_BASE = {
@@ -52,6 +54,8 @@ export default function ChatWithConnectionPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  // MESSAGING_ENABLED is server-only; ask for it rather than reading a public env.
+  const [messagingClosed, setMessagingClosed] = useState(false)
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [showMeetupSuggestion, setShowMeetupSuggestion] = useState(false)
@@ -69,7 +73,16 @@ export default function ChatWithConnectionPage() {
       try {
         setLoading(true)
 
-        // Check membership tier first
+        // MESSAGING KILL SWITCH first — independent of tier. A member who just
+        // activated HAEVN+ through the Founding Member promo must NOT be told to
+        // upgrade; the surface simply says messaging is coming soon.
+        if (!(await getMessagingOpen())) {
+          setMessagingClosed(true)
+          setLoading(false)
+          return
+        }
+
+        // Then the tier gate, via the shared predicate (accepts plus and pro).
         const membershipTier = await getUserMembershipTier()
         if (membershipTier !== 'plus') {
           toast({
@@ -285,6 +298,10 @@ export default function ChatWithConnectionPage() {
   }
 
   // Loading state
+  // Kill switch is checked before anything else renders, so a member who just
+  // activated HAEVN+ never sees an upgrade prompt for a closed feature.
+  if (messagingClosed) return <MessagingClosed />
+
   if (loading || authLoading) {
     return (
       <div className="flex min-h-[60vh] flex-1 items-center justify-center bg-[color:var(--haevn-dash-surface-alt)]">

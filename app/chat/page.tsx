@@ -14,6 +14,8 @@ import { useAuth } from '@/lib/auth/context'
 import { getMyConversations, type ConversationItem } from '@/lib/actions/connections'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { useToast } from '@/hooks/use-toast'
+import { getMessagingOpen } from '@/lib/actions/messaging'
+import { MessagingClosed } from '@/components/chat/MessagingClosed'
 
 export default function ChatPage() {
   const router = useRouter()
@@ -21,6 +23,8 @@ export default function ChatPage() {
   const { toast } = useToast()
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [loading, setLoading] = useState(true)
+  // MESSAGING_ENABLED is server-only; ask for it rather than reading a public env.
+  const [messagingClosed, setMessagingClosed] = useState(false)
 
   useEffect(() => {
     async function loadConversations() {
@@ -32,7 +36,16 @@ export default function ChatPage() {
       }
 
       try {
-        // Check membership tier first
+        // MESSAGING KILL SWITCH first — independent of tier. A member who just
+        // activated HAEVN+ through the Founding Member promo must NOT be told to
+        // upgrade; the surface simply says messaging is coming soon.
+        if (!(await getMessagingOpen())) {
+          setMessagingClosed(true)
+          setLoading(false)
+          return
+        }
+
+        // Then the tier gate, via the shared predicate (accepts plus and pro).
         const membershipTier = await getUserMembershipTier()
         if (membershipTier !== 'plus') {
           toast({
@@ -56,6 +69,13 @@ export default function ChatPage() {
 
     loadConversations()
   }, [user, authLoading, router, toast])
+
+  // Kill switch is checked before anything else renders, so a member who just
+
+  // activated HAEVN+ never sees an upgrade prompt for a closed feature.
+
+  if (messagingClosed) return <MessagingClosed />
+
 
   if (loading || authLoading) {
     return (

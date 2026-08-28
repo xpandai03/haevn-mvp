@@ -44,21 +44,21 @@ export interface Database {
           id: string
           owner_id: string
           city: string | null
-          membership_tier: 'free' | 'plus' | 'select'
+          membership_tier: 'free' | 'plus' | 'pro' | 'select'
           created_at: string
         }
         Insert: {
           id?: string
           owner_id: string
           city?: string | null
-          membership_tier?: 'free' | 'plus' | 'select'
+          membership_tier?: 'free' | 'plus' | 'pro' | 'select'
           created_at?: string
         }
         Update: {
           id?: string
           owner_id?: string
           city?: string | null
-          membership_tier?: 'free' | 'plus' | 'select'
+          membership_tier?: 'free' | 'plus' | 'pro' | 'select'
           created_at?: string
         }
       }
@@ -104,7 +104,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      membership_tier: 'free' | 'plus' | 'select'
+      membership_tier: 'free' | 'plus' | 'pro' | 'select'
       city_status: 'live' | 'waitlist'
       partnership_status: 'active' | 'pending' | 'inactive'
     }

@@ -16,6 +16,7 @@ import { type UnreadCounts } from '@/lib/services/chat'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { firstNameFromDisplayName } from '@/lib/utils/matchCardDisplay'
+import { isMessagingEnabled } from '@/lib/promo/config'
 
 function relationshipLabelFromStructure(
   structure: { type?: string | null; open_to?: string[] | null } | null
@@ -620,6 +621,12 @@ export async function sendMessageAction(
   body: string,
   imageUrl?: string  // Optional image URL for image messages
 ): Promise<{ message?: ChatMessage; error?: string }> {
+  // MESSAGING KILL SWITCH — see lib/promo/config.ts. Server-side, on the WRITE
+  // path so no client can bypass it. Independent of tier: a member who just
+  // activated HAEVN+ through the promo still cannot send while this is off.
+  if (!isMessagingEnabled()) {
+    return { error: 'Messaging is not available yet' }
+  }
   try {
     // Get current user from server-side auth
     const supabase = await createClient()

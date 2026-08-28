@@ -10,7 +10,7 @@ export type User = {
   name: string
   city_id: string
   survey_completed: boolean
-  membership_tier: 'free' | 'plus' | 'select'
+  membership_tier: 'free' | 'plus' | 'pro' | 'select'
   created_at: string
 }
 

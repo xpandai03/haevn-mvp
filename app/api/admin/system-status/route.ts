@@ -46,6 +46,7 @@ export async function GET() {
     lastRecomputeRes,
     lastRecomputeFailureRes,
     liveCountRes,
+    foundingActivationsRes,
   ] = await Promise.all([
     admin.from('system_events')
       .select('created_at, triggered_by, metadata')
@@ -129,7 +130,14 @@ export async function GET() {
     // Live partnership count — the denominator to compare processed against.
     admin.from('partnerships')
       .select('id', { count: 'exact', head: true })
-      .eq('profile_state', 'live'),
+      .eq('profile_state', 'live'),,
+
+    // Founding Member activations — the client's headline number for the promo.
+    // Counted from plus_source so it can never be confused with a paid upgrade.
+    admin
+      .from('partnerships')
+      .select('*', { count: 'exact', head: true })
+      .eq('plus_source', 'founding_member_promo')
   ])
 
   return NextResponse.json({
@@ -175,6 +183,10 @@ export async function GET() {
     pendingMatches: pendingRes.count ?? 0,
     activeMatches: activeRes.count ?? 0,
     expiredMatches: expiredRes.count ?? 0,
+
+    // Cast: the Promise.all tuple widens the tail element to `never` under
+    // this file's inference; the query itself is a plain head/count select.
+    foundingActivations: (foundingActivationsRes as { count: number | null } | undefined)?.count ?? 0,
 
     recentNotifications: (recentNotificationsRes.data || []).map((e: any) => ({
       at: e.created_at,

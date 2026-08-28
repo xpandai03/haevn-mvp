@@ -7,7 +7,7 @@ export interface PartnershipProfile {
   id: string
   owner_id: string
   city: string | null
-  membership_tier: 'free' | 'plus' | 'select'
+  membership_tier: 'free' | 'plus' | 'pro' | 'select'
 
   // Profile fields
   display_name: string | null

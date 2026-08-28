@@ -147,6 +147,7 @@ interface SystemStatus {
   pendingMatches: number
   activeMatches: number
   expiredMatches: number
+  foundingActivations: number
   recentNotifications: NotificationEvent[]
   systemState: string
 }
@@ -392,6 +393,12 @@ export function MatchingDashboard({ userEmail }: MatchingDashboardProps) {
             </span>
             <span className="text-gray-400 font-medium">
               {systemStatus.expiredMatches} expired
+            </span>
+            {/* Founding Member activations — the client's headline promo number.
+                Counted from partnerships.plus_source, so a paid upgrade can never
+                be miscounted as a promo grant. */}
+            <span className="text-[color:var(--haevn-gold)] font-medium">
+              {systemStatus.foundingActivations} founding activations
             </span>
           </div>
         </div>
