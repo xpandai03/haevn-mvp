@@ -364,7 +364,7 @@ export default async function ProfilePage() {
             </p>
             <p className="text-xs text-[color:var(--haevn-muted-fg)] mt-0.5">
               {isFree
-                ? 'Upgrade to unlock photos, connect, and message'
+                ? 'Become a HAEVN+ member to see photos, connect, and message'
                 : 'Active membership · Manage from billing'}
             </p>
           </div>

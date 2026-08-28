@@ -15,6 +15,7 @@ import { ArrowLeft, Lock, Info, Lightbulb, Target, Users, MessageCircle, Heart, 
 import { useAuth } from '@/lib/auth/context'
 import { getMatchBreakdownData, type MatchBreakdownData } from '@/lib/matches/getMatchCardData'
 import { fallbackExecutiveSummary } from '@/lib/matches/fallbackCopy'
+import { BECOME_MEMBER_CTA, BREAKDOWN_GATE_SUPPORT, LOCKED_IDENTITY_SUPPORT } from '@/lib/matches/membershipCopy'
 import type { Band, Section } from '@/lib/matches/sectionMapping'
 
 const SECTION_ICON: Record<string, typeof Target> = {
@@ -76,8 +77,8 @@ export default function BreakdownPage() {
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
                   <Lock size={22} className="text-[color:var(--haevn-muted-fg)]" />
-                  <p className="px-6 text-sm font-medium text-[color:var(--haevn-charcoal)]">Reveal your {data.matchScore}% match</p>
-                  <p className="px-6 text-[12px] text-[color:var(--haevn-muted-fg)]">Unlock to see their photos and full profile.</p>
+                  <p className="px-6 text-sm font-medium text-[color:var(--haevn-charcoal)]">Your {data.matchScore}% match</p>
+                  <p className="px-6 text-[12px] text-[color:var(--haevn-muted-fg)]">{LOCKED_IDENTITY_SUPPORT}</p>
                 </div>
               )}
             </div>
@@ -172,12 +173,11 @@ export default function BreakdownPage() {
             <div className="flex items-center gap-3">
               <Lock size={18} className="text-[color:var(--haevn-gold)]" />
               <p className="text-[13px] text-[color:var(--haevn-charcoal)]">
-                <span className="font-semibold">You’ve seen why we matched you.</span> Upgrade to reveal their photos and
-                profile and decide if you’d like to connect.
+                <span className="font-semibold">You’ve seen why we matched you.</span> {BREAKDOWN_GATE_SUPPORT}
               </p>
             </div>
             <button onClick={() => router.push('/onboarding/membership')} className="haevn-btn-gold flex shrink-0 items-center gap-2 px-6 text-sm">
-              <Lock size={15} /> Reveal my match
+              <Lock size={15} /> {BECOME_MEMBER_CTA}
             </button>
           </div>
         </div>

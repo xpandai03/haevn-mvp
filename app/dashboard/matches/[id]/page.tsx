@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
 import FullPageLoader from '@/components/ui/full-page-loader'
+import { BECOME_MEMBER_CTA } from '@/lib/matches/membershipCopy'
 
 const DIMENSIONS: Array<{ key: string; label: string }> = [
   { key: 'goals_expectations', label: 'Goals & Expectations' },
@@ -225,7 +226,7 @@ export default function MatchDetailPage() {
             <ellipse cx="100" cy="170" rx="60" ry="50" fill="#9CA3AF" />
           </svg>
           <span className="absolute flex items-center gap-1.5 bg-white/75 px-5 py-2.5 text-sm uppercase tracking-wider text-[color:var(--haevn-muted-fg)] backdrop-blur-sm">
-            <Lock size={13} strokeWidth={1.5} /> Upgrade to view
+            <Lock size={13} strokeWidth={1.5} /> HAEVN+
           </span>
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[color:var(--haevn-dash-bg)] via-[color:var(--haevn-dash-bg)]/60 to-transparent" />
         </div>
@@ -270,7 +271,7 @@ export default function MatchDetailPage() {
             </p>
             {isFree && (
               <p className="mt-2 text-sm text-[color:var(--haevn-teal)]">
-                Unlock to read more
+                Read more with HAEVN+
               </p>
             )}
           </div>
@@ -366,7 +367,7 @@ export default function MatchDetailPage() {
                   onClick={() => router.push('/onboarding/membership')}
                   className="haevn-btn-gold text-sm"
                 >
-                  Unlock with HAEVN+
+                  {BECOME_MEMBER_CTA}
                 </button>
               </div>
             )}
@@ -411,7 +412,7 @@ export default function MatchDetailPage() {
         {isFree && (
           <div className="dash-card mt-6 p-6">
             <h3 className="mb-4 text-lg font-semibold text-[color:var(--haevn-navy)]">
-              Unlock this match
+              Become a HAEVN+ member
             </h3>
             <ul className="mb-6 space-y-3">
               {[
@@ -434,7 +435,7 @@ export default function MatchDetailPage() {
               onClick={() => router.push('/onboarding/membership')}
               className="haevn-btn-gold w-full text-sm"
             >
-              Upgrade to HAEVN+
+              {BECOME_MEMBER_CTA}
             </button>
           </div>
         )}

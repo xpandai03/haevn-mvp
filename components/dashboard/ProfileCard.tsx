@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { ReadyToMeetButton } from '@/components/dashboard/ReadyToMeetButton'
 import type { PairState } from '@/lib/connections/pairState'
+import { BECOME_MEMBER_CTA, BECOME_MEMBER_SHORT } from '@/lib/matches/membershipCopy'
 
 /** Portrait photo for match cards (matches the Emergent demo's 3/4 ratio) */
 const MATCH_PHOTO_H = 'aspect-[3/4]'
@@ -140,10 +141,10 @@ function RecAcceptFooter({
       // connected_unrevealed — connected, but identity/messaging withheld until upgrade.
       <div>
         <button type="button" onClick={stop(onActivate)} className="haevn-btn-gold flex w-full items-center justify-center gap-2 text-sm">
-          <Lock size={15} strokeWidth={2} /> Activate HAEVN+ to reveal
+          <Lock size={15} strokeWidth={2} /> {BECOME_MEMBER_CTA}
         </button>
         <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--haevn-charcoal)]/60">
-          You&rsquo;re connected. Activate HAEVN+ to see who and start messaging.
+          You&rsquo;re connected. HAEVN+ members see each other&rsquo;s profiles and can message.
         </p>
       </div>
     )
@@ -236,7 +237,7 @@ function SilhouetteOverlay({ className }: { className?: string }) {
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-[11px] tracking-[0.12em] uppercase text-[color:var(--haevn-muted-fg)] bg-white/75 backdrop-blur-sm px-3 py-1.5 flex items-center gap-1.5">
           <Lock size={12} strokeWidth={1.5} />
-          Unlock to Connect
+          {BECOME_MEMBER_SHORT}
         </span>
       </div>
     </div>
@@ -401,7 +402,7 @@ export function ProfileCard({
                     onClick(profile.id)
                   }}
                 >
-                  Unlock to read more
+                  Read more with HAEVN+
                 </button>
               )}
             </div>
