@@ -29,6 +29,13 @@ export default function LoginPage() {
   // have an auth identity (email_confirm:true) but no password and no Google.
   const [magicLoading, setMagicLoading] = useState(false)
   const [magicSent, setMagicSent] = useState(false)
+  // The address we told the member we sent to — echoed back so a typo is obvious.
+  const [sentTo, setSentTo] = useState('')
+  // Password is the FALLBACK now: hidden until asked for. Most members were
+  // imported from the survey and never set one.
+  const [showPassword, setShowPassword] = useState(false)
+  // Resend is offered only after 60s, so a slow inbox doesn't trigger a burst.
+  const [resendIn, setResendIn] = useState(0)
   // True until we've confirmed there's no existing session. Prevents the
   // login form from flashing in front of a user who's already authenticated
   // (e.g. arriving from the OAuth callback in any code path).
@@ -47,6 +54,13 @@ export default function LoginPage() {
   // silent-retry budget this session. Cleared on explicit Google
   // button click (each fresh user-initiated attempt gets one retry).
   const OAUTH_RETRY_KEY = 'haevn_oauth_retry_attempted'
+
+  // Tick the resend cooldown down to zero after a send.
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const t = setTimeout(() => setResendIn((n) => n - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
 
   // Resolve where an authenticated user should land, then navigate.
   // Mirrors the post-password-login routing so OAuth returns and password
@@ -126,12 +140,12 @@ export default function LoginPage() {
       // incident stayed invisible until a live call. Supabase collapses "used"
       // and "expired" into one message, so say both and give the way out.
       setError(
-        'That sign-in link has already been used or has expired. Links work once and are short-lived — request a new one below.'
+        'That link expired or was already used. Enter your email to get a new one.'
       )
     } else if (errorCode === 'otp_no_session') {
-      setError('That sign-in link was accepted but no session was created. Please request a new link below.')
+      setError('That link expired or was already used. Enter your email to get a new one.')
     } else if (errorCode === 'missing_token') {
-      setError('That sign-in link was incomplete — it was probably cut off when it was copied. Request a new one below.')
+      setError('That link was incomplete — your email app may have cut it off. Enter your email to get a new one.')
     }
   }, [])
 
@@ -268,34 +282,45 @@ export default function LoginPage() {
     }
   }
 
-  // Send a passwordless magic sign-in link. shouldCreateUser:false is REQUIRED:
-  // it logs the recipient into their EXISTING identity (imported users already
-  // have one) and never creates a new empty user. The link returns to
-  // /auth/callback, which exchanges the code into a session.
-  const handleMagicLink = async () => {
+  /**
+   * Request a sign-in link. Posts to our own route rather than calling
+   * signInWithOtp from the browser, for two reasons:
+   *   - the email must be the BRANDED Resend template on haevn.app; Supabase's
+   *     signInWithOtp sends through Supabase's SMTP, which we can't brand here;
+   *   - what gets emailed is an opaque handoff token, not a magic link, so a
+   *     mail scanner can't burn it before the member clicks (see PR #27).
+   * The route ALWAYS returns the same 200, so this handler cannot reveal
+   * whether an account exists — and neither can this UI.
+   */
+  const handleMagicLink = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     setError(null)
     const target = email.trim()
     if (!target) {
-      setError('Enter your email above, then request a sign-in link.')
+      setError('Enter your email and we\u2019ll send you a sign-in link.')
       return
     }
     setMagicLoading(true)
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: target,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const res = await fetch('/api/auth/login-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: target }),
       })
-      if (otpError) {
-        // Do not reveal whether the email exists; generic guidance only.
-        setError('We couldn’t send a sign-in link to that email. Check the address and try again.')
+      // The route answers 200 for EVERY email-dependent outcome (known, unknown,
+      // rate-limited), so a non-200 can only be an infrastructure failure — and
+      // must not be dressed up as "check your email" when nothing was sent.
+      // Reporting it leaks nothing: it never varies by address.
+      if (!res.ok) {
+        setError('We couldn\u2019t send a sign-in link right now. Please try again in a moment.')
         return
       }
+      // Identical outcome for every address — known, unknown, or rate-limited.
+      setSentTo(target)
       setMagicSent(true)
+      setResendIn(60)
     } catch {
-      setError('We couldn’t send a sign-in link right now. Please try again.')
+      setError('We couldn\u2019t send a sign-in link right now. Please try again.')
     } finally {
       setMagicLoading(false)
     }
@@ -479,7 +504,40 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={showPassword ? handleSubmit : handleMagicLink} className="space-y-5">
+            {magicSent ? (
+            <div className="space-y-4 text-center">
+              <p className="text-haevn-navy" style={{ fontWeight: 500, fontSize: '17px' }}>
+                Check your email
+              </p>
+              <p className="text-haevn-charcoal" style={{ fontWeight: 300, fontSize: '15px', lineHeight: '150%' }}>
+                We sent a sign-in link to <span style={{ fontWeight: 500 }}>{sentTo}</span>.
+                It expires in 15 minutes.
+              </p>
+              <p className="text-haevn-charcoal" style={{ fontWeight: 300, fontSize: '13px' }}>
+                Nothing there? Check your spam folder.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full rounded-full text-haevn-teal hover:bg-haevn-teal/5"
+                disabled={resendIn > 0 || magicLoading}
+                onClick={() => handleMagicLink()}
+                style={{ fontWeight: 500, fontSize: '15px' }}
+              >
+                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Send another link'}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setMagicSent(false); setResendIn(0) }}
+                className="text-haevn-teal hover:underline"
+                style={{ fontWeight: 400, fontSize: '13px' }}
+              >
+                Use a different email
+              </button>
+            </div>
+            ) : (
+            <>
             <div>
               <Label
                 htmlFor="email"
@@ -503,6 +561,7 @@ export default function LoginPage() {
               />
             </div>
 
+            {showPassword && (
             <div>
               <Label
                 htmlFor="password"
@@ -537,6 +596,7 @@ export default function LoginPage() {
                 </Link>
               </div>
             </div>
+            )}
 
             {error && (
               <Alert variant="destructive" className="rounded-xl">
@@ -549,21 +609,45 @@ export default function LoginPage() {
               type="submit"
               className="w-full bg-haevn-orange hover:opacity-90 text-white rounded-full mt-6"
               size="lg"
-              disabled={loading}
+              disabled={loading || magicLoading}
               style={{
                 fontWeight: 500,
                 fontSize: '18px'
               }}
             >
-              {loading ? (
+              {loading || magicLoading ? (
                 <>
                   <HaevnLoader size={18} className="mr-2" />
-                  Signing in...
+                  {showPassword ? 'Signing in...' : 'Sending link...'}
                 </>
-              ) : (
+              ) : showPassword ? (
                 'Sign in'
+              ) : (
+                'Send me a sign-in link'
               )}
             </Button>
+
+            {/* Password is the fallback. Most members were imported from the
+                survey and never set one, so it stays out of the way until asked for. */}
+            {!showPassword ? (
+              <button
+                type="button"
+                onClick={() => setShowPassword(true)}
+                className="w-full text-center text-haevn-teal hover:underline"
+                style={{ fontWeight: 400, fontSize: '14px' }}
+              >
+                Sign in with password instead
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setShowPassword(false); setPassword(''); setError(null) }}
+                className="w-full text-center text-haevn-teal hover:underline"
+                style={{ fontWeight: 400, fontSize: '14px' }}
+              >
+                Email me a sign-in link instead
+              </button>
+            )}
 
             {/* Divider */}
             <div className="relative my-2">
@@ -611,31 +695,7 @@ export default function LoginPage() {
               )}
             </Button>
 
-            {/* Magic-link (passwordless) — primary path for imported users with
-                no password/Google. Sends a one-click sign-in link to their email. */}
-            {magicSent ? (
-              <p className="text-center text-sm text-haevn-teal pt-1" style={{ fontWeight: 400 }}>
-                Check your email for a sign-in link. It logs you straight in — no password needed.
-              </p>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full rounded-full text-haevn-teal hover:bg-haevn-teal/5"
-                size="lg"
-                disabled={magicLoading || loading || googleLoading}
-                onClick={handleMagicLink}
-                style={{ fontWeight: 500, fontSize: '15px' }}
-              >
-                {magicLoading ? (
-                  <>
-                    <HaevnLoader size={18} className="mr-2" />
-                    Sending link...
-                  </>
-                ) : (
-                  'Email me a sign-in link'
-                )}
-              </Button>
+            </>
             )}
 
             <div

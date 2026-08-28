@@ -22,27 +22,36 @@
  *   - the handoff is single-use and expires (TTL below).
  */
 
-import { createHash, randomBytes } from 'crypto'
+import {
+  HAEVN_BASE,
+  newHandoffToken,
+  hashHandoffToken,
+  classifyHandoff,
+  type HandoffRow,
+  type HandoffState,
+} from '@/lib/auth/handoff'
+
+// Re-exported so this module stays the single import site for the impersonation
+// flow (and its tests) even though the primitives are now shared with the
+// magic-link sign-in handoff — same pattern, same guarantees.
+export { newHandoffToken, hashHandoffToken, classifyHandoff }
+export type { HandoffState }
+
+/** The impersonation_log row the consume path reasons about: the shared handoff
+ *  shape plus the account the link signs in. */
+export type ImpersonationHandoffRow = HandoffRow & { target_user_id: string }
+/** Back-compat alias — the impersonation flow's own name for its row shape. */
+export type { ImpersonationHandoffRow as HandoffRow }
 
 /**
  * Always www. The apex 307s to www and drops headers on the way (the same trap
  * that burned the Resend webhook). `handoffUrlIsSafe` guards this in tests.
  */
-export const IMPERSONATION_BASE = 'https://www.haevn.app'
+export const IMPERSONATION_BASE = HAEVN_BASE
 
 /** Handoff TTL. Ours, in code — independent of Supabase's OTP expiry, which
  *  now only has to cover the milliseconds between generateLink and the redirect. */
 export const HANDOFF_TTL_MS = 15 * 60 * 1000
-
-/** 256 bits of entropy, hex. This is the whole credential — treat it as one. */
-export function newHandoffToken(): string {
-  return randomBytes(32).toString('hex')
-}
-
-/** What we persist. One-way: the DB never holds anything that can sign anyone in. */
-export function hashHandoffToken(raw: string): string {
-  return createHash('sha256').update(raw).digest('hex')
-}
 
 export function buildHandoffUrl(token: string, base: string = IMPERSONATION_BASE): string {
   return `${base}/impersonate/${token}`
@@ -54,28 +63,6 @@ export function handoffUrlIsSafe(url: string): boolean {
 }
 
 // ─── Redemption classification ──────────────────────────────────────────────
-
-/** The subset of the impersonation_log row the consume path reasons about. */
-export interface HandoffRow {
-  target_user_id: string
-  expires_at: string | null
-  consumed_at: string | null
-}
-
-export type HandoffState = 'valid' | 'used' | 'expired' | 'invalid'
-
-/**
- * Three distinct failure states, never a catch-all — the previous flow funnelled
- * every failure into one Supabase string ("invalid or has expired") on a login
- * page that rendered no message at all, which is why the incident took a live
- * call to even notice.
- */
-export function classifyHandoff(row: HandoffRow | null, nowMs: number): HandoffState {
-  if (!row) return 'invalid'
-  if (row.consumed_at) return 'used'
-  if (!row.expires_at || Date.parse(row.expires_at) <= nowMs) return 'expired'
-  return 'valid'
-}
 
 /** Copy shown on the landing page. Keyed by state so it can't drift per surface. */
 export const HANDOFF_COPY: Record<Exclude<HandoffState, 'valid'> | 'failed', { title: string; detail: string }> = {
