@@ -37,7 +37,7 @@ export interface ExternalMatchResult {
     city: string
     age: number
     photo_url?: string
-    membership_tier: 'free' | 'plus' | 'select'
+    membership_tier: 'free' | 'plus' | 'pro' | 'select'
   }
   compatibility: {
     overallScore: number
@@ -341,7 +341,7 @@ export async function getExternalMatches(
         city: match.city || 'Unknown',
         age: match.age || 0,
         photo_url: photoUrl,
-        membership_tier: ((match as any).membership_tier as 'free' | 'plus' | 'select') || 'free',
+        membership_tier: ((match as any).membership_tier as 'free' | 'plus' | 'pro' | 'select') || 'free',
       },
       compatibility: {
         overallScore: result.overallScore,
@@ -438,7 +438,7 @@ export async function getExternalMatchDetails(
       city: matchPartnership.city || 'Unknown',
       age: matchPartnership.age || 0,
       photo_url: photoUrl,
-      membership_tier: ((matchPartnership as any).membership_tier as 'free' | 'plus' | 'select') || 'free',
+      membership_tier: ((matchPartnership as any).membership_tier as 'free' | 'plus' | 'pro' | 'select') || 'free',
     },
     compatibility: {
       overallScore: result.overallScore,

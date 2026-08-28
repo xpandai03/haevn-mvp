@@ -21,6 +21,7 @@ import {
 import { HaevnLoader } from '@/components/ui/haevn-loader'
 import type { UserCard, UsersSummary, UserSortKey } from '@/lib/admin/userCards'
 import type { MarketOption } from '@/components/admin/network/types'
+import { isPaidTier } from '@/lib/partnership/tier'
 
 interface UsersResponse {
   rows: UserCard[]
@@ -331,7 +332,7 @@ function Chip({ children, className }: { children: React.ReactNode; className?: 
 }
 function TierChip({ tier }: { tier: string | null }) {
   if (!tier) return null
-  const isPro = tier === 'pro'
+  const isPro = isPaidTier(tier)
   return <Chip className={isPro ? 'bg-haevn-teal/10 text-haevn-teal' : 'bg-gray-100 text-gray-500'}>{tier}</Chip>
 }
 function SurveyChip({ status }: { status: string }) {

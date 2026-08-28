@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/supabase'
+import { isMessagingEnabled } from '@/lib/promo/config'
 
 type Message = Database['public']['Tables']['messages']['Row']
 type Handshake = Database['public']['Tables']['handshakes']['Row']
@@ -234,6 +235,15 @@ export async function sendMessage(
   userId: string,
   body: string
 ): Promise<{ message?: ChatMessage; error?: string }> {
+  // MESSAGING KILL SWITCH. Before this flag, chat was gated on membership tier
+  // ALONE — so granting HAEVN+ through the Founding Member promo would have
+  // opened messaging to every activated member at once. Messaging must be able
+  // to stay closed independently of tier. Server-side, and on the WRITE path, so
+  // no client can bypass it. Default off: absent env means closed.
+  if (!isMessagingEnabled()) {
+    return { error: 'Messaging is not available yet' }
+  }
+
   const supabase = createClient()
 
   console.log('[sendMessage] Starting:', { handshakeId, userId, bodyLength: body.length })

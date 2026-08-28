@@ -5,7 +5,7 @@ export interface Partnership {
   id: string
   owner_id: string
   city: string
-  membership_tier: 'free' | 'plus' | 'select'
+  membership_tier: 'free' | 'plus' | 'pro' | 'select'
   created_at: string
   survey_responses?: {
     answers_json: SurveyAnswers

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth/context'
 import { useProfile } from '@/hooks/useProfile'
 import { getPartnershipStats, type PartnershipStats } from '@/lib/data/partnershipStats'
 import { getPrimaryPhoto } from '@/lib/services/photos'
+import { isPaidTier } from '@/lib/partnership/tier'
 
 export interface PartnerData {
   id: string
@@ -132,7 +133,9 @@ export function usePartnerStats() {
     age: 32, // TODO: Add age to profile schema
     role: 'A', // TODO: Determine role from partnership_members
     avatar: avatarUrl, // Use uploaded avatar from primary photo
-    isPaid: profile.membership_tier === 'plus' || profile.membership_tier === 'select',
+    // FIX: this compared the RAW column against 'plus'/'select', so a member
+    // stored as 'pro' (the live value until migration 055) read as UNPAID.
+    isPaid: isPaidTier(profile.membership_tier),
     stats,
     bio: 'Seeking meaningful connections built on trust, communication, and shared growth.', // TODO: Add bio field
     relationshipGoals: [
