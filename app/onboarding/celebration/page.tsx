@@ -99,8 +99,7 @@ export default function CelebrationPage() {
                   03
                 </span>
                 <span>
-                  Choose a membership plan to unlock messaging and connect with
-                  others.
+                  Become a HAEVN+ member to message and connect with others.
                 </span>
               </li>
             </ol>

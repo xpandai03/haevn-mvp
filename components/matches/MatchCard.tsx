@@ -12,7 +12,7 @@
  */
 
 import { useRouter } from 'next/navigation'
-import { Lock, MessageCircle, Heart, Star, Target, Users, Calendar, ChevronRight } from 'lucide-react'
+import { MessageCircle, Heart, Star, Target, Users, Calendar, ChevronRight } from 'lucide-react'
 import type { Section } from '@/lib/matches/sectionMapping'
 import type { MatchInterpretation } from '@/lib/ai/matchInterpretationSchema'
 import { topSections, fallbackMatchSummary, fallbackStrongestAreas } from '@/lib/matches/fallbackCopy'
@@ -49,7 +49,6 @@ const SECTION_ICON: Record<string, typeof Target> = {
 
 export function MatchCard({ matchId, score, sections, interpretation, state, badge, identity }: MatchCardProps) {
   const router = useRouter()
-  const isFree = state !== 'unlocked'
   const nameHeading = `${identity.nameToken}, ${identity.age}`
 
   // The "why" — AI copy when cached, deterministic fallback otherwise (never blank).
@@ -59,7 +58,6 @@ export function MatchCard({ matchId, score, sections, interpretation, state, bad
       ? interpretation.strongest_areas.slice(0, 3)
       : fallbackStrongestAreas(sections)
 
-  const goUpgrade = () => router.push('/onboarding/membership')
   const goBreakdown = () => router.push(`/dashboard/matches/${matchId}/breakdown`)
   const goMessage = () => router.push(`/dashboard/matches/${matchId}`)
 
@@ -146,39 +144,36 @@ export function MatchCard({ matchId, score, sections, interpretation, state, bad
           </ul>
         </div>
 
-        {/* Alignment-breakdown link row → expanded view */}
-        <button
-          type="button"
-          onClick={goBreakdown}
-          className="-mx-1 flex items-center justify-between rounded-lg border border-dashed border-[color:var(--haevn-border)] px-3 py-2.5 text-left transition-colors hover:border-[color:var(--haevn-teal)]/50"
-        >
-          <span>
-            <span className="block text-sm font-semibold text-[color:var(--haevn-navy)]">
-              See your full alignment breakdown
-            </span>
-            <span className="block text-[12px] text-[color:var(--haevn-muted-fg)]">Explore all 5 areas of compatibility</span>
-          </span>
-          <ChevronRight size={18} className="shrink-0 text-[color:var(--haevn-muted-fg)]" />
-        </button>
-
-        {/* CTA per state */}
+        {/* CTA per state.
+            The card has ONE prominent action. For free and nudged members that action
+            is the alignment breakdown — the product's selling feature — not an upgrade
+            button; the paywall is reached from inside the breakdown instead. Unlocked
+            members keep messaging as their primary and get the breakdown as secondary. */}
         <div className="mt-auto pt-1">
           {state === 'unlocked' ? (
             <>
               <button type="button" onClick={goMessage} className="haevn-btn-teal flex w-full items-center justify-center gap-2 text-sm">
                 <MessageCircle size={16} /> Send a Message
               </button>
-              <p className="mt-2 text-center text-[12px] text-[color:var(--haevn-muted-fg)]">Start a conversation.</p>
+              <button
+                type="button"
+                onClick={goBreakdown}
+                className="mt-2 flex w-full items-center justify-center gap-1 text-center text-[13px] font-semibold leading-tight text-[color:var(--haevn-teal)] transition-colors hover:text-[color:var(--haevn-teal-hover)]"
+              >
+                See your full alignment breakdown <ChevronRight size={15} className="shrink-0" />
+              </button>
             </>
           ) : (
             <>
-              <button type="button" onClick={goUpgrade} className="haevn-btn-gold flex w-full items-center justify-center gap-2 text-sm">
-                <Lock size={15} /> {state === 'nudged' ? 'See who nudged you' : `See who your ${score}% match is`}
+              <button
+                type="button"
+                onClick={goBreakdown}
+                className="haevn-btn-teal flex w-full items-center justify-center gap-2 text-center text-sm leading-tight"
+              >
+                See your full alignment breakdown <ChevronRight size={16} className="shrink-0" />
               </button>
               <p className="mt-2 text-center text-[12px] leading-relaxed text-[color:var(--haevn-muted-fg)]">
-                {state === 'nudged'
-                  ? 'HAEVN+ membership required to view and respond.'
-                  : 'Unlock their photos, full profile, complete compatibility breakdown and the ability to connect.'}
+                Explore all 5 areas of compatibility.
               </p>
             </>
           )}

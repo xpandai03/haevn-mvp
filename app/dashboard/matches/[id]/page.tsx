@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/lib/auth/context'
 import { useToast } from '@/hooks/use-toast'
 import FullPageLoader from '@/components/ui/full-page-loader'
+import { BECOME_MEMBER_CTA } from '@/lib/matches/membershipCopy'
 
 const DIMENSIONS: Array<{ key: string; label: string }> = [
   { key: 'goals_expectations', label: 'Goals & Expectations' },
@@ -270,7 +271,7 @@ export default function MatchDetailPage() {
             </p>
             {isFree && (
               <p className="mt-2 text-sm text-[color:var(--haevn-teal)]">
-                Unlock to read more
+                Read more with HAEVN+
               </p>
             )}
           </div>
@@ -366,7 +367,7 @@ export default function MatchDetailPage() {
                   onClick={() => router.push('/onboarding/membership')}
                   className="haevn-btn-gold text-sm"
                 >
-                  Unlock with HAEVN+
+                  {BECOME_MEMBER_CTA}
                 </button>
               </div>
             )}
@@ -411,7 +412,7 @@ export default function MatchDetailPage() {
         {isFree && (
           <div className="dash-card mt-6 p-6">
             <h3 className="mb-4 text-lg font-semibold text-[color:var(--haevn-navy)]">
-              Unlock this match
+              Become a HAEVN+ member
             </h3>
             <ul className="mb-6 space-y-3">
               {[

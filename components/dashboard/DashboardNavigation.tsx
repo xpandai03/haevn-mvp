@@ -77,7 +77,7 @@ export function DashboardNavigation({ membershipTier = 'free' }: DashboardNaviga
               <NavItem
                 icon={<Sparkles className="h-5 w-5" />}
                 label="Upgrade Account"
-                sublabel="Unlock messaging & more"
+                sublabel="Become a HAEVN+ member"
                 href="/onboarding/membership"
                 onClick={() => router.push('/onboarding/membership')}
               />

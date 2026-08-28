@@ -62,7 +62,7 @@ export function UpgradeBar({ tier, delayMs = 15_000 }: UpgradeBarProps) {
         <Sparkles className="w-4 h-4 shrink-0" strokeWidth={1.75} />
         <p className="flex-1 text-sm leading-snug">
           You&rsquo;re viewing as a <span className="font-medium">Member</span>.
-          Upgrade to HAEVN+ to unlock full profiles, connect, and message.
+          Become a HAEVN+ member to see full profiles, connect, and message.
         </p>
         <Link
           href="/onboarding/membership"
