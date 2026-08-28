@@ -118,7 +118,7 @@ async function main() {
 
   // ── redemption: three distinct states, never a catch-all ────────────────
   {
-    const live = { target_user_id: 'u1', expires_at: new Date(T0 + 60_000).toISOString(), consumed_at: null }
+    const live = { expires_at: new Date(T0 + 60_000).toISOString(), consumed_at: null }
     eq(classifyHandoff(live, T0), 'valid', 'unconsumed, unexpired → valid')
     eq(classifyHandoff({ ...live, consumed_at: new Date(T0).toISOString() }, T0), 'used', 'consumed → used')
     eq(classifyHandoff({ ...live, expires_at: new Date(T0 - 1).toISOString() }, T0), 'expired', 'past expiry → expired')
@@ -135,19 +135,19 @@ async function main() {
     const s = fakeStore({ expires_at: new Date(T0 + HANDOFF_TTL_MS).toISOString(), consumed_at: null })
     ok(s.claim(T0), 'first consume succeeds')
     ok(!s.claim(T0 + 1000), 'second consume of the same token is refused')
-    eq(classifyHandoff({ target_user_id: 'u1', ...s.row }, T0 + 1000), 'used', 'and the landing page then says "used"')
+    eq(classifyHandoff({ ...s.row }, T0 + 1000), 'used', 'and the landing page then says "used"')
   }
   {
     const s = fakeStore({ expires_at: new Date(T0 + HANDOFF_TTL_MS).toISOString(), consumed_at: null })
     const afterTtl = T0 + HANDOFF_TTL_MS + 1
     ok(!s.claim(afterTtl), 'consume after expiry is refused')
     eq(s.row.consumed_at, null, 'a refused consume does not mark the row consumed')
-    eq(classifyHandoff({ target_user_id: 'u1', ...s.row }, afterTtl), 'expired', 'and the landing page says "expired"')
+    eq(classifyHandoff({ ...s.row }, afterTtl), 'expired', 'and the landing page says "expired"')
   }
   {
     // The whole point of the fix: reading the landing page must not consume.
     const s = fakeStore({ expires_at: new Date(T0 + HANDOFF_TTL_MS).toISOString(), consumed_at: null })
-    for (let i = 0; i < 5; i++) classifyHandoff({ target_user_id: 'u1', ...s.row }, T0 + i)
+    for (let i = 0; i < 5; i++) classifyHandoff({ ...s.row }, T0 + i)
     eq(s.row.consumed_at, null, 'GET-side classification never sets consumed_at (scanner-safe)')
     ok(s.claim(T0 + 10), 'the human POST still works after 5 machine GETs')
   }
