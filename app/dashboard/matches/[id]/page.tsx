@@ -226,7 +226,7 @@ export default function MatchDetailPage() {
             <ellipse cx="100" cy="170" rx="60" ry="50" fill="#9CA3AF" />
           </svg>
           <span className="absolute flex items-center gap-1.5 bg-white/75 px-5 py-2.5 text-sm uppercase tracking-wider text-[color:var(--haevn-muted-fg)] backdrop-blur-sm">
-            <Lock size={13} strokeWidth={1.5} /> Upgrade to view
+            <Lock size={13} strokeWidth={1.5} /> HAEVN+
           </span>
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[color:var(--haevn-dash-bg)] via-[color:var(--haevn-dash-bg)]/60 to-transparent" />
         </div>
@@ -435,7 +435,7 @@ export default function MatchDetailPage() {
               onClick={() => router.push('/onboarding/membership')}
               className="haevn-btn-gold w-full text-sm"
             >
-              Upgrade to HAEVN+
+              {BECOME_MEMBER_CTA}
             </button>
           </div>
         )}
