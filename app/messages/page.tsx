@@ -17,6 +17,8 @@ import {
   formatConversationPreviewText,
 } from '@/lib/utils/conversationPreview'
 import FullPageLoader from '@/components/ui/full-page-loader'
+import { getMessagingOpen } from '@/lib/actions/messaging'
+import { MessagingClosed } from '@/components/chat/MessagingClosed'
 
 function MessagesPageInner() {
   const router = useRouter()
@@ -28,6 +30,8 @@ function MessagesPageInner() {
   const [tier, setTier] = useState<'free' | 'plus'>('free')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // MESSAGING_ENABLED is server-only; ask for it rather than reading a public env.
+  const [messagingClosed, setMessagingClosed] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -38,6 +42,14 @@ function MessagesPageInner() {
       }
       try {
         setLoading(true)
+        // MESSAGING KILL SWITCH first — independent of tier, and before any
+        // conversation is fetched. /chat and /chat/[connectionId] already do
+        // this; /messages is the third conversation surface and was missed.
+        if (!(await getMessagingOpen())) {
+          setMessagingClosed(true)
+          setLoading(false)
+          return
+        }
         const [list, membership] = await Promise.all([
           getMyConversations(),
           getUserMembershipTier(),
@@ -53,6 +65,8 @@ function MessagesPageInner() {
     }
     void load()
   }, [user, authLoading, router])
+
+  if (messagingClosed) return <MessagingClosed />
 
   if (authLoading || loading) {
     return <FullPageLoader />

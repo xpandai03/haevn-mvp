@@ -104,6 +104,17 @@ function main() {
     .filter((f) => /["'`]\/founding-member/.test(read(f)))
   eq(offenders, [], 'no CTA links directly to /founding-member — everything routes through the choke point')
 
+  // ── every conversation surface is gated, not just the two chat routes ────
+  // /messages was missed on the first pass and only caught in prod verification.
+  for (const surface of ['app/chat/page.tsx', 'app/chat/[connectionId]/page.tsx', 'app/messages/page.tsx']) {
+    const src = code(surface)
+    ok(/getMessagingOpen/.test(src), `${surface} checks the messaging kill switch`)
+    ok(/MessagingClosed/.test(src), `${surface} renders the closed state`)
+  }
+  for (const writer of ['lib/services/chat.ts', 'lib/actions/connections.ts']) {
+    ok(/isMessagingEnabled/.test(code(writer)), `${writer} guards the send path`)
+  }
+
   report('founding-promo-routes')
 }
 main()
