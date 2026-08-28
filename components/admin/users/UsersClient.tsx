@@ -272,7 +272,7 @@ function ImpersonatePanel({ user }: { user: UserCard }) {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || `Failed (${res.status})`)
-      setLink(body.link)
+      setLink(body.url)
     } catch (e: any) { setErr(e?.message || 'Failed to generate link') } finally { setBusy(false) }
   }
 
@@ -312,7 +312,7 @@ function ImpersonatePanel({ user }: { user: UserCard }) {
 
       {link && (
         <div className="mt-2 space-y-2">
-          <p className="text-[11px] font-medium text-amber-800">Link generated & logged. Open in an incognito window:</p>
+          <p className="text-[11px] font-medium text-amber-800">Link generated & logged. Open it in a <strong>Chrome guest profile</strong> — it lands on a confirmation page and uses nothing until you press the button there. Good for 15 minutes, once.</p>
           <div className="flex items-center gap-1.5">
             <input readOnly value={link} className="min-w-0 flex-1 rounded-md border bg-white px-2 py-1.5 font-mono text-[10px] text-gray-600" />
             <button onClick={copy} className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50">

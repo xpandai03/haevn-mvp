@@ -119,6 +119,19 @@ export default function LoginPage() {
       setError('Google sign-in completed but no session was created. Please try again.')
     } else if (errorCode === 'missing_code') {
       setError('Google sign-in returned without an authorization code. Please try again.')
+    } else if (errorCode === 'otp_verify') {
+      // Email-link (magic link) failure from /auth/confirm. Before this branch
+      // existed the page rendered NOTHING here, so the only clue was the
+      // ?reason= in the address bar — which is how the 2026-08-25 impersonation
+      // incident stayed invisible until a live call. Supabase collapses "used"
+      // and "expired" into one message, so say both and give the way out.
+      setError(
+        'That sign-in link has already been used or has expired. Links work once and are short-lived — request a new one below.'
+      )
+    } else if (errorCode === 'otp_no_session') {
+      setError('That sign-in link was accepted but no session was created. Please request a new link below.')
+    } else if (errorCode === 'missing_token') {
+      setError('That sign-in link was incomplete — it was probably cut off when it was copied. Request a new one below.')
     }
   }, [])
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminRoute } from '@/lib/admin/requireAdmin'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { buildSignInUrl } from '@/lib/services/notifications'
 import { runImpersonation } from '@/lib/admin/impersonation'
 
 export const dynamic = 'force-dynamic'
@@ -9,15 +8,18 @@ export const dynamic = 'force-dynamic'
 /**
  * Impersonation side-door — the highest-privilege action. POST { targetUserId, reason }.
  *
- * Order is the guarantee: allowlist gate → (audit row written) → link generated →
+ * Order is the guarantee: allowlist gate → (audit row written) → handoff URL
  * returned ONCE. A non-allowlisted caller is refused at the gate and NOTHING is
- * generated. The generated link is never logged or persisted server-side.
- * Reuses the proven generateLink path (buildSignInUrl); no email is sent, TTL is
- * Supabase-default (not extended), same-tab session juggling is out of scope.
+ * generated.
+ *
+ * This route no longer produces a sign-in link. It produces an opaque handoff
+ * token whose landing page does nothing on GET; the link is created only when a
+ * human POSTs from that page (see lib/admin/impersonation.ts for the 2026-08-25
+ * incident that forced this). Only the token's SHA-256 is persisted.
  */
 export async function POST(request: NextRequest) {
   const gate = await requireAdminRoute()
-  if (!gate.ok) return gate.response // 403 — nothing resolved, audited, or generated
+  if (!gate.ok) return gate.response // 401 — nothing resolved, audited, or generated
 
   const admin = createAdminClient()
   const body = await request.json().catch(() => ({}))
@@ -35,16 +37,15 @@ export async function POST(request: NextRequest) {
         const { error } = await admin.from('impersonation_log').insert(row)
         if (error) throw new Error(`audit write failed: ${error.message}`)
       },
-      generateLink: (email) => buildSignInUrl(email),
     }
   )
 
   if (!result.ok) {
-    // Log the failure reason ONLY — never a link (there isn't one on this path).
+    // Log the failure reason ONLY — never a token (there isn't one on this path).
     console.warn('[impersonate] refused/failed:', result.error)
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
 
-  // The link is returned to the caller here and nowhere else — not logged, not stored.
-  return NextResponse.json({ link: result.link, targetEmail: result.targetEmail })
+  // The raw handoff token is returned to the caller here and nowhere else.
+  return NextResponse.json({ url: result.url, expiresAt: result.expiresAt })
 }
