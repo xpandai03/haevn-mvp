@@ -21,6 +21,10 @@ const offerUi = code('app/founding-member/FoundingOffer.tsx')
 const confirmUi = code('app/founding-member/FoundingConfirmation.tsx')
 const actions = code('app/founding-member/actions.ts')
 const config = code('lib/promo/config.ts')
+// The promo-to-all-markets paths: these now decide the copy city and the
+// attribution value, so they are exactly where a city literal would creep in.
+const eligibility = code('lib/promo/eligibility.ts')
+const memberCtx = code('lib/promo/memberContext.ts')
 
 function main() {
   // ── the activation is a grant, not a purchase ───────────────────────────
@@ -55,10 +59,40 @@ function main() {
 
   // ── NO HARDCODED CITY ANYWHERE ──────────────────────────────────────────
   const cityWords = /\b(Austin|Portland|Round Rock|Tampa|Salem|Beaverton)\b/
-  for (const [name, src] of Object.entries({ chokepoint, offerPage, offerUi, confirmUi, actions, config })) {
+  for (const [name, src] of Object.entries({ chokepoint, offerPage, offerUi, confirmUi, actions, config, eligibility, memberCtx })) {
     ok(!cityWords.test(src), `${name} contains no hardcoded city name`)
   }
   ok(/marketDisplayName|cityName/.test(offerUi), 'the city in the copy comes from markets.display_name')
+
+  // ── the city-less variant is a real branch, not a blank interpolation ────
+  // Once the promo opens beyond one market, members with no market — and in
+  // principle no city — reach these sentences. "founding members in ." must be
+  // impossible, so both surfaces must branch on the city rather than inline it.
+  for (const [name, src] of Object.entries({ offerUi, confirmUi })) {
+    ok(/cityName\s*\n?\s*\?/.test(src), `${name} branches on the city rather than always interpolating it`)
+    ok(/founding members,/.test(src), `${name} has a city-less sentence with no dangling clause`)
+  }
+
+  // ── promo_market is decided in ONE place ────────────────────────────────
+  // The slug-or-city fallback lives in decideEligibility. If a caller re-derives
+  // it, the column and the copy can drift apart silently.
+  ok(/promo_market: decision\.promoMarket/.test(actions),
+    'promo_market is written from the single decided value, never re-derived')
+  ok(!/promo_market:.*(marketSlug|cityName)/.test(actions),
+    'the activation never assembles promo_market from its parts')
+  ok(/promoMarket:\s*marketSlug \?\? \(city \|\| null\)/.test(eligibility),
+    'the slug-or-city-or-null fallback is stated once, in eligibility')
+
+  // ── the sentinel widens the MARKET axis only ────────────────────────────
+  ok(/isAllMarkets/.test(eligibility), 'eligibility consults the sentinel')
+  ok(/isPaidTier\(tier\)/.test(eligibility) && /if \(plusSource\)/.test(eligibility),
+    'the paid and already-activated guards are still unconditional')
+  // Match the CALL SITE, not the import line at the top of the file.
+  const sentinelIdx = eligibility.indexOf('!isAllMarkets(cfg)')
+  const paidIdx = eligibility.indexOf('isPaidTier(tier)')
+  ok(sentinelIdx > -1, 'the sentinel is consulted at the market check')
+  ok(paidIdx > -1 && sentinelIdx > paidIdx,
+    'the sentinel is reached only AFTER the paid/activated guards — it can never widen them')
 
   // ── no member-facing mention of payment problems ────────────────────────
   const forbidden = /payment (issue|problem|unavailable|processor)|cannot (accept|process) payment|checkout (is )?(down|unavailable)|billing (issue|problem)/i

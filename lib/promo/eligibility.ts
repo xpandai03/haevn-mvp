@@ -10,7 +10,7 @@
 
 import { isPaidTier } from '@/lib/partnership/tier'
 import type { PromoConfig } from './config'
-import { isMarketEnabled } from './config'
+import { isAllMarkets, isMarketEnabled } from './config'
 
 export type IneligibleReason =
   | 'promo_disabled'
@@ -20,7 +20,27 @@ export type IneligibleReason =
   | 'market_not_enabled'
 
 export type Eligibility =
-  | { eligible: true; marketSlug: string; marketDisplayName: string; termMonths: number }
+  | {
+      eligible: true
+      /** markets.slug, or null when the member resolves to no market (sentinel only). */
+      marketSlug: string | null
+      /** markets.display_name, '' when there is none. Kept for existing callers. */
+      marketDisplayName: string
+      /** partnerships.city — the member's own city, whether or not it is a market. */
+      cityName: string
+      /**
+       * The ONE city string member-facing copy should interpolate:
+       * market display name, else the member's own city, else '' (city-less variant).
+       */
+      displayCity: string
+      /**
+       * What partnerships.promo_market records: the market slug when there is
+       * one, else the member's actual city, else null. Decided here so no caller
+       * re-derives it and the two can never drift.
+       */
+      promoMarket: string | null
+      termMonths: number
+    }
   | { eligible: false; reason: IneligibleReason }
 
 export interface EligibilityInput {
@@ -33,10 +53,16 @@ export interface EligibilityInput {
   marketSlug: string | null | undefined
   /** markets.display_name — what member-facing copy interpolates */
   marketDisplayName: string | null | undefined
+  /**
+   * partnerships.city. Under the `all` sentinel this is what carries the copy and
+   * the attribution for a member whose city belongs to no market. Optional so
+   * every existing caller keeps compiling and behaves exactly as before.
+   */
+  cityName?: string | null | undefined
 }
 
 export function decideEligibility(input: EligibilityInput): Eligibility {
-  const { cfg, tier, plusSource, marketSlug, marketDisplayName } = input
+  const { cfg, tier, plusSource, marketSlug, marketDisplayName, cityName } = input
 
   if (!cfg.enabled) return { eligible: false, reason: 'promo_disabled' }
 
@@ -48,16 +74,26 @@ export function decideEligibility(input: EligibilityInput): Eligibility {
   // activation was rolled back or expired. Do not grant a second term here.
   if (plusSource) return { eligible: false, reason: 'already_activated' }
 
-  if (!marketSlug) return { eligible: false, reason: 'no_market' }
+  // THE ONLY WIDENED AXIS. Without the sentinel this is byte-for-byte the old
+  // behaviour: no slug -> no_market. With it, a member who resolves to no market
+  // is eligible on the strength of every other axis, which is the whole point —
+  // outside Austin there is no slug to name.
+  if (!marketSlug && !isAllMarkets(cfg)) return { eligible: false, reason: 'no_market' }
   if (!isMarketEnabled(cfg, marketSlug)) return { eligible: false, reason: 'market_not_enabled' }
+
+  // Copy needs a city name. Prefer the market's display name, fall back to the
+  // member's own city, and if there is neither, callers render the city-less
+  // variant of the sentence — never a hardcoded literal.
+  const display = marketDisplayName ?? ''
+  const city = cityName?.trim() ?? ''
 
   return {
     eligible: true,
-    marketSlug,
-    // Copy needs a city name; if the market row has no display_name we still
-    // must not fall back to a hardcoded literal, so callers render the
-    // city-less variant of the sentence.
-    marketDisplayName: marketDisplayName ?? '',
+    marketSlug: marketSlug ?? null,
+    marketDisplayName: display,
+    cityName: city,
+    displayCity: display || city,
+    promoMarket: marketSlug ?? (city || null),
     termMonths: cfg.termMonths,
   }
 }

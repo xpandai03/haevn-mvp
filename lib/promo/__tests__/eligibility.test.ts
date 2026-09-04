@@ -3,12 +3,17 @@
  * Run: npx tsx lib/promo/__tests__/eligibility.test.ts
  */
 import { decideEligibility, hasActivatedPromo, computeExpiry } from '../eligibility'
-import { getPromoConfig, isMarketEnabled, isMessagingEnabled, DEFAULT_TERM_MONTHS, type PromoConfig } from '../config'
+import {
+  getPromoConfig, isMarketEnabled, isAllMarkets, isMessagingEnabled,
+  DEFAULT_TERM_MONTHS, PROMO_ALL_MARKETS, type PromoConfig,
+} from '../config'
 import { FOUNDING_MEMBER_PROMO, PROMO_EVENTS } from '../constants'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
 
 const ON: PromoConfig = { enabled: true, markets: ['austin'], termMonths: 6 }
 const OFF: PromoConfig = { ...ON, enabled: false }
+/** The sentinel: every market, and every member who resolves to no market. */
+const ALL: PromoConfig = { ...ON, markets: [PROMO_ALL_MARKETS] }
 
 const base = { plusSource: null, marketSlug: 'austin', marketDisplayName: 'Austin' }
 const decide = (o: Record<string, unknown> = {}) =>
@@ -40,6 +45,71 @@ function main() {
   eq(decideEligibility({ cfg: { ...ON, markets: [] }, tier: 'free', ...base } as any as any).eligible === false
     ? (decideEligibility({ cfg: { ...ON, markets: [] }, tier: 'free', ...base } as any) as any).reason : 'ELIGIBLE',
     'market_not_enabled', 'empty market list -> nobody eligible')
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE `all` SENTINEL — the only widened axis
+  // ═══════════════════════════════════════════════════════════════════════════
+  // A member outside Austin resolves to NO slug, which the slug list cannot
+  // express. The sentinel widens exactly that and nothing else.
+
+  // ── sentinel OFF: a city NEVER rescues a member with no market ────────────
+  eq(decide({ marketSlug: null, cityName: 'Portland' }).reason, 'no_market',
+    'sentinel off + no slug -> no_market, even with a city (unchanged behaviour)')
+  eq(decide({ marketSlug: null, cityName: null }).reason, 'no_market',
+    'sentinel off + no slug + no city -> no_market')
+  eq(decide({ marketSlug: 'portland', cityName: 'Portland' }).reason, 'market_not_enabled',
+    'sentinel off + an unlisted slug -> market_not_enabled, city is irrelevant')
+
+  // ── sentinel ON × slug / city / neither ───────────────────────────────────
+  const all = (o: Record<string, unknown> = {}) =>
+    decideEligibility({ cfg: ALL, tier: 'free', ...base, ...o } as any) as any
+
+  ok(all().eligible, 'sentinel + in-market member -> ELIGIBLE')
+  eq(all().promoMarket, 'austin', 'a member WITH a market still records the slug')
+  eq(all().displayCity, 'Austin', '...and the copy still uses the market display name')
+
+  const portland = all({ marketSlug: null, marketDisplayName: null, cityName: 'Portland' })
+  ok(portland.eligible, 'sentinel + NO market + a city -> ELIGIBLE (the whole point)')
+  eq(portland.promoMarket, 'Portland', 'promo_market records the member\'s actual city')
+  eq(portland.displayCity, 'Portland', 'copy interpolates the member\'s actual city')
+  eq(portland.marketSlug, null, 'no slug is invented for a member who has no market')
+
+  const nowhere = all({ marketSlug: null, marketDisplayName: null, cityName: null })
+  ok(nowhere.eligible, 'sentinel + no market + NO city -> still ELIGIBLE')
+  eq(nowhere.promoMarket, null, 'a city-less member records promo_market = null, never a literal')
+  eq(nowhere.displayCity, '', '...and gets the city-less copy variant')
+
+  eq(all({ marketSlug: null, marketDisplayName: null, cityName: '   ' }).promoMarket, null,
+    'a whitespace-only city is treated as no city, not as a blank market')
+  eq(all({ marketSlug: null, marketDisplayName: null, cityName: '  Portland  ' }).displayCity, 'Portland',
+    'city is trimmed for copy')
+
+  ok(all({ marketSlug: 'portland', marketDisplayName: 'Portland' }).eligible,
+    'sentinel + a slug that is NOT in the list -> eligible; the sentinel outranks the list')
+
+  // ── sentinel ON: every OTHER axis still fails closed ──────────────────────
+  for (const t of ['plus', 'pro', 'select']) {
+    eq(all({ tier: t }).reason, 'already_paid', `sentinel + tier '${t}' -> still already_paid`)
+    eq(all({ tier: t, marketSlug: null, cityName: 'Portland' }).reason, 'already_paid',
+      `sentinel + tier '${t}' + no market -> still already_paid, never eligible`)
+  }
+  eq(all({ plusSource: FOUNDING_MEMBER_PROMO }).reason, 'already_activated',
+    'sentinel never grants a second term')
+  eq(all({ plusSource: FOUNDING_MEMBER_PROMO, marketSlug: null, cityName: 'Portland' }).reason,
+    'already_activated', 'sentinel + no market + already activated -> still already_activated')
+  eq(decideEligibility({ cfg: { ...ALL, enabled: false }, tier: 'free', ...base } as any as any).eligible === false
+    ? (decideEligibility({ cfg: { ...ALL, enabled: false }, tier: 'free', ...base } as any) as any).reason : 'ELIGIBLE',
+    'promo_disabled', 'the kill switch outranks the sentinel — disabled means disabled')
+
+  // ── isAllMarkets / isMarketEnabled under the sentinel ─────────────────────
+  ok(!isAllMarkets(ON), 'a plain slug list is not the sentinel')
+  ok(isAllMarkets(ALL), 'the sentinel is recognised')
+  ok(!isAllMarkets({ ...ALL, enabled: false }), 'a disabled promo is never "all markets"')
+  ok(isMarketEnabled(ALL, null), 'under the sentinel a null slug IS enabled')
+  ok(isMarketEnabled(ALL, 'anything-at-all'), 'under the sentinel any slug is enabled')
+  ok(!isMarketEnabled({ ...ALL, enabled: false }, null), 'disabled + sentinel -> still closed')
+  ok(isAllMarkets({ ...ON, markets: ['austin', PROMO_ALL_MARKETS] }),
+    'the sentinel works alongside explicit slugs')
 
   // ── term + copy inputs flow through ─────────────────────────────────────
   eq(decide({ cfg: { ...ON, termMonths: 12 } }).termMonths, 12, 'configured term reaches the decision')
@@ -74,6 +144,12 @@ function main() {
   })
   withEnv({ FOUNDING_PROMO_ENABLED: 'true', FOUNDING_PROMO_MARKETS: ' Austin , portland ,,' }, () => {
     eq(getPromoConfig().markets, ['austin', 'portland'], 'markets trimmed, lowercased, blanks dropped')
+  })
+  withEnv({ FOUNDING_PROMO_ENABLED: 'true', FOUNDING_PROMO_MARKETS: ' ALL ' }, () => {
+    ok(isAllMarkets(getPromoConfig()), "FOUNDING_PROMO_MARKETS=' ALL ' parses to the sentinel")
+  })
+  withEnv({ FOUNDING_PROMO_ENABLED: undefined, FOUNDING_PROMO_MARKETS: 'all' }, () => {
+    ok(!isAllMarkets(getPromoConfig()), 'the sentinel without the enable flag is still off')
   })
   for (const bad of ['0', '-3', 'abc', '']) {
     withEnv({ FOUNDING_PROMO_TERM_MONTHS: bad }, () => {
