@@ -2,6 +2,7 @@ import { sendSMS } from './twilio'
 import { sendEmail } from './email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendScopeForNotificationType } from '@/lib/suppression/scope'
+import { noMatchSms, noMatchEmail, type NoMatchVariant } from '@/lib/notify/noMatchCopy'
 
 // ─── Base URL (never hardcode a domain) ────────────────────────
 
@@ -89,14 +90,24 @@ const EMAIL_TEMPLATES = {
 // ─── Core Dispatcher ────────────────────────────────────────────
 
 interface NotificationOptions {
-  type: 'match' | 'message' | 'connection_interest'
+  type: 'match' | 'message' | 'connection_interest' | 'no_match'
   phone?: string | null
   email?: string | null
   senderName?: string
   /** Partnership ID for tracking (optional) */
   partnershipId?: string
-  /** Per-user passwordless magic sign-in URL for the match CTA (see buildSignInUrl). */
+  /**
+   * Sign-in URL for the CTA. For every cron-issued notification this is a
+   * HANDOFF url (/login-link/<token>, see lib/auth/notifySignIn.ts) — never a
+   * raw magic link, which mail scanners burn before the member taps it.
+   */
   signInUrl?: string
+  /** no_match only: which sentence the member gets. Live market vs pre-launch. */
+  noMatchVariant?: NoMatchVariant
+  /** no_match only: partnerships.city, interpolated into {city}. Null = no clause. */
+  city?: string | null
+  /** no_match only: per-recipient one-click unsubscribe URL (footer + RFC 8058). */
+  unsubUrl?: string | null
 }
 
 /**
@@ -144,19 +155,27 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   // Build messages based on type. Match CTA = the per-user magic sign-in URL
   // (passwordless). Fallback to the login page only if no link was generated.
   const matchSignInUrl = opts.signInUrl || `${SIGN_IN_BASE}/auth/login`
+  // no_match copy lives in lib/notify/noMatchCopy.ts (variant + city + env
+  // overrides); the other three keep their templates above, untouched.
+  const noMatchVariant: NoMatchVariant = opts.noMatchVariant ?? 'pre_launch'
+
   const smsBody =
     opts.type === 'match'
       ? SMS_TEMPLATES.match(matchSignInUrl)
       : opts.type === 'connection_interest'
         ? SMS_TEMPLATES.connection_interest(matchSignInUrl)
-        : SMS_TEMPLATES.message(senderName)
+        : opts.type === 'no_match'
+          ? noMatchSms(noMatchVariant, opts.city, matchSignInUrl)
+          : SMS_TEMPLATES.message(senderName)
 
   const emailTemplate =
     opts.type === 'match'
       ? EMAIL_TEMPLATES.match(matchSignInUrl)
       : opts.type === 'connection_interest'
         ? EMAIL_TEMPLATES.connection_interest(matchSignInUrl)
-        : EMAIL_TEMPLATES.message(senderName)
+        : opts.type === 'no_match'
+          ? noMatchEmail(noMatchVariant, opts.city, matchSignInUrl, opts.unsubUrl ?? undefined)
+          : EMAIL_TEMPLATES.message(senderName)
 
   // Send in parallel
   const promises: Promise<void>[] = []
@@ -178,12 +197,23 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
 
   // Email — tag the send scope from the notification type so the suppression
   // guard applies correctly: connection_interest nudges are 'all_noncritical'
-  // (a complaint suppresses them); match/message stay 'critical' (never
-  // suppressed — they carry the sign-in link and are the core service).
+  // (a complaint suppresses them); no_match is 'renotify' (ANY suppression,
+  // including a plain unsubscribe, stops the recurring ping — see
+  // lib/suppression/scope.ts); match/message stay 'critical' (never suppressed —
+  // they carry the sign-in link and are the core service).
   if (opts.email) {
     promises.push(
       sendEmail(opts.email, emailTemplate.subject, emailTemplate.html, {
         scope: sendScopeForNotificationType(opts.type),
+        // RFC 8058 one-click unsubscribe on the recurring broadcast only.
+        ...(opts.unsubUrl
+          ? {
+              headers: {
+                'List-Unsubscribe': `<${opts.unsubUrl}>, <mailto:unsubscribe@haevn.app>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              },
+            }
+          : {}),
       })
         .then((r) => {
           result.email.sent = r.success
