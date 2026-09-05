@@ -10,6 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadMarketIndex, resolveMarket } from '@/lib/markets/releaseGate'
+import { getPromoConfig, isAllMarkets } from './config'
 
 export interface MemberPromoContext {
   userId: string
@@ -18,6 +19,12 @@ export interface MemberPromoContext {
   plusSource: string | null
   marketSlug: string | null
   marketDisplayName: string | null
+  /**
+   * partnerships.city verbatim. Always populated when the member has one, market
+   * or no market — it is what the copy and the attribution fall back to once the
+   * promo opens beyond the single live market.
+   */
+  cityName: string | null
 }
 
 /**
@@ -56,6 +63,12 @@ export async function loadMemberPromoContext(): Promise<MemberPromoContext | nul
   // city -> market_name (shared resolver) -> slug/display_name (055 columns).
   let marketSlug: string | null = null
   let marketDisplayName: string | null = null
+  // Under the `all` sentinel, is_live no longer decides whether a market may host
+  // the promo — the promo is deliberately open everywhere, so a member in a
+  // pre-launch market keeps their real slug and display name instead of being
+  // flattened to "no market". Without the sentinel this is unchanged: is_live is
+  // still required, so flags-off behaviour is byte-for-byte what it was.
+  const requireLiveMarket = !isAllMarkets(getPromoConfig())
   try {
     const idx = await loadMarketIndex()
     if (idx.ok) {
@@ -67,15 +80,17 @@ export async function loadMemberPromoContext(): Promise<MemberPromoContext | nul
           .eq('market_name', marketName)
           .maybeSingle()
         const m = market as { slug: string | null; display_name: string | null; is_live: boolean } | null
-        // A market that is not live cannot host the promo, whatever the config says.
-        if (m?.is_live) {
+        if (m && (m.is_live || !requireLiveMarket)) {
           marketSlug = m.slug
           marketDisplayName = m.display_name
         }
       }
     }
   } catch {
-    // Fail closed: an unreadable market index means no market, means ineligible.
+    // Fail closed on the MARKET half only: an unreadable index means no market.
+    // cityName below is read straight off the partnership and is unaffected —
+    // which is what keeps a member reachable when the index is down and the
+    // sentinel is on.
   }
 
   return {
@@ -85,5 +100,6 @@ export async function loadMemberPromoContext(): Promise<MemberPromoContext | nul
     plusSource: p.plus_source,
     marketSlug,
     marketDisplayName,
+    cityName: p.city?.trim() || null,
   }
 }

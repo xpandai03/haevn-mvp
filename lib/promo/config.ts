@@ -16,10 +16,30 @@
 
 export interface PromoConfig {
   enabled: boolean
-  /** markets.slug values. Empty = no market enabled, so nobody is eligible. */
+  /**
+   * markets.slug values, OR the sentinel `all`. Empty = no market enabled, so
+   * nobody is eligible.
+   */
   markets: string[]
   termMonths: number
 }
+
+/**
+ * Sentinel accepted in FOUNDING_PROMO_MARKETS to mean "every market, and every
+ * member whose city resolves to no market at all".
+ *
+ * WHY A SENTINEL AND NOT A LONGER LIST: `markets` holds exactly one row (Austin),
+ * because a market row is created only when the client approves a city list. So
+ * "enable Portland" is not a config change — there is no `portland` slug to name.
+ * Members outside Austin resolve to NO slug, which is precisely the case the slug
+ * list cannot express. The sentinel widens the market axis and nothing else;
+ * every other eligibility axis still fails closed.
+ *
+ * A market slugged literally 'all' would collide. `markets.slug` is admin-set and
+ * Austin is the only row, so this is theoretical — but it is why the value is a
+ * named constant rather than a bare string spread through the code.
+ */
+export const PROMO_ALL_MARKETS = 'all'
 
 /** Term fallback if the env var is absent or unparseable. The client's launch value. */
 export const DEFAULT_TERM_MONTHS = 6
@@ -37,9 +57,22 @@ export function getPromoConfig(): PromoConfig {
   }
 }
 
-/** Is this market slug enabled? Slugs come from markets.slug — never a literal. */
+/**
+ * Is the promo open to every market (and to members with no market at all)?
+ * False whenever the promo is disabled — the kill switch outranks the sentinel.
+ */
+export function isAllMarkets(cfg: PromoConfig): boolean {
+  return cfg.enabled && cfg.markets.includes(PROMO_ALL_MARKETS)
+}
+
+/**
+ * Is this market slug enabled? Slugs come from markets.slug — never a literal.
+ * Under the `all` sentinel the slug is irrelevant, including when it is null.
+ */
 export function isMarketEnabled(cfg: PromoConfig, slug: string | null | undefined): boolean {
-  if (!cfg.enabled || !slug) return false
+  if (!cfg.enabled) return false
+  if (isAllMarkets(cfg)) return true
+  if (!slug) return false
   return cfg.markets.includes(slug.trim().toLowerCase())
 }
 

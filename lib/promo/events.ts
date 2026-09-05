@@ -9,6 +9,11 @@
  * created_at. partnership_id is a first-class column — use it, and keep member
  * identity (email, name, city) OUT of metadata.
  *
+ * `market` therefore stays a market SLUG (or null), never the member's own city,
+ * even though partnerships.promo_market now records that city once the promo
+ * opens to all markets. The city is reachable by joining on partnership_id; it
+ * does not belong in an event payload.
+ *
  * Never throws. A analytics failure must not break a member's upgrade path.
  */
 
@@ -43,7 +48,7 @@ export function emitCtaClicked(
 /** The offer rendered for an eligible member. */
 export function emitOfferViewed(
   partnershipId: string | null,
-  meta: { src: string; market: string; term_months: number }
+  meta: { src: string; market: string | null; term_months: number }
 ): Promise<void> {
   return emit(PROMO_EVENTS.offerViewed, partnershipId, { ...meta })
 }
@@ -51,7 +56,7 @@ export function emitOfferViewed(
 /** An activation that actually changed the row. Emitted once, never on a replay. */
 export function emitActivationCompleted(
   partnershipId: string,
-  meta: { src: string; market: string; term_months: number; expires_at: string }
+  meta: { src: string; market: string | null; term_months: number; expires_at: string }
 ): Promise<void> {
   return emit(PROMO_EVENTS.activationCompleted, partnershipId, { ...meta })
 }

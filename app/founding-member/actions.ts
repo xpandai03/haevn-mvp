@@ -41,6 +41,7 @@ export async function activateFoundingMembership(src?: string): Promise<Activati
     plusSource: ctx.plusSource,
     marketSlug: ctx.marketSlug,
     marketDisplayName: ctx.marketDisplayName,
+    cityName: ctx.cityName,
   })
   if (!decision.eligible) return { status: 'ineligible' }
 
@@ -56,7 +57,7 @@ export async function activateFoundingMembership(src?: string): Promise<Activati
       membership_expires_at: expiresAt.toISOString(),
       plus_source: FOUNDING_MEMBER_PROMO,
       plus_activated_at: now.toISOString(),
-      promo_market: decision.marketSlug,
+      promo_market: decision.promoMarket,
       promo_cta_source: source,
     })
     .eq('id', ctx.partnershipId)

@@ -69,6 +69,7 @@ export default async function MembershipPage({
     plusSource: ctx?.plusSource,
     marketSlug: ctx?.marketSlug,
     marketDisplayName: ctx?.marketDisplayName,
+    cityName: ctx?.cityName,
   })
 
   // Fire-and-forget: analytics must never delay or break the member's path.

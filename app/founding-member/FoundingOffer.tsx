@@ -9,7 +9,9 @@ import { activateFoundingMembership } from './actions'
 
 /**
  * The offer. Copy is the client's spec text; the term and the city are the only
- * dynamic parts — the city comes from markets.display_name, never a literal.
+ * dynamic parts. The city is the caller's resolved displayCity — markets.display_name
+ * when the member is in a market, else their own partnerships.city — never a literal,
+ * and the sentence still reads correctly when there is neither.
  * Benefits are imported from the existing membership page, not duplicated, so the
  * two surfaces can never drift.
  */

@@ -38,7 +38,7 @@ export default async function FoundingMemberPage({
 
   // Already a founding member → confirmation, not the offer.
   if (ctx.plusSource === FOUNDING_MEMBER_PROMO) {
-    return <FoundingConfirmation cityName={ctx.marketDisplayName ?? ''} />
+    return <FoundingConfirmation cityName={ctx.marketDisplayName || ctx.cityName || ''} />
   }
 
   const decision = decideEligibility({
@@ -47,6 +47,7 @@ export default async function FoundingMemberPage({
     plusSource: ctx.plusSource,
     marketSlug: ctx.marketSlug,
     marketDisplayName: ctx.marketDisplayName,
+    cityName: ctx.cityName,
   })
   if (!decision.eligible) redirect('/onboarding/membership')
 
@@ -58,7 +59,7 @@ export default async function FoundingMemberPage({
 
   return (
     <FoundingOffer
-      cityName={decision.marketDisplayName}
+      cityName={decision.displayCity}
       termMonths={decision.termMonths}
       benefits={PLUS_BENEFITS}
       src={source}
