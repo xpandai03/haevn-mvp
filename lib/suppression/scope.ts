@@ -37,9 +37,30 @@ export function scopeBlocks(rowScope: SuppressionScope, sendScope: SendScope): b
   return rowScope === 'all_noncritical'
 }
 
-/** Notification type → send scope. connection_interest is a nudge; the rest are core. */
+/**
+ * Notification type → send scope. connection_interest is a nudge; match and
+ * message are core; no_match is a recurring broadcast.
+ *
+ * WHY no_match IS 'renotify' AND NOT 'all_noncritical'
+ * ---------------------------------------------------
+ * Read scopeBlocks above: an 'all_noncritical' SEND is blocked only by a
+ * COMPLAINT. A plain unsubscribe records scope 'renotify' (scopeForReason), and
+ * a 'renotify' row does NOT block an 'all_noncritical' send.
+ *
+ * The no-match ping carries an unsubscribe link. Tagged 'all_noncritical', that
+ * link would record a suppression that does not stop the very mail it was
+ * attached to — the member unsubscribes, keeps receiving pings, and complains.
+ * That converts an opt-out into a spam complaint against the shared sending
+ * domain, which also carries the critical match mail and the sign-in handoffs.
+ *
+ * 'renotify' is the send scope whose meaning is "recurring reminder — block it
+ * on ANY suppression signal", which is exactly what this is. It costs nothing:
+ * match and message stay 'critical' and are never blocked, so a member who opts
+ * out of the Monday ping still hears from us the week they actually match.
+ */
 export function sendScopeForNotificationType(
-  type: 'match' | 'message' | 'connection_interest'
+  type: 'match' | 'message' | 'connection_interest' | 'no_match'
 ): SendScope {
+  if (type === 'no_match') return 'renotify'
   return type === 'connection_interest' ? 'all_noncritical' : 'critical'
 }

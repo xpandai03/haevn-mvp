@@ -59,6 +59,34 @@ export const HIDE_ALL_NON_LIVE = false
 export const GRANDFATHER_RELEASED_BEFORE = '2026-07-16T00:00:00.000Z'
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ALL-MARKETS RELEASE — the flag that retires the gate without deleting it
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * RELEASE_ALL_MARKETS=true releases and notifies every market, and every member
+ * whose city resolves to no market at all.
+ *
+ * WHY A FLAG AND NOT A DELETION. Everything above stays exactly as written:
+ * `markets`, `msa_allowed_zips` and `is_live` remain the source of truth for
+ * reporting and for whatever the client does with markets next, and the gate is
+ * still there to be switched back on in seconds by unsetting one env var. A code
+ * deletion would make the rollback a revert-and-deploy.
+ *
+ * WHAT IT DOES NOT CHANGE. Computation was never gated (computeMatches iterates
+ * every profile_state='live' partnership, all pairs), so this widens RELEASE and
+ * NOTIFY only. Scoring, thresholds and distance handling are untouched.
+ *
+ * EXCLUSIONS BECOME REPORTING-ONLY, NOT SILENT. When the flag is on, everyone is
+ * eligible but `excludedByCity` is still populated with the members who WOULD
+ * have been withheld. The Monday readout keeps its per-city spread on the exact
+ * week the client most wants to see it; the numbers just stop being a gate.
+ *
+ * Default OFF. Anything but the exact string 'true' is off.
+ */
+export function releaseAllMarkets(): boolean {
+  return process.env.RELEASE_ALL_MARKETS === 'true'
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const normalizeCity = (city: string | null | undefined): string =>
   String(city ?? '').trim().toLowerCase()
@@ -121,12 +149,24 @@ export function isCityLive(city: string | null | undefined, idx: MarketIndex): b
 }
 
 export interface EligibilityResult {
-  /** partnership ids in a LIVE market — the only ones release/notify may touch */
+  /** partnership ids release/notify may touch */
   eligible: Set<string>
-  /** partnership ids excluded (non-live market OR unresolved city) */
+  /**
+   * Partnership ids excluded (non-live market OR unresolved city).
+   * ALWAYS EMPTY when RELEASE_ALL_MARKETS is on — nothing is withheld.
+   */
   excluded: Set<string>
-  /** excluded broken down by city, for auditable logging */
+  /**
+   * Members in a non-live/unresolved market, broken down by city.
+   *
+   * Two meanings, and `gateEnforced` says which:
+   *   gateEnforced=true  → these members WERE withheld (the gate is live).
+   *   gateEnforced=false → REPORTING ONLY. Everyone was released; this is the
+   *                        city spread of who the gate would have withheld.
+   */
   excludedByCity: Record<string, number>
+  /** False when RELEASE_ALL_MARKETS is on: the counts above withheld nobody. */
+  gateEnforced: boolean
   ok: boolean
 }
 
@@ -135,6 +175,7 @@ export interface EligibilityResult {
  * @param ids restrict to these partnership ids (omit = all partnerships)
  */
 export async function getReleaseEligibility(ids?: string[]): Promise<EligibilityResult> {
+  const allMarkets = releaseAllMarkets()
   const idx = await loadMarketIndex()
   const admin = createAdminClient()
 
@@ -142,9 +183,20 @@ export async function getReleaseEligibility(ids?: string[]): Promise<Eligibility
   if (ids && ids.length > 0) q = q.in('id', ids)
   const { data, error } = await q.limit(10000)
 
-  if (error || !idx.ok) {
+  // The partnership read must still succeed — without it we have no ids at all.
+  // The market INDEX, though, only matters when the gate is enforced: with
+  // RELEASE_ALL_MARKETS on, an unreadable markets table costs us the per-city
+  // breakdown, not the release. Failing closed there would strand every member
+  // for a reporting field, which is the opposite of the point of the flag.
+  if (error || (!idx.ok && !allMarkets)) {
     console.error('[releaseGate] FAIL CLOSED — eligibility unavailable.', error?.message)
-    return { eligible: new Set(), excluded: new Set(ids ?? []), excludedByCity: {}, ok: false }
+    return {
+      eligible: new Set(),
+      excluded: new Set(ids ?? []),
+      excludedByCity: {},
+      gateEnforced: true,
+      ok: false,
+    }
   }
 
   const eligible = new Set<string>()
@@ -152,15 +204,18 @@ export async function getReleaseEligibility(ids?: string[]): Promise<Eligibility
   const excludedByCity: Record<string, number> = {}
 
   for (const p of (data ?? []) as { id: string; city: string | null }[]) {
-    if (isCityLive(p.city, idx)) {
-      eligible.add(p.id)
-    } else {
-      excluded.add(p.id)
+    const live = isCityLive(p.city, idx)
+    // Everyone is eligible under the flag. The tally below still runs so the
+    // Monday readout keeps its city spread — reporting, no longer a gate.
+    if (live || allMarkets) eligible.add(p.id)
+    else excluded.add(p.id)
+
+    if (!live) {
       const key = p.city || '(no city)'
       excludedByCity[key] = (excludedByCity[key] ?? 0) + 1
     }
   }
-  return { eligible, excluded, excludedByCity, ok: true }
+  return { eligible, excluded, excludedByCity, gateEnforced: !allMarkets, ok: true }
 }
 
 /**

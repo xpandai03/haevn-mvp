@@ -16,7 +16,7 @@ import { redactMatchPartnership } from '@/lib/matches/redactMatchCard'
 import { parseSections, type Section } from '@/lib/matches/sectionMapping'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
-import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket } from '@/lib/markets/releaseGate'
+import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket, releaseAllMarkets } from '@/lib/markets/releaseGate'
 
 // =============================================================================
 // TYPES
@@ -186,16 +186,21 @@ export async function getComputedMatchCards(
   //     visible — the Jun 29 blast already showed/emailed them. Anything
   //     releasing after is gated, so no NEW pre-launch release can occur.
   //     MODE B: flip HIDE_ALL_NON_LIVE in releaseGate.ts -> fully dark.
+  //
+  //     RELEASE_ALL_MARKETS short-circuits the whole gate: every viewer is
+  //     treated as in-market, so a released row is visible to whoever it belongs
+  //     to. This is the READ half of the flag — without it a member outside
+  //     Austin would be released and notified, tap the link, and land on an
+  //     empty matches page.
   const marketIdx = await loadMarketIndex()
   const { data: viewerPartnership } = await adminClient
     .from('partnerships')
     .select('city')
     .eq('id', currentPartnershipId)
     .maybeSingle()
-  const viewerMarketLive = isCityLive(
-    (viewerPartnership as { city?: string | null } | null)?.city,
-    marketIdx
-  )
+  const viewerMarketLive =
+    releaseAllMarkets() ||
+    isCityLive((viewerPartnership as { city?: string | null } | null)?.city, marketIdx)
 
   // 1. Fetch computed matches for this partnership (bidirectional)
   //    Filter by release_at (Match Monday) and expires_at (90-day expiry)

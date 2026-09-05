@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyHandoff, hashHandoffToken, type HandoffRow } from '@/lib/auth/handoff'
-import { LOGIN_LINK_TTL_MINUTES } from '@/lib/auth/loginLink'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,8 +45,12 @@ function html(body: string, status = 200): NextResponse {
  *  this page by holding a token we issued. */
 const COPY = {
   expired: {
+    // TTL-agnostic on purpose. Two flows issue these tokens with DIFFERENT
+    // windows — self-serve is minutes (the member is watching for it), a Monday
+    // notification is days (it arrives unprompted). Naming one number here would
+    // be wrong for the other flow, and the row does not carry which it came from.
     title: 'This link has expired',
-    detail: `Sign-in links last ${LOGIN_LINK_TTL_MINUTES} minutes. Enter your email again and we&rsquo;ll send a fresh one.`,
+    detail: 'Enter your email again and we&rsquo;ll send a fresh one.',
     status: 410,
   },
   used: {
