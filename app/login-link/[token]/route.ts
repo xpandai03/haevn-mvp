@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyHandoff, hashHandoffToken, type HandoffRow } from '@/lib/auth/handoff'
+import { CHANNEL_PARAM, parseChannelCode } from '@/lib/auth/notifySignIn'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,6 +84,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ token: 
   const { token } = await ctx.params
   if (request.nextUrl.searchParams.get('e') === 'failed') return errorPage('failed')
 
+  // Channel marker (?c=e / ?c=s) — which message the member tapped. Parsed here
+  // so anything unrecognised becomes null before it reaches the form, and a
+  // self-serve link (no param) simply stays null.
+  const channel = parseChannelCode(request.nextUrl.searchParams.get(CHANNEL_PARAM))
+
   const admin = createAdminClient()
   const { data } = await admin
     .from('login_links')
@@ -98,6 +104,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ token: 
       `<p class="muted">Press the button to finish signing in.</p>` +
       `<form method="POST" action="/api/auth/login-link/consume">` +
       `<input type="hidden" name="token" value="${escapeHtml(token)}">` +
+      (channel ? `<input type="hidden" name="${CHANNEL_PARAM}" value="${channel === 'sms' ? 's' : 'e'}">` : '') +
       `<button class="btn" type="submit">Sign me in</button>` +
       `</form>` +
       `<p class="muted" style="margin-top:24px">This link works once. Opening this page hasn&rsquo;t used it up.</p>`

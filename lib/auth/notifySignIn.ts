@@ -54,6 +54,55 @@ type Admin = ReturnType<typeof createAdminClient>
 export const NOTIFY_SIGNIN_TTL_MS = 72 * 60 * 60 * 1000
 export const NOTIFY_SIGNIN_TTL_HOURS = 72
 
+// ─── Channel attribution ────────────────────────────────────────────────────
+/**
+ * WHICH MESSAGE DID THEY TAP?
+ *
+ * A member with a phone gets the SAME handoff URL in both the SMS and the email,
+ * so a consumed token proves someone arrived but not how. Rather than mint two
+ * tokens per member — which would double the login_links footprint that also
+ * backs the self-serve rate limit, and break "one consume == one member" — we
+ * append a one-letter marker to the URL as DISPLAYED in each channel.
+ *
+ * One token, two presentations. The landing page carries the marker through its
+ * hidden form field and the consume route records it beside consumed_at.
+ *
+ * LIMIT, stated plainly: this is FIRST-TAP attribution. The token is still
+ * single-use, so if a member taps the SMS and then the email, only the first is
+ * recorded — the second sees "already used", exactly as today. That is the
+ * price of not minting a second token, and it is the intended trade.
+ */
+export type NotifyChannel = 'email' | 'sms'
+
+/** Query parameter name. One letter to keep SMS bodies short. */
+export const CHANNEL_PARAM = 'c'
+
+const CHANNEL_CODE: Record<NotifyChannel, string> = { email: 'e', sms: 's' }
+const CODE_CHANNEL: Record<string, NotifyChannel> = { e: 'email', s: 'sms' }
+
+/**
+ * Append the channel marker to a handoff URL.
+ *
+ * Only ever touches a /login-link/ URL: the caller falls back to the plain login
+ * page when no handoff could be minted, and tagging that would record a channel
+ * for a sign-in this system never issued.
+ */
+export function withChannel(url: string, channel: NotifyChannel): string {
+  if (!url.includes('/login-link/')) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}${CHANNEL_PARAM}=${CHANNEL_CODE[channel]}`
+}
+
+/**
+ * Parse a marker back to a channel. ANYTHING unrecognised — absent, empty,
+ * misspelt, an array, an injection attempt — yields null, which is written as
+ * NULL. A bad marker must never cost a member their sign-in.
+ */
+export function parseChannelCode(raw: unknown): NotifyChannel | null {
+  if (typeof raw !== 'string') return null
+  return CODE_CHANNEL[raw.trim().toLowerCase()] ?? null
+}
+
 /**
  * Mint a handoff sign-in URL for a known user. Returns null if the row cannot be
  * written — callers must then fall back to the plain login page rather than

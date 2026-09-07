@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hashHandoffToken, HAEVN_BASE } from '@/lib/auth/handoff'
 import { loginLinkUrl } from '@/lib/auth/loginLink'
+import { CHANNEL_PARAM, parseChannelCode } from '@/lib/auth/notifySignIn'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,9 +33,12 @@ function backToLanding(request: NextRequest, token: string, failed = false): Nex
 
 export async function POST(request: NextRequest) {
   let token = ''
+  let channel: 'email' | 'sms' | null = null
   try {
     const form = await request.formData()
     token = String(form.get('token') ?? '')
+    // Anything unrecognised -> null. A bad marker never costs a sign-in.
+    channel = parseChannelCode(form.get(CHANNEL_PARAM))
   } catch {
     /* no body */
   }
@@ -62,9 +66,33 @@ export async function POST(request: NextRequest) {
 
   const { id, user_id: userId } = claimed[0] as { id: string; user_id: string | null }
 
+  // ── CHANNEL ATTRIBUTION — deliberately NOT part of the atomic claim ───────
+  // Written as a separate best-effort update so it can never affect sign-in:
+  //   - the claim above is byte-identical to before, so single-use is untouched;
+  //   - if migration 057 has not been applied yet the column does not exist,
+  //     this update errors, and the member still signs in normally;
+  //   - a self-serve link carries no marker, so channel stays NULL.
+  // Analytics must never be on the critical path of a member getting in.
+  if (channel) {
+    try {
+      const { error } = await admin.from('login_links').update({ channel }).eq('id', id)
+      if (error) console.warn('[login-link-consume] channel not recorded:', error.message)
+    } catch (e) {
+      console.warn('[login-link-consume] channel write threw:', (e as Error)?.message)
+    }
+  }
+
   /** Put the handoff back if we can't finish — our bug shouldn't cost the member their link. */
   const rollback = async () => {
-    await admin.from('login_links').update({ consumed_at: null, consumed_ip: null }).eq('id', id)
+    // channel is cleared too, so a rolled-back handoff carries no stale
+    // attribution if the member retries. Tolerates 057 not being applied:
+    // the whole update is best-effort and a failure only leaves the row as-is.
+    await admin
+      .from('login_links')
+      .update({ consumed_at: null, consumed_ip: null, channel: null })
+      .eq('id', id)
+      .then(undefined, () => admin.from('login_links')
+        .update({ consumed_at: null, consumed_ip: null }).eq('id', id))
   }
 
   if (!userId) {
