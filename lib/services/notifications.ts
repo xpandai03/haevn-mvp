@@ -3,6 +3,7 @@ import { sendEmail } from './email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendScopeForNotificationType } from '@/lib/suppression/scope'
 import { noMatchSms, noMatchEmail, type NoMatchVariant } from '@/lib/notify/noMatchCopy'
+import { withChannel } from '@/lib/auth/notifySignIn'
 
 // ─── Base URL (never hardcode a domain) ────────────────────────
 
@@ -155,26 +156,32 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   // Build messages based on type. Match CTA = the per-user magic sign-in URL
   // (passwordless). Fallback to the login page only if no link was generated.
   const matchSignInUrl = opts.signInUrl || `${SIGN_IN_BASE}/auth/login`
+  // SAME TOKEN, two presentations. The only difference between the SMS and the
+  // email CTA is a one-letter marker, so the consume route can record which
+  // message the member actually tapped. withChannel is a no-op on the
+  // /auth/login fallback, which is not a handoff and must not be attributed.
+  const smsSignInUrl = withChannel(matchSignInUrl, 'sms')
+  const emailSignInUrl = withChannel(matchSignInUrl, 'email')
   // no_match copy lives in lib/notify/noMatchCopy.ts (variant + city + env
   // overrides); the other three keep their templates above, untouched.
   const noMatchVariant: NoMatchVariant = opts.noMatchVariant ?? 'pre_launch'
 
   const smsBody =
     opts.type === 'match'
-      ? SMS_TEMPLATES.match(matchSignInUrl)
+      ? SMS_TEMPLATES.match(smsSignInUrl)
       : opts.type === 'connection_interest'
-        ? SMS_TEMPLATES.connection_interest(matchSignInUrl)
+        ? SMS_TEMPLATES.connection_interest(smsSignInUrl)
         : opts.type === 'no_match'
-          ? noMatchSms(noMatchVariant, opts.city, matchSignInUrl)
+          ? noMatchSms(noMatchVariant, opts.city, smsSignInUrl)
           : SMS_TEMPLATES.message(senderName)
 
   const emailTemplate =
     opts.type === 'match'
-      ? EMAIL_TEMPLATES.match(matchSignInUrl)
+      ? EMAIL_TEMPLATES.match(emailSignInUrl)
       : opts.type === 'connection_interest'
-        ? EMAIL_TEMPLATES.connection_interest(matchSignInUrl)
+        ? EMAIL_TEMPLATES.connection_interest(emailSignInUrl)
         : opts.type === 'no_match'
-          ? noMatchEmail(noMatchVariant, opts.city, matchSignInUrl, opts.unsubUrl ?? undefined)
+          ? noMatchEmail(noMatchVariant, opts.city, emailSignInUrl, opts.unsubUrl ?? undefined)
           : EMAIL_TEMPLATES.message(senderName)
 
   // Send in parallel
