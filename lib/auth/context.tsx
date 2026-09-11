@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
@@ -24,6 +24,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabase = createClient()
 
+  /**
+   * The user id currently reflected in state.
+   *
+   * WHY — identity churn (2026-09-10). Supabase emits SIGNED_IN on EVERY page
+   * load for an already-signed-in session, and TOKEN_REFRESHED periodically.
+   * The handler below called setUser(session?.user ?? null) on all of them, and
+   * each call installs a NEW user OBJECT even when it is the same person. Every
+   * consumer with `user` in a dependency array then re-runs: useNotifications
+   * re-queries partnership_members and tears down/rebuilds its realtime
+   * channels on each one.
+   *
+   * Measured on production: 228 auth state changes and 345 partnership_members
+   * queries in a 15s window for one signed-in visitor.
+   *
+   * Comparing the ID — not the object — makes a re-emission for the same
+   * session a genuine no-op, while a real sign-in / sign-out / account switch
+   * still propagates. Pairs with useNotifications depending on user?.id; either
+   * alone fixes the churn, and each defends against the other regressing.
+   */
+  const currentUserIdRef = useRef<string | null>(null)
+
   useEffect(() => {
     // Check active session
     const initAuth = async () => {
@@ -38,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         setSession(session)
         setUser(session?.user ?? null)
+        currentUserIdRef.current = session?.user?.id ?? null
       } catch (error) {
         console.error('[Auth] Error loading session:', error)
       } finally {
@@ -61,10 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[Auth] Previous user:', user?.id, user?.email)
         console.log('[Auth] ===============================')
 
-        // CRITICAL: Always update state even if user ID is the same
-        // This ensures React re-renders and effects re-run
+        // The session object is always refreshed (token rotation matters to
+        // anything reading the access token), but the USER object is replaced
+        // only when the identity actually changes — see currentUserIdRef.
         setSession(session)
-        setUser(session?.user ?? null)
+        const nextUserId = session?.user?.id ?? null
+        if (currentUserIdRef.current !== nextUserId) {
+          currentUserIdRef.current = nextUserId
+          setUser(session?.user ?? null)
+        }
 
         if (event === 'SIGNED_IN') {
           console.log('[Auth] ✅ User signed in:', session?.user?.id)
@@ -75,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('[Auth] Previous user was:', user?.id)
           // Explicitly set to null to force state update
           setSession(null)
+          currentUserIdRef.current = null
           setUser(null)
           router.push('/')
         } else if (event === 'TOKEN_REFRESHED') {

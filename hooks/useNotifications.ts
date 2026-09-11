@@ -201,7 +201,11 @@ export function useNotifications() {
         supabase.removeChannel(handshakeChannel)
       }
     }
-  }, [user, supabase, toast])
+    // user?.id, NOT `user`: a re-emitted SIGNED_IN for the SAME session used to
+    // install a new user object and re-run this effect, re-querying
+    // partnership_members and rebuilding both realtime channels every time.
+    // AuthProvider now also guards the identity; this is the second defence.
+  }, [user?.id, supabase, toast])
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev =>
