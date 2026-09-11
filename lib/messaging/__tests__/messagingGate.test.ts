@@ -47,8 +47,10 @@ function main() {
   // A "use server" file may export ONLY async functions, so the constant lives
   // in a plain module. tsc and this suite both pass a bad export; only the
   // webpack build catches it. Guard it here so it cannot regress.
-  ok(!/^export (const|let|var|class|interface|type) /m.test(code('lib/actions/connections.ts')),
-    "no non-async export in the 'use server' file — that breaks the build")
+  // Only RUNTIME values are illegal there. `export type` / `export interface`
+  // are erased at compile and are fine — the file has several.
+  ok(!/^export (const|let|var|class|function|enum)\s/m.test(code('lib/actions/connections.ts')),
+    "no non-async runtime export in the 'use server' file — that breaks the build")
   ok(new RegExp(`return \\{ error: UPGRADE_REQUIRED_ERROR \\}`).test(action),
     'a free member gets the upgrade-required error, not a silent failure')
   eq(UPGRADE_REQUIRED_ERROR, 'Upgrade to HAEVN+ to send messages',
