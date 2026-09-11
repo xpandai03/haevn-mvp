@@ -17,6 +17,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { firstNameFromDisplayName } from '@/lib/utils/matchCardDisplay'
 import { isMessagingEnabled } from '@/lib/promo/config'
+import { getUserMembershipTier } from '@/lib/actions/dashboard'
+import { messageNotifyCooldownMinutes, shouldNotifyRecipient } from '@/lib/messaging/notifyCooldown'
 
 function relationshipLabelFromStructure(
   structure: { type?: string | null; open_to?: string[] | null } | null
@@ -613,6 +615,25 @@ export async function getMessagesForHandshake(
 }
 
 /**
+ * What a free member gets from the send action. Deliberately the same message
+ * the UI's upgrade toast shows, so a direct invocation and the on-screen path
+ * tell the member the same thing — never a silent failure or a generic error.
+ */
+export const UPGRADE_REQUIRED_ERROR = 'Upgrade to HAEVN+ to send messages'
+
+/**
+ * Thrown to exit the notification block when the cooldown says stay quiet.
+ * A named type so the catch can tell "we chose not to notify" apart from
+ * "notifying broke", and only log the latter.
+ */
+class SkipNotification extends Error {
+  constructor() {
+    super('notification suppressed by cooldown')
+    this.name = 'SkipNotification'
+  }
+}
+
+/**
  * Send a message in a connection chat using admin client.
  * Bypasses RLS to ensure message inserts work regardless of partnership_members setup.
  */
@@ -637,6 +658,20 @@ export async function sendMessageAction(
     }
 
     const userId = user.id
+
+    // ── TIER GATE — server-side, and BEFORE any handshake work ──────────────
+    // The three read surfaces gate on tier, but they are client components, so
+    // until now the WRITE path was gated only in the UI: a free member with an
+    // accepted connection could invoke this action directly and send. This is
+    // the server-side half of that gate.
+    //
+    // getUserMembershipTier is the same resolver the read surfaces call — it
+    // collapses every paid value ('plus'/'pro'/'select', including Founding
+    // Member activations) to 'plus' and applies read-time expiry — so the answer
+    // here and the answer the UI shows can never disagree.
+    if ((await getUserMembershipTier()) !== 'plus') {
+      return { error: UPGRADE_REQUIRED_ERROR }
+    }
 
     // Validate message - either text or image required
     if (!body.trim() && !imageUrl) {
@@ -707,7 +742,8 @@ export async function sendMessageAction(
       return { error: 'Failed to send message' }
     }
 
-    // Get sender info
+    // Get sender info. full_name is the in-app label; the NOTIFICATION uses the
+    // curated display_name instead — see below.
     const { data: profile } = await adminClient
       .from('profiles')
       .select('full_name')
@@ -720,6 +756,28 @@ export async function sendMessageAction(
         handshake.a_partnership === userPartnershipId
           ? handshake.b_partnership
           : handshake.a_partnership
+
+      // ── COOLDOWN — per recipient, per handshake ─────────────────────────
+      // A notification fires on every send, so "when was this recipient last
+      // notified here?" is "when did this sender last message them here?". The
+      // previous message row is the marker; no extra column is needed.
+      const cooldownMinutes = messageNotifyCooldownMinutes()
+      const { data: priorMessage } = await adminClient
+        .from('messages')
+        .select('created_at')
+        .eq('handshake_id', handshakeId)
+        .eq('sender_partnership', userPartnershipId)
+        .neq('id', newMessage.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!shouldNotifyRecipient(priorMessage?.created_at, new Date(), cooldownMinutes)) {
+        console.log(
+          `[sendMessageAction] notification suppressed by ${cooldownMinutes}m cooldown (handshake=${handshakeId.slice(0, 8)})`
+        )
+        throw new SkipNotification()
+      }
 
       const { data: recipientPartnership } = await adminClient
         .from('partnerships')
@@ -748,15 +806,29 @@ export async function sendMessageAction(
         }
       }
 
+      // The notification names the sender by their CURATED display_name, not
+      // profiles.full_name. full_name is closer to a legal name; display_name is
+      // what the member chose to be known as and what every in-app surface
+      // shows. A discretion-first product must not disclose more in an SMS than
+      // it does on screen.
+      const { data: senderPartnership } = await adminClient
+        .from('partnerships')
+        .select('display_name')
+        .eq('id', userPartnershipId)
+        .maybeSingle()
+
       const { sendNotification } = await import('@/lib/services/notifications')
       await sendNotification({
         type: 'message',
         phone: recipientPartnership?.phone,
         email: recipientEmail,
-        senderName: profile?.full_name || 'Someone',
+        senderName: senderPartnership?.display_name || 'Someone',
       })
     } catch (notifyError) {
-      console.error('[sendMessageAction] Notification error (non-blocking):', notifyError)
+      // A cooldown skip is control flow, not a failure — don't log it as one.
+      if (!(notifyError instanceof SkipNotification)) {
+        console.error('[sendMessageAction] Notification error (non-blocking):', notifyError)
+      }
     }
 
     // Map DB columns (sender_partnership, content) to ChatMessage fields (sender_user, body)

@@ -145,9 +145,15 @@ function main() {
     ok(/getMessagingOpen/.test(src), `${surface} checks the messaging kill switch`)
     ok(/MessagingClosed/.test(src), `${surface} renders the closed state`)
   }
-  for (const writer of ['lib/services/chat.ts', 'lib/actions/connections.ts']) {
-    ok(/isMessagingEnabled/.test(code(writer)), `${writer} guards the send path`)
-  }
+  // connections.ts holds the ONLY send path now. lib/services/chat.ts used to
+  // carry a second one (sendMessage, browser client) that was deleted with its
+  // only caller, components/ChatConversation.tsx — so the assertion for that
+  // file flipped from "guards the send path" to "has no send path to guard".
+  // Asserting the guard there would have passed on a stale unused import.
+  ok(/isMessagingEnabled/.test(code('lib/actions/connections.ts')),
+    'lib/actions/connections.ts guards the send path')
+  ok(!/export async function sendMessage\(/.test(code('lib/services/chat.ts')),
+    'lib/services/chat.ts has no send path at all')
 
   report('founding-promo-routes')
 }
