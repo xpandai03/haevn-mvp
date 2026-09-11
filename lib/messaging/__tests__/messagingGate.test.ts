@@ -10,7 +10,7 @@ import {
   shouldNotifyRecipient, messageNotifyCooldownMinutes,
   DEFAULT_MESSAGE_NOTIFY_COOLDOWN_MINUTES,
 } from '../notifyCooldown'
-import { UPGRADE_REQUIRED_ERROR } from '../../actions/connections'
+import { UPGRADE_REQUIRED_ERROR } from '../constants'
 import { ok, eq, report } from '../../metrics/__tests__/_assert'
 
 const root = join(__dirname, '../../..')
@@ -44,6 +44,11 @@ function main() {
   // ══ 1. TIER GATE — server-side, before the handshake checks ══════════════
   ok(/getUserMembershipTier\(\)\) !== 'plus'/.test(action),
     'the send action checks membership tier server-side')
+  // A "use server" file may export ONLY async functions, so the constant lives
+  // in a plain module. tsc and this suite both pass a bad export; only the
+  // webpack build catches it. Guard it here so it cannot regress.
+  ok(!/^export (const|let|var|class|interface|type) /m.test(code('lib/actions/connections.ts')),
+    "no non-async export in the 'use server' file — that breaks the build")
   ok(new RegExp(`return \\{ error: UPGRADE_REQUIRED_ERROR \\}`).test(action),
     'a free member gets the upgrade-required error, not a silent failure')
   eq(UPGRADE_REQUIRED_ERROR, 'Upgrade to HAEVN+ to send messages',
