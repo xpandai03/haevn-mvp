@@ -19,6 +19,7 @@ import { firstNameFromDisplayName } from '@/lib/utils/matchCardDisplay'
 import { isMessagingEnabled } from '@/lib/promo/config'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { messageNotifyCooldownMinutes, shouldNotifyRecipient } from '@/lib/messaging/notifyCooldown'
+import { UPGRADE_REQUIRED_ERROR } from '@/lib/messaging/constants'
 
 function relationshipLabelFromStructure(
   structure: { type?: string | null; open_to?: string[] | null } | null
@@ -613,13 +614,6 @@ export async function getMessagesForHandshake(
     return []
   }
 }
-
-/**
- * What a free member gets from the send action. Deliberately the same message
- * the UI's upgrade toast shows, so a direct invocation and the on-screen path
- * tell the member the same thing — never a silent failure or a generic error.
- */
-export const UPGRADE_REQUIRED_ERROR = 'Upgrade to HAEVN+ to send messages'
 
 /**
  * Thrown to exit the notification block when the cooldown says stay quiet.
