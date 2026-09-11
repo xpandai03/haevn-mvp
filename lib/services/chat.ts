@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/supabase'
-import { isMessagingEnabled } from '@/lib/promo/config'
 
 type Message = Database['public']['Tables']['messages']['Row']
 type Handshake = Database['public']['Tables']['handshakes']['Row']
@@ -230,87 +229,10 @@ export async function getHandshakeMessages(
   }
 }
 
-export async function sendMessage(
-  handshakeId: string,
-  userId: string,
-  body: string
-): Promise<{ message?: ChatMessage; error?: string }> {
-  // MESSAGING KILL SWITCH. Before this flag, chat was gated on membership tier
-  // ALONE — so granting HAEVN+ through the Founding Member promo would have
-  // opened messaging to every activated member at once. Messaging must be able
-  // to stay closed independently of tier. Server-side, and on the WRITE path, so
-  // no client can bypass it. Default off: absent env means closed.
-  if (!isMessagingEnabled()) {
-    return { error: 'Messaging is not available yet' }
-  }
-
-  const supabase = createClient()
-
-  console.log('[sendMessage] Starting:', { handshakeId, userId, bodyLength: body.length })
-
-  try {
-    // Validate message
-    if (!body.trim()) {
-      console.log('[sendMessage] Validation failed: empty message')
-      return { error: 'Message cannot be empty' }
-    }
-
-    if (body.length > 2000) {
-      console.log('[sendMessage] Validation failed: too long')
-      return { error: 'Message too long (max 2000 characters)' }
-    }
-
-    // Get user's partnership ID first (schema uses sender_partnership)
-    const { data: membership } = await supabase
-      .from('partnership_members')
-      .select('partnership_id')
-      .eq('user_id', userId)
-      .single()
-
-    if (!membership) {
-      return { error: 'User has no partnership' }
-    }
-
-    // Send message - NOTE: schema uses sender_partnership + content (not sender_user + body)
-    console.log('[sendMessage] Inserting into messages table...')
-    const { data: newMessage, error } = await supabase
-      .from('messages')
-      .insert({
-        handshake_id: handshakeId,
-        sender_partnership: membership.partnership_id,
-        content: body.trim()
-      })
-      .select()
-      .single()
-
-    console.log('[sendMessage] Insert result:', { newMessage, error })
-
-    if (error) throw error
-
-    // Get sender info
-    const { data: partnership } = await supabase
-      .from('partnerships')
-      .select('display_name')
-      .eq('id', membership.partnership_id)
-      .single()
-
-    const chatMessage: ChatMessage = {
-      id: newMessage.id,
-      handshake_id: newMessage.handshake_id,
-      sender_user: userId,
-      sender_name: partnership?.display_name || 'Unknown',
-      sender_partnership_id: newMessage.sender_partnership,
-      body: newMessage.content, // Map content -> body
-      created_at: newMessage.created_at,
-      is_own_message: true
-    }
-
-    return { message: chatMessage }
-  } catch (error) {
-    console.error('Error sending message:', error)
-    return { error: 'Failed to send message' }
-  }
-}
+// NOTE: sendMessage() lived here and was deleted with components/ChatConversation.tsx,
+// its only caller. It ran on the BROWSER client and — unlike sendMessageAction —
+// checked neither membership tier nor that the sender belonged to the handshake.
+// The live send path is sendMessageAction in lib/actions/connections.ts.
 
 export async function togglePhotoGrant(
   handshakeId: string,
