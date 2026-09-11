@@ -48,6 +48,15 @@ export function qaHarnessEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
   return env.QA_HARNESS_ENABLED === 'true'
 }
 
+/**
+ * Restrict the feed to ONLY fixtures, so a QA run produces a deterministic
+ * payload instead of the fixture set buried in ~400 real pairs. Harness-only:
+ * meaningless (and inert) unless QA_HARNESS_ENABLED is also true.
+ */
+export function qaFixturesOnly(env: NodeJS.ProcessEnv = process.env): boolean {
+  return qaHarnessEnabled(env) && env.QA_FIXTURES_ONLY === 'true'
+}
+
 /** Does this partnership's badge list mark it as a QA fixture? */
 export function isQaFixture(badges: unknown): boolean {
   if (!Array.isArray(badges)) return false
@@ -62,6 +71,9 @@ export function isQaFixture(badges: unknown): boolean {
  * fixture leaking INTO production, never a real member being dropped.
  */
 export function includeInFeed(badges: unknown, env: NodeJS.ProcessEnv = process.env): boolean {
-  if (!isQaFixture(badges)) return true
-  return qaHarnessEnabled(env)
+  if (isQaFixture(badges)) return qaHarnessEnabled(env)
+  // A real partnership is always included, EXCEPT under fixtures-only mode,
+  // which exists so a QA payload is exactly the fixture set. That mode can only
+  // be reached with the harness on, so production is unaffected either way.
+  return !qaFixturesOnly(env)
 }

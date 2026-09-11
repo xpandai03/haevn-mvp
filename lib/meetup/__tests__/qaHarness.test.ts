@@ -7,7 +7,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { createHmac } from 'crypto'
-import { isQaFixture, includeInFeed, qaHarnessEnabled, QA_FIXTURE_BADGE } from '../qaFixtures'
+import { isQaFixture, includeInFeed, qaHarnessEnabled, qaFixturesOnly, QA_FIXTURE_BADGE } from '../qaFixtures'
 import { assembleMeetupRecord } from '../assemble'
 import { computePairId } from '../pairId'
 import { resolveCity } from '../cityCentroids'
@@ -58,6 +58,15 @@ function main() {
   ok(!includeInFeed([QA_FIXTURE_BADGE], PROD), 'PRODUCTION EXCLUDES FIXTURES — the load-bearing case')
   ok(includeInFeed([QA_FIXTURE_BADGE], PREVIEW), 'the preview harness includes fixtures')
   ok(includeInFeed([], PREVIEW), 'the harness still includes real partnerships')
+
+  // Fixtures-only: a deterministic QA payload, and unreachable from production.
+  const ONLY = { QA_HARNESS_ENABLED: 'true', QA_FIXTURES_ONLY: 'true' } as any
+  ok(qaFixturesOnly(ONLY), 'fixtures-only is on when both flags are set')
+  ok(!qaFixturesOnly({ QA_FIXTURES_ONLY: 'true' } as any),
+    'fixtures-only is INERT without the harness flag — production can never reach it')
+  ok(includeInFeed([QA_FIXTURE_BADGE], ONLY), 'fixtures-only includes fixtures')
+  ok(!includeInFeed([], ONLY), 'fixtures-only EXCLUDES real partnerships')
+  ok(includeInFeed([], PROD), 'production still includes real partnerships regardless')
 
   // Wired into the builder, and the builder reads the column it needs.
   ok(/includeInFeed\(p\.badges\)/.test(buildFeed), 'buildMeetupFeed applies the gate')
