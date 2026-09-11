@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { FEATURE_FLAGS } from '@/lib/feature-flags'
 import { HAEVN_AUTH_COOKIE_OPTIONS } from '@/lib/supabase/cookieName'
+import { isKnownRoute } from '@/lib/routes/routeTable'
 
 // DEBUG: Build ID for verifying deploy - remove after debugging
 const BUILD_ID = 'multi-partnership-fix'
@@ -102,6 +103,38 @@ function logOnboardingGate(data: {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next()
   const pathname = request.nextUrl.pathname
+
+  // ── UNMATCHED-PATH SHORT-CIRCUIT ─────────────────────────────────────────
+  // MITIGATION, not a root-cause fix. A signed-in visitor on a URL with no
+  // matching route could put the app into a reload loop — measured on
+  // production at 2,685 requests / 114 navigations / ~345 Supabase reads in 15
+  // seconds for ONE visitor. The cause is still under investigation
+  // (docs/backlog.md); this removes the blast radius in the meantime.
+  //
+  // Returning here means an unknown URL never renders the app shell: no React,
+  // no AuthProvider, no Supabase client, no client JS at all. Nothing is left
+  // that could churn, whatever the underlying trigger turns out to be.
+  //
+  // FIRST STATEMENT IN THE FUNCTION, deliberately — before the OAuth recovery
+  // hop, before session refresh, before every redirect branch below. Those all
+  // assume a real route.
+  //
+  // isKnownRoute fails OPEN: anything it is unsure about is treated as real and
+  // falls through. Over-blocking would take a working page off the site, which
+  // is worse than the bug being mitigated.
+  if (!isKnownRoute(pathname)) {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        // Cache-friendly: identical for every visitor and cheap to re-validate,
+        // so the edge can absorb a scanner hammering unknown paths. No
+        // Set-Cookie and no session work happened, so nothing here is personal.
+        'cache-control': 'public, max-age=0, s-maxage=3600, must-revalidate',
+        'x-haevn-unmatched': '1',
+      },
+    })
+  }
 
   // OAuth recovery: when /auth/callback isn't on the Supabase project's
   // Redirect URLs allowlist, Supabase falls back to the configured Site
