@@ -26,6 +26,7 @@ import {
 import { computePairId } from './pairId'
 import { assembleMeetupRecord, type AssembledMemberInput } from './assemble'
 import type { MeetupFeedPayload } from './types'
+import { includeInFeed } from './qaFixtures'
 
 type Admin = ReturnType<typeof createAdminClient>
 const REC_MIN = 77 // matches lib/matching/scoreBands (rec band 77–79; >=80 = match)
@@ -38,6 +39,8 @@ export interface BuildResult {
     unresolvedCityMembers: number
     unresolvedCities: string[]
     unknownTokens: string[]
+    /** Partnerships dropped because they are QA fixtures (0 in production). */
+    qaFixturesExcluded: number
   }
 }
 
@@ -82,9 +85,18 @@ export async function buildMeetupFeed(admin: Admin, nowIso?: string): Promise<Bu
 
   // 3. Fetch partner geo + owner survey signals for every partnership in a pair.
   const ids = [...new Set([...pairByKey.values()].flatMap((p) => [p.a, p.b]))]
-  const parts = ids.length ? await fetchAll(admin, 'partnerships', 'id, owner_id, city', (q) => q.in('id', ids)) : []
-  const partById = new Map<string, { id: string; owner_id: string | null; city: string | null }>()
-  for (const p of parts) partById.set(p.id, p)
+  const parts = ids.length ? await fetchAll(admin, 'partnerships', 'id, owner_id, city, badges', (q) => q.in('id', ids)) : []
+  const partById = new Map<string, { id: string; owner_id: string | null; city: string | null; badges: unknown }>()
+  // QA FIXTURE GATE. Preview shares production's database, so a fixture seeded
+  // for a QA run is visible to the production cron. Tagged partnerships are
+  // simply never put in the lookup unless the harness flag is on, so every pair
+  // touching one drops out at the existing `partById.has` filter below — no
+  // second filter to keep in sync. See lib/meetup/qaFixtures.ts.
+  let qaFixturesExcluded = 0
+  for (const p of parts) {
+    if (!includeInFeed(p.badges)) { qaFixturesExcluded++; continue }
+    partById.set(p.id, p)
+  }
 
   const ownerIds = [...new Set(parts.map((p: any) => p.owner_id).filter(Boolean))] as string[]
   const surveyByOwner = new Map<string, { answers: Record<string, unknown>; pct: number }>()
@@ -157,6 +169,7 @@ export async function buildMeetupFeed(admin: Admin, nowIso?: string): Promise<Bu
       unresolvedCityMembers,
       unresolvedCities: [...unresolvedCities],
       unknownTokens: [...unknownTokens],
+      qaFixturesExcluded,
     },
   }
 }
