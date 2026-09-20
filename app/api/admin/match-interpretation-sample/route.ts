@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { parseSections } from '@/lib/matches/sectionMapping'
 import { staticCopyFor } from '@/lib/matches/categoryCopy'
 import { assembleInterpretationForPair } from '@/lib/matches/getMatchInterpretation'
-import { generateMatchInterpretation } from '@/lib/ai/generateMatchInterpretation'
+import { generateMatchInterpretation, OPENAI_MODEL } from '@/lib/ai/generateMatchInterpretation'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    model: 'gpt-4o-mini',
+    model: OPENAI_MODEL,
     system_prompt: includePrompt ? systemPrompt : undefined,
     total_cost_usd: Number(totalCost.toFixed(6)),
     samples,

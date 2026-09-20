@@ -1,6 +1,7 @@
 /**
  * Consolidated match-interpretation generation (one OpenAI call per viewer→match).
- * Mirrors lib/ai/generateSummaries.ts (raw fetch, gpt-4o-mini, no SDK) but requests
+ * Mirrors lib/ai/generateSummaries.ts (raw fetch, no SDK) but on a different model
+ * (see below) and requests
  * strict JSON via response_format and validates it hard. Returns token usage so the
  * caller can record real cost. A failure or malformed response returns result:null
  * (never throws to the caller) so the card degrades to deterministic section data.
@@ -13,12 +14,42 @@ import {
 } from './prompts/matchInterpretation'
 import { validateMatchInterpretation, type MatchInterpretation } from './matchInterpretationSchema'
 
-const OPENAI_MODEL = 'gpt-4o-mini'
+/**
+ * MODEL CHOICE, AND WHY THE PROSE IS SHORTER THAN THE DESIGN ASKS FOR.
+ *
+ * The match report's field targets (45–65 words for each per-category prose
+ * field, 90–140 for haevn_assessment) were taken from the client's public sample
+ * report. Neither model reaches them, and the reason is NOT model capability:
+ *
+ *   field                   target   gpt-4o-mini   gpt-4o
+ *   section.overview         25–45        11         13     (0/50 in range, both)
+ *   your_alignment           45–65        23         32     (0/50 in range, both)
+ *   where_you_differ         45–65        24         30     (0/50 in range, both)
+ *   haevn_assessment        90–140        46         72     (0/10 in range, both)
+ *
+ * gpt-4o writes ~40% longer for 18.7x the cost and still misses every
+ * section-level target. Strengthening the length instruction moved nothing.
+ *
+ * THE ACTUAL CONSTRAINT IS INPUT. The whole user message is ~264 words, of which
+ * the real evidence is ~30 terse engine labels — "Compatible roles", "Workable
+ * structure match", "Shared goals: 100% alignment". Asking for 45–65 words about
+ * "Compatible roles" means inventing detail that no supplied datum supports,
+ * which rules 2, 6, 7 and 11 of the client's own AI doc forbid outright. The
+ * models are under-writing because they are obeying the more important rule.
+ *
+ * So this stays on mini until the INPUT is richer (the underlying survey answers
+ * behind each signal exist in user_survey_responses but are reduced to these
+ * labels before they reach the model). Buying a larger model to force padding
+ * would be paying more for worse copy. Re-evaluate the model after the input
+ * layer improves — not before. See docs/plans/match-report-rebuild.md §4.4.
+ */
+export const OPENAI_MODEL = 'gpt-4o-mini'
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
 const MAX_TOKENS = 3000
 const TEMPERATURE = 0.3
 
-// gpt-4o-mini pricing (USD / 1M tokens) — for cost reporting only.
+// Pricing (USD / 1M tokens) — for cost reporting only. MUST track OPENAI_MODEL:
+// a stale pair here silently misreports every cost number in the readout.
 const PRICE_IN_PER_M = 0.15
 const PRICE_OUT_PER_M = 0.6
 
