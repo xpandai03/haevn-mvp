@@ -46,6 +46,12 @@ export interface InterpretationModelInput {
    * than to reject, and a rejection costs the whole payload.
    */
   forbiddenCityTokens?: string[]
+  /**
+   * Per-category decoded answer comparison (lib/matches/enrichedAnswers.ts).
+   * The evidence the prose is written from; '' when no answers survived the
+   * filter, in which case the model falls back to engine signals alone.
+   */
+  enrichedAnswers?: string
 }
 
 export const MATCH_INTERPRETATION_SYSTEM = `You are the compatibility interpretation engine for HAEVN. You are analyzing a match between two HAEVN members.
@@ -125,6 +131,10 @@ OUTPUT: Return ONLY a single valid JSON object (no markdown, no prose outside th
 
 Use the provided category classifications and scores exactly. Interpret ONLY within the five engine categories and their supplied SIGNALS. Do NOT introduce observations drawn from demographics — age, location, gender, or similar — or from anything outside the supplied category signals; demographics are already shown on the card, so re-surfacing them (for example an age gap) as a "difference" adds judgment, not information. If a category's coverage is low or a signal is absent, treat it as unknown: prefer "limited data" framing and NEVER phrase missing data (e.g. "X not specified") as a difference. Only real, answered signals may support an alignment or a difference.
 
+USING THE MEMBER ANSWERS. When MEMBER ANSWERS BY CATEGORY is supplied, it is your primary evidence — write from what the two people actually answered, not from the engine's one-line verdicts. Name the substance of an alignment or difference ("you both want a long-term partnership; they are also open to something more casual") rather than restating the verdict ("your goals are aligned"). An answer marked "no answer" is UNKNOWN: never treat it as a difference. Still never reveal identity, and still never reason from demographics.
+
+SEXUAL COMPATIBILITY — DO NOT QUOTE ANSWERS. For the Sexual Compatibility category specifically, describe alignment and difference WITHOUT quoting or listing either person's individual answers. "Your expectations around frequency differ somewhat, and you align on how openly you each want to discuss intimacy" is right. Naming specific practices, experience levels or body preferences either member selected is NOT — that is disclosure, not analysis, and the viewer may not be entitled to it. This applies to every output field, not just that section.
+
 LENGTH. Measured against real generations, the most common failure by far is UNDER-WRITING — fields came back at roughly half their stated length, which makes the report read thin and unconsidered. Treat every range below as a MINIMUM WORD COUNT you must reach, not a ceiling to stay under. A 45–65 word field means AT LEAST 45 words: that is three to four full sentences, not one. Before you return the JSON, re-read each prose field and expand any that fall short by adding the specific supporting evidence from the supplied signals — never filler, never repetition. Ranges: match_summary 35–55 words; executive_summary 45–70 words; each section overview 25–45 words; each your_alignment 45–65 words; each where_you_differ 45–65 words; each why_this_introduction paragraph 45–65 words (the_verdict 25–40); closing_read.statement 35–50 words; haevn_assessment 90–140 words.
 
 DO NOT REPEAT YOURSELF ACROSS FIELDS. overview, your_alignment and where_you_differ sit in the SAME category block and a member reads them one after another: overview is the one-glance summary, your_alignment is the detail behind what you share, where_you_differ is the detail behind what you do not. Three paraphrases of the same sentence is the most common failure here. Likewise why_this_introduction is the document's opening argument, not a restatement of the five sections, and closing_read.statement is the last word, not a summary of everything above.`
@@ -149,6 +159,11 @@ export function buildMatchInterpretationMessage(input: InterpretationModelInput)
   lines.push('MATCH_PROFILE:')
   lines.push(JSON.stringify(input.match, null, 2))
   lines.push('')
+  if (input.enrichedAnswers) {
+    lines.push('MEMBER ANSWERS BY CATEGORY (the evidence — "you" = viewer, "them" = the match):')
+    lines.push(input.enrichedAnswers)
+    lines.push('')
+  }
   lines.push('CATEGORY_RESULTS (engine-supplied — use scores + classifications exactly):')
   for (const s of input.sections) {
     // Only real signals are fed to the model. Unknown/"not specified" reasons are
