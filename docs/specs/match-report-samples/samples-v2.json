@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-09-20T22:42:24.038Z",
-  "model": "gpt-4o",
-  "schema_version": "v2",
+  "generated_at": "2026-09-20T23:10:26.871Z",
+  "model": "gpt-4o-mini",
+  "schema_version": "v3",
   "note": "Real pairs. No survey answers, emails, or full names are stored. Cache not written.",
   "measurements": {
-    "valid": 10,
+    "valid": 9,
     "of": 10,
-    "avg_latency_ms": 14007,
-    "cost_per_call_usd": 0.001359,
+    "avg_latency_ms": 11062,
+    "cost_per_call_usd": 0.001572,
     "warm_targets": 683,
-    "projected_warm_seconds": 9567
+    "projected_warm_seconds": 7555
   },
   "samples": [
     {
@@ -69,152 +69,147 @@
           }
         }
       ],
-      "generation_ms": 15879,
+      "generation_ms": 10484,
       "usage": {
-        "prompt_tokens": 2830,
-        "completion_tokens": 1589,
-        "total_tokens": 4419,
-        "cost_usd": 0.0013779
+        "prompt_tokens": 3214,
+        "completion_tokens": 1503,
+        "total_tokens": 4717,
+        "cost_usd": 0.0013838999999999998
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "HAEVN matched you based on exceptional alignment in relationship goals and values, alongside compatible structures. Both of you prioritize stability and emotional balance, which may create a strong foundation for connection.",
-        "executive_summary": "This match achieved a high score due to exceptional alignment in your relationship goals and values, indicating a shared vision for the future. While there are some differences in emotional engagement needs, the overall compatibility suggests a worthwhile introduction.",
+        "match_summary": "You and this person share strong alignment in your goals for a long-term partnership and values like stability and emotional balance. Both of you prefer quieter lifestyles and enjoy one-on-one interactions, creating a solid foundation for connection.",
+        "executive_summary": "This match reflects exceptional alignment in goals and expectations, particularly regarding long-term partnership intentions and shared values. While there are some differences in emotional engagement needs, the overall compatibility suggests a worthwhile introduction.",
         "why_this_introduction": {
-          "what_aligns": "You both value stability, emotional balance, and intentional connection, creating a strong foundation for a potential partnership. Additionally, your preference for quieter, more relaxed lifestyles aligns well, suggesting comfort in each other's company.",
-          "what_differs": "There are some differences in emotional engagement needs and attachment patterns, which could influence how you connect emotionally. While you both prefer direct communication, your differing emotional engagement styles may require some understanding.",
-          "the_verdict": "Despite some differences, the strong alignment in your goals and values makes this introduction worth considering."
+          "what_aligns": "You both prioritize stability, emotional balance, and intentional connection in your lives. Additionally, your preference for quieter rhythms and one-on-one social settings enhances the potential for a meaningful relationship.",
+          "what_differs": "While you share many values, there are differences in emotional engagement needs. You may approach emotional connection differently, which could influence how you relate to one another in deeper discussions.",
+          "the_verdict": "The strong alignment in your goals and values makes this introduction worth considering despite the differences."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both share the same relationship goals and values."
+            "summary": "You both seek a long-term partnership with shared values."
           },
           {
             "category": "Structure Fit",
-            "summary": "Your relationship structures and boundaries align well."
+            "summary": "You have compatible relationship structures and orientations."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "You have compatible expectations and desires in intimacy."
+            "summary": "You align well on erotic styles and frequency expectations."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Shared relationship goals",
-          "Compatible emotional styles",
-          "Well-aligned intimacy expectations"
+          "Shared goals for long-term partnership",
+          "Similar lifestyle preferences",
+          "Aligned values of stability and emotional balance"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a strong alignment in your relationship goals and values.",
-            "your_alignment": "Both of you seek long-term partnerships and value stability, emotional balance, and intentional connection. This shared vision can create a solid foundation for a relationship, enhancing the potential for meaningful interactions.",
-            "where_you_differ": "While your goals align closely, there are differences in attachment patterns and availability, which could affect how you approach emotional intimacy and connection.",
-            "interpretation": "The strong alignment in goals suggests a mutual understanding, while the differences may require open communication to navigate effectively.",
+            "overview": "You both aim for a long-term partnership with aligned values.",
+            "your_alignment": "You and this person both seek a long-term partnership, emphasizing stability and emotional balance. This shared goal creates a strong foundation for potential connection and understanding.",
+            "where_you_differ": "You are open to casual dating, while this person is focused solely on a long-term partnership. This difference in availability patterns may shape your interactions.",
+            "interpretation": "This alignment suggests a strong potential for a meaningful connection, though differing availability may require discussion.",
             "alignments": [
-              "Shared long-term partnership intent",
-              "Similar values of stability and balance",
-              "Compatible relationship styles"
+              "Shared goals for long-term partnership",
+              "Compatible relationship styles",
+              "Similar values"
             ],
             "differences": [
-              "Different attachment patterns",
-              "Different availability patterns"
+              "Different attachment patterns"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "Your relationship structures and boundaries align well.",
-            "your_alignment": "Both of you prefer monogamous relationships and have compatible boundaries regarding privacy and safer-sex approaches. This alignment can foster trust and security as you explore a connection.",
-            "where_you_differ": "There are some unanswered signals regarding your specific availability patterns, which could impact how you manage time together. However, the overall structure appears workable.",
-            "interpretation": "The compatibility in structure indicates a solid framework for a potential relationship, though further discussions about availability may enhance understanding.",
+            "overview": "You both prefer monogamous relationships and have compatible orientations.",
+            "your_alignment": "You both identify as straight and are currently single, which aligns well with your relationship structure preferences. This compatibility can foster a sense of mutual understanding.",
+            "where_you_differ": "There are some unanswered signals regarding your boundaries and safer-sex approaches, which could be relevant to discuss as you get to know each other.",
+            "interpretation": "The compatibility in your relationship structures indicates a solid foundation for exploration and connection.",
             "alignments": [
-              "Monogamous relationship preference",
-              "Well-aligned boundaries",
-              "Compatible privacy preferences"
+              "Compatible orientation preferences",
+              "Workable structure match",
+              "Well-aligned boundaries"
             ],
             "differences": []
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "There are some differences in emotional engagement and attachment styles.",
-            "your_alignment": "You both have compatible communication styles and emotional paces, which can facilitate understanding and connection. This alignment can help you navigate conversations and emotional exchanges effectively.",
-            "where_you_differ": "Your differing emotional engagement needs and attachment patterns may influence how you express feelings and connect emotionally. This difference is worth discussing to ensure mutual understanding.",
-            "interpretation": "While your emotional styles align well, the differences in engagement needs suggest that open dialogue will be important for fostering a deeper connection.",
+            "overview": "You have compatible emotional styles but differ in engagement needs.",
+            "your_alignment": "Both of you value quality time and physical touch, which can enhance emotional connection. Your similar emotional pace suggests a mutual understanding in how you express feelings.",
+            "where_you_differ": "Differences in attachment patterns and emotional engagement needs may influence how you connect emotionally. Understanding these differences could be important for deeper communication.",
+            "interpretation": "While you share emotional compatibility, recognizing and discussing your differing engagement needs may enhance your connection.",
             "alignments": [
               "Compatible communication styles",
               "Well-matched emotional styles",
-              "Similar emotional pace"
+              "Very similar emotional pace"
             ],
             "differences": [
-              "Different emotional engagement needs",
-              "Different attachment patterns"
+              "Different emotional engagement needs"
             ]
           },
           {
             "category": "Sexual Compatibility",
             "classification": "Compatible",
-            "overview": "You have compatible expectations and desires in intimacy.",
-            "your_alignment": "Both of you share strong erotic alignment and compatible frequency expectations, which can create a comfortable space for exploring intimacy together. This alignment suggests a mutual understanding of each other's needs.",
-            "where_you_differ": "There are some unanswered signals regarding specific preferences in exploration, which could be important to discuss as you get to know each other better.",
-            "interpretation": "The compatibility in sexual expectations indicates a positive foundation for intimacy, though further exploration of preferences may enhance connection.",
+            "overview": "You both align well on erotic styles and frequency expectations.",
+            "your_alignment": "You share preferences for romantic and playful erotic styles, which can create a comfortable space for intimacy. Additionally, your expectations around frequency are compatible.",
+            "where_you_differ": "There are some unanswered signals regarding exploration desires and boundary alignments that could be beneficial to discuss as you progress.",
+            "interpretation": "The compatibility in your sexual preferences suggests a positive foundation for intimacy, though further discussions may be helpful.",
             "alignments": [
               "Strong erotic alignment",
               "Compatible frequency expectations",
-              "Well-aligned exploration desires"
+              "Good boundary alignment"
             ],
             "differences": []
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "Your practical aspects align well, creating a workable foundation.",
-            "your_alignment": "You both have similar social energy levels and privacy preferences, which can foster comfort in shared spaces. Additionally, your independence preferences align, allowing for personal space within the relationship.",
-            "where_you_differ": "There are several unanswered signals regarding practical aspects, such as distance and substance alignment, which may need further exploration to ensure compatibility.",
-            "interpretation": "The practical compatibility suggests a solid foundation, but addressing the unknowns will be important for a comprehensive understanding.",
+            "overview": "You have a workable distance situation and similar social energy.",
+            "your_alignment": "Both of you prefer smaller social settings and have compatible privacy levels, which can enhance your interactions and comfort in each other's company.",
+            "where_you_differ": "There are several unanswered signals regarding your independence preferences and substance alignment, which may require further exploration.",
+            "interpretation": "Your practical compatibility suggests that logistical aspects of a relationship are likely to align well.",
             "alignments": [
-              "Well-matched social energy",
+              "Workable distance situation",
               "Compatible privacy levels",
-              "Similar independence preferences"
+              "Well-matched social energy"
             ],
-            "differences": [
-              "Limited data on distance situation",
-              "Limited data on substance alignment"
-            ]
+            "differences": []
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in emotional engagement needs",
-            "Attachment patterns and their impact",
-            "Exploration of intimacy preferences"
+            "Your differing attachment patterns",
+            "Emotional engagement needs",
+            "Casual dating openness"
           ],
-          "closing": "These topics can help deepen your understanding of each other and foster a stronger connection."
+          "closing": "These topics can help deepen your understanding of each other and clarify expectations."
         },
         "signals_that_mattered": [
-          "Shared long-term partnership intent",
-          "Compatible communication styles",
+          "Shared goals: 100% alignment",
+          "Compatible relationship styles",
           "Well-aligned boundaries",
           "Strong erotic alignment",
-          "Similar emotional pace",
-          "Well-matched social energy"
+          "Compatible privacy preferences",
+          "Very similar emotional pace"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your exceptional alignment in relationship goals and values creates a strong foundation.",
-          "most_meaningful_difference": "Differences in emotional engagement needs may require open communication.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, driven by shared values and compatible relationship structures. While there are some differences in emotional engagement and attachment styles, these can be navigated through open communication. Overall, the alignment suggests that exploring this connection could be worthwhile."
+          "strongest_reason": "Your shared goals for a long-term partnership and aligned values create a strong foundation.",
+          "most_meaningful_difference": "Your differing openness to casual dating may influence how you approach this connection.",
+          "haevn_assessment": "This match presents a promising opportunity for connection, given the exceptional alignment in your goals and values. While there are some differences in emotional engagement and availability, these can be addressed through open communication. Overall, this introduction is worth considering as you explore the potential for a meaningful relationship."
         },
         "conversation_starters": [
           "What does emotional balance mean to you?",
-          "How do you prefer to communicate in relationships?",
-          "What are your thoughts on intimacy exploration?"
+          "How do you prefer to spend quiet evenings?",
+          "What are your thoughts on casual dating?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The combination of shared values and compatible structures suggests a promising introduction. Engaging in open dialogue about your differences can enhance your connection and understanding."
+          "statement": "The strong alignment in your goals and values suggests a meaningful connection is possible. Exploring your differences may enhance your understanding and relationship potential."
         }
       }
     },
@@ -275,22 +270,22 @@
           }
         }
       ],
-      "generation_ms": 12254,
+      "generation_ms": 10630,
       "usage": {
-        "prompt_tokens": 2854,
-        "completion_tokens": 1541,
-        "total_tokens": 4395,
-        "cost_usd": 0.0013526999999999999
+        "prompt_tokens": 3238,
+        "completion_tokens": 1579,
+        "total_tokens": 4817,
+        "cost_usd": 0.0014330999999999999
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "You and this person share similar values and preferences for relationship structure, which HAEVN identified as significant compatibility signals. Your shared goals and emotional styles further enhance the potential for a meaningful connection.",
-        "executive_summary": "This match reflects exceptional alignment in goals and expectations, particularly in shared values and relationship styles. While there are some differences in attachment patterns and availability, the overall compatibility suggests a promising introduction.",
+        "match_summary": "You both value stability and emotional balance, and share a preference for quieter, relaxed lifestyles. Your goals align closely, with both of you open to long-term partnerships, though this person also seeks casual dating experiences.",
+        "executive_summary": "This match reflects exceptional alignment in goals and expectations, particularly regarding stability and emotional balance. While you both prefer one-on-one social settings and quieter lifestyles, this person is also exploring a broader range of relationship styles, which may require discussion.",
         "why_this_introduction": {
-          "what_aligns": "You both value stability, emotional balance, and intentional connections, which are foundational for a strong relationship. Additionally, your preferences for quieter lifestyles and one-on-one interactions align well, creating a comfortable space for connection.",
-          "what_differs": "While you share many values, there are differences in your relationship intents and attachment patterns. You seek a long-term partnership, whereas this person is open to casual dating and exploring various relationship styles. This difference may influence how you approach your connection.",
-          "the_verdict": "Despite the differences, your strong alignment in goals and emotional styles makes this introduction worth considering."
+          "what_aligns": "You both share a strong foundation in values like stability and emotional balance, which is essential for meaningful connections. Additionally, your preferences for quieter lifestyles and one-on-one interactions create a comfortable social environment for both of you.",
+          "what_differs": "While you both seek long-term partnerships, this person is also open to casual dating and exploring various relationship styles. This broader approach may lead to different expectations regarding commitment and relationship dynamics.",
+          "the_verdict": "Considering your shared values and strong alignment in goals, this introduction could be worthwhile despite the differences in relationship expectations."
         },
         "strongest_areas": [
           {
@@ -299,129 +294,129 @@
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in erotic preferences and exploration desires."
+            "summary": "There is strong alignment in your erotic styles and exploration desires."
           },
           {
             "category": "Practical Fit",
-            "summary": "You both have compatible social energy and privacy levels."
+            "summary": "You both have compatible social energy and privacy preferences."
           }
         ],
         "nudge_compatibility_highlights": [
           "Shared values of stability and emotional balance",
           "Strong alignment in sexual exploration desires",
-          "Compatible social styles in small settings"
+          "Compatible social styles and preferences"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a strong alignment in your relationship goals and styles.",
-            "your_alignment": "Both of you prioritize stability, emotional balance, and intentional connection in your relationships. This shared understanding creates a solid foundation for exploring a potential partnership.",
-            "where_you_differ": "However, you have different attachment patterns and availability, which may affect how you engage with each other. This difference is worth discussing to ensure mutual understanding.",
-            "interpretation": "The strong alignment in goals suggests a promising foundation, but the differences should be acknowledged.",
+            "overview": "You both prioritize stability and emotional balance in your relationships.",
+            "your_alignment": "Your goals align closely, with both of you valuing long-term partnerships and emotional stability. This shared focus can create a solid foundation for any potential connection.",
+            "where_you_differ": "This person is also interested in casual dating and exploring various relationship styles, which may differ from your more singular focus on long-term commitment.",
+            "interpretation": "This strong alignment in goals suggests a promising foundation, though differing relationship styles may require open communication.",
             "alignments": [
-              "Shared values of stability and emotional balance",
+              "Shared goals for stability",
               "Compatible relationship styles",
-              "Shared HAEVN purposes"
+              "Emotional balance as a priority"
             ],
             "differences": [
-              "Different attachment patterns",
-              "Different availability patterns"
+              "Different relationship style preferences"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Some Differences",
-            "overview": "There are some differences in your relationship structures, though they are manageable.",
-            "your_alignment": "You both prefer exploring relationship styles and have compatible boundaries and safer-sex approaches. This alignment indicates a mutual respect for each other's preferences.",
-            "where_you_differ": "The differences in orientation and role preferences may require open communication to navigate effectively. Understanding these nuances will be important as you explore your connection.",
-            "interpretation": "While there are some differences, they are manageable and can be discussed openly.",
+            "overview": "You both have a workable structure match, though some differences exist.",
+            "your_alignment": "You share some orientation alignment and complementary role preferences, which can facilitate understanding in your interactions. This can help create a comfortable dynamic as you explore your connection.",
+            "where_you_differ": "There are differences in your availability patterns and boundaries, which may influence how you approach potential interactions and commitments.",
+            "interpretation": "While there are some differences in structure, your complementary aspects can help navigate these challenges effectively.",
             "alignments": [
-              "Workable structure match",
-              "Compatible boundaries",
-              "Complementary role preferences"
+              "Some orientation alignment",
+              "Complementary role preferences",
+              "Compatible boundaries"
             ],
             "differences": [
-              "Some orientation alignment differences"
+              "Different availability patterns"
             ]
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "You both have strong emotional styles, but there are differences in attachment.",
-            "your_alignment": "Your emotional styles align well, allowing for effective communication. This shared understanding can foster a supportive environment for discussing feelings and needs.",
-            "where_you_differ": "The differences in attachment patterns and pace of emotional openness may influence how you express and receive emotions. Being aware of these differences can help you navigate emotional discussions.",
-            "interpretation": "The strong communication alignment is a positive aspect, but the differences should be approached with care.",
+            "overview": "You both have strong communication alignment, yet some differences exist.",
+            "your_alignment": "Your emotional styles align well, which can foster understanding and connection. This shared emotional bandwidth can help you both navigate conversations and emotional exchanges comfortably.",
+            "where_you_differ": "You have different attachment patterns and paces of emotional openness, which may affect how you both express feelings and connect emotionally over time.",
+            "interpretation": "The strong communication alignment can help bridge the differences in emotional expression, allowing for deeper connections.",
             "alignments": [
               "Strong communication alignment",
               "Well-matched emotional styles",
-              "Compatible privacy preferences"
+              "Compatible emotional bandwidth"
             ],
             "differences": [
-              "Different attachment patterns",
-              "Different pace of emotional openness"
+              "Different attachment patterns"
             ]
           },
           {
             "category": "Sexual Compatibility",
             "classification": "Strong Alignment",
-            "overview": "You both have a strong alignment in sexual preferences and exploration.",
-            "your_alignment": "There is a notable alignment in your erotic preferences and desires for exploration. This shared interest can enhance intimacy and connection.",
-            "where_you_differ": "Some boundary understanding may differ, which is important to clarify as you explore your sexual compatibility. Open discussions about boundaries will be beneficial.",
-            "interpretation": "The strong alignment in sexual compatibility suggests a positive foundation for intimacy, but clarity on boundaries is essential.",
+            "overview": "There is strong alignment in your sexual preferences and exploration desires.",
+            "your_alignment": "You both resonate with romantic erotic styles and share a desire for exploration, which can enhance intimacy and connection. This alignment suggests a mutual understanding of each other's needs.",
+            "where_you_differ": "Your expectations around frequency differ somewhat, which may require discussion to ensure both of you feel comfortable and understood in your intimacy.",
+            "interpretation": "The strong alignment in sexual compatibility can create a fulfilling dynamic, though discussing frequency expectations is advisable.",
             "alignments": [
               "Strong erotic alignment",
-              "Compatible frequency expectations",
-              "Well-aligned exploration desires"
+              "Well-aligned exploration desires",
+              "Compatible frequency expectations"
             ],
             "differences": [
-              "Some boundary understanding"
+              "Different expectations around frequency"
             ]
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "You have a compatible practical fit in social energy and privacy levels.",
-            "your_alignment": "Both of you share similar social energy and privacy preferences, which can create a comfortable environment for interaction. This compatibility can facilitate a smoother connection.",
-            "where_you_differ": "There are some unanswered signals regarding practical fit, which means the picture is somewhat limited. Exploring these aspects further could provide more clarity.",
-            "interpretation": "",
+            "overview": "You have a compatible practical fit, with some differences in distance preferences.",
+            "your_alignment": "Both of you have compatible social energy and privacy preferences, which can lead to a comfortable and understanding dynamic in your interactions.",
+            "where_you_differ": "There are some differences in your distance preferences, with this person open to connections anywhere nationally, while you prefer within 50 miles.",
+            "interpretation": "While there are some practical differences, your shared values and preferences can help navigate these aspects effectively.",
             "alignments": [
-              "Well-matched social energy",
-              "Compatible privacy levels",
-              "Workable distance situation"
+              "Compatible social energy",
+              "Well-matched privacy levels",
+              "Workable substance alignment"
             ],
-            "differences": []
+            "differences": [
+              "Different distance preferences"
+            ]
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Different relationship intents and styles",
-            "Attachment patterns and emotional openness",
-            "Boundary understanding in sexual preferences"
+            "Different relationship style preferences",
+            "Expectations around intimacy frequency",
+            "Your distance preferences for connection"
           ],
-          "closing": "These topics can help you understand each other's perspectives and foster a deeper connection."
+          "closing": "Understanding these differences can foster open communication and help both of you navigate potential challenges."
         },
         "signals_that_mattered": [
           "Shared goals",
           "Compatible relationship styles",
-          "Strong communication alignment",
-          "Well-matched emotional styles",
           "Strong erotic alignment",
-          "Compatible privacy preferences"
+          "Well-matched emotional styles",
+          "Compatible privacy preferences",
+          "Complementary role preferences"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your shared values and emotional styles create a strong foundation for connection.",
-          "most_meaningful_difference": "The difference in relationship intent may influence how you approach your connection.",
-          "haevn_assessment": "This match presents a compelling opportunity for exploration, given your shared values and emotional compatibility. While there are some differences in relationship intent and attachment patterns, these can be navigated through open communication. Overall, this introduction is worth considering as it may lead to a fulfilling connection."
+          "strongest_reason": "The exceptional alignment in your goals and values creates a solid foundation for connection.",
+          "most_meaningful_difference": "The differing relationship style preferences may influence how you approach potential interactions.",
+          "haevn_assessment": "This match showcases a promising balance of shared values and goals, particularly in stability and emotional balance. While there are differences in relationship styles and intimacy expectations, these can be addressed through open dialogue. The strong alignment in sexual compatibility further enhances the potential for a meaningful connection."
         },
         "conversation_starters": [
           "What does stability mean to you in a relationship?",
-          "How do you approach emotional openness?",
-          "What are your thoughts on exploring different relationship styles?"
+          "How do you approach exploring different relationship styles?",
+          "What are your thoughts on intimacy and connection?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The balance of strong alignment and manageable differences suggests this introduction could lead to meaningful conversations and connections."
+          "statement": "This match presents a strong foundation with shared values and goals. While there are differences in relationship styles and preferences, these can be navigated through open communication."
         }
       }
     },
@@ -482,54 +477,54 @@
           }
         }
       ],
-      "generation_ms": 14809,
+      "generation_ms": 10791,
       "usage": {
-        "prompt_tokens": 2847,
-        "completion_tokens": 1665,
-        "total_tokens": 4512,
-        "cost_usd": 0.0014260499999999999
+        "prompt_tokens": 3234,
+        "completion_tokens": 1526,
+        "total_tokens": 4760,
+        "cost_usd": 0.0014007
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "You and this person share a strong alignment in goals and expectations, particularly regarding long-term partnership intentions and relationship styles. Both of you prefer quieter social settings and are open to exploration, which could foster meaningful connections.",
-        "executive_summary": "This match achieved a high score due to exceptional alignment in goals and expectations, particularly in your shared intent for a long-term partnership. While there are some differences in attachment patterns and boundaries, the overall compatibility suggests a promising introduction.",
+        "match_summary": "You both seek a long-term partnership and share similar values around emotional connection and intentionality. Your preferences for quieter social settings and exploration align well, creating a solid foundation for connection.",
+        "executive_summary": "This match reflects strong alignment in goals and expectations, particularly in relationship intent and structure. While there are some differences in emotional expression and sexual preferences, these are manageable, suggesting a promising introduction.",
         "why_this_introduction": {
-          "what_aligns": "You both seek long-term partnerships and prefer monogamous relationships, which creates a solid foundation for compatibility. Additionally, your shared preference for one-on-one or small group settings can enhance your connection and comfort with each other.",
-          "what_differs": "There are differences in your attachment patterns and boundary preferences, which may require discussion to ensure mutual understanding. While you both value emotional connection, how you approach it may vary, highlighting the need for open communication.",
-          "the_verdict": "These shared goals and compatible relationship structures justify an introduction, as they provide a strong basis for exploring a potential connection."
+          "what_aligns": "You both value emotional connection and intentionality in relationships, which is crucial for building a strong partnership. Additionally, your preference for quieter social settings creates a comfortable environment for interaction.",
+          "what_differs": "While you both appreciate exploration, your erotic styles differ, with one leaning towards playful and romantic, and the other towards kink and sensuality. This could be an area for discussion to ensure mutual understanding.",
+          "the_verdict": "These shared values and compatible relationship goals suggest that an introduction could be worthwhile."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both have aligned long-term partnership goals and relationship styles."
+            "summary": "You both prioritize long-term partnerships with similar relationship structures."
           },
           {
             "category": "Emotional & Communication",
-            "summary": "You share strong communication alignment and emotional styles."
+            "summary": "You share strong communication alignment and emotional engagement."
           },
           {
             "category": "Structure Fit",
-            "summary": "Your relationship structures are compatible, though with some differences."
+            "summary": "You have compatible orientations and workable relationship structures."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Aligned long-term partnership intentions",
+          "Shared goals for long-term partnership",
           "Similar social style preferences",
-          "Shared values of intentional connection"
+          "Aligned values around emotional connection"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both share aligned goals for a long-term partnership.",
-            "your_alignment": "Your intentions for a long-term partnership and monogamous relationship style align perfectly, creating a strong foundation for compatibility. Additionally, your shared purpose within HAEVN enhances the potential for meaningful interactions.",
-            "where_you_differ": "While your goals align, there are differences in your attachment patterns and availability, which could influence how you connect. These aspects may require further exploration to ensure mutual understanding.",
-            "interpretation": "The alignment in goals suggests a strong potential for a meaningful relationship, while the differences may provide opportunities for growth.",
+            "overview": "You both seek long-term partnerships with aligned relationship structures.",
+            "your_alignment": "You both aim for a long-term partnership and share a monogamous structure. This alignment in goals creates a strong foundation for potential compatibility.",
+            "where_you_differ": "There are some differences in attachment and availability patterns, which could influence how you approach the relationship. However, these differences may be manageable.",
+            "interpretation": "The strong alignment in goals suggests a mutual understanding of what you both want from a relationship.",
             "alignments": [
-              "Shared long-term partnership goals",
-              "Compatible relationship styles",
-              "Shared HAEVN purposes"
+              "Shared goals for long-term partnership",
+              "Compatible relationship structures",
+              "Aligned privacy preferences"
             ],
             "differences": [
               "Different attachment patterns",
@@ -539,14 +534,14 @@
           {
             "category": "Structure Fit",
             "classification": "Some Differences",
-            "overview": "Your relationship structures show some differences but remain workable.",
-            "your_alignment": "You both prefer monogamous relationships and have compatible orientation preferences, which supports a cohesive structure. Additionally, your boundaries and safer-sex approaches are generally compatible, allowing for a healthy dynamic.",
-            "where_you_differ": "There are some differences in boundary preferences, which may require discussion to ensure both parties feel comfortable and respected. Understanding each other's perspectives will be key to navigating these differences.",
-            "interpretation": "While there are some differences in structure, the overall compatibility suggests a workable dynamic that can be navigated with open communication.",
+            "overview": "You have compatible orientations and workable relationship structures.",
+            "your_alignment": "Both of you identify as straight and prefer monogamous relationships, which helps in establishing a common ground for your connection.",
+            "where_you_differ": "There are some differences in boundaries and preferences regarding privacy, which may require open communication to navigate effectively.",
+            "interpretation": "The workable structure suggests that while there are differences, they can be discussed and managed.",
             "alignments": [
-              "Compatible orientation preferences",
-              "Workable structure match",
-              "Compatible safer-sex approaches"
+              "Compatible sexual orientation",
+              "Workable relationship structure",
+              "Complementary role preferences"
             ],
             "differences": [
               "Some differences in boundaries"
@@ -555,14 +550,14 @@
           {
             "category": "Emotional & Communication",
             "classification": "Compatible",
-            "overview": "You both have compatible emotional styles and strong communication alignment.",
-            "your_alignment": "Your emotional engagement and communication styles are well-matched, allowing for a deeper connection. This compatibility can foster understanding and support in your interactions, enhancing your relationship potential.",
-            "where_you_differ": "The differences in attachment patterns may influence how you express emotions and communicate. Being aware of these differences will help you navigate emotional discussions more effectively.",
-            "interpretation": "The strong emotional and communication alignment indicates a solid foundation for a supportive relationship, while the differences may encourage growth and deeper understanding.",
+            "overview": "You share strong communication alignment and emotional engagement.",
+            "your_alignment": "Both of you exhibit similar emotional styles and engagement levels, which can facilitate deeper connections and understanding in your interactions.",
+            "where_you_differ": "There are differences in attachment patterns that could influence how you express emotions and needs, but overall, your communication styles are well-matched.",
+            "interpretation": "The strong emotional alignment indicates a potential for effective communication and understanding.",
             "alignments": [
               "Strong communication alignment",
               "Well-matched emotional styles",
-              "Very similar emotional pace"
+              "Similar emotional pace"
             ],
             "differences": [
               "Different attachment patterns"
@@ -571,65 +566,65 @@
           {
             "category": "Sexual Compatibility",
             "classification": "Some Differences",
-            "overview": "You both have compatible sexual preferences, though some differences exist.",
-            "your_alignment": "Your exploration desires and erotic preferences align well, suggesting a mutual openness to discussing intimacy. This compatibility can enhance your connection and create a comfortable space for exploration.",
-            "where_you_differ": "There are some differences in boundary understanding, which may require conversation to ensure both partners feel comfortable and respected. Addressing these differences openly can strengthen your sexual compatibility.",
-            "interpretation": "The compatibility in sexual preferences suggests potential for a fulfilling intimate relationship, while the differences highlight the importance of communication.",
+            "overview": "You have compatible erotic preferences but some differences in styles.",
+            "your_alignment": "Both of you express a desire for exploration in intimacy, which is a positive sign for potential compatibility in this area.",
+            "where_you_differ": "Your erotic styles differ, with one favoring playful and romantic experiences, while the other leans towards kink and sensuality. This difference may require discussion to ensure mutual satisfaction.",
+            "interpretation": "While there are differences in erotic preferences, the shared desire for exploration suggests a willingness to communicate about intimacy.",
             "alignments": [
-              "Compatible erotic preferences",
-              "Well-aligned exploration desires",
-              "Compatible frequency expectations"
+              "Aligned exploration desires",
+              "Compatible frequency expectations",
+              "Great role compatibility"
             ],
             "differences": [
-              "Some boundary understanding"
+              "Different erotic styles"
             ]
           },
           {
             "category": "Practical Fit",
             "classification": "Some Differences",
-            "overview": "You have a workable practical fit, though some differences exist.",
-            "your_alignment": "Your similar independence preferences and social energy levels create a comfortable dynamic. Additionally, your privacy levels align well, which can foster trust in the relationship.",
-            "where_you_differ": "There are some differences in practical aspects that may require further discussion, including substance alignment and distance situations. Understanding each other's perspectives will be important for navigating these practical differences.",
-            "interpretation": "The practical fit suggests a solid foundation for a relationship, while the differences may require open communication to ensure mutual understanding.",
+            "overview": "You have a workable distance situation and compatible social energy.",
+            "your_alignment": "Both of you prefer one-on-one or small group settings, which can create a comfortable social dynamic as you get to know each other.",
+            "where_you_differ": "There are some differences in the distance you are willing to consider for connection, which could impact how you approach meeting each other.",
+            "interpretation": "The differences in distance preferences may require consideration, but your social compatibility can help bridge any gaps.",
             "alignments": [
-              "Well-matched social energy",
+              "Similar social energy",
               "Compatible privacy levels",
-              "Very similar independence preferences"
+              "Workable substance alignment"
             ],
             "differences": [
-              "Workable substance alignment"
+              "Different distance preferences"
             ]
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in attachment patterns",
-            "Boundary preferences in relationships",
-            "Exploration desires in intimacy"
+            "Differences in erotic styles and preferences",
+            "Attachment and availability patterns",
+            "Distance preferences for connection"
           ],
-          "closing": "These topics can foster deeper understanding and connection, enhancing your potential relationship."
+          "closing": "These topics can foster understanding and help you both navigate your potential partnership more effectively."
         },
         "signals_that_mattered": [
-          "Shared goals",
-          "Compatible relationship styles",
+          "Shared goals for long-term partnership",
+          "Compatible relationship structures",
           "Strong communication alignment",
-          "Well-matched emotional styles",
-          "Compatible erotic preferences",
+          "Aligned exploration desires",
+          "Similar social energy",
           "Workable distance situation"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your exceptional alignment in goals and relationship styles creates a solid foundation for a meaningful connection.",
-          "most_meaningful_difference": "The differences in attachment patterns may influence how you connect emotionally.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, given your shared intentions for a long-term partnership and compatible emotional styles. While there are some differences that may require discussion, the overall compatibility suggests a promising introduction. Engaging openly about your differences can lead to a deeper understanding and a more fulfilling relationship."
+          "strongest_reason": "Your shared intent for a long-term partnership and similar values create a solid foundation for connection.",
+          "most_meaningful_difference": "Differences in erotic styles may require open communication to ensure mutual satisfaction.",
+          "haevn_assessment": "This match presents a compelling opportunity for connection, given your aligned goals and emotional engagement. While there are some differences in attachment styles and sexual preferences, these can be navigated through open communication. Engaging with each other on these topics can help deepen your understanding and compatibility."
         },
         "conversation_starters": [
           "What does emotional connection mean to you?",
-          "How do you approach boundaries in relationships?",
-          "What are your thoughts on exploring intimacy?"
+          "How do you approach intimacy and exploration?",
+          "What are your favorite ways to spend quiet time?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The combination of shared goals and compatible emotional styles presents a promising opportunity for connection. Engaging in open discussions about your differences can further enhance your potential relationship."
+          "statement": "The combination of shared goals and compatible emotional styles indicates a promising foundation for connection. Engaging in open discussions about your differences can further enhance your compatibility."
         }
       }
     },
@@ -690,155 +685,151 @@
           }
         }
       ],
-      "generation_ms": 12975,
+      "generation_ms": 10140,
       "usage": {
-        "prompt_tokens": 2853,
-        "completion_tokens": 1544,
-        "total_tokens": 4397,
-        "cost_usd": 0.0013543499999999998
+        "prompt_tokens": 3246,
+        "completion_tokens": 1448,
+        "total_tokens": 4694,
+        "cost_usd": 0.0013556999999999998
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "You and this person share a strong alignment in your relationship goals and styles, along with compatible communication and emotional engagement. Both of you prefer quieter lifestyles and value intentional connections, making this match worth considering.",
-        "executive_summary": "This match reflects exceptional alignment in goals and expectations, particularly in relationship styles and shared values. While there are some differences in attachment patterns and availability, the overall compatibility suggests a promising introduction.",
+        "match_summary": "You both seek intentional connection, sharing a preference for monogamous relationships and a quieter lifestyle. Your alignment on social styles and communication approaches enhances the potential for meaningful interactions.",
+        "executive_summary": "This match shows exceptional alignment in goals and expectations, particularly in your shared desire for a long-term partnership. While there are some differences in emotional communication styles, the overall compatibility suggests a promising introduction.",
         "why_this_introduction": {
-          "what_aligns": "You both prioritize intentional connections and prefer quieter lifestyles, which fosters a comfortable environment for building a relationship. Additionally, your shared preference for one-on-one or small group social settings enhances compatibility.",
-          "what_differs": "While you both value direct communication, there are differences in attachment patterns and availability. This may influence how you approach emotional closeness and relationship dynamics, warranting discussion.",
-          "the_verdict": "The strong alignment in goals and sexual compatibility suggests that an introduction could be beneficial."
+          "what_aligns": "You both value intentional connection and prefer quieter, more relaxed lifestyles. Your shared interest in one-on-one or small group settings suggests a comfortable social dynamic, enhancing the potential for meaningful interactions.",
+          "what_differs": "While you both appreciate quality time and physical touch as love languages, this person also values words of affirmation and receiving gifts. These differences in emotional communication styles may require some understanding as you get to know each other.",
+          "the_verdict": "The strong alignment in your goals and lifestyles justifies an introduction, as it creates a solid foundation for connection."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both have aligned long-term relationship goals and styles."
+            "summary": "You both prioritize long-term partnerships and intentional connections."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in erotic preferences and exploration desires."
+            "summary": "You share strong alignment in erotic styles and exploration desires."
           },
           {
             "category": "Structure Fit",
-            "summary": "Your relationship structures are compatible with some differences."
+            "summary": "You both prefer a monogamous relationship structure."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Aligned long-term relationship goals",
-          "Strong sexual compatibility",
-          "Compatible communication styles"
+          "Shared goals for long-term partnership",
+          "Similar social style preferences",
+          "Strong alignment in sexual exploration"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both share aligned goals and relationship styles, fostering compatibility.",
-            "your_alignment": "Your mutual intent for long-term partnerships and preference for monogamy creates a solid foundation for connection. Both of you value intentional connections, which aligns your relationship expectations closely.",
-            "where_you_differ": "There are differences in attachment and availability patterns, which could affect how you navigate emotional closeness and relationship dynamics. Understanding these differences will be important.",
-            "interpretation": "The strong alignment in goals suggests a solid basis for a meaningful connection, while the differences highlight areas for potential discussion.",
+            "overview": "You both prioritize long-term partnerships and have compatible relationship structures.",
+            "your_alignment": "Your shared intent for long-term partnerships and community connections indicates a strong foundation for mutual understanding and commitment.",
+            "where_you_differ": "You have different availability patterns, which may affect how you pursue these goals together.",
+            "interpretation": "This strong alignment suggests a solid basis for exploring a relationship together.",
             "alignments": [
-              "Shared long-term relationship goals",
+              "Shared goals for long-term partnership",
               "Compatible relationship structures",
-              "Aligned privacy preferences"
+              "Intentional connection values"
             ],
             "differences": [
-              "Different attachment patterns",
               "Different availability patterns"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "Your relationship structures are generally compatible with some differences.",
-            "your_alignment": "Both of you prefer monogamous relationships and have compatible boundaries, which can facilitate a healthy partnership. Your shared social styles also contribute positively to this compatibility.",
-            "where_you_differ": "There are differences in safer-sex practices and role preferences, which may require open communication to ensure mutual understanding and comfort in your relationship.",
-            "interpretation": "While your structures align well, discussing the differences will help establish a clearer understanding of each other's needs.",
+            "overview": "You both prefer monogamous relationships and have similar orientation preferences.",
+            "your_alignment": "Your shared preference for monogamous structures indicates a mutual understanding of relationship expectations, which can foster trust and security.",
+            "where_you_differ": "There are some differences in boundaries and safer-sex practices that may need discussion as your relationship develops.",
+            "interpretation": "The compatibility in structure suggests a good starting point for a relationship, but open communication is key.",
             "alignments": [
-              "Compatible relationship structures",
-              "Workable boundaries",
-              "Similar social styles"
+              "Compatible orientation preferences",
+              "Workable structure match",
+              "Similar relationship boundaries"
             ],
             "differences": [
-              "Different safer-sex practices",
-              "Complementary role preferences"
+              "Different safer-sex practices"
             ]
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "You both have compatible communication styles but differ in attachment patterns.",
-            "your_alignment": "Your direct communication styles and well-matched emotional engagement suggest that you can express feelings and needs effectively, which is crucial for a healthy relationship.",
-            "where_you_differ": "Differences in attachment patterns may influence how you approach emotional intimacy and connection, potentially leading to misunderstandings if not addressed.",
-            "interpretation": "The compatibility in communication is a strong asset, but the differences in attachment may require attention to foster deeper emotional connections.",
+            "overview": "You both have compatible communication styles but differ in emotional expression.",
+            "your_alignment": "Your direct communication styles and similar emotional paces can facilitate effective conversations and understanding between you.",
+            "where_you_differ": "This person values words of affirmation and receiving gifts, which contrasts with your focus on quality time and physical touch, indicating different ways of expressing love.",
+            "interpretation": "Understanding these emotional differences can enhance your connection and communication.",
             "alignments": [
               "Compatible communication styles",
               "Well-matched emotional engagement",
               "Similar emotional pace"
             ],
             "differences": [
-              "Different attachment patterns"
+              "Different love languages"
             ]
           },
           {
             "category": "Sexual Compatibility",
             "classification": "Strong Alignment",
-            "overview": "You both exhibit strong alignment in sexual preferences and desires.",
-            "your_alignment": "There is a notable compatibility in erotic preferences, frequency expectations, and exploration desires, indicating a shared openness to discussing and engaging in sexual experiences.",
-            "where_you_differ": "While your sexual preferences align well, specific boundaries may differ, which could be important to clarify as you explore intimacy together.",
-            "interpretation": "The strong alignment in sexual compatibility suggests a solid foundation for intimacy, though discussing boundaries will enhance mutual understanding.",
+            "overview": "You both have strong alignment in erotic styles and exploration desires.",
+            "your_alignment": "Your shared playful and sensual erotic styles indicate a mutual interest in exploring intimacy in a fun and engaging way.",
+            "where_you_differ": "Your expectations around frequency may differ somewhat, which could be worth discussing to ensure mutual satisfaction.",
+            "interpretation": "This strong alignment suggests a promising foundation for intimacy, but open dialogue about expectations is important.",
             "alignments": [
               "Strong erotic alignment",
-              "Compatible frequency expectations",
-              "Well-aligned exploration desires"
+              "Compatible exploration desires",
+              "Good boundary alignment"
             ],
             "differences": [
-              "Different boundary preferences"
+              "Different frequency expectations"
             ]
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "You both have compatible practical preferences, with some areas needing clarification.",
-            "your_alignment": "Your similar preferences for privacy and social styles create a comfortable environment for interaction. Additionally, your shared language capabilities enhance communication.",
-            "where_you_differ": "There are several unanswered signals regarding practical fit, which may include lifestyle habits or logistical considerations that could impact your connection.",
-            "interpretation": "",
+            "overview": "You both prefer similar social styles and have compatible distance preferences.",
+            "your_alignment": "Your shared preference for one-on-one or small group settings indicates a comfortable social dynamic, enhancing your potential connection.",
+            "where_you_differ": "There is limited data on other practical aspects, which may require further exploration as you get to know each other.",
+            "interpretation": "The compatibility in practical aspects suggests a good foundation for exploring a relationship.",
             "alignments": [
               "Compatible social styles",
               "Similar independence preferences",
-              "Compatible privacy levels"
+              "Workable substance alignment"
             ],
             "differences": []
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in attachment patterns",
-            "Different availability patterns",
-            "Clarifying safer-sex practices"
+            "Discuss your different love languages",
+            "Explore your availability patterns",
+            "Clarify your expectations around intimacy"
           ],
-          "closing": "These topics can help deepen your understanding of each other and strengthen your connection."
+          "closing": "These topics can deepen your understanding and help navigate any differences."
         },
         "signals_that_mattered": [
-          "Shared goals",
-          "Compatible relationship styles",
+          "Shared goals for long-term partnership",
+          "Compatible relationship structures",
           "Strong erotic alignment",
+          "Similar social styles",
           "Compatible communication styles",
-          "Well-matched emotional engagement",
-          "Compatible privacy preferences"
+          "Workable structure match"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your shared long-term relationship goals and compatible communication styles create a solid foundation.",
-          "most_meaningful_difference": "Differences in attachment patterns may influence emotional dynamics, requiring discussion.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, given the strong alignment in goals and sexual compatibility. While some differences exist, particularly in attachment and availability, these can be addressed through open communication. Engaging with this person could lead to a meaningful relationship, provided you navigate the differences thoughtfully."
+          "strongest_reason": "Your shared goals for long-term partnership create a strong foundation for connection.",
+          "most_meaningful_difference": "Understanding your different love languages will be important as you connect.",
+          "haevn_assessment": "This match presents a promising opportunity for connection, given your shared values and relationship goals. While there are some differences in emotional expression and availability, these can be navigated through open communication. The overall compatibility suggests that an introduction could lead to a meaningful relationship."
         },
         "conversation_starters": [
           "What does intentional connection mean to you?",
-          "How do you prefer to communicate your needs?",
-          "What are your thoughts on emotional intimacy?",
-          "How do you approach relationship boundaries?",
-          "What are your views on exploring new experiences?"
+          "How do you express love and affection?",
+          "What are your thoughts on exploring intimacy?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The strong alignment in goals and sexual compatibility suggests a promising opportunity for connection. Engaging in open discussions about differences will enhance mutual understanding and strengthen your bond."
+          "statement": "The strong alignment in your goals and lifestyles suggests a meaningful introduction. Understanding each other's differences can enhance your connection and communication."
         }
       }
     },
@@ -899,155 +890,20 @@
           }
         }
       ],
-      "generation_ms": 11959,
+      "generation_ms": 11302,
       "usage": {
-        "prompt_tokens": 2848,
-        "completion_tokens": 1500,
-        "total_tokens": 4348,
-        "cost_usd": 0.0013272
+        "prompt_tokens": 3263,
+        "completion_tokens": 1588,
+        "total_tokens": 4851,
+        "cost_usd": 0.00144225
       },
-      "degraded": false,
-      "error": null,
-      "payload": {
-        "match_summary": "You and this person share strong alignment in your relationship goals and values, particularly regarding stability and emotional balance. Both of you prefer a quieter lifestyle and enjoy one-on-one or small group social settings, which may enhance your connection.",
-        "executive_summary": "This match reflects exceptional alignment in goals and values, particularly regarding long-term partnership intentions and emotional balance. While there are meaningful differences in your relationship structures and safer-sex practices, the overall compatibility suggests a worthwhile introduction.",
-        "why_this_introduction": {
-          "what_aligns": "You both prioritize stability, emotional balance, and intentional connection in relationships. Your preference for quieter lifestyles and small social settings aligns well, creating a comfortable environment for connection.",
-          "what_differs": "While you share many values, there are differences in your safer-sex practices and relationship structures. These differences may require discussion to ensure mutual understanding and comfort.",
-          "the_verdict": "The strong alignment in goals and emotional compatibility justifies considering this introduction."
-        },
-        "strongest_areas": [
-          {
-            "category": "Goals & Expectations",
-            "summary": "You both have fully aligned relationship goals and styles."
-          },
-          {
-            "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in sexual preferences and exploration desires."
-          },
-          {
-            "category": "Emotional & Communication",
-            "summary": "You share a well-matched emotional pace and strong communication."
-          }
-        ],
-        "nudge_compatibility_highlights": [
-          "Shared relationship goals",
-          "Strong emotional engagement",
-          "Compatible social styles"
-        ],
-        "sections": [
-          {
-            "category": "Goals & Expectations",
-            "classification": "Exceptional Alignment",
-            "overview": "You both have a remarkable alignment in your relationship goals and styles.",
-            "your_alignment": "Both of you seek long-term partnerships and share similar values like stability and emotional balance. This alignment indicates a strong foundation for a potential relationship.",
-            "where_you_differ": "There are differences in your attachment and availability patterns, which may influence how you approach relationships. These differences could be worth discussing to ensure compatibility.",
-            "interpretation": "This strong alignment suggests a solid basis for a meaningful connection, though awareness of differences is essential.",
-            "alignments": [
-              "Shared long-term partnership goals",
-              "Compatible relationship styles",
-              "Aligned values of stability and emotional balance"
-            ],
-            "differences": [
-              "Different attachment patterns",
-              "Different availability patterns"
-            ]
-          },
-          {
-            "category": "Structure Fit",
-            "classification": "Meaningful Difference",
-            "overview": "There are some significant differences in your relationship structures.",
-            "your_alignment": "You both prefer monogamous relationships and are currently single, which aligns your foundational relationship structures.",
-            "where_you_differ": "Your safer-sex practices differ, which may impact how you approach intimacy and boundaries. Understanding each other's preferences in this area will be important.",
-            "interpretation": "While there is a workable structure match, discussing your differences in safer-sex practices is advisable for clarity.",
-            "alignments": [
-              "Both prefer monogamous relationships",
-              "Currently single status",
-              "Compatible foundational structures"
-            ],
-            "differences": [
-              "Different safer-sex practices",
-              "Complementary role preferences"
-            ]
-          },
-          {
-            "category": "Emotional & Communication",
-            "classification": "Compatible",
-            "overview": "You both exhibit strong emotional compatibility and communication styles.",
-            "your_alignment": "Your emotional styles and communication preferences align well, allowing for a comfortable exchange of feelings and thoughts. This compatibility can foster a deeper connection.",
-            "where_you_differ": "You have different attachment patterns, which may influence how you express emotions and needs. Awareness of these differences can help navigate emotional interactions.",
-            "interpretation": "This compatibility in emotional and communication styles suggests a strong foundation for understanding each other.",
-            "alignments": [
-              "Well-matched emotional styles",
-              "Strong communication alignment",
-              "Similar emotional engagement"
-            ],
-            "differences": [
-              "Different attachment patterns"
-            ]
-          },
-          {
-            "category": "Sexual Compatibility",
-            "classification": "Strong Alignment",
-            "overview": "There is a strong alignment in your sexual preferences and desires.",
-            "your_alignment": "You both have compatible frequency expectations and share an interest in exploration, which can enhance intimacy and connection.",
-            "where_you_differ": "While there is strong alignment, there are some differences in boundary understanding that may need to be addressed to ensure comfort in sexual interactions.",
-            "interpretation": "This strong alignment indicates potential for a fulfilling sexual connection, but discussing boundaries is important.",
-            "alignments": [
-              "Strong erotic alignment",
-              "Compatible exploration desires",
-              "Well-aligned frequency expectations"
-            ],
-            "differences": [
-              "Some boundary understanding differences"
-            ]
-          },
-          {
-            "category": "Practical Fit",
-            "classification": "Compatible",
-            "overview": "You both have compatible practical preferences and lifestyle rhythms.",
-            "your_alignment": "Your preferences for privacy levels and social energy align well, suggesting a comfortable day-to-day interaction style.",
-            "where_you_differ": "There is limited data on some practical aspects, which may affect your overall compatibility. Understanding each other's practical needs will be beneficial.",
-            "interpretation": "",
-            "alignments": [
-              "Compatible privacy levels",
-              "Well-matched social energy",
-              "Similar independence preferences"
-            ],
-            "differences": []
-          }
-        ],
-        "worth_talking_about": {
-          "items": [
-            "Differences in safer-sex practices",
-            "Attachment pattern variations",
-            "Exploration interests and boundaries"
-          ],
-          "closing": "These topics can help clarify expectations and enhance understanding, paving the way for a stronger connection."
-        },
-        "signals_that_mattered": [
-          "Shared long-term partnership goals",
-          "Strong emotional engagement",
-          "Compatible relationship styles",
-          "Well-matched social energy",
-          "Compatible frequency expectations",
-          "Aligned values of stability and emotional balance"
-        ],
-        "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your shared values of stability and emotional balance create a strong foundation for connection.",
-          "most_meaningful_difference": "Differences in safer-sex practices may require open discussion for mutual comfort.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, given your shared goals and emotional compatibility. While some differences exist, particularly in safer-sex practices and attachment patterns, these can be addressed through open communication. Overall, the potential for a meaningful relationship is significant."
-        },
-        "conversation_starters": [
-          "What are your thoughts on relationship boundaries?",
-          "How do you approach emotional communication?",
-          "What interests you about exploration in relationships?"
-        ],
-        "closing_read": {
-          "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The strong alignment in your goals and emotional styles suggests a promising connection. While there are meaningful differences, discussing them can lead to a deeper understanding and a fruitful introduction."
-        }
-      }
+      "degraded": true,
+      "error": {
+        "code": "SCHEMA_INVALID",
+        "detail": "sections[3].where_you_differ quotes a sexual-compatibility answer verbatim: Voyeuristic"
+      },
+      "raw_on_failure": "{\n  \"match_summary\": \"You both seek stability and emotional balance in relationships, with a preference for monogamous connections. Your shared values and social styles suggest a strong foundation for meaningful interactions.\",\n  \"executive_summary\": \"This match reflects exceptional alignment in goals and expectations, particularly regarding relationship intent and styles. While you both prefer quieter lifestyles, there are some differences in your sexual compatibility and practical fit that may be worth discussing.\",\n  \"strongest_areas\": [\n    {\n      \"category\": \"Goals & Expectations\",\n      \"summary\": \"You both prioritize long-term partnerships and share similar relationship styles.\"\n    },\n    {\n      \"category\": \"Sexual Compatibility\",\n      \"summary\": \"You align well on erotic styles and exploration desires.\"\n    },\n    {\n      \"category\": \"Emotional & Communication\",\n      \"summary\": \"You have strong communication alignment and similar emotional engagement.\"\n    }\n  ],\n  \"nudge_compatibility_highlights\": [\n    \"Shared relationship goals\",\n    \"Similar emotional styles\",\n    \"Compatible social preferences\"\n  ],\n  \"why_this_introduction\": {\n    \"what_aligns\": \"You both value stability, emotional balance, and intentional connections, which creates a strong foundation for a relationship. Additionally, your preference for one-on-one or small group settings aligns well, fostering deeper connections.\",\n    \"what_differs\": \"While you both seek long-term partnerships, they are focused solely on that, whereas you are open to casual dating as well. Additionally, your sexual preferences show some differences in exploration styles, which could be meaningful to discuss.\",\n    \"the_verdict\": \"These alignments and differences suggest a worthwhile introduction, as your shared values can facilitate a strong connection.\"\n  },\n  \"sections\": [\n    {\n      \"category\": \"Goals & Expectations\",\n      \"classification\": \"Exceptional Alignment\",\n      \"overview\": \"You both have a strong alignment in your relationship goals and styles.\",\n      \"your_alignment\": \"You both seek long-term partnerships and share similar relationship structures, which creates a solid foundation for compatibility. Your values of stability and emotional balance further enhance this alignment.\",\n      \"where_you_differ\": \"You are open to casual dating and play partner connections, while they are focused solely on a long-term partnership. This difference in relationship intent may require discussion to ensure mutual understanding.\",\n      \"alignments\": [\n        \"Shared long-term partnership goals\",\n        \"Compatible relationship structures\",\n        \"Similar values around stability\"\n      ],\n      \"differences\": [\n        \"Different relationship intent focus\"\n      ],\n      \"interpretation\": \"This strong alignment suggests that you both have a clear understanding of what you want, but the difference in relationship intent may require open communication.\"\n    },\n    {\n      \"category\": \"Structure Fit\",\n      \"classification\": \"Meaningful Difference\",\n      \"overview\": \"There are some differences in your relationship structures and preferences.\",\n      \"your_alignment\": \"You both identify as straight and prefer monogamous relationships, which provides a compatible foundation for your connection. Your shared preference for quieter lifestyles also aligns well.\",\n      \"where_you_differ\": \"Your preferences for safer-sex practices and boundaries differ, which could impact your relationship dynamics. Understanding each other's comfort levels in these areas will be important.\",\n      \"alignments\": [\n        \"Same sexual orientation\",\n        \"Monogamous relationship preference\",\n        \"Similar lifestyle rhythms\"\n      ],\n      \"differences\": [\n        \"Different safer-sex practices\"\n      ],\n      \"interpretation\": \"While there is a solid foundation in your relationship structures, addressing the differences in safer-sex practices will be important for compatibility.\"\n    },\n ",
+      "payload": null
     },
     {
       "sample": 6,
@@ -1106,151 +962,152 @@
           }
         }
       ],
-      "generation_ms": 11857,
+      "generation_ms": 11701,
       "usage": {
-        "prompt_tokens": 2854,
-        "completion_tokens": 1566,
-        "total_tokens": 4420,
-        "cost_usd": 0.0013677
+        "prompt_tokens": 3243,
+        "completion_tokens": 1625,
+        "total_tokens": 4868,
+        "cost_usd": 0.00146145
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "You and this person share a strong alignment in relationship goals and expectations, along with compatible sexual preferences. Both of you value intentional connection and prefer a quieter lifestyle rhythm, making an introduction worth considering.",
-        "executive_summary": "This match achieved a high compatibility score due to exceptional alignment in goals and expectations, particularly in shared relationship intents and styles. While there are some differences in emotional attachment patterns, the overall compatibility suggests a meaningful connection.",
+        "match_summary": "You and this person share a strong alignment in relationship goals and structure, both seeking a long-term partnership. Additionally, your preferences for social settings and lifestyle rhythms are compatible, suggesting a good foundation for connection.",
+        "executive_summary": "This match achieved a high compatibility score due to exceptional alignment in goals and expectations, particularly in relationship intent and structure. While there are some differences in emotional communication styles, the overall compatibility suggests a worthwhile introduction.",
         "why_this_introduction": {
-          "what_aligns": "You and this person have exceptional alignment in your relationship goals and styles, both seeking long-term partnerships. Additionally, your preference for quieter lifestyles and one-on-one social interactions enhances your compatibility.",
-          "what_differs": "While you both have compatible communication styles, there are differences in your attachment patterns, which may influence how you connect emotionally. This is worth discussing to ensure mutual understanding.",
-          "the_verdict": "The strong alignment in goals and sexual compatibility justifies an introduction, as these are foundational aspects of a potential relationship."
+          "what_aligns": "You both prioritize long-term partnerships and prefer one-on-one or small group social settings. Additionally, your lifestyle rhythms are similar, favoring a quieter and more relaxed pace, which can create a comfortable environment for connection.",
+          "what_differs": "While you both value physical touch and quality time, this person also appreciates words of affirmation and acts of service as love languages. This difference in emotional communication styles could lead to varying expectations in expressing affection.",
+          "the_verdict": "The strong alignment in goals and compatibility in lifestyle suggest that an introduction could be beneficial."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both have aligned long-term partnership goals and relationship styles."
+            "summary": "You both seek a long-term partnership with compatible relationship styles."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in sexual preferences and exploration levels."
+            "summary": "There is strong alignment in erotic styles and intimacy preferences."
           },
           {
             "category": "Structure Fit",
-            "summary": "You both have a workable structure match with complementary preferences."
+            "summary": "You both have a workable structure match and similar boundaries."
           }
         ],
         "nudge_compatibility_highlights": [
           "Shared long-term partnership goals",
-          "Strong sexual alignment",
+          "Strong erotic alignment",
           "Compatible social styles"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both share a strong alignment in relationship goals and styles.",
-            "your_alignment": "Both of you are seeking long-term partnerships and prefer monogamous structures. This shared intent creates a solid foundation for a potential relationship, as you both value intentional connections.",
-            "where_you_differ": "There are differences in your attachment patterns, which could affect how you approach emotional intimacy. Understanding these differences will be important for effective communication.",
-            "interpretation": "The shared goals and styles indicate a strong potential for a meaningful connection, while the attachment differences suggest areas for open dialogue.",
+            "overview": "You both have a clear alignment in relationship goals and styles.",
+            "your_alignment": "Both of you are seeking a long-term partnership, which creates a strong foundation for potential connection. Your relationship structures are also aligned, as you both prefer monogamous arrangements.",
+            "where_you_differ": "There are some differences in attachment and availability patterns, which could influence how you approach the relationship. However, these differences are not necessarily dealbreakers.",
+            "interpretation": "The strong alignment in goals suggests a mutual understanding of relationship expectations, while the differences may require discussion to ensure compatibility.",
             "alignments": [
-              "Shared long-term partnership goals",
-              "Compatible relationship styles",
+              "Shared long-term partnership intent",
+              "Compatible relationship structures",
               "Aligned privacy preferences"
             ],
             "differences": [
-              "Different attachment patterns"
+              "Different attachment patterns",
+              "Different availability patterns"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "You both have a workable structure match with aligned boundaries.",
-            "your_alignment": "Your preferences for monogamous relationships and similar social styles create a compatible structure. Both of you prefer smaller social settings, which can foster deeper connections.",
-            "where_you_differ": "There are some unanswered questions regarding your availability patterns, which could influence how you navigate your relationship structure. Clarifying these aspects may enhance compatibility.",
-            "interpretation": "The compatibility in structure suggests a solid foundation, but addressing availability will be key to ensuring both partners feel supported.",
+            "overview": "You both have a workable structure match and similar boundaries.",
+            "your_alignment": "Your shared preference for monogamous relationships and compatible sexual orientations indicate a solid foundation for connection. Both of you also have well-aligned boundaries, which can foster trust.",
+            "where_you_differ": "There are some unanswered signals regarding specific preferences and independence expectations, which may require further exploration to fully understand each other's needs.",
+            "interpretation": "The compatibility in structure suggests that you can navigate a relationship together, but clarifying any unknowns will be important for a deeper understanding.",
             "alignments": [
-              "Well-aligned boundaries",
-              "Complementary role preferences",
-              "Compatible safer-sex approaches"
+              "Workable structure match",
+              "Aligned boundaries",
+              "Complementary role preferences"
             ],
-            "differences": [
-              "Different availability patterns"
-            ]
+            "differences": []
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "You have compatible communication styles but some differences in emotional attachment.",
-            "your_alignment": "Both of you value direct communication and have well-matched emotional engagement. This can facilitate open discussions and a supportive emotional environment.",
-            "where_you_differ": "Your differing attachment patterns may lead to variations in how you express and receive emotional support. Understanding these differences will be crucial for effective communication.",
-            "interpretation": "While your communication is strong, the emotional differences highlight the need for awareness and understanding to foster a deeper connection.",
+            "overview": "There are some differences in emotional communication styles.",
+            "your_alignment": "You both value emotional connection and have similar emotional paces, which can help in building a strong bond. Additionally, your compatible communication styles can facilitate open discussions.",
+            "where_you_differ": "This person also values words of affirmation and acts of service, which are not as prominent in your preferences. This difference might lead to varying expectations in how affection is expressed.",
+            "interpretation": "Understanding and addressing these differences in emotional expression can enhance your connection and ensure both partners feel valued.",
             "alignments": [
+              "Similar emotional pace",
               "Compatible communication styles",
-              "Well-matched emotional engagement",
-              "Very similar emotional pace"
+              "Well-matched emotional engagement"
             ],
             "differences": [
-              "Different attachment patterns"
+              "Different love languages"
             ]
           },
           {
             "category": "Sexual Compatibility",
             "classification": "Strong Alignment",
-            "overview": "There is a strong alignment in sexual preferences and exploration levels.",
-            "your_alignment": "Both of you exhibit strong erotic alignment and compatible frequency preferences, which can enhance intimacy. Your openness to exploration further supports a healthy sexual connection.",
-            "where_you_differ": "There are no significant differences in sexual compatibility, indicating a harmonious approach to intimacy. This alignment can contribute positively to your relationship dynamics.",
-            "interpretation": "The strong sexual compatibility suggests a solid foundation for intimacy, which can enhance the overall relationship experience.",
+            "overview": "You both have strong alignment in erotic styles and intimacy preferences.",
+            "your_alignment": "Both of you resonate with romantic and sensual styles, which can create a shared understanding of intimacy. Additionally, you align well on frequency preferences and exploration levels.",
+            "where_you_differ": "This person also identifies with playful and kinky styles, which may introduce some differences in how you approach intimacy. Discussing these preferences could be beneficial.",
+            "interpretation": "The strong alignment in sexual compatibility suggests a good foundation for intimacy, but discussing differing preferences will be important for mutual satisfaction.",
             "alignments": [
               "Strong erotic alignment",
               "Well-aligned frequency preferences",
-              "Compatible exploration levels"
+              "Good boundary alignment"
             ],
-            "differences": []
+            "differences": [
+              "Different erotic styles"
+            ]
           },
           {
             "category": "Practical Fit",
             "classification": "Some Differences",
-            "overview": "You have some differences in practical aspects, but compatibility remains.",
-            "your_alignment": "Both of you have compatible privacy levels and social energy, which can help in navigating daily interactions and shared experiences.",
-            "where_you_differ": "There are several unanswered signals regarding practical fit, including substance alignment and independence expectations. Addressing these could clarify compatibility in daily life.",
-            "interpretation": "While there are some practical differences, the overall compatibility in daily interactions suggests a manageable fit.",
+            "overview": "You both have a workable distance situation and compatible social energy.",
+            "your_alignment": "Your preferences for connection within 25 miles and similar social styles indicate that practical aspects of a relationship could be manageable. You both enjoy smaller social settings, which can enhance shared experiences.",
+            "where_you_differ": "There are several unanswered signals regarding independence expectations and substance alignment, which may require further discussion to ensure compatibility in practical matters.",
+            "interpretation": "While practical fit appears manageable, clarifying any unknowns will be essential for ensuring both partners feel comfortable and understood.",
             "alignments": [
-              "Compatible privacy levels",
-              "Well-matched social energy",
-              "Shared language(s) available"
+              "Workable distance situation",
+              "Compatible social energy",
+              "Well-matched privacy levels"
             ],
             "differences": [
-              "Workable distance situation"
+              "Unanswered signals on independence"
             ]
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Discuss your attachment patterns",
-            "Explore availability preferences",
-            "Clarify practical expectations"
+            "Discuss emotional expression preferences",
+            "Explore differing erotic styles",
+            "Clarify independence expectations"
           ],
-          "closing": "These topics can enhance understanding and strengthen your connection, rather than being seen as dealbreakers."
+          "closing": "These topics can help deepen your understanding of each other and ensure a more harmonious connection."
         },
         "signals_that_mattered": [
-          "Shared long-term partnership goals",
-          "Compatible relationship styles",
+          "Shared long-term partnership intent",
+          "Compatible relationship structures",
           "Strong erotic alignment",
           "Well-aligned frequency preferences",
           "Compatible communication styles",
-          "Well-matched emotional engagement"
+          "Workable distance situation"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "The exceptional alignment in your relationship goals and styles makes this match particularly promising.",
-          "most_meaningful_difference": "The differing attachment patterns may influence emotional dynamics, so understanding this is important.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, given the strong alignment in goals and sexual preferences. While there are some differences in emotional attachment, addressing these openly can lead to a deeper understanding and a more fulfilling relationship. The overall compatibility suggests that an introduction is worth considering."
+          "strongest_reason": "The exceptional alignment in your relationship goals and structures suggests a strong foundation for connection.",
+          "most_meaningful_difference": "Differences in emotional expression and erotic styles may require discussion to ensure mutual understanding.",
+          "haevn_assessment": "This match shows a high level of compatibility, particularly in shared goals and relationship structures. While there are some differences in emotional communication and intimacy preferences, these can be navigated through open dialogue. Overall, this introduction is worth considering, as it holds the potential for a meaningful connection."
         },
         "conversation_starters": [
           "What does emotional connection mean to you?",
-          "How do you approach intimacy in relationships?",
-          "What are your thoughts on exploring new experiences together?"
+          "How do you express affection in relationships?",
+          "What are your thoughts on exploring intimacy?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The strong alignment in your goals and sexual compatibility suggests a meaningful connection. Engaging in open discussions about your differences can further enhance this potential relationship."
+          "statement": "The compatibility in goals and structure, along with shared values, presents a promising foundation for connection. Engaging in open discussions about differences can further enhance your potential relationship."
         }
       }
     },
@@ -1311,88 +1168,84 @@
           }
         }
       ],
-      "generation_ms": 11456,
+      "generation_ms": 10712,
       "usage": {
-        "prompt_tokens": 2865,
-        "completion_tokens": 1531,
-        "total_tokens": 4396,
-        "cost_usd": 0.00134835
+        "prompt_tokens": 3275,
+        "completion_tokens": 1553,
+        "total_tokens": 4828,
+        "cost_usd": 0.00142305
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "You and this person share strong alignment in goals and expectations, particularly regarding relationship intent and styles. Both of you prefer quieter, more relaxed lifestyles and enjoy one-on-one or small group social settings, which can foster deeper connections.",
-        "executive_summary": "This match achieved a high score due to exceptional alignment in goals and expectations, particularly in relationship intent and styles. While there are some differences in structure and emotional communication, the overall compatibility suggests a worthwhile introduction.",
+        "match_summary": "You and this person share a strong alignment in your goals for a long-term partnership and a preference for quieter social settings. Both of you value intentional connection and are open to exploration, which creates a solid foundation for potential compatibility.",
+        "executive_summary": "This match achieved a strong score due to exceptional alignment in goals and expectations, particularly regarding long-term partnership intentions. While there are some differences in availability and emotional attachment patterns, the overall compatibility suggests a worthwhile introduction.",
         "why_this_introduction": {
-          "what_aligns": "You both have a strong intent for long-term partnerships and prefer quieter, relaxed lifestyles. Additionally, your shared interest in exploration suggests a willingness to discover new experiences together, which can enhance your connection.",
-          "what_differs": "While you both prefer one-on-one or small group settings, there are differences in your relationship structures. You identify as monogamish, while this person prefers a monogamous structure. This difference may require discussion to ensure compatibility.",
-          "the_verdict": "Despite some differences in relationship structure, the strong alignment in goals and interests makes this introduction worth considering."
+          "what_aligns": "You both prioritize intentional connection and prefer quieter social interactions. This shared value can foster a deeper understanding and connection between you, enhancing the potential for a meaningful relationship.",
+          "what_differs": "While you both seek long-term partnerships, this person is more focused on monogamy, whereas you are open to casual dating and play partner connections. Additionally, your availability patterns differ, which may influence how you approach dating.",
+          "the_verdict": "These alignments and differences suggest that an introduction could lead to a fruitful conversation about your relationship expectations."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both have aligned relationship intents and styles."
+            "summary": "You both seek a long-term partnership, aligning on core relationship goals."
           },
           {
             "category": "Practical Fit",
-            "summary": "You share compatible social energy and privacy preferences."
+            "summary": "You share compatible preferences for social energy and privacy levels."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in erotic interests and exploration desires."
+            "summary": "You both resonate with romantic and playful erotic styles."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Shared relationship intents",
-          "Compatible social styles",
-          "Aligned exploration interests"
+          "Shared goals for a long-term partnership",
+          "Similar social style preferences",
+          "Aligned interests in exploration"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a strong alignment in relationship goals and styles.",
-            "your_alignment": "Both of you are seeking long-term partnerships and share a commitment to intentional connection. This alignment in relationship intent creates a solid foundation for potential interactions.",
-            "where_you_differ": "There are differences in attachment patterns and availability, which could influence how you approach the relationship. These differences may require open communication to navigate effectively.",
-            "interpretation": "The strong alignment in goals suggests a mutual understanding of what you both seek in a relationship.",
+            "overview": "You both share a strong focus on long-term partnership goals.",
+            "your_alignment": "Both of you are interested in a long-term partnership, which creates a solid foundation for mutual understanding. This shared goal can lead to deeper discussions about your relationship aspirations.",
+            "where_you_differ": "You are open to casual dating and play partner connections, while this person is primarily focused on a monogamous long-term partnership. This difference in approach may shape your interactions.",
+            "interpretation": "The strong alignment in goals suggests a promising foundation, but discussing your differing approaches to dating will be important.",
             "alignments": [
-              "Shared relationship intents",
+              "Shared long-term partnership goals",
               "Compatible relationship styles",
-              "Shared HAEVN purposes"
+              "Intentional connection values"
             ],
             "differences": [
-              "Different attachment patterns",
               "Different availability patterns"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Some Differences",
-            "overview": "There are some differences in your relationship structures and boundaries.",
-            "your_alignment": "You both prefer one-on-one or small group settings, which can facilitate deeper connections. Additionally, your compatible orientation preferences suggest a willingness to explore together.",
-            "where_you_differ": "You identify as monogamish, while this person prefers a monogamous structure. This difference in relationship structure may influence how you both approach intimacy and commitment.",
-            "interpretation": "The differences in structure may require discussion to ensure both parties feel comfortable and understood.",
+            "overview": "You have compatible orientations but differ in boundary approaches.",
+            "your_alignment": "Both of you identify as straight and have a workable structure match, which can facilitate a comfortable connection. This compatibility can help in navigating relationship dynamics.",
+            "where_you_differ": "Your boundary approaches differ, which may affect how you each view relationship structures. Understanding each other's perspectives on boundaries will be essential.",
+            "interpretation": "While you have a solid foundation, discussing your boundary preferences can help clarify expectations moving forward.",
             "alignments": [
-              "Compatible orientation preferences",
-              "Workable structure match",
-              "Similar social settings"
+              "Compatible sexual orientation",
+              "Workable structure match"
             ],
             "differences": [
-              "Different boundary approaches",
-              "Different safer-sex practices"
+              "Different boundary approaches"
             ]
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "You have compatible communication styles but some differences in emotional attachment.",
-            "your_alignment": "Both of you value direct communication and have well-matched emotional engagement. This compatibility can foster open and honest discussions in your interactions.",
-            "where_you_differ": "You have different attachment patterns, which may influence how you express and perceive emotional needs. Understanding these differences can enhance your communication.",
-            "interpretation": "While you communicate well, being aware of emotional differences can help navigate potential misunderstandings.",
+            "overview": "You both have compatible communication styles but differ in attachment patterns.",
+            "your_alignment": "Your communication styles are compatible, allowing for direct and meaningful exchanges. This can foster a supportive environment for emotional discussions.",
+            "where_you_differ": "You have different attachment patterns, which may influence how you express and receive emotional support. Understanding these differences can enhance your emotional connection.",
+            "interpretation": "The compatibility in communication is a strong asset, but addressing attachment differences will be important for emotional harmony.",
             "alignments": [
               "Compatible communication styles",
-              "Well-matched emotional engagement",
-              "Very similar emotional pace"
+              "Well-matched emotional engagement"
             ],
             "differences": [
               "Different attachment patterns"
@@ -1401,63 +1254,63 @@
           {
             "category": "Sexual Compatibility",
             "classification": "Compatible",
-            "overview": "You both have aligned expectations regarding sexual interests and exploration.",
-            "your_alignment": "There is strong erotic alignment between you, with both of you expressing desires for exploration and compatible frequency expectations. This shared interest can enhance intimacy.",
-            "where_you_differ": "Some differences exist in boundary understanding, which may require discussion to ensure both parties feel comfortable and respected in their preferences.",
-            "interpretation": "The compatibility in sexual interests suggests a foundation for exploring intimacy together.",
+            "overview": "You both have strong erotic alignment and compatible frequency expectations.",
+            "your_alignment": "Your shared interests in romantic and playful erotic styles indicate a strong foundation for intimacy. This alignment can enhance your connection and exploration together.",
+            "where_you_differ": "Your expectations around frequency differ somewhat, which may require open dialogue to ensure mutual satisfaction. Discussing these preferences can help align your intimacy expectations.",
+            "interpretation": "The strong erotic alignment is promising, but discussing frequency expectations will be key to ensuring compatibility.",
             "alignments": [
               "Strong erotic alignment",
-              "Compatible frequency expectations",
-              "Well-aligned exploration desires"
+              "Compatible frequency expectations"
             ],
             "differences": [
-              "Some boundary understanding"
+              "Different expectations around frequency"
             ]
           },
           {
             "category": "Practical Fit",
             "classification": "Strong Alignment",
-            "overview": "You both share compatible social energy and privacy preferences.",
-            "your_alignment": "Your similar independence preferences and compatible distance preferences suggest that you can maintain your individual lives while also enjoying shared experiences together.",
-            "where_you_differ": "Coverage in this category is limited, so there may be additional practical considerations that have not been addressed yet.",
-            "interpretation": "The strong practical alignment indicates a good potential for shared activities and mutual respect for personal space.",
+            "overview": "You have compatible preferences for social energy and privacy levels.",
+            "your_alignment": "Both of you prefer one-on-one or small group settings, which can create a comfortable social dynamic. This shared preference can enhance your interactions and connection.",
+            "where_you_differ": "You have different distance preferences for connection, with this person preferring a closer range. This difference may influence how you approach meeting and connecting.",
+            "interpretation": "Your strong alignment in practical fit suggests a good foundation, but discussing distance preferences will be important for planning future interactions.",
             "alignments": [
-              "Compatible distance preferences",
-              "Well-matched social energy",
-              "Compatible privacy levels"
+              "Compatible social energy preferences",
+              "Well-matched privacy levels"
             ],
-            "differences": []
+            "differences": [
+              "Different distance preferences"
+            ]
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in relationship structures",
-            "Understanding emotional attachment patterns",
-            "Boundary preferences in intimacy"
+            "Discuss your different availability patterns",
+            "Explore boundary preferences in relationships",
+            "Clarify expectations around intimacy frequency"
           ],
-          "closing": "These topics can enhance understanding and help establish a comfortable connection."
+          "closing": "These topics can help you both understand each other's perspectives and enhance compatibility moving forward."
         },
         "signals_that_mattered": [
-          "Shared goals",
-          "Compatible relationship styles",
-          "Workable structure match",
+          "Shared long-term partnership goals",
+          "Compatible sexual orientation",
           "Well-matched emotional engagement",
           "Strong erotic alignment",
-          "Compatible distance preferences"
+          "Compatible social energy preferences",
+          "Intentional connection values"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "The exceptional alignment in your goals and relationship intents indicates a strong foundation for connection.",
-          "most_meaningful_difference": "The difference in relationship structures may require open dialogue to ensure compatibility.",
-          "haevn_assessment": "While there are some differences in attachment and relationship structures, the overall compatibility in goals, interests, and practical fit suggests that an introduction could lead to meaningful interactions. Engaging in open discussions about your differences can further enhance your connection."
+          "strongest_reason": "Your shared goals for a long-term partnership create a solid foundation for connection.",
+          "most_meaningful_difference": "Your differing approaches to relationship structures may require open dialogue.",
+          "haevn_assessment": "This match shows a strong alignment in key areas, particularly in goals and values. While there are some differences in availability and emotional attachment patterns, these can be addressed through open communication. Overall, this connection is worth exploring further."
         },
         "conversation_starters": [
-          "What are your thoughts on relationship structures?",
-          "How do you define emotional connection?",
-          "What interests do you want to explore together?"
+          "What does intentional connection mean to you?",
+          "How do you view boundaries in relationships?",
+          "What are your thoughts on exploring intimacy?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The combination of strong alignment in goals and interests, along with manageable differences, suggests that this introduction could be valuable for both of you."
+          "statement": "This match presents a promising opportunity for connection. While there are some differences to explore, the strong alignment in goals and values suggests a meaningful introduction could be beneficial."
         }
       }
     },
@@ -1518,83 +1371,82 @@
           }
         }
       ],
-      "generation_ms": 25614,
+      "generation_ms": 10328,
       "usage": {
-        "prompt_tokens": 2838,
-        "completion_tokens": 1516,
-        "total_tokens": 4354,
-        "cost_usd": 0.0013353
+        "prompt_tokens": 3233,
+        "completion_tokens": 1553,
+        "total_tokens": 4786,
+        "cost_usd": 0.00141675
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "HAEVN matched you based on exceptional alignment in goals and expectations, including shared values and relationship styles. You both prefer a quieter lifestyle and enjoy one-on-one interactions, which may enhance your connection.",
-        "executive_summary": "This match reached a strong compatibility score due to exceptional alignment in goals and expectations, particularly in shared values and relationship styles. While you both have compatible emotional styles, there are some differences in attachment and availability patterns that could be worth discussing.",
+        "match_summary": "You and this person share similar values and preferences for relationship structure, with a strong alignment in goals and emotional communication. Both of you prefer quieter social settings and are open to exploration.",
+        "executive_summary": "This match reflects exceptional alignment in your goals and expectations, particularly regarding relationship styles and values. While you both prefer a quieter lifestyle and similar social settings, there’s a notable difference in your relationship intents, with them seeking a long-term partnership.",
         "why_this_introduction": {
-          "what_aligns": "You and this person have exceptional alignment in your goals and expectations, particularly regarding stability and emotional balance. Both of you are open to exploration and prefer a monogamous relationship structure, which may foster a deeper connection.",
-          "what_differs": "While you share many values, there are differences in attachment patterns and availability. This person may have a different approach to emotional attachment, which could influence how you connect on a deeper level. Additionally, some unanswered questions remain regarding your compatibility in practical aspects.",
-          "the_verdict": "These shared values and compatible relationship structures justify an introduction, as they create a solid foundation for connection."
+          "what_aligns": "You both value stability, emotional balance, and intentional connection, which creates a solid foundation for understanding each other. Additionally, your preferences for quieter social settings and exploration align well, suggesting compatibility in lifestyle choices.",
+          "what_differs": "While you are open to casual dating and a long-term partnership, this person is specifically looking for a long-term commitment. This difference in relationship intent may require discussion to ensure mutual understanding.",
+          "the_verdict": "Despite the difference in relationship intent, the strong alignment in values and communication makes this introduction worth considering."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both share aligned goals and relationship styles."
+            "summary": "You both prioritize stability and emotional balance in relationships."
           },
           {
             "category": "Emotional & Communication",
-            "summary": "You have strong communication alignment and similar emotional styles."
+            "summary": "Your communication styles align well, fostering emotional connection."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in sexual roles and exploration desires."
+            "summary": "You both share a strong interest in romantic and experimental intimacy."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Shared relationship values",
-          "Similar lifestyle preferences",
-          "Strong communication alignment"
+          "Shared values of stability and connection",
+          "Similar social preferences for small gatherings",
+          "Aligned emotional communication styles"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a strong alignment in goals and relationship styles.",
-            "your_alignment": "Your shared values of stability, emotional balance, and intentional connection create a strong foundation for your relationship. Both of you are currently single and prefer monogamous relationships, which aligns well with your intentions.",
-            "where_you_differ": "There are differences in your attachment patterns and availability, which may affect how you approach emotional connections. Understanding these differences could be important as you explore a potential relationship.",
-            "interpretation": "These alignments suggest a strong potential for connection, while the differences invite deeper conversation.",
+            "overview": "You both have a strong alignment in your relationship goals and values.",
+            "your_alignment": "Both of you prioritize stability, emotional balance, and intentional connection in your relationships. You share a commitment to similar relationship structures, which enhances compatibility.",
+            "where_you_differ": "You are open to casual dating, while this person is focused on a long-term partnership. This difference in intent may influence how you approach a potential relationship.",
+            "interpretation": "This alignment suggests a strong foundation for a meaningful connection, but the difference in relationship intent should be addressed.",
             "alignments": [
-              "Shared goals",
-              "Compatible relationship styles",
-              "Aligned values"
+              "Shared goals for stability",
+              "Compatible relationship structures",
+              "Intentional connection values"
             ],
             "differences": [
-              "Different attachment patterns",
-              "Different availability patterns"
+              "Different relationship intents"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "Your relationship structures and boundaries are compatible.",
-            "your_alignment": "You both prefer a monogamous relationship structure and have compatible orientation preferences. This alignment may help in establishing a solid foundation for your connection.",
-            "where_you_differ": "There are some differences in your boundaries and safer-sex approaches, which could be worth discussing to ensure mutual understanding and comfort.",
-            "interpretation": "The compatibility in structure suggests a workable foundation, but addressing the differences will be important for clarity.",
+            "overview": "Your relationship structures are compatible, with some differences.",
+            "your_alignment": "You both prefer monogamous relationships and have compatible sexual orientations, which supports a solid foundation for connection. Your boundaries and safer-sex approaches also align well.",
+            "where_you_differ": "There are some differences in your boundaries and preferences regarding privacy and connection distance. They prefer a closer connection distance compared to your broader range.",
+            "interpretation": "The compatibility in structure indicates potential for a harmonious relationship, but the distance preference difference may require consideration.",
             "alignments": [
-              "Compatible relationship structure",
-              "Workable boundaries",
-              "Compatible orientation preferences"
+              "Compatible relationship structures",
+              "Similar sexual orientations",
+              "Aligned boundaries"
             ],
             "differences": [
-              "Different boundaries"
+              "Different distance preferences"
             ]
           },
           {
             "category": "Emotional & Communication",
             "classification": "Compatible",
-            "overview": "You both have compatible emotional styles and strong communication alignment.",
-            "your_alignment": "Your emotional styles are well-matched, and you both exhibit a similar emotional pace. This compatibility may facilitate open and effective communication, enhancing your connection.",
-            "where_you_differ": "While your emotional styles align, your different attachment patterns may influence how you express emotions and connect with one another. Understanding these differences could be beneficial.",
-            "interpretation": "The strong emotional alignment suggests a solid foundation for communication, while the differences invite exploration of emotional needs.",
+            "overview": "You both communicate effectively and share emotional styles.",
+            "your_alignment": "Your love languages align well, with both valuing physical touch, quality time, and words of affirmation. This shared emotional pace fosters a supportive environment for connection.",
+            "where_you_differ": "There are different attachment patterns between you, which may influence how you approach emotional intimacy and communication. Understanding these differences can enhance your connection.",
+            "interpretation": "The strong emotional and communication alignment suggests a good foundation for understanding each other, but awareness of attachment differences can enhance your connection.",
             "alignments": [
               "Strong communication alignment",
               "Well-matched emotional styles",
@@ -1607,27 +1459,29 @@
           {
             "category": "Sexual Compatibility",
             "classification": "Compatible",
-            "overview": "You have a good alignment in sexual expectations and desires.",
-            "your_alignment": "Both of you have compatible roles and interests when it comes to sexual exploration. You also share similar frequency expectations, which may enhance your intimate connection.",
-            "where_you_differ": "While there is strong alignment, there are some unanswered questions regarding your sexual preferences and boundaries that could be worth discussing as you get to know each other.",
-            "interpretation": "",
+            "overview": "You both have aligned interests and expectations regarding intimacy.",
+            "your_alignment": "Your preferences for romantic and experimental intimacy align well, indicating a shared openness to exploring different aspects of intimacy together.",
+            "where_you_differ": "Your expectations around intimacy frequency may differ slightly, which could be worth discussing to ensure mutual understanding and comfort.",
+            "interpretation": "The compatibility in sexual interests suggests potential for a fulfilling intimate connection, but discussing frequency expectations may enhance understanding.",
             "alignments": [
               "Strong erotic alignment",
-              "Compatible roles",
-              "Aligned exploration desires"
+              "Compatible exploration desires",
+              "Aligned intimacy expectations"
             ],
-            "differences": []
+            "differences": [
+              "Different frequency expectations"
+            ]
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "You both have compatible social energy and privacy levels.",
-            "your_alignment": "Your preferences for social interactions align well, as both of you enjoy one-on-one or small group settings. This compatibility may create a comfortable environment for your connection.",
-            "where_you_differ": "There are several unanswered questions regarding practical aspects, such as independence expectations and substance alignment, which could provide a fuller picture of your compatibility.",
-            "interpretation": "",
+            "overview": "You both have compatible practical preferences and social energy.",
+            "your_alignment": "Your preferences for social settings and privacy levels align well, indicating a shared understanding of how to engage socially and maintain personal space.",
+            "where_you_differ": "There is limited data on some practical aspects, including lifestyle habits and independence expectations, which could provide a fuller picture of compatibility.",
+            "interpretation": "While there are some unknowns in practical fit, the existing alignments suggest a good basis for practical compatibility.",
             "alignments": [
               "Compatible social energy",
-              "Compatible privacy levels",
+              "Aligned privacy levels",
               "Workable substance alignment"
             ],
             "differences": []
@@ -1635,33 +1489,33 @@
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in attachment patterns",
-            "Availability patterns to connect",
-            "Boundaries in your relationship"
+            "Your differing relationship intents",
+            "Distance preferences for connection",
+            "Attachment patterns in communication"
           ],
-          "closing": "These topics can help you both understand each other's perspectives and enhance your connection."
+          "closing": "These topics can help clarify your compatibility and ensure mutual understanding as you explore a connection."
         },
         "signals_that_mattered": [
           "Shared goals",
-          "Compatible relationship styles",
+          "Compatible relationship structures",
           "Strong communication alignment",
-          "Aligned values",
-          "Compatible emotional styles",
-          "Compatible social energy"
+          "Aligned intimacy expectations",
+          "Compatible distance preferences",
+          "Similar social energy"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your exceptional alignment in goals and relationship styles creates a strong foundation for connection.",
-          "most_meaningful_difference": "Differences in attachment patterns may influence how you connect emotionally.",
-          "haevn_assessment": "This match presents a promising opportunity for connection, given your strong alignment in goals and values. While there are some differences in attachment and availability, these can be explored through open communication. Engaging in discussions about your emotional needs and boundaries will be essential as you get to know each other."
+          "strongest_reason": "The exceptional alignment in your goals and emotional communication makes this match worth exploring.",
+          "most_meaningful_difference": "The difference in relationship intent may require open discussion to ensure compatibility.",
+          "haevn_assessment": "This match presents a promising opportunity for connection, given the strong alignment in values and communication styles. While there are differences in relationship intent and distance preferences, these can be addressed through open dialogue. Engaging in conversations about your respective goals and expectations will be crucial in determining how well you align moving forward."
         },
         "conversation_starters": [
-          "What does emotional balance mean to you?",
-          "How do you approach exploring new interests?",
-          "What are your thoughts on relationship boundaries?"
+          "What does a long-term partnership mean to you?",
+          "How do you prefer to spend your weekends?",
+          "What are your thoughts on exploring new experiences together?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The combination of shared values and compatible relationship structures makes this introduction worth exploring. Engaging in conversation about your differences can further clarify your potential connection."
+          "statement": "The strong alignment in values and communication suggests potential for a meaningful connection, despite some differences in relationship intent and distance preferences."
         }
       }
     },
@@ -1722,50 +1576,50 @@
           }
         }
       ],
-      "generation_ms": 12298,
+      "generation_ms": 10513,
       "usage": {
-        "prompt_tokens": 2809,
-        "completion_tokens": 1586,
-        "total_tokens": 4395,
-        "cost_usd": 0.0013729499999999997
+        "prompt_tokens": 3195,
+        "completion_tokens": 1536,
+        "total_tokens": 4731,
+        "cost_usd": 0.00140085
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "HAEVN matched you based on your shared long-term partnership goals, compatible relationship structures, and similar social styles. Both of you value intentional connection and prefer quieter, more relaxed lifestyles, which may foster a meaningful bond.",
-        "executive_summary": "This match achieved a strong compatibility score due to exceptional alignment in goals and expectations, particularly regarding relationship intent and structure. While there are some differences in attachment patterns, the overall compatibility suggests a solid foundation for connection.",
+        "match_summary": "You both seek long-term partnerships and prefer quieter social settings, which creates a strong foundation for connection. Additionally, you share values around intentional connection, enhancing your compatibility.",
+        "executive_summary": "This match scored well due to exceptional alignment in goals and expectations, particularly regarding long-term partnership intentions. While there are some differences in emotional communication styles, the overall compatibility suggests a promising introduction.",
         "why_this_introduction": {
-          "what_aligns": "You both have exceptional alignment in your goals and expectations for a long-term partnership. This shared vision can create a strong foundation for your connection. Additionally, your preference for quieter social settings aligns well, fostering comfort in each other's company.",
-          "what_differs": "There are some differences in attachment patterns, which may influence how you both approach emotional connections. While you share compatible communication styles, understanding these differences could be important as you explore a relationship together.",
-          "the_verdict": "Despite the differences in attachment patterns, the strong alignment in goals and compatibility in other areas makes this introduction worth considering."
+          "what_aligns": "You both value intentional connection and prefer quieter, more relaxed social environments. This shared approach to socializing can foster a deeper bond as you explore a potential partnership together.",
+          "what_differs": "While you both appreciate quality time and acts of service as love languages, this person also values receiving gifts. This difference may influence how you express affection and appreciation within the relationship.",
+          "the_verdict": "The strong alignment in goals and expectations, along with compatible lifestyles, makes this introduction worth considering."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both share the same long-term partnership goals."
+            "summary": "You both prioritize long-term partnerships and share similar relationship structures."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in sexual expectations and desires."
+            "summary": "There is strong alignment in erotic styles and exploration desires."
           },
           {
-            "category": "Structure Fit",
-            "summary": "Your relationship structures align well, supporting monogamous intentions."
+            "category": "Practical Fit",
+            "summary": "You have compatible preferences for social energy and privacy levels."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Shared long-term partnership goals",
-          "Similar social styles",
-          "Strong sexual compatibility"
+          "Shared goals for long-term partnership",
+          "Similar social style preferences",
+          "Strong alignment in sexual exploration"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a clear vision for long-term partnerships.",
-            "your_alignment": "Your shared goals for a long-term partnership and compatible relationship structures create a strong foundation for connection. Both of you value intentional connection, which can enhance your interactions and mutual understanding.",
-            "where_you_differ": "While your relationship intents align, there are different attachment patterns that may affect how you engage emotionally. This difference is worth discussing to ensure mutual understanding.",
-            "interpretation": "This strong alignment in goals suggests a solid basis for exploring a relationship, while the differing attachment styles may require open communication.",
+            "overview": "You both seek long-term partnerships with compatible relationship structures.",
+            "your_alignment": "Both of you are looking for long-term partnerships and share a monogamous structure. This alignment in goals sets a solid foundation for a potential relationship.",
+            "where_you_differ": "You have different attachment patterns, which could influence how you connect emotionally. Understanding these differences may be important as you explore your compatibility.",
+            "interpretation": "Your shared goals and relationship structures indicate a strong potential for a meaningful connection.",
             "alignments": [
               "Shared long-term partnership goals",
               "Compatible relationship structures",
@@ -1778,28 +1632,30 @@
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "Your relationship structures align well, supporting monogamous intentions.",
-            "your_alignment": "Both of you prefer monogamous relationships and have compatible boundaries, which can facilitate a harmonious partnership. Your shared understanding of privacy preferences further strengthens this alignment.",
-            "where_you_differ": "There are some unanswered signals regarding orientation and safer-sex approaches, which could provide more clarity on how you both approach these aspects of a relationship.",
-            "interpretation": "The compatibility in relationship structure indicates a solid foundation, though further discussion on specific preferences may enhance understanding.",
+            "overview": "Your relationship structures and orientations align well, supporting compatibility.",
+            "your_alignment": "Both of you identify as straight and prefer monogamous relationships. This alignment suggests a mutual understanding of relationship expectations.",
+            "where_you_differ": "There are some unanswered questions regarding safer-sex approaches and boundaries, which could be worth discussing to ensure clarity.",
+            "interpretation": "The compatibility in your relationship structures indicates a solid foundation, but addressing any unanswered questions will enhance clarity.",
             "alignments": [
-              "Well-aligned boundaries",
-              "Compatible safer-sex approaches",
-              "Workable structure match"
+              "Well-aligned relationship structures",
+              "Similar boundaries",
+              "Compatible safer-sex approaches"
             ],
-            "differences": []
+            "differences": [
+              "Unanswered questions on boundaries"
+            ]
           },
           {
             "category": "Emotional & Communication",
             "classification": "Some Differences",
-            "overview": "You have compatible communication styles but different attachment patterns.",
-            "your_alignment": "Both of you exhibit compatible communication styles and emotional paces, which can facilitate understanding and connection. Your similar emotional bandwidth may also help in navigating discussions about feelings.",
-            "where_you_differ": "The differing attachment patterns could lead to varied emotional responses and needs, which may require open dialogue to ensure both partners feel supported and understood.",
-            "interpretation": "While you communicate well, understanding each other's attachment styles may enhance emotional intimacy and connection.",
+            "overview": "You have compatible emotional styles but differ in attachment patterns.",
+            "your_alignment": "Both of you share similar emotional paces and bandwidths, which can facilitate understanding and connection. Your communication styles are also compatible, fostering effective dialogue.",
+            "where_you_differ": "The differences in attachment patterns may affect how you approach emotional intimacy and support. Recognizing these differences can help navigate emotional interactions.",
+            "interpretation": "While your emotional styles align well, understanding your differing attachment patterns may enhance your connection.",
             "alignments": [
-              "Compatible communication styles",
-              "Well-matched emotional styles",
-              "Similar emotional pace"
+              "Compatible emotional styles",
+              "Similar emotional pace",
+              "Effective communication styles"
             ],
             "differences": [
               "Different attachment patterns"
@@ -1808,61 +1664,65 @@
           {
             "category": "Sexual Compatibility",
             "classification": "Strong Alignment",
-            "overview": "There is strong alignment in sexual expectations and desires.",
-            "your_alignment": "You both have compatible frequency expectations and desires for exploration, which can enhance intimacy. The alignment in boundaries further supports a healthy sexual relationship.",
-            "where_you_differ": "There are some unanswered signals regarding specific sexual preferences, which could provide more insight into how you both approach intimacy.",
-            "interpretation": "The strong alignment in sexual compatibility suggests a good foundation for intimacy, though further discussions may enhance mutual understanding.",
+            "overview": "You both have strong alignment in erotic styles and exploration desires.",
+            "your_alignment": "Your preferences for playful, romantic, and sensual experiences align well, indicating a shared approach to intimacy. This can create a comfortable environment for exploring sexual connection.",
+            "where_you_differ": "You may have different expectations around the frequency of intimacy, which could be worth discussing to ensure mutual satisfaction.",
+            "interpretation": "The strong alignment in sexual compatibility suggests a solid foundation for intimacy, but discussing frequency expectations will be important.",
             "alignments": [
-              "Strong erotic alignment",
-              "Compatible frequency expectations",
-              "Well-aligned exploration desires"
+              "Strong erotic style alignment",
+              "Compatible exploration desires",
+              "Well-aligned intimacy boundaries"
             ],
-            "differences": []
+            "differences": [
+              "Different frequency expectations"
+            ]
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "Your practical aspects align well, supporting a potential partnership.",
-            "your_alignment": "Both of you have compatible privacy levels and social energy, which can create a comfortable environment for your interactions. Your shared language preferences may also facilitate communication.",
-            "where_you_differ": "There are several unanswered signals regarding practical fit, including distance and substance alignment, which could provide more clarity on how practical aspects may influence your relationship.",
-            "interpretation": "The compatibility in practical fit suggests a solid foundation, though further exploration of unanswered signals may enhance understanding.",
+            "overview": "You have compatible preferences for social energy and privacy levels.",
+            "your_alignment": "Both of you prefer one-on-one or small group settings, which can create a comfortable social dynamic. Additionally, your privacy preferences align well, supporting a respectful connection.",
+            "where_you_differ": "There are some unanswered questions regarding distance preferences and social energy, which could be explored further to ensure compatibility.",
+            "interpretation": "Your practical fit suggests a good match, but clarifying any unanswered questions will enhance understanding.",
             "alignments": [
+              "Similar social style preferences",
               "Compatible privacy levels",
-              "Well-matched social energy",
-              "Shared language(s) available"
+              "Workable distance situation"
             ],
-            "differences": []
+            "differences": [
+              "Unanswered questions on distance"
+            ]
           }
         ],
         "worth_talking_about": {
           "items": [
-            "How do you both approach emotional needs?",
-            "What are your views on attachment styles?",
-            "How do you envision exploring intimacy together?"
+            "Discuss your different attachment patterns",
+            "Explore expectations around intimacy frequency",
+            "Clarify unanswered questions on boundaries"
           ],
-          "closing": "These topics can foster understanding and connection, helping you navigate your differences and strengthen your bond."
+          "closing": "These topics can help deepen your understanding of each other and strengthen your potential connection."
         },
         "signals_that_mattered": [
-          "Shared goals",
-          "Compatible relationship styles",
-          "Well-aligned boundaries",
-          "Strong erotic alignment",
-          "Compatible communication styles",
+          "Shared long-term partnership goals",
+          "Compatible relationship structures",
+          "Strong erotic style alignment",
+          "Similar social style preferences",
+          "Well-aligned emotional styles",
           "Workable distance situation"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your shared long-term partnership goals and compatible relationship structures create a strong foundation for connection.",
-          "most_meaningful_difference": "The differing attachment patterns may influence emotional engagement, so understanding each other's styles is important.",
-          "haevn_assessment": "This match presents a promising opportunity for connection, given the exceptional alignment in goals and expectations. While there are some differences in attachment patterns, the overall compatibility suggests that with open communication, you can navigate these aspects effectively. Exploring your shared values and interests could lead to a rewarding partnership."
+          "strongest_reason": "Your shared goals for long-term partnerships and similar social preferences create a solid foundation for connection.",
+          "most_meaningful_difference": "The differing attachment patterns may influence your emotional interactions, so understanding these is important.",
+          "haevn_assessment": "This match presents a promising opportunity for connection, given your shared values and goals. While there are some differences in emotional communication and intimacy expectations, these can be navigated through open dialogue. Exploring these areas will help you both understand each other better and foster a deeper connection."
         },
         "conversation_starters": [
           "What does intentional connection mean to you?",
-          "How do you prefer to explore intimacy?",
-          "What are your thoughts on emotional needs in relationships?"
+          "How do you express affection in relationships?",
+          "What are your thoughts on exploring intimacy?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION WORTH CONSIDERING",
-          "statement": "The strong alignment in your goals and relationship structures suggests a meaningful connection. While there are some differences to explore, the overall compatibility indicates this introduction could be worthwhile."
+          "statement": "The strong alignment in your goals and lifestyles suggests a meaningful connection could develop. Engaging in open discussions about your differences will further enhance your compatibility."
         }
       }
     },
@@ -1923,68 +1783,68 @@
           }
         }
       ],
-      "generation_ms": 10967,
+      "generation_ms": 14018,
       "usage": {
-        "prompt_tokens": 2841,
-        "completion_tokens": 1503,
-        "total_tokens": 4344,
-        "cost_usd": 0.0013279499999999998
+        "prompt_tokens": 3219,
+        "completion_tokens": 1574,
+        "total_tokens": 4793,
+        "cost_usd": 0.00142725
       },
       "degraded": false,
       "error": null,
       "payload": {
-        "match_summary": "HAEVN matched you based on your shared long-term partnership goals and similar relationship structures. Both of you prefer quieter social settings and value intentional connections, which could create a strong foundation for your interactions.",
-        "executive_summary": "This match achieved a high compatibility score due to exceptional alignment in goals and expectations, particularly in shared relationship intents and styles. A notable difference exists in attachment patterns, which may be worth discussing to ensure mutual understanding.",
+        "match_summary": "You share a strong alignment in relationship goals and structure, with both preferring monogamous partnerships. Additionally, your emotional communication styles are compatible, which may enhance your connection.",
+        "executive_summary": "This match achieved a high compatibility score due to exceptional alignment in goals and sexual compatibility. Both of you value intentional connection and prefer quieter social settings, though there is a notable difference in relationship intent regarding casual dating.",
         "why_this_introduction": {
-          "what_aligns": "You both share a strong desire for a long-term partnership and prefer monogamous relationships. Additionally, your social styles align well, as both of you enjoy one-on-one or small group interactions, fostering deeper connections.",
-          "what_differs": "While you both value intentional connection, your attachment patterns differ, which may influence how you approach emotional intimacy and relationship dynamics. Understanding these differences could enhance your compatibility.",
-          "the_verdict": "Given the strong alignment in core values and relationship goals, an introduction is recommended to explore potential connections."
+          "what_aligns": "You both prioritize long-term partnerships and prefer monogamous relationships. Additionally, your social styles align, as both of you enjoy one-on-one or small group interactions, creating a comfortable environment for connection.",
+          "what_differs": "While you both seek long-term partnerships, you are also open to casual dating and social connections, whereas this person is focused solely on long-term partnership. This difference in relationship intent may be worth discussing further.",
+          "the_verdict": "The strong alignments in goals and emotional communication justify an introduction, despite the difference in relationship intent."
         },
         "strongest_areas": [
           {
             "category": "Goals & Expectations",
-            "summary": "You both have aligned long-term partnership goals."
+            "summary": "You both seek long-term partnerships and share similar relationship styles."
           },
           {
             "category": "Sexual Compatibility",
-            "summary": "There is strong alignment in sexual preferences and boundaries."
+            "summary": "There is strong alignment in erotic styles and preferences."
           },
           {
             "category": "Emotional & Communication",
-            "summary": "You share compatible emotional styles and communication preferences."
+            "summary": "Your emotional communication styles align well, enhancing potential connection."
           }
         ],
         "nudge_compatibility_highlights": [
-          "Aligned long-term partnership goals",
-          "Similar social style preferences",
-          "Strong emotional engagement"
+          "Shared goals for long-term partnership",
+          "Similar emotional engagement styles",
+          "Strong alignment in sexual preferences"
         ],
         "sections": [
           {
             "category": "Goals & Expectations",
             "classification": "Exceptional Alignment",
             "overview": "You both have a strong alignment in your relationship goals and styles.",
-            "your_alignment": "Both of you are seeking long-term partnerships and prefer monogamous structures. This shared intent can create a solid foundation for mutual understanding and future planning.",
-            "where_you_differ": "There is a difference in your attachment patterns, which may affect how you connect emotionally. This aspect is worth discussing to ensure compatibility in emotional experiences.",
-            "interpretation": "This strong alignment in goals suggests you both are likely to prioritize similar relationship dynamics.",
+            "your_alignment": "Both of you are seeking long-term partnerships and prefer monogamous structures. This shared intent creates a solid foundation for exploring a potential connection, as you both value stability and intentionality in your relationships.",
+            "where_you_differ": "You are open to casual dating and social connections, while this person is focused solely on long-term partnerships. This difference may influence how you approach your initial interactions.",
+            "interpretation": "This alignment suggests a strong potential for mutual understanding in your relationship goals.",
             "alignments": [
-              "Shared long-term partnership goals",
+              "Shared goals for long-term partnership",
               "Compatible relationship structures",
-              "Aligned privacy preferences"
+              "Similar privacy preferences"
             ],
             "differences": [
-              "Different attachment patterns"
+              "Different openness to casual dating"
             ]
           },
           {
             "category": "Structure Fit",
             "classification": "Compatible",
-            "overview": "Your relationship structures and boundaries show compatibility.",
-            "your_alignment": "You both prefer a monogamous relationship and have compatible boundaries and safer-sex approaches. This alignment can help establish trust and clarity in your interactions.",
-            "where_you_differ": "There is limited data on certain structural preferences, which may provide additional insights into how you each navigate relationships. Understanding these nuances could enhance compatibility.",
-            "interpretation": "The compatibility in structure indicates a solid foundation for a potential relationship.",
+            "overview": "Your relationship structures align well, supporting a potential connection.",
+            "your_alignment": "You both prefer monogamous relationships and have compatible boundaries, which can foster a sense of security and trust. This structural alignment is essential for building a lasting connection.",
+            "where_you_differ": "There are some unanswered signals regarding specific boundaries or preferences, which may require further discussion to ensure complete alignment.",
+            "interpretation": "Your compatible structures indicate a solid foundation for exploring a relationship.",
             "alignments": [
-              "Workable structure match",
+              "Monogamous relationship preference",
               "Well-aligned boundaries",
               "Complementary role preferences"
             ],
@@ -1993,14 +1853,14 @@
           {
             "category": "Emotional & Communication",
             "classification": "Compatible",
-            "overview": "You both exhibit compatible emotional styles and communication preferences.",
-            "your_alignment": "Your emotional engagement and communication styles align well, allowing for open dialogue and understanding. This compatibility can foster a supportive environment for both of you.",
-            "where_you_differ": "Your differing attachment patterns may influence your emotional responses and communication styles, which could be important to address as you get to know each other.",
-            "interpretation": "The emotional compatibility suggests a strong potential for meaningful conversations and connections.",
+            "overview": "You both have a strong emotional connection and communication style.",
+            "your_alignment": "Your love languages of physical touch and quality time align well with their preference for quality time and physical touch. This shared emotional engagement can enhance your connection and understanding of each other.",
+            "where_you_differ": "There are different attachment patterns that may influence how you approach emotional intimacy, but these differences can also provide opportunities for growth and deeper understanding.",
+            "interpretation": "This compatibility in emotional styles suggests a potential for a deep and meaningful connection.",
             "alignments": [
               "Strong communication alignment",
               "Well-matched emotional styles",
-              "Similar emotional pace"
+              "Similar emotional engagement"
             ],
             "differences": [
               "Different attachment patterns"
@@ -2009,61 +1869,63 @@
           {
             "category": "Sexual Compatibility",
             "classification": "Exceptional Alignment",
-            "overview": "You both have a strong alignment in sexual preferences and boundaries.",
-            "your_alignment": "There is a significant alignment in your sexual desires, including frequency preferences and exploration interests. This shared understanding can enhance intimacy and connection.",
-            "where_you_differ": "Limited data exists on specific sexual preferences, which may provide further insights into your compatibility in this area. Exploring these aspects could be beneficial.",
-            "interpretation": "The strong sexual compatibility indicates a solid foundation for physical intimacy.",
+            "overview": "You have a strong alignment in your sexual preferences and desires.",
+            "your_alignment": "Both of you resonate with romantic and sensual styles, and there is a shared interest in exploring intimacy openly. This alignment can create a comfortable environment for discussing sexual desires and boundaries.",
+            "where_you_differ": "Your expectations around frequency differ somewhat, which may be worth discussing to ensure both partners feel satisfied and understood in this area.",
+            "interpretation": "This strong sexual compatibility suggests a solid foundation for intimacy, though discussing frequency expectations may enhance mutual satisfaction.",
             "alignments": [
               "Strong erotic alignment",
-              "Well-aligned frequency preferences",
+              "Well-aligned exploration desires",
               "Good boundary alignment"
             ],
-            "differences": []
+            "differences": [
+              "Different expectations around frequency"
+            ]
           },
           {
             "category": "Practical Fit",
             "classification": "Compatible",
-            "overview": "You both have a workable practical fit in various areas.",
-            "your_alignment": "Your social energy levels and privacy preferences align, which can facilitate comfortable interactions. This compatibility is essential for maintaining a harmonious relationship.",
-            "where_you_differ": "There is limited data on several practical aspects, which may provide additional context for how you navigate everyday life together. Understanding these factors could enhance your compatibility.",
-            "interpretation": "The practical compatibility suggests a good potential for a balanced relationship.",
+            "overview": "You have a workable practical fit for connection.",
+            "your_alignment": "Both of you prefer one-on-one or small group settings, which can create a comfortable social dynamic. Additionally, your compatible independence expectations can support a healthy balance in the relationship.",
+            "where_you_differ": "There are several unanswered signals regarding practical considerations, such as lifestyle habits or long-term plans, which may require further exploration to fully understand compatibility.",
+            "interpretation": "This practical compatibility indicates a solid foundation for exploring a relationship, though further discussion may be beneficial.",
             "alignments": [
-              "Compatible privacy levels",
-              "Well-matched social energy",
-              "Workable distance situation"
+              "Compatible social energy",
+              "Well-matched independence expectations",
+              "Shared language(s) available"
             ],
             "differences": []
           }
         ],
         "worth_talking_about": {
           "items": [
-            "Differences in attachment patterns",
-            "Exploration of emotional intimacy",
-            "Understanding practical preferences"
+            "Your openness to casual dating",
+            "Different attachment patterns",
+            "Expectations around intimacy frequency"
           ],
-          "closing": "These topics can help you both understand each other better and strengthen your connection."
+          "closing": "These topics can enhance understanding and clarify expectations as you explore your connection."
         },
         "signals_that_mattered": [
-          "Shared goals",
-          "Compatible relationship styles",
-          "Strong communication alignment",
-          "Well-matched emotional styles",
+          "Shared goals for long-term partnership",
           "Strong erotic alignment",
-          "Compatible privacy preferences"
+          "Well-matched emotional styles",
+          "Compatible relationship structures",
+          "Similar social energy",
+          "Well-aligned exploration desires"
         ],
         "what_haevn_thinks_you_should_know": {
-          "strongest_reason": "Your shared long-term partnership goals and compatible relationship structures create a solid foundation.",
-          "most_meaningful_difference": "The difference in attachment patterns may influence emotional dynamics, so understanding this is important.",
-          "haevn_assessment": "This match presents a compelling opportunity for connection, given the strong alignment in your relationship goals and emotional styles. While there are differences in attachment patterns, these can be addressed through open communication. Engaging in discussions about your values and preferences will help you both navigate potential challenges and enhance your compatibility."
+          "strongest_reason": "The exceptional alignment in your goals and sexual compatibility makes this introduction worthwhile.",
+          "most_meaningful_difference": "Your differing openness to casual dating may influence your initial interactions.",
+          "haevn_assessment": "This match presents a strong opportunity for connection, given the high compatibility scores across multiple dimensions. While there are some differences in relationship intent, the shared values and emotional styles suggest a solid foundation for exploring a meaningful relationship. Engaging in open discussions about your differences can further enhance your connection."
         },
         "conversation_starters": [
-          "What does emotional connection mean to you?",
-          "How do you prefer to navigate attachment styles?",
-          "What are your thoughts on exploring new experiences together?"
+          "What does a long-term partnership mean to you?",
+          "How do you like to explore intimacy?",
+          "What are your favorite ways to connect emotionally?"
         ],
         "closing_read": {
           "verdict": "INTRODUCTION RECOMMENDED",
-          "statement": "The strong alignment in your goals and values suggests a promising opportunity for connection. Engaging in conversation about your differences can further enhance your compatibility."
+          "statement": "The strong alignments in goals and emotional communication suggest a promising potential for connection. Exploring the differences can provide clarity and enhance your understanding of each other."
         }
       }
     }

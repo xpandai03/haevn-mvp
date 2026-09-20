@@ -111,6 +111,13 @@ export async function generateMatchInterpretation(
   }
 
   const usage = readUsage(payload)
+  // Log real input size every call. The 3,500-token cap is enforced upstream on
+  // an ESTIMATE (chars/3.9); this is the only place the ACTUAL count is known,
+  // so without it the cap could drift out of true and the cost model with it.
+  if (usage) {
+    const over = usage.prompt_tokens > 3500 ? ' ⚠ OVER CAP' : ''
+    console.log(`[MatchInterp] tokens in=${usage.prompt_tokens} out=${usage.completion_tokens} $${usage.cost_usd.toFixed(5)}${over}`)
+  }
   const raw = payload?.choices?.[0]?.message?.content
   if (typeof raw !== 'string' || !raw.trim()) {
     return { result: null, error: { code: 'AI_UNAVAILABLE', detail: 'empty content' }, usage }

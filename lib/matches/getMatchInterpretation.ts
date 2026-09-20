@@ -26,7 +26,7 @@ type Admin = ReturnType<typeof createAdminClient>
 // Single source of truth — this value is PERSISTED to match_interpretations.model,
 // so a hardcoded copy here would make every cached row lie about its provenance.
 const MODEL = OPENAI_MODEL
-const SCHEMA_VERSION = 'v2'
+const SCHEMA_VERSION = 'v3'
 
 export interface MatchInterpretationResult {
   sections: Section[]
@@ -203,6 +203,10 @@ export async function assembleInterpretationForPair(
     // Both members' cities. §05 chips are visible to free viewers, so a city
     // name there would leak the geography the header deliberately bands.
     forbiddenCityTokens: [viewer.city, match.city].filter((c: unknown): c is string => typeof c === 'string' && c.trim().length > 0),
+    // Raw answers power the per-category evidence block. They are filtered and
+    // decoded by enrichedAnswers.ts before any of it reaches the model.
+    viewerRawAnswers: answersByOwner.get(viewer.owner_id) ?? {},
+    matchRawAnswers: answersByOwner.get(match.owner_id) ?? {},
   })
 
   return {

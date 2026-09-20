@@ -27,6 +27,7 @@
  */
 
 import { SECTION_DISPLAY_NAMES, type ClosingVerdict } from '@/lib/matches/sectionMapping'
+import { verbatimChemistryHits } from '@/lib/matches/enrichedAnswers'
 
 export type { ClosingVerdict }
 
@@ -261,6 +262,37 @@ export function validateMatchInterpretation(obj: unknown, opts: ValidateOpts = {
   // conversation starters — need at least 3; keep up to 5.
   const starters = strArr(o.conversation_starters, 5)
   if (starters.length < 3) errors.push('conversation_starters needs at least 3 strings')
+
+  // ── SEXUAL-COMPATIBILITY VERBATIM GUARD ──
+  // That category's answers feed the model because its prose depends on them,
+  // but the report must describe alignment and difference WITHOUT quoting either
+  // member's selections back. Naming a practice, experience level or body
+  // preference someone chose is disclosure, not analysis — and the viewer may
+  // not be entitled to it. Checked across EVERY output field, not just the
+  // Sexual Compatibility section, because a leak is a leak wherever it lands.
+  const proseFields: Array<[string, unknown]> = [
+    ['match_summary', o.match_summary],
+    ['executive_summary', o.executive_summary],
+    ['why_this_introduction.what_aligns', why.what_aligns],
+    ['why_this_introduction.what_differs', why.what_differs],
+    ['why_this_introduction.the_verdict', why.the_verdict],
+    ['what_haevn…haevn_assessment', w.haevn_assessment],
+    ['closing_read.statement', (o.closing_read as any)?.statement],
+    ...sections.flatMap((sec, i) => [
+      [`sections[${i}].overview`, sec.overview],
+      [`sections[${i}].your_alignment`, sec.your_alignment],
+      [`sections[${i}].where_you_differ`, sec.where_you_differ],
+      [`sections[${i}].interpretation`, sec.interpretation],
+    ] as Array<[string, unknown]>),
+    ...wtaItems.map((t, i) => [`worth_talking_about.items[${i}]`, t] as [string, unknown]),
+    ...rawChips.map((t, i) => [`signals_that_mattered[${i}]`, t] as [string, unknown]),
+    ...starters.map((t, i) => [`conversation_starters[${i}]`, t] as [string, unknown]),
+  ]
+  for (const [name, val] of proseFields) {
+    if (typeof val !== 'string' || !val) continue
+    const hits = verbatimChemistryHits(val)
+    if (hits.length) errors.push(`${name} quotes a sexual-compatibility answer verbatim: ${hits.join(', ')}`)
+  }
 
   // ── v2: closing verdict strip ──
   const cr = (o.closing_read ?? {}) as Record<string, unknown>
