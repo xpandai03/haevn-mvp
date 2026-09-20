@@ -9,7 +9,9 @@
 import {
   isDueForPing, isRowLive, visiblePartnerships, pingEveryNWeeks, noMatchPingEnabled,
   DEFAULT_PING_EVERY_N_WEEKS, PING_INTERVAL_GRACE_MS, PING_SCORE_FLOOR,
-  type MatchRowLite,
+  liveMembersByCity, hasNetworkPresence, noMatchDensityThreshold,
+  DEFAULT_NO_MATCH_DENSITY_THRESHOLD,
+  type MatchRowLite, type CityDensityRow,
 } from '../noMatchAudience'
 import {
   variantForMarket, noMatchBody, noMatchSms, noMatchEmail, stripCityClause,
@@ -92,9 +94,98 @@ function main() {
   const opened = visiblePartnerships([row()], cities, idx, nowIso, true)
   ok(opened.has('a') && opened.has('b'), 'RELEASE_ALL_MARKETS on -> both sides can see it')
 
+  // ═══ variant criterion: network DENSITY, not market liveness ═════════════
+  // The bug this replaced: under RELEASE_ALL_MARKETS a Portland member is
+  // matched and notified exactly like an Austin member, but isCityLive(
+  // 'Portland') is false, so they used to be told HAEVN was "still building its
+  // network in Portland" — the false-claim failure mode the variants exist for.
+  eq(noMatchDensityThreshold({} as any), DEFAULT_NO_MATCH_DENSITY_THRESHOLD,
+    'absent threshold -> documented default')
+  eq(DEFAULT_NO_MATCH_DENSITY_THRESHOLD, 20, 'the default is the reviewed value')
+  eq(noMatchDensityThreshold({ NO_MATCH_DENSITY_THRESHOLD: '5' } as any), 5,
+    'the threshold is read from env — retunable without a deploy')
+  for (const bad of ['0', '-3', 'abc', '', 'NaN']) {
+    eq(noMatchDensityThreshold({ NO_MATCH_DENSITY_THRESHOLD: bad } as any),
+      DEFAULT_NO_MATCH_DENSITY_THRESHOLD,
+      `threshold='${bad}' falls back to the default — never "everyone gets A"`)
+  }
+
+  // Density counts LIVE members only, normalized, and ignores everyone else.
+  const densityRows: CityDensityRow[] = [
+    ...Array.from({ length: 21 }, () => ({ city: 'Portland', profile_state: 'live' })),
+    ...Array.from({ length: 14 }, () => ({ city: 'Salem', profile_state: 'live' })),
+    { city: '  pOrTlAnD  ', profile_state: 'live' },   // normalization
+    { city: 'Portland', profile_state: 'draft' },      // not live -> not counted
+    { city: 'Portland', profile_state: null },         // not live -> not counted
+    { city: null, profile_state: 'live' },             // cityless densifies nothing
+    { city: '   ', profile_state: 'live' },            // blank likewise
+  ]
+  const density = liveMembersByCity(densityRows)
+  eq(density.get('portland'), 22, 'live members counted, case and whitespace normalized')
+  eq(density.get('salem'), 14, 'a thin city counts exactly its live members')
+  eq(density.get(''), undefined, 'cityless members densify nothing')
+  eq(density.has('austin'), false, 'a city with no live members is simply absent')
+
+  // Threshold boundary — exactly at the threshold is variant A. `idx` here holds
+  // only Austin/Round Rock, so none of these cities qualify via a live market.
+  const at = new Map([['x', 20], ['y', 19], ['z', 21]])
+  ok(!hasNetworkPresence('y', at, 20, idx), '19 live members, threshold 20 -> B')
+  ok(hasNetworkPresence('x', at, 20, idx), 'EXACTLY 20 live members -> A (>=, not >)')
+  ok(hasNetworkPresence('z', at, 20, idx), '21 live members -> A')
+  ok(!hasNetworkPresence('unknown-city', at, 20, idx), 'a city with no members at all -> B')
+
+  // A LIVE MARKET qualifies regardless of its own city count. Without this, the
+  // original bug reappears one ring out: San Marcos (11 live) sits inside the
+  // launched Austin MSA and would be told HAEVN is "still building" there.
+  const sparseLiveMarket = new Map([['round rock', 3]])
+  ok(hasNetworkPresence('Round Rock', sparseLiveMarket, 20, idx),
+    'a live-market city gets variant A even at 3 live members')
+  const roundRockBody = noMatchBody(
+    variantForMarket(hasNetworkPresence('Round Rock', sparseLiveMarket, 20, idx)),
+    'Round Rock', {} as any)
+  ok(!/still building/i.test(roundRockBody),
+    'a launched market is NEVER told we are still building there — the original invariant')
+
+  // The cross-market truthfulness case, end to end through the copy. Portland is
+  // in NO live market, so it can only qualify on density — which is the point.
+  ok(!idx.liveMarkets.has(idx.cityToMarket.get('portland') ?? ''),
+    'Portland is not a live market, so this is a pure density qualification')
+  ok(hasNetworkPresence('Portland', density, 20, idx),
+    'Portland (22 live) has real network presence -> variant A')
+  ok(!hasNetworkPresence('Salem', density, 20, idx),
+    'Salem (14 live) is genuinely thin -> variant B keeps the growth ask')
+  const portlandBody = noMatchBody(
+    variantForMarket(hasNetworkPresence('Portland', density, 20, idx)), 'Portland', {} as any)
+  ok(!/still building|haven't launched|not launched|launch/i.test(portlandBody),
+    'a Portland member is NEVER told HAEVN is still building there — the whole point')
+  ok(!/know someone|sending them/i.test(portlandBody),
+    '...and does not get a growth ask aimed at pre-launch markets')
+  const salemBody = noMatchBody(
+    variantForMarket(hasNetworkPresence('Salem', density, 20, idx)), 'Salem', {} as any)
+  ok(/still building/i.test(salemBody), 'a thin-market member still hears we are building')
+  ok(/know someone|sending them/i.test(salemBody), "...and still gets Rik's spread-the-word line")
+
+  // Variant B is reachable ONLY by a member who is both outside a live market
+  // and in a thin city. That conjunction is the whole truthfulness guarantee.
+  ok(!hasNetworkPresence('Salem', density, 20, idx) &&
+     !idx.liveMarkets.has(idx.cityToMarket.get('salem') ?? ''),
+    'variant B requires BOTH: not a live market AND under the density threshold')
+
+  // Cityless -> variant A, deliberately: B would claim something about an area
+  // we do not know. A's city-less form makes no geographic claim at all.
+  ok(hasNetworkPresence(null, density, 20, idx), 'a cityless member gets variant A')
+  ok(hasNetworkPresence(undefined, density, 20, idx), 'undefined city likewise')
+  ok(hasNetworkPresence('   ', density, 20, idx), 'a blank city string likewise')
+  const citylessBody = noMatchBody(
+    variantForMarket(hasNetworkPresence(null, density, 20, idx)), null, {} as any)
+  ok(!/still building/i.test(citylessBody),
+    'a cityless member is never told we are building in an area we cannot name')
+  ok(!/\{city\}/.test(citylessBody) && !/\bnull\b/.test(citylessBody),
+    'the city-less fallback still renders cleanly')
+
   // ═══ copy variants ═══════════════════════════════════════════════════════
-  eq(variantForMarket(true), 'live_market', 'a live market gets variant A')
-  eq(variantForMarket(false), 'pre_launch', 'a pre-launch market gets variant B')
+  eq(variantForMarket(true), 'live_market', 'network presence gets variant A')
+  eq(variantForMarket(false), 'pre_launch', 'no network presence gets variant B')
 
   const a = noMatchBody('live_market', 'Austin', {} as any)
   const b = noMatchBody('pre_launch', 'Portland', {} as any)
@@ -232,7 +323,13 @@ async function runnerTests() {
     }],
   }
 
-  const env = { NO_MATCH_PING_ENABLED: 'true', NO_MATCH_PING_EVERY_N_WEEKS: '1' } as any
+  // Threshold 2 so a 4-row fixture can express the real rule. The production
+  // default is 20; DEFAULT_NO_MATCH_DENSITY_THRESHOLD is asserted in main().
+  const env = {
+    NO_MATCH_PING_ENABLED: 'true',
+    NO_MATCH_PING_EVERY_N_WEEKS: '1',
+    NO_MATCH_DENSITY_THRESHOLD: '2',
+  } as any
 
   // ── variant split + exclusions ──
   let st: FakeState = { sent: [], marked: [], tokens: 0 }
@@ -243,12 +340,78 @@ async function runnerTests() {
   eq(r.hasMatch, 1, 'the matched partnership is counted, not pinged')
   eq(r.byVariant.live_market, 1, 'the Austin member gets variant A')
   eq(r.byVariant.pre_launch, 1, 'the Portland member gets variant B')
+  eq(r.densityThreshold, 2, 'the run reports the threshold that produced the split')
+
   eq(st.sent.find((s) => s.partnershipId === 'p-austin')?.variant, 'live_market',
     'Austin -> variant A, never B')
   eq(st.sent.find((s) => s.partnershipId === 'p-portland')?.variant, 'pre_launch', 'Portland -> variant B')
   eq(st.sent.find((s) => s.partnershipId === 'p-portland')?.city, 'Portland',
     'the member city is passed through for {city}, never a market slug')
   eq(st.marked.sort(), ['p-austin', 'p-portland'], 'both successful sends are marked')
+
+  // ── ONE SNAPSHOT: density and audience come from the same partnerships read ──
+  // A member must never be counted into a city's density by one query while
+  // being excluded from the audience by another taken a moment later. Both are
+  // derived from the single `partnerships` array, so the two filters can differ
+  // in intent without ever disagreeing about who exists.
+  //
+  // Both use Salem — NOT a live market in `idx` — so the only thing that can
+  // produce variant A is density. In Austin the live-market arm would qualify
+  // the member regardless and the assertion would prove nothing.
+  //
+  // (i) NOT-live rows densify nothing, even in bulk. Five drafts in one city
+  //     cannot lift it over the threshold and flip its one live member to A.
+  const draftsDontCount = {
+    ...base,
+    partnership_members: [{ partnership_id: 'p-thin', user_id: 'u9' }],
+    profiles: [{ user_id: 'u9', email: 'thin@example.test' }],
+    partnerships: [
+      { id: 'p-thin', city: 'Salem', phone: null, profile_state: 'live', no_match_notified_at: null },
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `p-draft-${i}`, city: 'Salem', phone: null,
+        profile_state: 'draft', no_match_notified_at: null,
+      })),
+    ],
+  }
+  st = { sent: [], marked: [], tokens: 0 }
+  r = await runNoMatchPing({ admin: fakeAdmin(draftsDontCount), sender: fakeSender(st), now: NOW, env, marketIdx: idx })
+  eq(r.eligible, 1, 'only the live member is in the audience')
+  eq(r.byVariant.pre_launch, 1,
+    'five drafts in the same city do NOT lift it over the threshold — density is live-only')
+  eq(r.byVariant.live_market, 0, '...so the one live member correctly keeps variant B')
+
+  // (ii) The converse, and the reason this is a snapshot rather than a re-query:
+  //      a live member EXCLUDED from the audience for having a match still
+  //      counts as network presence. Real people are real density.
+  //      RELEASE_ALL_MARKETS is on here so the Salem pair's match is VISIBLE to
+  //      them (that is what excludes them) while Salem stays a non-live market.
+  const prevAllMarkets = process.env.RELEASE_ALL_MARKETS
+  process.env.RELEASE_ALL_MARKETS = 'true'
+  try {
+    const matchedStillDensifies = {
+      ...base,
+      computed_matches: [{
+        partnership_a: 'p-m1', partnership_b: 'p-m2', score: 82,
+        release_at: '2026-09-01T12:00:00.000Z', expires_at: null, saved: false,
+      }],
+      partnership_members: [{ partnership_id: 'p-solo', user_id: 'u8' }],
+      profiles: [{ user_id: 'u8', email: 'solo@example.test' }],
+      partnerships: [
+        { id: 'p-solo', city: 'Salem', phone: null, profile_state: 'live', no_match_notified_at: null },
+        { id: 'p-m1', city: 'Salem', phone: null, profile_state: 'live', no_match_notified_at: null },
+        { id: 'p-m2', city: 'Salem', phone: null, profile_state: 'live', no_match_notified_at: null },
+      ],
+    }
+    st = { sent: [], marked: [], tokens: 0 }
+    r = await runNoMatchPing({ admin: fakeAdmin(matchedStillDensifies), sender: fakeSender(st), now: NOW, env, marketIdx: idx })
+    eq(r.eligible, 1, 'the two matched members are excluded from the audience')
+    eq(r.hasMatch, 2, '...and counted as having a match')
+    eq(r.byVariant.live_market, 1,
+      'but they still count toward density (3 >= 2), so the unmatched neighbour gets variant A')
+  } finally {
+    if (prevAllMarkets === undefined) delete process.env.RELEASE_ALL_MARKETS
+    else process.env.RELEASE_ALL_MARKETS = prevAllMarkets
+  }
 
   // ── the match phase always wins: never both in one run ──
   st = { sent: [], marked: [], tokens: 0 }
