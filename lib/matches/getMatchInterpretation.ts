@@ -14,7 +14,7 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 import { parseSections, type Section } from './sectionMapping'
 import { buildInterpretationInput } from './buildInterpretationInput'
 import { hasMatchNudgedViewer } from './nudgeState'
-import { generateMatchInterpretation, type InterpretationUsage } from '@/lib/ai/generateMatchInterpretation'
+import { generateMatchInterpretation, OPENAI_MODEL, type InterpretationUsage } from '@/lib/ai/generateMatchInterpretation'
 import {
   MATCH_INTERPRETATION_SYSTEM,
   buildMatchInterpretationMessage,
@@ -23,7 +23,9 @@ import {
 import type { MatchInterpretation } from '@/lib/ai/matchInterpretationSchema'
 
 type Admin = ReturnType<typeof createAdminClient>
-const MODEL = 'gpt-4o-mini'
+// Single source of truth — this value is PERSISTED to match_interpretations.model,
+// so a hardcoded copy here would make every cached row lie about its provenance.
+const MODEL = OPENAI_MODEL
 const SCHEMA_VERSION = 'v2'
 
 export interface MatchInterpretationResult {

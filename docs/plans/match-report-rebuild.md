@@ -328,6 +328,61 @@ The proposed output is *slightly smaller* than current: the reference's single
 prose paragraph per field costs fewer tokens than today's `alignments[≤3]` +
 `differences[≤2]` arrays. **One consolidated call is correct; no split needed.**
 
+### 4.5 MEASURED (2026-09-20, PR-1) — and the constraint nobody predicted
+
+Estimates above were replaced by measurement on 10 real production pairs.
+
+| | gpt-4o-mini (shipped) | gpt-4o (tested, rejected) |
+|---|---|---|
+| valid | 10/10 | 10/10 |
+| cost / call | **$0.00136** | $0.02465 (**18.7x**) |
+| weekly @ 683 warm targets | **$0.93** | $16.84 |
+| weekly @ 2,200 directions | **$2.99** | $54.24 (over the $50 flag) |
+| avg latency | 14.0s | 15.6s |
+
+**Cost was never the problem. Prose length is, and the model is not the cause.**
+
+| field | target | mini | gpt-4o | in range |
+|---|---|---|---|---|
+| `section.overview` | 25–45 | 10 | 13 | **0/50 both** |
+| `your_alignment` | 45–65 | 25 | 32 | **0/50 both** |
+| `where_you_differ` | 45–65 | 24 | 30 | **0/50 both** |
+| `haevn_assessment` | 90–140 | 48 | 72 | **0/10 both** |
+
+gpt-4o writes ~40% longer for 18.7x the cost and still misses every
+section-level target. Rewriting the length instruction to be far more forceful
+moved nothing (overview 11 -> 10).
+
+**Root cause: the model is starved of input, not incapable.** The entire user
+message is **~264 words**, of which the real evidence is ~30 terse engine labels:
+
+```
+Goals & Expectations   signals=6  "Shared goals: 100% alignment"
+                                  "Compatible relationship styles: 100%"
+Structure Fit          signals=5  "Workable structure match"
+                                  "Compatible roles"
+```
+
+The two member profiles reduce to **22 and 19 words**. We are asking for ~900–1,200
+words of prose from ~140 words of signal — and asking for 45–65 words about
+"Compatible roles" means inventing detail no supplied datum supports, which
+rules 2, 6, 7 and 11 of the client's own AI doc forbid outright.
+
+**The length targets and the no-padding rules are in direct conflict, and the
+models are obeying the more important one.** Under-writing here is correct
+behaviour.
+
+Two ways forward, both for a later PR — **do not re-evaluate the model before
+fixing the input, or the model test just gets repeated**:
+
+- **(a) Feed richer input.** The underlying survey answers exist in
+  `user_survey_responses.answers_json`; `buildSummaryInput` currently reduces
+  them to 8 keys. Widening what reaches the model is the real fix, and it makes
+  the prose *more* specific rather than longer for its own sake.
+- **(b) Revise the targets down** to what the evidence supports and adjust the
+  report design to shorter fields. Cheaper, and arguably more honest to the data,
+  but it will not match the reference page's visual density.
+
 ⚠️ **One required change:** `max_tokens` is **2000** and the proposed output
 estimates **~1,795**. That is a 10% margin, and a long `haevn_assessment` would
 truncate mid-JSON → `MALFORMED_JSON` → silent degrade. **Raise to 3,000.** Cost
@@ -545,9 +600,20 @@ byte-identical with the flag off.
 - Whatever the client resolves from §9 (photos, verification, bios).
 - Flip `MATCH_REPORT_V2_ENABLED` after a staged check.
 
-**Gates:** warm cron completes inside its 300s budget at ~2,200 directions
-(currently unmeasured — **measure in PR-1**); cache hit rate on the Monday after;
-actual weekly spend against the $3.92 estimate.
+**Also decide in PR-3 — warm COVERAGE, which is the cost lever.** The cron today
+warms only directions whose viewer has logged in: **683 of 1,100 released rows**.
+Warming all 2,200 pair-directions instead is the difference between **$0.93 and
+$2.99/week on mini**, or **$16.84 and $54.24 on gpt-4o** — i.e. it is the single
+input that decides whether this ever approaches the $50/week flag. Warming only
+logged-in viewers means a member who signs in for the first time waits ~14s for a
+cold generation; warming everything pays for reports most members never open.
+Pick deliberately rather than inheriting the current filter by accident.
+
+**Gates:** warm cron completes inside its 300s budget (**MEASURED IN PR-1: it does
+NOT** — 683 targets x 14.0s = **9,567s vs a 300s ceiling, 32x over**; even at
+concurrency 8 it is ~1,200s, so this needs chunking across runs, not just
+parallelism); cache hit rate on the Monday after; actual weekly spend against the
+measured $0.93.
 
 ---
 
@@ -589,10 +655,10 @@ actual weekly spend against the $3.92 estimate.
 1. **Migration drift.** 052 missing while 053–057 applied means migrations are not
    being applied in order or by a single process. Worth understanding before
    PR-1 applies 052, or the next one goes missing too.
-2. **Warm-cron budget unmeasured.** 2,200 directions × ~2s ≈ 73 min sequential,
-   against a 300s ceiling. The cron already limits itself to viewers who have
-   logged in (173 users), so real volume is far lower — **but it has never run**.
-   Measure in PR-1 before enabling.
+2. **Warm-cron budget — MEASURED, and it does not fit.** 683 eligible targets x
+   14.0s = **9,567s against a 300s ceiling (32x over)**. The cron would process
+   ~21 pairs before being killed. Needs chunking across runs; concurrency alone
+   is not enough. Scope + the coverage decision are PR-3.
 3. **`alignments[]`/`differences[]` dual-write.** Keeping them one release costs
    ~200 output tokens/call (~$0.40/wk). Cheap insurance; drop in PR-3.
 4. **Score compression** (§9.9) is a product risk, not a technical one, but it
