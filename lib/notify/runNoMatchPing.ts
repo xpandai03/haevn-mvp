@@ -82,6 +82,9 @@ export interface PingRunResult {
   /** Excluded because the MATCH phase notified them in this same run. */
   excludedMatchPhase: number
   byVariant: Record<NoMatchVariant, number>
+  /** Live-member threshold that picked the variants. Surfaced so a split can be
+   *  read against the rule that produced it rather than guessed at. */
+  densityThreshold: number
   /** False when the soft budget stopped the run short. */
   completed: boolean
 }
@@ -175,6 +178,7 @@ export async function runNoMatchPing(params: {
     unreachable: built.unreachable.length,
     excludedMatchPhase: exclude.size,
     byVariant: built.byVariant,
+    densityThreshold: built.densityThreshold,
     completed: true,
   }
 
