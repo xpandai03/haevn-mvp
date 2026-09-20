@@ -10,6 +10,7 @@
  */
 
 import type { SummaryInput } from '@/lib/ai/types'
+import type { ClosingVerdict } from '@/lib/matches/sectionMapping'
 
 export interface InterpretationSectionInput {
   /** Exact design category name, e.g. "Goals & Expectations". */
@@ -34,6 +35,17 @@ export interface InterpretationModelInput {
   sections: InterpretationSectionInput[]
   nudged: boolean
   membership: 'free' | 'plus'
+  /**
+   * Code-derived closing verdict. Supplied so the model echoes it verbatim; the
+   * validator overwrites the echo regardless. Same contract as `classification`.
+   */
+  closingVerdict: ClosingVerdict
+  /**
+   * Cities that must never appear in a §05 chip. Passed so the constraint is
+   * stated to the model as well as enforced in the validator — cheaper to steer
+   * than to reject, and a rejection costs the whole payload.
+   */
+  forbiddenCityTokens?: string[]
 }
 
 export const MATCH_INTERPRETATION_SYSTEM = `You are the compatibility interpretation engine for HAEVN. You are analyzing a match between two HAEVN members.
@@ -74,14 +86,35 @@ OUTPUT: Return ONLY a single valid JSON object (no markdown, no prose outside th
       "summary": string }         // one sentence on the actual alignment between these two people, ≤16 words, no demographic restating
   ],
   "nudge_compatibility_highlights": [string, string, string], // 3 short scannable phrases (4–8 words) of the most compelling compatibility observations; supported by data; no hype
+  "why_this_introduction": {      // §02. THREE paragraphs, each standing alone — not one idea split in three.
+    "what_aligns": string,        // what these two genuinely share, 45–65 words
+    "what_differs": string,       // the real differences, named without alarm, 45–65 words; if none are meaningful, say so plainly
+    "the_verdict": string         // why that balance justified an introduction, 25–40 words. Do NOT restate the score.
+  },
   "sections": [                   // EXACTLY 5, in this order: Goals & Expectations, Structure Fit, Emotional & Communication, Sexual Compatibility, Practical Fit
     { "category": string,         // the exact category name
       "classification": string,   // echo the provided classification for that category
       "overview": string,         // 25–45 words, where you align, written to the viewer
+      "your_alignment": string,   // 45–65 words of PROSE (not a list) on what these two actually share in this category
+      "where_you_differ": string, // 45–65 words of PROSE on the real differences here. If none are meaningful, say that directly — never manufacture one.
+                                  // If coverage is limited, you may say the picture is partial. NEVER name a specific unanswered question as the difference.
       "alignments": [string],     // max 3, most important areas of alignment
       "differences": [string],    // max 2, meaningful differences only; [] if none (never manufacture)
       "interpretation": string }  // 25–50 words on what the pattern could reasonably mean; "" if nothing useful
   ],
+  "worth_talking_about": {        // §04
+    "items": [string, string, string],  // EXACTLY 3. Each ≤14 words, phrased as a topic to understand, not a warning. Drawn from the real differences above.
+    "closing": string             // 25–35 words framing these as things to understand rather than dealbreakers
+  },
+  "signals_that_mattered": [string, string, string, string, string, string],
+                                  // §05. EXACTLY 6 short chips, 2–4 words each, e.g. "Long-term intent", "Direct communication".
+                                  // HARD CONSTRAINT: every chip must come from the five engine categories and their supplied SIGNALS.
+                                  // NEVER a location, city, region, "<City>-based", distance, employer, job, or demographic (age/gender/orientation) chip.
+                                  // This section is shown to members who cannot see the other person's identity; a location chip would expose it.
+  "closing_read": {               // the closing verdict strip
+    "verdict": string,            // echo the CLOSING_VERDICT value supplied below, verbatim
+    "statement": string           // 35–50 words: the balanced closing read. Shorter and more decisive than haevn_assessment — this is the last word, not a summary of the report.
+  },
   "what_haevn_thinks_you_should_know": {   // the shift from comparison engine to matchmaker; do NOT summarize the 5 sections
     "strongest_reason": string,            // the strongest reason these two are worth introducing
     "most_meaningful_difference": string,  // the most meaningful difference/uncertainty they should understand; if none, say no major incompatibility was identified
@@ -92,7 +125,9 @@ OUTPUT: Return ONLY a single valid JSON object (no markdown, no prose outside th
 
 Use the provided category classifications and scores exactly. Interpret ONLY within the five engine categories and their supplied SIGNALS. Do NOT introduce observations drawn from demographics — age, location, gender, or similar — or from anything outside the supplied category signals; demographics are already shown on the card, so re-surfacing them (for example an age gap) as a "difference" adds judgment, not information. If a category's coverage is low or a signal is absent, treat it as unknown: prefer "limited data" framing and NEVER phrase missing data (e.g. "X not specified") as a difference. Only real, answered signals may support an alignment or a difference.
 
-LENGTH IS A HARD REQUIREMENT, not a suggestion. Write each field to the FULL range and do not under-write: match_summary 35–55 words; executive_summary 45–70 words; each section overview 25–45 words; haevn_assessment 90–140 words.`
+LENGTH. Measured against real generations, the most common failure by far is UNDER-WRITING — fields came back at roughly half their stated length, which makes the report read thin and unconsidered. Treat every range below as a MINIMUM WORD COUNT you must reach, not a ceiling to stay under. A 45–65 word field means AT LEAST 45 words: that is three to four full sentences, not one. Before you return the JSON, re-read each prose field and expand any that fall short by adding the specific supporting evidence from the supplied signals — never filler, never repetition. Ranges: match_summary 35–55 words; executive_summary 45–70 words; each section overview 25–45 words; each your_alignment 45–65 words; each where_you_differ 45–65 words; each why_this_introduction paragraph 45–65 words (the_verdict 25–40); closing_read.statement 35–50 words; haevn_assessment 90–140 words.
+
+DO NOT REPEAT YOURSELF ACROSS FIELDS. overview, your_alignment and where_you_differ sit in the SAME category block and a member reads them one after another: overview is the one-glance summary, your_alignment is the detail behind what you share, where_you_differ is the detail behind what you do not. Three paraphrases of the same sentence is the most common failure here. Likewise why_this_introduction is the document's opening argument, not a restatement of the five sections, and closing_read.statement is the last word, not a summary of everything above.`
 
 /** Build the user message carrying both members' data + engine results. */
 export function buildMatchInterpretationMessage(input: InterpretationModelInput): string {
@@ -100,6 +135,13 @@ export function buildMatchInterpretationMessage(input: InterpretationModelInput)
   lines.push(`MATCH_SCORE: ${input.matchScore}`)
   lines.push(`NUDGE_STATUS: ${input.nudged ? 'this person has already nudged the viewer' : 'no nudge'}`)
   lines.push(`MEMBERSHIP_STATUS: viewer is ${input.membership === 'free' ? 'a free member' : 'a HAEVN+ member'}`)
+  lines.push(`CLOSING_VERDICT: ${input.closingVerdict}   (echo this verbatim into closing_read.verdict)`)
+  if (input.forbiddenCityTokens?.length) {
+    lines.push(
+      `FORBIDDEN_IN_SIGNAL_CHIPS: ${input.forbiddenCityTokens.map((c) => `"${c}"`).join(', ')}` +
+        ' — these city names, and any location/employer/demographic phrasing, must NEVER appear in signals_that_mattered.'
+    )
+  }
   lines.push('')
   lines.push('VIEWER_PROFILE:')
   lines.push(JSON.stringify(input.viewer, null, 2))

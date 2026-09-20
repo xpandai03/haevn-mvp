@@ -10,7 +10,7 @@ import { normalizeAnswers } from '@/lib/matching/utils/normalizeAnswers'
 import { buildSummaryInput } from '@/lib/ai/buildSummaryInput'
 import type { RawAnswers } from '@/lib/matching/types'
 import type { InterpretationModelInput, InterpretationSectionInput } from '@/lib/ai/prompts/matchInterpretation'
-import type { Section } from './sectionMapping'
+import { verdictForScore, type Section } from './sectionMapping'
 
 /** Engine reasons that denote UNKNOWN (unanswered) data — never a difference. */
 const UNKNOWN_REASON = /not specified|unspecified|have not specified|not answered|no data|unknown/i
@@ -24,6 +24,8 @@ export interface BuildInterpretationInputParams {
   matchScore: number
   nudged: boolean
   membership: 'free' | 'plus'
+  /** Cities that must never surface in a §05 signal chip (both members'). */
+  forbiddenCityTokens?: string[]
 }
 
 export function buildInterpretationInput(p: BuildInterpretationInputParams): InterpretationModelInput {
@@ -54,5 +56,16 @@ export function buildInterpretationInput(p: BuildInterpretationInputParams): Int
       return { category: s.displayName, classification: s.band.label, score: s.score, coverage: s.coverage, signals, unknowns }
     })
 
-  return { viewer, match, matchScore: p.matchScore, sections, nudged: p.nudged, membership: p.membership }
+  return {
+    viewer,
+    match,
+    matchScore: p.matchScore,
+    sections,
+    nudged: p.nudged,
+    membership: p.membership,
+    // Derived here, not passed in, so the verdict can never disagree with the
+    // score the same object carries.
+    closingVerdict: verdictForScore(p.matchScore),
+    forbiddenCityTokens: p.forbiddenCityTokens ?? [],
+  }
 }
