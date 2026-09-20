@@ -24,7 +24,7 @@ import type { MatchInterpretation } from '@/lib/ai/matchInterpretationSchema'
 
 type Admin = ReturnType<typeof createAdminClient>
 const MODEL = 'gpt-4o-mini'
-const SCHEMA_VERSION = 'v1'
+const SCHEMA_VERSION = 'v2'
 
 export interface MatchInterpretationResult {
   sections: Section[]
@@ -77,11 +77,19 @@ export async function getMatchInterpretation(
   if (!opts.noCache) {
     const { data: cached } = await admin
       .from('match_interpretations')
-      .select('payload, engine_version, source_computed_at')
+      .select('payload, engine_version, source_computed_at, schema_version')
       .eq('viewer_partnership_id', viewerPartnershipId)
       .eq('match_partnership_id', matchPartnershipId)
       .maybeSingle()
-    if (cached && cached.engine_version === engineVersion && String(cached.source_computed_at) === sourceComputedAt) {
+    // schema_version joins the freshness key: a v1 row predates the report
+    // fields and would render a half-empty document, so it is stale by
+    // definition and regenerates on first read.
+    if (
+      cached &&
+      cached.engine_version === engineVersion &&
+      String(cached.source_computed_at) === sourceComputedAt &&
+      String(cached.schema_version ?? '') === SCHEMA_VERSION
+    ) {
       return { sections, matchScore, payload: cached.payload as MatchInterpretation, degraded: false, source: 'cache' }
     }
   }
@@ -159,7 +167,7 @@ export async function assembleInterpretationForPair(
 ): Promise<AssembledInterpretation | null> {
   const { data: parts } = await admin
     .from('partnerships')
-    .select('id, owner_id, display_name, membership_tier')
+    .select('id, owner_id, display_name, membership_tier, city')
     .in('id', [viewerPartnershipId, matchPartnershipId])
   const byId = new Map((parts ?? []).map((p: any) => [p.id, p]))
   const viewer = byId.get(viewerPartnershipId)
@@ -190,6 +198,9 @@ export async function assembleInterpretationForPair(
     matchScore,
     nudged,
     membership,
+    // Both members' cities. §05 chips are visible to free viewers, so a city
+    // name there would leak the geography the header deliberately bands.
+    forbiddenCityTokens: [viewer.city, match.city].filter((c: unknown): c is string => typeof c === 'string' && c.trim().length > 0),
   })
 
   return {

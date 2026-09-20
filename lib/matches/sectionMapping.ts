@@ -73,6 +73,41 @@ export function overallBadge(score: number): { band: Band; label: string } {
   return { band, label }
 }
 
+// ── Closing verdict strip (match report §closing) ──
+/**
+ * The verdict rendered in the report's closing strip ("84% MATCH · INTRODUCTION
+ * RECOMMENDED"). A CLOSED SET derived in code from the same five bands.
+ *
+ * It is deliberately not the model's to write. A verdict is the product's
+ * judgement, not prose: a model free-texting "STRONG INTRODUCTION RECOMMENDED"
+ * would break the strip's layout, and one that drifted to a warmer verdict than
+ * the score supports would misrepresent the match. The model echoes this value
+ * and the validator overwrites the echo — exactly how `classification` already
+ * works for the per-category band.
+ */
+export type ClosingVerdict =
+  | 'INTRODUCTION STRONGLY RECOMMENDED'
+  | 'INTRODUCTION RECOMMENDED'
+  | 'INTRODUCTION WORTH CONSIDERING'
+  | 'INTRODUCTION WITH RESERVATIONS'
+
+export function verdictForScore(score: number): ClosingVerdict {
+  const { band } = scoreToBand(score)
+  switch (band) {
+    case 'exceptional':
+      return 'INTRODUCTION STRONGLY RECOMMENDED'
+    case 'strong':
+      return 'INTRODUCTION RECOMMENDED'
+    case 'compatible':
+      return 'INTRODUCTION WORTH CONSIDERING'
+    default:
+      // some_differences + meaningful_difference share the most reserved verdict.
+      // A stored pair is already above the engine's floor, so there is no
+      // "do not meet" verdict — the honest framing is reservation, not refusal.
+      return 'INTRODUCTION WITH RESERVATIONS'
+  }
+}
+
 // ── Parse the raw engine breakdown array into ordered, banded sections ──
 export interface EngineSubScore {
   key: string

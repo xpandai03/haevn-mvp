@@ -15,7 +15,7 @@ import { validateMatchInterpretation, type MatchInterpretation } from './matchIn
 
 const OPENAI_MODEL = 'gpt-4o-mini'
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
-const MAX_TOKENS = 2000
+const MAX_TOKENS = 3000
 const TEMPERATURE = 0.3
 
 // gpt-4o-mini pricing (USD / 1M tokens) — for cost reporting only.
@@ -93,7 +93,12 @@ export async function generateMatchInterpretation(
     return { result: null, error: { code: 'MALFORMED_JSON', detail: raw.slice(0, 200) }, usage, raw }
   }
 
-  const validation = validateMatchInterpretation(parsed)
+  // Verdict is derived in code and the chip constraint needs the pair's cities;
+  // both come from the input so the validator can enforce what the prompt asked for.
+  const validation = validateMatchInterpretation(parsed, {
+    verdict: input.closingVerdict,
+    forbiddenCityTokens: input.forbiddenCityTokens ?? [],
+  })
   if (!validation.ok) {
     console.error('[MatchInterp] schema invalid —', validation.errors.join('; '))
     return { result: null, error: { code: 'SCHEMA_INVALID', detail: validation.errors.join('; ') }, usage, raw }

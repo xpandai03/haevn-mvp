@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parseSections } from '@/lib/matches/sectionMapping'
+import { staticCopyFor } from '@/lib/matches/categoryCopy'
 import { assembleInterpretationForPair } from '@/lib/matches/getMatchInterpretation'
 import { generateMatchInterpretation } from '@/lib/ai/generateMatchInterpretation'
 
@@ -61,8 +62,20 @@ export async function POST(request: NextRequest) {
     samples.push({
       label: p.label,
       match_score: cm.score,
-      section_scores: sections.map((s) => ({ category: s.displayName, score: s.score, band: s.band.label, coverage: s.coverage })),
+      section_scores: sections.map((s) => ({
+        category: s.displayName,
+        score: s.score,
+        band: s.band.label,
+        coverage: s.coverage,
+        // v2: the static explainers the REPORT renders above the AI prose. Echoed
+        // here so a reviewer reads the category block exactly as a member will,
+        // even though these never went to the model.
+        static_copy: staticCopyFor(s.key),
+      })),
       membership: assembled.membership,
+      schema_version: 'v2',
+      closing_verdict_derived: assembled.input.closingVerdict,
+      forbidden_city_tokens: assembled.input.forbiddenCityTokens ?? [],
       nudged: assembled.nudged,
       user_message: includePrompt ? assembled.userMessage : undefined,
       result: gen.result,
