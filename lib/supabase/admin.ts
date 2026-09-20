@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { assertSafeServiceRoleTarget } from './envGuard'
 
 const KNOWN_SUPABASE_URL = 'https://sdepasybfkmxcswaxnsz.supabase.co'
 
@@ -29,6 +30,9 @@ export function createAdminClient() {
   if (!serviceRoleKey) {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
   }
+
+  // A preview/development deployment must never hold a prod service-role client.
+  assertSafeServiceRoleTarget(supabaseUrl)
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: {

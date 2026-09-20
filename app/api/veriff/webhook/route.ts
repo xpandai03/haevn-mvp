@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { verifyVeriffSignature, getVeriffStatusMessage } from '@/lib/veriff'
+import { assertSafeServiceRoleTarget } from '@/lib/supabase/envGuard'
 
 /** Lazy init so `next build` does not require Supabase env at module evaluation time. */
 function getSupabaseAdmin(): SupabaseClient {
@@ -17,6 +18,8 @@ function getSupabaseAdmin(): SupabaseClient {
   if (!url || !key) {
     throw new Error('Supabase URL or service role key is not configured')
   }
+  // A preview/development deployment must never hold a prod service-role client.
+  assertSafeServiceRoleTarget(url)
   return createClient(url, key)
 }
 

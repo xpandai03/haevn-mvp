@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { HAEVN_AUTH_COOKIE_OPTIONS } from './cookieName'
+import { assertSafeServiceRoleTarget } from './envGuard'
 
 // Known Supabase project URL — hardcoded fallback because NEXT_PUBLIC_SUPABASE_URL
 // may be unavailable or misconfigured in Vercel serverless runtime.
@@ -62,6 +63,9 @@ export async function createServiceRoleClient(): Promise<SupabaseClient<Database
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
+
+  // A preview/development deployment must never hold a prod service-role client.
+  assertSafeServiceRoleTarget(getSupabaseUrl())
 
   const cookieStore = await cookies()
 

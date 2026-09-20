@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { assertSafeServiceRoleTarget } from '@/lib/supabase/envGuard'
 
 /**
  * POST /api/auth/signup
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
     const supabaseUrl = getSupabaseUrl()
     const anonKey = getAnonKey()
     const serviceRoleKey = getServiceRoleKey()
+
+    // A preview/development deployment must never hold a prod service-role client.
+    if (serviceRoleKey) assertSafeServiceRoleTarget(supabaseUrl)
 
     console.log(`[Signup] supabaseUrl=${supabaseUrl}`)
     console.log(`[Signup] anonKey set=${!!anonKey} (${anonKey.slice(0, 8)}...)`)
