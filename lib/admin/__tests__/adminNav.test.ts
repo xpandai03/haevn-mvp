@@ -6,7 +6,7 @@ import { PRIMARY_NAV, TOOLS_NAV, deriveActive } from '../adminNav'
 import { eq, ok, report } from '../../metrics/__tests__/_assert'
 
 // exactly four primary pages, in order
-eq(PRIMARY_NAV.map((n) => n.key), ['network-performance', 'users', 'matches', 'surveys'], 'exactly four primary pages')
+eq(PRIMARY_NAV.map((n) => n.key), ['network-performance', 'users', 'matches', 'surveys', 'founding-members'], 'the primary pages, in nav order (Founding Members added 2026-09-21)')
 ok(PRIMARY_NAV.every((n) => n.href.startsWith('/admin/')), 'every primary item is a real /admin link')
 
 // removed sections must be absent

@@ -54,6 +54,7 @@ import { TOOLTIPS } from './tooltips'
 import { KpiCard, BlockedCard } from './cards'
 import { CompositionChart } from './CompositionChart'
 import { EngagementStrip } from './EngagementStrip'
+import { FoundingPromoRow } from './FoundingPromoRow'
 
 const NETWORK = 'network'
 const AGE_ORDER = ['18-24', '25-34', '35-44', '45-54', '55+', 'unknown']
@@ -412,6 +413,11 @@ function Sections({
           />
           <BlockedCard label="Meetup Shares" icon={Share2} reason={(snap.meetupShares as BlockedMetric).reason} />
         </div>
+
+        {/* Founding promo — headline totals only. The funnel (came back /
+            connected / messaged) lives on its own page rather than being
+            squeezed in here; this is the pointer to it. */}
+        <FoundingPromoRow />
       </section>
 
       {/* Section 2 — Weekly Activity */}

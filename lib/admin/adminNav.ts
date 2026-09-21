@@ -4,7 +4,7 @@
  * Connections/Content/Reports/Settings/Utilities were removed (client's Jul-20 call).
  */
 
-export type NavKey = 'network-performance' | 'users' | 'matches' | 'surveys'
+export type NavKey = 'network-performance' | 'users' | 'matches' | 'surveys' | 'founding-members'
 
 export interface NavEntry {
   key: NavKey
@@ -17,6 +17,7 @@ export const PRIMARY_NAV: NavEntry[] = [
   { key: 'users', label: 'Users', href: '/admin/users' },
   { key: 'matches', label: 'Matches', href: '/admin/matches' },
   { key: 'surveys', label: 'Surveys', href: '/admin/surveys' },
+  { key: 'founding-members', label: 'Founding Members', href: '/admin/founding-members' },
 ]
 
 /** Tools section — the ops tool, kept separate from the primary pages. */
@@ -27,6 +28,7 @@ export function deriveActive(pathname: string): NavKey | null {
   if (pathname.startsWith('/admin/matches')) return 'matches'
   if (pathname.startsWith('/admin/users')) return 'users'
   if (pathname.startsWith('/admin/surveys')) return 'surveys'
+  if (pathname.startsWith('/admin/founding-members')) return 'founding-members'
   if (pathname.startsWith('/admin/network-performance')) return 'network-performance'
   return null
 }

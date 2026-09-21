@@ -10,19 +10,13 @@
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  BarChart3,
-  Users,
-  ClipboardList,
-  Sparkles,
-  SlidersHorizontal,
-  Menu,
-} from 'lucide-react'
+import { Award, BarChart3, ClipboardList, Menu, SlidersHorizontal, Sparkles, Users } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { PRIMARY_NAV, TOOLS_NAV, deriveActive, type NavKey } from '@/lib/admin/adminNav'
 
 /** key → icon (kept out of the pure nav config so it stays testable). */
 const ICONS: Record<NavKey, typeof BarChart3> = {
+  'founding-members': Award,
   'network-performance': BarChart3,
   users: Users,
   matches: Sparkles,
