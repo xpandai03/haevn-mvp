@@ -277,3 +277,41 @@ check `degraded`.
 `WARM_COVERAGE` is the cost lever: `viewers` (default, ~683 directions, ~$0.93/wk)
 or `all` (every released direction, ~$2.99/wk). Members outside the warm set
 still get a report — generated on demand and cached for the next viewer.
+
+### Quota headroom is verified by hand, before each Monday
+
+**Resend exposes no quota or usage endpoint.** The SDK surfaces `emails`,
+`batch`, `broadcasts`, `domains`, `logs`, `webhooks`, `audiences`, `contacts`,
+`templates`, `segments`, `topics` and `apiKeys` — none of which reports how much
+of the plan's daily or monthly allowance is left. There is nothing to poll, so
+this cannot be automated today.
+
+**Until it can be, check the Resend dashboard before each Monday run** and
+confirm the remaining allowance covers the expected volume:
+
+| | |
+|---|---|
+| Expected Monday email volume | **~620** (match phase + ping, incl. retries) |
+| Monthly, notification email alone | **~2,500** |
+| Plus | magic links, re-notify, connection nudges |
+
+The only in-band signal is retrospective: a non-zero `quota_dead` in §8 means the
+allowance ran out *during* the run, and those members go unsent until the
+following week. By then the money is spent and the Monday is lost, which is why
+the check is a pre-flight rather than a readout item.
+
+**If Resend later ships a usage endpoint**, wire it into a pre-flight check in
+the notify cron: abort with a loud event rather than half-sending. Track it as
+the automation that closes this gap.
+
+### Follow-up worth considering: batch sending
+
+`resend.batch.send()` accepts up to **100 emails per API call**. At ~620 emails
+that is **7 calls instead of 620**, which sidesteps the per-second rate limit
+almost entirely and would cut the pacing cost from ~124s to seconds.
+
+It does **not** help with the daily quota — 620 emails still count as 620
+against the plan — so it is an efficiency and duration win, not a capacity one.
+Not implemented here: the pacer already brings the run inside its budget, and
+batching changes per-recipient error handling (one call, many results), which
+needs its own care around which members get marked invalid or retried.
