@@ -162,6 +162,28 @@ GROUP BY 1, 2 ORDER BY 3 DESC;
 `promo_market` holds a market **slug** when the member's city resolves to a
 market (`austin`), otherwise their **city verbatim** (`Portland`), otherwise NULL.
 
+### ⚠️ 2026-09-11 carries residual contamination
+
+A preview-hosted QA harness wrote synthetic promo events into production on
+**2026-09-11** (see
+[preview-prod-isolation-2026-09-20.md](./preview-prod-isolation-2026-09-20.md)).
+**78 positively-identified synthetic rows were deleted on 2026-09-20**, so the
+day is materially clean — but three surviving `upgrade_cta_clicked` rows from
+that day cannot be *proven* real, and no further row can be positively
+classified either way.
+
+Keep the existing convention: **exclude Sep 11** when the number goes to the
+client. Add to the funnel query above:
+
+```sql
+  AND e.created_at::date <> '2026-09-11'
+```
+
+The difference is three CTA clicks (39 including Sep 11, 36 excluding it).
+Offer views (35) and activations (18) are identical either way — **activations
+were never contaminated**, so no activation figure previously reported to the
+client was wrong.
+
 ## 7. Anomaly scan
 
 ```sql
