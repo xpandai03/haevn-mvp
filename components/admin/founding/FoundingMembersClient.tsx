@@ -83,7 +83,11 @@ function Rows({ rows, comp }: { rows: FoundingRow[]; comp: boolean }) {
           </td>
           <td className="whitespace-nowrap px-3 py-2 text-sm">{r.city ?? '—'}</td>
           <td className="whitespace-nowrap px-3 py-2 text-sm">{r.promoMarket ?? '—'}</td>
-          <td className="whitespace-nowrap px-3 py-2 text-[13px] text-[color:var(--haevn-muted-fg)]">{r.ctaSource ?? '—'}</td>
+          {/* '/dashboard/recommendations' on nearly every row costs ~140px and
+              says nothing the suffix doesn't. The full value stays in the title. */}
+          <td className="whitespace-nowrap px-3 py-2 text-[13px] text-[color:var(--haevn-muted-fg)]" title={r.ctaSource ?? undefined}>
+            {r.ctaSource ? r.ctaSource.replace(/^\/dashboard\//, '').replace(/^\//, '') : '—'}
+          </td>
           <td className="whitespace-nowrap px-3 py-2 text-sm">{fmtDate(r.activatedAt)}</td>
           <td className="whitespace-nowrap px-3 py-2 text-sm">{fmtDate(r.expiresAt)}</td>
           <td className="whitespace-nowrap px-3 py-2 text-sm">
@@ -103,9 +107,9 @@ function Rows({ rows, comp }: { rows: FoundingRow[]; comp: boolean }) {
             )}
             <span className="ml-2 text-[11px] text-[color:var(--haevn-muted-fg)]">{fmtDate(r.lastSignInAt)}</span>
           </td>
-          <td className="px-3 py-2 text-center text-sm tabular-nums">{r.nudgesSent || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
-          <td className="px-3 py-2 text-center text-sm tabular-nums">{r.connectionsAccepted || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
-          <td className="px-3 py-2 text-center text-sm tabular-nums">{r.messagesSent || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
+          <td className="px-2 py-2 text-center text-sm tabular-nums">{r.nudgesSent || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
+          <td className="px-2 py-2 text-center text-sm tabular-nums">{r.connectionsAccepted || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
+          <td className="px-2 py-2 text-center text-sm tabular-nums">{r.messagesSent || <span className="text-[color:var(--haevn-muted-fg)]">0</span>}</td>
         </tr>
       ))}
     </>
@@ -176,12 +180,12 @@ export function FoundingMembersClient() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full min-w-[1080px]">
+        <table className="w-full min-w-[920px]">
           <thead className="bg-black/[0.02]">
             <tr>
-              <Th>Member</Th><Th>City</Th><Th>Promo market</Th><Th>CTA source</Th>
-              <Th>Activated</Th><Th>Expires</Th><Th>Days left</Th><Th>Signed in since</Th>
-              <Th className="text-center">Nudges</Th><Th className="text-center">Connections</Th><Th className="text-center">Messages</Th>
+              <Th>Member</Th><Th>City</Th><Th>Market</Th><Th>CTA</Th>
+              <Th>Activated</Th><Th>Expires</Th><Th>Days left</Th><Th>Back since</Th>
+              <Th className="text-center">Nudges</Th><Th className="text-center">Conns</Th><Th className="text-center">Msgs</Th>
             </tr>
           </thead>
           <tbody>
