@@ -13,7 +13,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Lock, Info, Lightbulb, Target, Users, MessageCircle, Heart, Calendar } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
-import { getMatchBreakdownData, type MatchBreakdownData } from '@/lib/matches/getMatchCardData'
+import { getMatchBreakdownData, ensureMatchInterpretation, type MatchBreakdownData } from '@/lib/matches/getMatchCardData'
+import MatchReport from '@/components/matches/report/MatchReport'
 import { fallbackExecutiveSummary } from '@/lib/matches/fallbackCopy'
 import { BECOME_MEMBER_CTA, BREAKDOWN_GATE_SUPPORT, LOCKED_IDENTITY_SUPPORT } from '@/lib/matches/membershipCopy'
 import type { Band, Section } from '@/lib/matches/sectionMapping'
@@ -54,8 +55,25 @@ export default function BreakdownPage() {
       .finally(() => setLoading(false))
   }, [authLoading, user, matchId])
 
+  // v2 kicks off generation behind the painted document. Generation is ~12s and
+  // the scores, bands and static copy are all available instantly, so blocking
+  // the render on it would show a spinner for no reason. Fires once per mount.
+  useEffect(() => {
+    if (!data?.reportV2 || !data.interpretationPending) return
+    let cancelled = false
+    ensureMatchInterpretation(data.matchId)
+      .then((r) => { if (!cancelled && r.ready) return getMatchBreakdownData(data.matchId).then((d) => d && setData(d)) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [data?.reportV2, data?.interpretationPending, data?.matchId])
+
   if (loading) return <div className="p-10 text-center text-[color:var(--haevn-muted-fg)]">Loading your breakdown…</div>
   if (notFound || !data) return <div className="p-10 text-center text-[color:var(--haevn-muted-fg)]">Match not found.</div>
+
+  // THE ONE BRANCH POINT. The flag is read server-side in getMatchBreakdownData
+  // and arrives as a boolean, so its value never ships in the client bundle and
+  // the data fetch above is not duplicated. Off => the expansion below, untouched.
+  if (data.reportV2) return <MatchReport data={data} />
 
   const isFree = data.state !== 'unlocked'
   const interp = data.interpretation

@@ -15,6 +15,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { matchReportV2Enabled } from './reportFlag'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import { getComputedMatchCards, type ComputedMatchCard } from '@/lib/actions/computedMatchCards'
@@ -47,6 +48,12 @@ export interface CardIdentity {
   demographics: string | null
   distanceMiles?: number
   city: string
+  /** Profile-at-a-Glance fields, individually. The card renders them joined as
+   *  `demographics`; the report renders them as labelled columns, and a null
+   *  field renders NOTHING rather than "Unknown". */
+  gender: string | null
+  orientation: string | null
+  structure: string | null
 }
 
 export interface MatchBreakdownData {
@@ -59,6 +66,18 @@ export interface MatchBreakdownData {
   sections: Section[]
   interpretation: MatchInterpretation | null
   degraded: boolean
+  /** True when the v2 report document should render instead of the expansion. */
+  reportV2: boolean
+  /** Viewer's own city — powers the same-city / cross-city location line. */
+  viewerCity: string | null
+  /** Veriff-confirmed. The report's trust badge renders only when true. */
+  matchVerified: boolean
+  /**
+   * v2 only. True when no usable interpretation is cached yet, so the document
+   * renders its "being prepared" state for the AI fields while generation runs
+   * in the background. Never set on the v1 path.
+   */
+  interpretationPending: boolean
 }
 
 function demographicsLine(p: ComputedMatchCard['partnership']): string | null {
@@ -81,6 +100,9 @@ function identityOf(card: ComputedMatchCard): CardIdentity {
     demographics: demographicsLine(p),
     distanceMiles: p.distance_miles,
     city: p.city,
+    gender: p.gender ?? null,
+    orientation: p.sexuality ?? null,
+    structure: p.relationship_structure ?? null,
   }
 }
 
@@ -102,8 +124,15 @@ export async function getMatchBreakdownData(matchId: string): Promise<MatchBreak
   const nudged = isFree ? await hasMatchNudgedViewer(admin, viewer, matchId) : false
   const state: CardState = !isFree ? 'unlocked' : nudged ? 'nudged' : 'standard'
 
-  // Breakdown = single match → generate on demand (cache-fills for next time).
-  const interp = await getMatchInterpretation(admin, viewer, matchId)
+  const v2 = matchReportV2Enabled()
+
+  // v1 keeps generating on demand — a ~12s render, but changing it would not be
+  // byte-identical with the flag off, and that is the harder requirement.
+  // v2 reads CACHE ONLY so the document paints immediately; generation is kicked
+  // off separately by ensureMatchInterpretation() and picked up on refresh.
+  const interp = await getMatchInterpretation(admin, viewer, matchId, v2 ? { cacheOnly: true } : {})
+
+  const { data: viewerRow } = await admin.from('partnerships').select('city').eq('id', viewer).maybeSingle()
 
   return {
     matchId,
@@ -115,6 +144,34 @@ export async function getMatchBreakdownData(matchId: string): Promise<MatchBreak
     sections: card.sections,
     interpretation: interp.payload,
     degraded: interp.degraded,
+    reportV2: v2,
+    viewerCity: (viewerRow as { city?: string | null } | null)?.city ?? null,
+    matchVerified: card.partnership.is_verified === true,
+    interpretationPending: v2 && !interp.payload,
+  }
+}
+
+/**
+ * Fire-and-forget generation for the v2 document.
+ *
+ * Generation is synchronous and measured at ~11–14s. Blocking the report render
+ * on it would mean a member staring at a spinner for the length of a lift ride,
+ * on a page whose scores, bands and static copy are all available instantly. So
+ * the document paints, this runs behind it, and a refresh picks up the prose.
+ *
+ * Returns whether a payload now exists so the client can decide to re-fetch
+ * rather than poll blindly. Never throws — a failure leaves the prepared state
+ * on screen, which is the same thing the member already sees.
+ */
+export async function ensureMatchInterpretation(matchId: string): Promise<{ ready: boolean }> {
+  try {
+    const viewer = await resolveViewerPartnershipId()
+    if (!viewer) return { ready: false }
+    const admin = createAdminClient()
+    const r = await getMatchInterpretation(admin, viewer, matchId)
+    return { ready: !!r.payload }
+  } catch {
+    return { ready: false }
   }
 }
 
