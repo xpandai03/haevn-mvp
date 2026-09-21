@@ -40,6 +40,9 @@ export interface ComputedMatchCard {
     relationship_structure: string | null
     /** Rounded road miles when both partnerships have coordinates */
     distance_miles?: number
+    /** Identity verified via Veriff. The report's trust badge renders ONLY when
+     *  this is true, so an unverified member shows no Veriff claim at all. */
+    is_verified: boolean
   }
   score: number
   tier: 'Platinum' | 'Gold' | 'Silver' | 'Bronze'
@@ -325,7 +328,7 @@ export async function getComputedMatchCards(
   const { data: partnerships } = await adminClient
     .from('partnerships')
     .select(
-      'id, owner_id, display_name, short_bio, connection_summary, identity, city, age, membership_tier, orientation, structure, latitude, longitude'
+      'id, owner_id, display_name, short_bio, connection_summary, identity, city, age, membership_tier, orientation, structure, latitude, longitude, is_verified'
     )
     .in('id', partnerIds)
 
@@ -476,6 +479,7 @@ export async function getComputedMatchCards(
       sexuality,
       relationship_structure,
       distance_miles,
+      is_verified: (partner as any).is_verified === true,
     }
 
     // SERVER-SIDE REDACTION — the reveal gate, enforced before the payload
