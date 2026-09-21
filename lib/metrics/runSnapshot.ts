@@ -50,10 +50,30 @@ export async function runNetworkSnapshot(opts?: {
 
   for (const { scope, marketName } of scopes) {
     try {
-      const [metrics, composition] = await Promise.all([
-        getMetrics({ scope, week }),
-        getComposition({ scope }),
-      ])
+      // COMPOSITION IS DEGRADABLE; THE SNAPSHOT IS NOT.
+      //
+      // These used to be awaited together, so a composition failure lost the
+      // ENTIRE scope's row. That is exactly what happened: one member's survey
+      // carried the birthdate "1989-04-31" — April has 30 days — and
+      // get_composition_breakdown throws casting it. The member is in Gladstone,
+      // so the Austin-scoped call never touched them and kept succeeding, while
+      // the NETWORK scope threw every Saturday from 2026-08-29 onward. Four
+      // weeks of network-wide history were lost to one impossible date, and
+      // nothing surfaced it because the per-scope catch swallowed it into an
+      // outcome nobody read.
+      //
+      // Composition is one section of the readout. Member counts, weekly deltas
+      // and engagement are the time series itself, and losing those to a
+      // breakdown failure is the wrong trade. Composition now fails on its own.
+      const metrics = await getMetrics({ scope, week })
+      let composition: Awaited<ReturnType<typeof getComposition>> | null = null
+      let compositionError: string | null = null
+      try {
+        composition = await getComposition({ scope })
+      } catch (e: any) {
+        compositionError = e?.message ?? String(e)
+        console.error(`[Snapshot] composition FAILED for ${marketName ?? 'network'} — writing the row without it:`, compositionError)
+      }
 
       const payload: SnapshotPayload = {
         scopeLabel: metrics.scopeLabel,
@@ -62,6 +82,9 @@ export async function runNetworkSnapshot(opts?: {
         snapshot: metrics.snapshot,
         weekly: metrics.weekly,
         composition,
+        // Recorded in the row itself, so a degraded snapshot is visible in the
+        // data rather than only in a log line nobody reads.
+        ...(compositionError ? { compositionError } : {}),
         engagement: metrics.engagement,
         definitionsVersion: SNAPSHOT_DEFINITIONS_VERSION,
         generatedAt: metrics.generatedAt,
@@ -78,7 +101,12 @@ export async function runNetworkSnapshot(opts?: {
       if (error) throw new Error(error.message)
 
       written++
-      outcomes.push({ scopeLabel: metrics.scopeLabel, marketName, ok: true })
+      outcomes.push({
+        scopeLabel: metrics.scopeLabel,
+        marketName,
+        ok: true,
+        ...(compositionError ? { degraded: 'composition', error: compositionError } : {}),
+      })
     } catch (err: any) {
       outcomes.push({
         scopeLabel: marketName ?? 'network',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { phoneForStorage } from '@/lib/utils/phone'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -26,6 +27,11 @@ export async function POST(request: NextRequest) {
     console.log('[API /onboarding/save-identity] Incoming payload:', body)
 
     const { profileType, relationshipOrientation, city = 'Austin', phone } = body
+    // Normalize server-side. A member who mistypes their phone still completes
+    // onboarding — the number is simply not stored, and they keep email.
+    // Never block the submission on it.
+    const normalizedPhone = phoneForStorage(phone)
+    if (phone && !normalizedPhone) console.warn('[save-identity] unusable phone discarded, onboarding continues')
 
     // Validate: Need at least one field to update
     if (!profileType && !relationshipOrientation) {
@@ -73,8 +79,8 @@ export async function POST(request: NextRequest) {
         updateData.relationship_orientation = [relationshipOrientation] // Store as array
       }
 
-      if (phone) {
-        updateData.phone = phone
+      if (normalizedPhone) {
+        updateData.phone = normalizedPhone
       }
 
       const { error: updateError } = await adminClient
@@ -121,8 +127,8 @@ export async function POST(request: NextRequest) {
         insertData.relationship_orientation = [relationshipOrientation] // Store as array
       }
 
-      if (phone) {
-        insertData.phone = phone
+      if (normalizedPhone) {
+        insertData.phone = normalizedPhone
       }
 
       const { data: newPartnership, error: insertError } = await adminClient
