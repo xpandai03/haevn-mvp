@@ -21,6 +21,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendNotification } from '@/lib/services/notifications'
+import { loadInvalidDestinations, type InvalidDestinations } from '@/lib/services/invalidDestinations'
+import { sendRatePerSec, type SendFailureKind } from '@/lib/services/sendRate'
 import { issueNotifySignInUrl } from '@/lib/auth/notifySignIn'
 import { makeUnsubToken } from '@/lib/suppression/unsubToken'
 import { buildNoMatchAudience, pingEveryNWeeks, type PingEntry } from './noMatchAudience'
@@ -57,7 +59,13 @@ export interface PingSender {
     noMatchVariant: NoMatchVariant
     city: string | null
     unsubUrl?: string | null
-  }) => Promise<{ sms: { sent: boolean }; email: { sent: boolean } }>
+    /** Channel already known-invalid — do not attempt, do not count as failure. */
+    skipSms?: boolean
+    skipEmail?: boolean
+  }) => Promise<{
+    sms: { sent: boolean; failureKind?: SendFailureKind }
+    email: { sent: boolean; failureKind?: SendFailureKind; retries?: number }
+  }>
   /** Mint a handoff sign-in URL for this member, or null if one can't be made. */
   signInUrl: (email: string, userId: string) => Promise<string | null>
   /** Stamp no_match_notified_at. Called ONLY after a successful send. */
@@ -82,6 +90,16 @@ export interface PingRunResult {
   /** Excluded because the MATCH phase notified them in this same run. */
   excludedMatchPhase: number
   byVariant: Record<NoMatchVariant, number>
+  /** Sends retried past a provider throttle and then succeeded. */
+  throttleRetried: number
+  /** Sends abandoned because the email plan's daily quota was exhausted. */
+  quotaDead: number
+  /** Channels skipped because the provider already rejected them as invalid. */
+  invalidSkipped: { sms: number; email: number }
+  /** Destinations newly marked invalid by THIS run. */
+  invalidMarked: { sms: number; email: number }
+  /** Pacing actually applied, for the readout. */
+  sendRatePerSec: number
   /** Live-member threshold that picked the variants. Surfaced so a split can be
    *  read against the rule that produced it rather than guessed at. */
   densityThreshold: number
@@ -179,8 +197,18 @@ export async function runNoMatchPing(params: {
     excludedMatchPhase: exclude.size,
     byVariant: built.byVariant,
     densityThreshold: built.densityThreshold,
+    throttleRetried: 0,
+    quotaDead: 0,
+    invalidSkipped: { sms: 0, email: 0 },
+    invalidMarked: { sms: 0, email: 0 },
+    sendRatePerSec: sendRatePerSec(env),
     completed: true,
   }
+
+  // One bulk read for the whole run: destinations a provider has already called
+  // permanently invalid. Skipping them is not a failure — it stops a mistyped
+  // number consuming a paced slot and reading as a fresh error every Monday.
+  const invalid: InvalidDestinations = dryRun ? { phone: new Set(), email: new Set() } : await loadInvalidDestinations(admin)
 
   await pooled(built.audience, PING_CONCURRENCY, async (entry: PingEntry) => {
     if (Date.now() - startedAt > PING_SOFT_BUDGET_MS) {
@@ -204,15 +232,27 @@ export async function runNoMatchPing(params: {
       if (userId) signInUrl = (await sender.signInUrl(email, userId)) ?? undefined
     }
 
+    const skipSms = invalid.phone.has(entry.partnershipId)
+    const skipEmail = invalid.email.has(entry.partnershipId)
+    if (skipSms) result.invalidSkipped.sms++
+    if (skipEmail) result.invalidSkipped.email++
+
     const res = await sender.send({
-      phone: entry.phone,
-      email,
+      phone: skipSms ? null : entry.phone,
+      email: skipEmail ? null : email,
+      skipSms,
+      skipEmail,
       partnershipId: entry.partnershipId,
       signInUrl,
       noMatchVariant: entry.variant,
       city: entry.city,
       unsubUrl: email ? unsubUrlFor(email) : null,
     })
+
+    if (res.email.retries) result.throttleRetried += res.email.retries
+    if (res.email.failureKind === 'quota') result.quotaDead++
+    if (res.email.failureKind === 'invalid') result.invalidMarked.email++
+    if (res.sms.failureKind === 'invalid') result.invalidMarked.sms++
 
     if (res.sms.sent || res.email.sent) {
       result.sent++

@@ -1,5 +1,7 @@
 import { sendSMS } from './twilio'
 import { sendEmail } from './email'
+import { classifySmsError, type SendFailureKind } from './sendRate'
+import { markDestinationInvalid } from './invalidDestinations'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendScopeForNotificationType } from '@/lib/suppression/scope'
 import { noMatchSms, noMatchEmail, type NoMatchVariant } from '@/lib/notify/noMatchCopy'
@@ -109,6 +111,14 @@ interface NotificationOptions {
   city?: string | null
   /** no_match only: per-recipient one-click unsubscribe URL (footer + RFC 8058). */
   unsubUrl?: string | null
+  /**
+   * Channel skips for destinations a provider has already rejected as
+   * permanently invalid (migration 058). Set by the caller from one bulk read,
+   * so a run never re-attempts a number that cannot receive SMS. Skipping is
+   * NOT a failure — the readout counts it separately.
+   */
+  skipSms?: boolean
+  skipEmail?: boolean
 }
 
 /**
@@ -143,12 +153,12 @@ export async function buildSignInUrl(email: string): Promise<string | null> {
  * Logs each attempt to system_events for admin visibility.
  */
 export async function sendNotification(opts: NotificationOptions): Promise<{
-  sms: { sent: boolean; error?: any }
-  email: { sent: boolean; error?: any }
+  sms: { sent: boolean; error?: any; failureKind?: SendFailureKind; skipped?: boolean }
+  email: { sent: boolean; error?: any; failureKind?: SendFailureKind; retries?: number; skipped?: boolean }
 }> {
   const result = {
-    sms: { sent: false } as { sent: boolean; error?: any },
-    email: { sent: false } as { sent: boolean; error?: any },
+    sms: { sent: false } as { sent: boolean; error?: any; failureKind?: SendFailureKind; skipped?: boolean },
+    email: { sent: false } as { sent: boolean; error?: any; failureKind?: SendFailureKind; retries?: number; skipped?: boolean },
   }
 
   const senderName = opts.senderName || 'Someone'
@@ -188,12 +198,22 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   const promises: Promise<void>[] = []
 
   // SMS
-  if (opts.phone) {
+  if (opts.phone && !opts.skipSms) {
     promises.push(
       sendSMS(opts.phone, smsBody)
-        .then((r) => {
+        .then(async (r) => {
           result.sms.sent = r.success
-          if (!r.success) result.sms.error = r.error
+          if (!r.success) {
+            result.sms.error = r.error
+            const kind = classifySmsError(r.error)
+            result.sms.failureKind = kind
+            // A number the carrier calls invalid will be invalid next Monday
+            // too. Mark it so it stops consuming a slot and stops reading as a
+            // fresh failure every week.
+            if (kind === 'invalid' && opts.partnershipId) {
+              await markDestinationInvalid(createAdminClient(), opts.partnershipId, 'phone')
+            }
+          }
         })
         .catch((err) => {
           result.sms.error = err
@@ -208,7 +228,7 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   // including a plain unsubscribe, stops the recurring ping — see
   // lib/suppression/scope.ts); match/message stay 'critical' (never suppressed —
   // they carry the sign-in link and are the core service).
-  if (opts.email) {
+  if (opts.email && !opts.skipEmail) {
     promises.push(
       sendEmail(opts.email, emailTemplate.subject, emailTemplate.html, {
         scope: sendScopeForNotificationType(opts.type),
@@ -222,9 +242,16 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
             }
           : {}),
       })
-        .then((r) => {
+        .then(async (r) => {
           result.email.sent = r.success
-          if (!r.success) result.email.error = r.error
+          result.email.retries = r.retries
+          if (!r.success) {
+            result.email.error = r.error
+            result.email.failureKind = r.failureKind
+            if (r.failureKind === 'invalid' && opts.partnershipId) {
+              await markDestinationInvalid(createAdminClient(), opts.partnershipId, 'email')
+            }
+          }
         })
         .catch((err) => {
           result.email.error = err

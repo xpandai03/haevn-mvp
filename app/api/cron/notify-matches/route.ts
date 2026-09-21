@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendNotification } from '@/lib/services/notifications'
+import { loadInvalidDestinations } from '@/lib/services/invalidDestinations'
+import { sendRatePerSec } from '@/lib/services/sendRate'
 import { getReleaseEligibility } from '@/lib/markets/releaseGate'
 import { issueNotifySignInUrl } from '@/lib/auth/notifySignIn'
 import { noMatchPingEnabled } from '@/lib/notify/noMatchAudience'
@@ -60,7 +62,16 @@ async function logNotifyRun(
 
 /** What the match phase produced, and whether the run may continue to the ping. */
 interface MatchPhaseResult {
-  summary: { sent: number; skipped: number; errors: number }
+  summary: {
+    sent: number; skipped: number; errors: number
+    /** Provider-throttle retries consumed (pacing working under load). */
+    throttleRetried: number
+    /** Sends abandoned because the email plan's daily quota was exhausted. */
+    quotaDead: number
+    /** Channels skipped as permanently invalid — NOT failures. */
+    invalidSkipped: { sms: number; email: number }
+    sendRatePerSec: number
+  }
   /** Partnerships messaged in THIS run — excluded from the ping, always. */
   notifiedThisRun: Set<string>
   log: Partial<NotifyRunLog> & { eligible: number; reason: NotifyReason }
@@ -131,7 +142,12 @@ export async function GET(request: NextRequest) {
 async function runMatchPhase(
   supabase: ReturnType<typeof createAdminClient>
 ): Promise<MatchPhaseResult> {
-  const summary = { sent: 0, skipped: 0, errors: 0 }
+  const summary = {
+    sent: 0, skipped: 0, errors: 0,
+    throttleRetried: 0, quotaDead: 0,
+    invalidSkipped: { sms: 0, email: 0 },
+    sendRatePerSec: 0,
+  }
   const notifiedThisRun = new Set<string>()
 
   // Find all partnerships with released-but-un-notified results. Notify the
@@ -218,6 +234,11 @@ async function runMatchPhase(
     }
   }
 
+  // One bulk read for the whole phase — destinations already rejected as
+  // permanently invalid are skipped rather than re-attempted every Monday.
+  const invalidDest = await loadInvalidDestinations(supabase)
+  summary.sendRatePerSec = sendRatePerSec()
+
   for (const partnershipId of partnershipIds) {
     // Phone may be null — the imported cohort has no phone numbers, so EMAIL
     // is the primary channel. We no longer skip no-phone recipients.
@@ -283,13 +304,23 @@ async function runMatchPhase(
 
     // Send via notification system. SMS only fires if a phone exists; email
     // carries the branded magic link for the no-phone cohort.
+    const skipSms = invalidDest.phone.has(partnershipId)
+    const skipEmail = invalidDest.email.has(partnershipId)
+    if (skipSms) summary.invalidSkipped.sms++
+    if (skipEmail) summary.invalidSkipped.email++
+
     const result = await sendNotification({
       type: 'match',
-      phone: partnership?.phone ?? null,
-      email: userEmail,
+      phone: skipSms ? null : (partnership?.phone ?? null),
+      email: skipEmail ? null : userEmail,
       partnershipId,
       signInUrl: signInUrl ?? undefined,
+      skipSms,
+      skipEmail,
     })
+
+    if (result.email.retries) summary.throttleRetried += result.email.retries
+    if (result.email.failureKind === 'quota') summary.quotaDead++
 
     if (result.sms.sent || result.email.sent) {
       console.log(`[Cron notify-matches] Notified ${partnershipId}: sms=${result.sms.sent} email=${result.email.sent}`)

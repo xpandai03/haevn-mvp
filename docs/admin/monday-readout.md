@@ -178,3 +178,102 @@ duplicate invocation. Any `match_recompute_failed` row is a hard failure.
 
 Watch recompute duration (`finished_at - started_at`) against the 300s ceiling —
 91s on Sept 7, and the pair set is growing (189 → 391 since July).
+
+---
+
+## 8. Send health — throttle, quota, invalid destinations
+
+Added after 2026-09-21, when the first no-match ping lost 138 of 496 sends. The
+failures were **not** a HAEVN bug: 146 hit Resend's 10/sec rate limit (we peaked
+at 12/sec, unpaced) and 205 hit the daily quota. Those are different problems
+with different fixes, and the readout now separates them.
+
+```sql
+SELECT
+  (metadata->'no_match_ping'->>'sent')::int            AS ping_sent,
+  (metadata->'no_match_ping'->>'failed')::int          AS ping_failed,
+  (metadata->'no_match_ping'->>'throttleRetried')::int AS throttle_retried,
+  (metadata->'no_match_ping'->>'quotaDead')::int       AS quota_dead,
+  metadata->'no_match_ping'->'invalidSkipped'          AS invalid_skipped,
+  metadata->'no_match_ping'->'invalidMarked'           AS invalid_marked,
+  (metadata->'no_match_ping'->>'sendRatePerSec')::numeric AS rate_per_sec,
+  metadata->>'sent' AS match_sent, metadata->>'errors' AS match_errors
+FROM system_events
+WHERE event_type = 'notify_run' AND created_at::date = CURRENT_DATE;
+```
+
+Read the columns like this:
+
+| Column | Means | What to do |
+|---|---|---|
+| `throttle_retried` | sends that hit a rate limit and **succeeded on retry** | nothing — pacing working under load. A large number says lower `SEND_RATE_PER_SEC`. |
+| `quota_dead` | the email plan's **daily cap was exhausted**; these can't succeed today | **upgrade the Resend plan.** No code change helps. These retry next Monday. |
+| `invalid_skipped` | destinations a provider already called permanently invalid | nothing — they were skipped, not failed. |
+| `invalid_marked` | destinations marked invalid by **this** run | expect a handful once, then ~0. A rising number means bad data at signup. |
+
+**`quota_dead` is the one that needs a human.** Everything else is the system
+absorbing a provider's limits; that column means we asked for more email than
+the plan allows. Measured empirical cap on 2026-09-21: **202 emails/day**.
+
+Per-channel failure detail for one day:
+
+```sql
+SELECT metadata->>'notification_type' AS type,
+       count(*) FILTER (WHERE (metadata->>'email_sent')::bool) AS email_ok,
+       count(*) FILTER (WHERE (metadata->>'sms_sent')::bool)   AS sms_ok,
+       count(*) FILTER (WHERE metadata->>'email_error' LIKE '%daily_quota%')   AS quota,
+       count(*) FILTER (WHERE metadata->>'email_error' LIKE '%rate_limit%')    AS throttled,
+       count(*) FILTER (WHERE metadata->>'sms_error'   LIKE '%Invalid%')       AS bad_number
+FROM system_events
+WHERE event_type = 'notification_sent' AND created_at::date = CURRENT_DATE
+GROUP BY 1;
+```
+
+Marked-invalid destinations (should stay small and stable):
+
+```sql
+SELECT count(*) FILTER (WHERE notify_phone_invalid_at IS NOT NULL) AS bad_phone,
+       count(*) FILTER (WHERE notify_email_invalid_at IS NOT NULL) AS bad_email
+FROM partnerships;
+```
+
+Clearing either column re-enables that channel — do it when a member updates
+their details. **Never delete the underlying phone or email**; support needs to
+see what the member actually typed.
+
+## 9. Warm-interpretation cron
+
+Runs Monday 13:00 UTC, between recompute and notify, behind
+`INTERPRETATION_WARM_ENABLED` (default OFF).
+
+```sql
+SELECT metadata->>'coverage'     AS coverage,
+       metadata->>'eligible'     AS eligible,
+       metadata->>'processed'    AS processed,
+       metadata->>'remaining'    AS remaining,
+       metadata->>'generated'    AS generated,
+       metadata->>'cached'       AS already_warm,
+       metadata->>'degraded'     AS failed,
+       metadata->>'cost_usd'     AS cost,
+       (metadata->>'duration_ms')::int / 1000 AS seconds
+FROM system_events
+WHERE event_type = 'interpretation_warm'
+ORDER BY created_at DESC LIMIT 10;
+```
+
+**`remaining > 0` is normal, not an error.** A generation averages ~12s and the
+viewer set is ~683 directions — about 9,500s of work against a 300s ceiling. The
+run takes a 240s budget, stops cleanly, and the next invocation continues.
+Roughly 20 directions per run, so ~35 runs to warm the set fully.
+
+There is no progress table: **the cache is the cursor.** A direction is done when
+a fresh row exists for it, which `getMatchInterpretation` already decides. That
+makes continuation safe across a crash, a redeploy, or a changed audience —
+there is nothing to resume, only work remaining.
+
+`seconds` should never exceed 240. If it does, a single generation ran long;
+check `degraded`.
+
+`WARM_COVERAGE` is the cost lever: `viewers` (default, ~683 directions, ~$0.93/wk)
+or `all` (every released direction, ~$2.99/wk). Members outside the warm set
+still get a report — generated on demand and cached for the next viewer.
