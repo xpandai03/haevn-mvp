@@ -147,8 +147,17 @@ export async function GET(request: NextRequest) {
     history_error: historyError,
     release_at: todayNoonUtcIso,
     // City-gating audit — exclusions are never silent.
+    //
+    // READ excluded_non_live_market TOGETHER WITH gate_enforced, never alone.
+    // The same number means two opposite things: with the gate ON these members
+    // WERE withheld; with RELEASE_ALL_MARKETS on it is REPORTING ONLY — nobody
+    // was withheld and it is just the city spread of who would have been. The
+    // notify run has always emitted gate_enforced; recompute did not, so its
+    // rows read as "411 members blocked" when in fact zero were. Same field,
+    // same run, opposite meaning — now disambiguated on both.
     excluded_non_live_market: Object.values(gate.excludedByCity).reduce((s, n) => s + n, 0),
     excluded_by_city: gate.excludedByCity,
+    gate_enforced: gate.gateEnforced,
     gate_failed_closed: !gate.ok,
     started_at: runStartedAt.toISOString(),
     finished_at: new Date().toISOString(),

@@ -136,7 +136,11 @@ export interface SnapshotPayload {
   partnershipsInScope: number
   snapshot: SnapshotMetrics
   weekly: WeeklyMetrics
-  composition: Composition
+  /** Null when the composition RPC failed for this scope — the rest of the
+   *  snapshot is still valid and still written. See runSnapshot. */
+  composition: Composition | null
+  /** Present only when composition was skipped, naming the reason. */
+  compositionError?: string
   engagement?: EngagementMetrics
   definitionsVersion?: number
   generatedAt: string

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { normalizePhone } from '@/lib/utils/phone'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -231,10 +232,24 @@ export async function updatePartnershipPhone(phone: string): Promise<{ success: 
     const { id, error } = await getCurrentPartnershipId()
     if (error || !id) return { success: false, error: error || 'No partnership' }
 
+    // Normalized server-side, because the client cannot be trusted to and the
+    // only prior normalization was an inline US-only expression in signup.
+    // A number we cannot make sense of is stored as NULL rather than verbatim —
+    // saving junk means burning a paced send slot on it every Monday.
+    const { value: normalized, reason } = normalizePhone(phone)
+    if (phone.trim() && !normalized) {
+      return { success: false, error: "That doesn't look like a phone number we can text. Check the digits and try again." }
+    }
+
     const adminClient = createAdminClient()
     const { error: updateError } = await adminClient
       .from('partnerships')
-      .update({ phone: phone || null })
+      .update({
+        phone: normalized,
+        // A corrected number re-enables SMS: the carrier's old verdict was about
+        // the OLD value and must not silence the new one (migration 058).
+        notify_phone_invalid_at: null,
+      })
       .eq('id', id)
 
     if (updateError) {
