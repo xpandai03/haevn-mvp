@@ -7,7 +7,6 @@ import {
   Mail,
   Lock,
   Shield,
-  AlertTriangle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { loadDashboardData } from '@/lib/dashboard/loadDashboardData'
@@ -19,6 +18,7 @@ import { GenerateSummaryButton } from '@/components/dashboard/GenerateSummaryBut
 import { SignOutButton } from '@/components/dashboard/SignOutButton'
 import { isFallbackInsight } from '@/lib/ai/fallbacks'
 import { ProfilePhotoHero } from '@/components/profile/ProfilePhotoHero'
+import { DeleteAccountSection } from '@/components/profile/DeleteAccountSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -424,26 +424,7 @@ export default async function ProfilePage() {
       <SignOutButton />
 
       {/* ─── DANGER ZONE ─── */}
-      <div className="bg-white border border-red-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-red-50">
-          <h3 className="text-sm font-medium text-red-400 tracking-[0.14em] uppercase">
-            Danger Zone
-          </h3>
-        </div>
-        <DangerRow
-          label="Pause Account"
-          desc="Temporarily hide your profile from matches"
-          tone="muted"
-          icon="chevron"
-        />
-        <DangerRow
-          label="Cancel Account"
-          desc="Permanently delete your account and data"
-          tone="danger"
-          icon="warning"
-          isLast
-        />
-      </div>
+      <DeleteAccountSection />
 
       <div className="h-12 md:h-0" />
     </div>
@@ -606,55 +587,5 @@ function NavRow({
         strokeWidth={1.5}
       />
     </Link>
-  )
-}
-
-function DangerRow({
-  label,
-  desc,
-  tone,
-  icon,
-  isLast = false,
-}: {
-  label: string
-  desc: string
-  tone: 'muted' | 'danger'
-  icon: 'chevron' | 'warning'
-  isLast?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      // No-op for now — feature is a placeholder per spec. Hooks up later.
-      className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-red-50/50 transition-colors ${
-        isLast ? '' : 'border-b border-[color:var(--haevn-border)]'
-      }`}
-    >
-      <div>
-        <span
-          className={`text-sm block ${
-            tone === 'danger'
-              ? 'text-red-400'
-              : 'text-[color:var(--haevn-charcoal)]'
-          }`}
-        >
-          {label}
-        </span>
-        <p className="text-[13px] text-[color:var(--haevn-muted-fg)] mt-0.5">
-          {desc}
-        </p>
-      </div>
-      {icon === 'warning' ? (
-        <AlertTriangle
-          className="w-4 h-4 text-red-300 shrink-0"
-          strokeWidth={1.5}
-        />
-      ) : (
-        <ChevronRight
-          className="w-4 h-4 text-[color:var(--haevn-muted-fg)] shrink-0"
-          strokeWidth={1.5}
-        />
-      )}
-    </button>
   )
 }

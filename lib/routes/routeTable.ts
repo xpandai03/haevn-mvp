@@ -129,6 +129,7 @@ export const STATIC_ROUTES: readonly string[] = [
   '/dev/tools',
   '/discovery',
   '/founding-member',
+  '/goodbye',
   '/matches',
   '/messages',
   '/nudges',
