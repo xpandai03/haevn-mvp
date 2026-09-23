@@ -1,15 +1,26 @@
 /**
  * Member-initiated account deletion pipeline.
  *
- *   1. Build the anonymized survey copy (lib/account/anonymizeSurvey.ts).
- *   2. Remove the member's files through the Storage API — photos under
- *      <partnershipId>/ in every photo bucket, chat images under
- *      <handshakeId>/ in chat-media. Supabase forbids deleting storage.objects
- *      from SQL, so this can't sit inside the DB transaction. It runs FIRST so
- *      a storage failure aborts before anything else changes (retry is safe);
- *      the reverse order would leave orphaned photos nobody could find.
- *   3. delete_member_account() (migration 059): in ONE transaction, insert the
- *      anonymized copy, then delete every PII row and the auth user.
+ *   1. Read-only prep: partnerships, handshakes, and the exact storage paths
+ *      to remove (photos under <partnershipId>/ in every photo bucket, chat
+ *      images under <handshakeId>/ in chat-media), plus the anonymized survey
+ *      copy (lib/account/anonymizeSurvey.ts).
+ *   2. delete_member_account() (migrations 059/060): in ONE transaction, insert
+ *      the anonymized copy, then delete every PII row and the auth user.
+ *   3. Only after that commits: remove the storage files through the Storage
+ *      API (Supabase forbids deleting storage.objects from SQL, so this can't
+ *      sit inside the transaction), with retries.
+ *
+ * FAIL-CLOSED. Any error before the transaction commits deletes NOTHING — not
+ * even a photo file. (The first release removed files before the transaction;
+ * when the transaction then failed, the member kept their account but lost
+ * their photo files. Found in QA on 2026-09-22.) If storage cleanup fails after
+ * the commit, the account is already gone; the leftover files sit under a
+ * prefix whose partnership no longer exists, which
+ * scripts/sweep-orphan-storage.ts finds and removes.
+ *
+ * Errors carry the stage they happened in (DeletionStageError) so the server
+ * log names the failing step and the Postgres code in one line.
  *
  * The store is injected so the whole sequence runs against fixtures in tests.
  */
@@ -61,19 +72,63 @@ export function buildAnonymizedPayload(row: SurveyRow, now: Date): AnonymizedPay
   }
 }
 
-async function removeStorage(store: DeletionStore, partnershipIds: string[], handshakeIds: string[]): Promise<number> {
-  const targets: Array<[string, string]> = [
+export class DeletionStageError extends Error {
+  constructor(public readonly stage: string, cause: unknown) {
+    super(`stage=${stage} ${cause instanceof Error ? cause.message : String(cause)}`)
+    this.name = 'DeletionStageError'
+  }
+}
+
+async function stage<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (err instanceof DeletionStageError) throw err
+    throw new DeletionStageError(name, err)
+  }
+}
+
+type StorageTarget = { bucket: string; paths: string[] }
+
+async function listStorage(store: DeletionStore, partnershipIds: string[], handshakeIds: string[]): Promise<StorageTarget[]> {
+  const prefixes: Array<[string, string]> = [
     ...partnershipIds.flatMap((p) => PHOTO_BUCKETS.map((b) => [b, p] as [string, string])),
     ...handshakeIds.map((h) => [CHAT_BUCKET, h] as [string, string]),
   ]
-  let removed = 0
-  for (const [bucket, prefix] of targets) {
+  const out: StorageTarget[] = []
+  for (const [bucket, prefix] of prefixes) {
     const paths = await store.listFiles(bucket, prefix)
-    if (paths.length === 0) continue
-    await store.removeFiles(bucket, paths)
-    removed += paths.length
+    if (paths.length > 0) out.push({ bucket, paths })
   }
-  return removed
+  return out
+}
+
+const STORAGE_ATTEMPTS = 3
+
+/** Post-commit cleanup. Never throws: the account is already deleted, so a
+ *  storage hiccup must not turn a completed deletion into an error screen.
+ *  Returns how many files could not be removed (logged; swept later). */
+async function removeStorage(store: DeletionStore, targets: StorageTarget[]): Promise<{ removed: number; failed: number }> {
+  let removed = 0
+  let failed = 0
+  for (const { bucket, paths } of targets) {
+    let lastErr: unknown = null
+    for (let attempt = 1; attempt <= STORAGE_ATTEMPTS; attempt++) {
+      try {
+        await store.removeFiles(bucket, paths)
+        lastErr = null
+        break
+      } catch (err) {
+        lastErr = err
+      }
+    }
+    if (lastErr) {
+      failed += paths.length
+      console.error('[account-delete] storage cleanup incomplete bucket=', bucket, 'files=', paths.length,
+        lastErr instanceof Error ? lastErr.message : lastErr)
+    } else removed += paths.length
+  }
+  return { removed, failed }
 }
 
 const MAX_SURVEY_RACE_RETRIES = 2
@@ -83,28 +138,30 @@ export async function deleteMemberAccount(
   userId: string,
   now: Date = new Date()
 ): Promise<DeletionOutcome> {
-  if (!(await store.userExists(userId))) return { status: 'already_deleted' }
+  if (!(await stage('lookup', () => store.userExists(userId)))) return { status: 'already_deleted' }
 
-  const partnershipIds = await store.partnershipIds(userId)
-  if (await store.hasOtherMembers(partnershipIds, userId)) return { status: 'shared_partnership' }
+  const partnershipIds = await stage('lookup', () => store.partnershipIds(userId))
+  if (await stage('lookup', () => store.hasOtherMembers(partnershipIds, userId))) return { status: 'shared_partnership' }
 
-  const handshakeIds = await store.handshakeIds(partnershipIds)
-  const filesRemoved = await removeStorage(store, partnershipIds, handshakeIds)
+  const handshakeIds = await stage('lookup', () => store.handshakeIds(partnershipIds))
+  // Read-only: which files will need removing once the account is gone.
+  const storageTargets = await stage('storage_list', () => listStorage(store, partnershipIds, handshakeIds))
 
   for (let attempt = 0; ; attempt++) {
-    const survey = await store.readSurvey(userId)
+    const survey = await stage('read_survey', () => store.readSurvey(userId))
     const payload = survey ? buildAnonymizedPayload(survey, now) : null
     try {
       const res = await store.runDeletion(userId, payload, survey?.updated_at ?? null)
       if (res.status === 'already_deleted') return { status: 'already_deleted' }
-      return { status: 'deleted', filesRemoved, surveyRetained: survey !== null }
+      const { removed } = await removeStorage(store, storageTargets)
+      return { status: 'deleted', filesRemoved: removed, surveyRetained: survey !== null }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('shared_partnership')) return { status: 'shared_partnership' }
       // The survey row changed between our read and the transaction (e.g. an
       // autosave from another tab). Rebuild the copy from the new row.
       if (msg.includes('survey_changed') && attempt < MAX_SURVEY_RACE_RETRIES) continue
-      throw err
+      throw new DeletionStageError('transaction', err)
     }
   }
 }
@@ -201,7 +258,13 @@ export function supabaseDeletionStore(admin: SupabaseClient): DeletionStore {
         p_anonymized: anonymized,
         p_survey_updated_at: surveyUpdatedAt,
       })
-      if (error) throw new Error(error.message)
+      if (error) {
+        // Keep the Postgres code/details: "42P01 relation … does not exist" is
+        // diagnosable from the log line alone; "Something went wrong" is not.
+        const e = error as { message: string; code?: string; details?: string; hint?: string }
+        throw new Error([e.message, e.code && `code=${e.code}`, e.details && `details=${e.details}`, e.hint && `hint=${e.hint}`]
+          .filter(Boolean).join(' '))
+      }
       const status = (data as { status?: string } | null)?.status
       if (status !== 'deleted' && status !== 'already_deleted') {
         throw new Error(`delete_member_account returned unexpected status: ${String(status)}`)
@@ -236,7 +299,9 @@ export async function runDeleteMyAccount(deps: DeleteMyAccountDeps): Promise<Del
   try {
     outcome = await deleteMemberAccount(deps.store, userId, deps.now)
   } catch (err) {
-    console.error('[account-delete] failed user=', userId.slice(0, 8), err instanceof Error ? err.message : err)
+    // One line, one query: `vercel logs --query "account-delete] failed"`.
+    // stage=… says which step; the rest is the underlying error verbatim.
+    console.error('[account-delete] failed user=', userId.slice(0, 8), err instanceof Error ? err.message : String(err))
     return { ok: false, error: 'failed' }
   }
   if (outcome.status === 'shared_partnership') return { ok: false, error: 'shared_partnership' }
