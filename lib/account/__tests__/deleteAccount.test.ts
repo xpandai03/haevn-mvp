@@ -222,8 +222,8 @@ async function main() {
     // Audit + ordering.
     eq(w.deletions.length, 1, 'one departure audit row')
     eq(Object.keys(w.deletions[0]).sort(), ['city', 'partnership_hash'], 'audit row carries only city + hash')
-    const order = w.log.filter((x) => x !== 'storage:private-photos' && x !== 'storage:chat-media')
-    eq(order, ['storage:public-photos', 'rpc', 'anonymize', 'delete', 'signOut'], 'storage → anonymize → delete → sign out')
+    eq(w.log, ['rpc', 'anonymize', 'delete', 'storage:public-photos', 'storage:private-photos', 'storage:chat-media', 'signOut'],
+      'anonymize → delete (one transaction) → storage only after commit → sign out')
 
     // Idempotent second attempt.
     const again = await deleteMemberAccount(fakeStore(w), A.user, NOW)
@@ -252,16 +252,36 @@ async function main() {
 
   // ── Failure modes ────────────────────────────────────────────────────────
   {
+    // REGRESSION (2026-09-22 QA): the transaction failed (42P01 from a photo
+    // trigger) AFTER storage had been cleared, so the member kept the account
+    // but lost their photo files. Fail-closed means a failed transaction
+    // deletes NOTHING — files included.
     const w = world()
-    const res = await runDeleteMyAccount({ sessionUserId: async () => A.user, store: fakeStore(w, { failStorage: true }), signOut: async () => {}, now: NOW })
-    eq(res, { ok: false, error: 'failed' }, 'storage failure → error shown')
-    ok(w.users.has(A.user) && w.surveys.has(A.user) && w.anonymized.length === 0, 'storage failure aborts before the database is touched')
-  }
-  {
-    const w = world()
+    const errs: string[] = []
+    const orig = console.error
+    console.error = (...a: unknown[]) => { errs.push(a.map(String).join(' ')) }
     const res = await runDeleteMyAccount({ sessionUserId: async () => A.user, store: fakeStore(w, { failRpc: true }), signOut: async () => {}, now: NOW })
+    console.error = orig
     eq(res, { ok: false, error: 'failed' }, 'transaction failure → error shown')
     ok(w.users.has(A.user) && w.surveys.has(A.user), 'transaction failure leaves the account and answers intact')
+    ok(w.storage.get('public-photos')!.has(`${A.pid}/1.jpg`) && w.storage.get('private-photos')!.has(`${A.pid}/p.jpg`) && w.storage.get('chat-media')!.has(`${HS}/img.png`),
+      'transaction failure leaves every storage file in place')
+    ok(!w.log.some((x) => x.startsWith('storage:')), 'no storage removal is even attempted before the transaction commits')
+    ok(errs.some((e) => /\[account-delete\] failed/.test(e) && /stage=transaction/.test(e) && /boom/.test(e)),
+      'the server log names the stage and carries the underlying error')
+  }
+  {
+    // Storage failing AFTER the commit: the account is gone; the member must
+    // still land on goodbye, and the leftover is logged for the sweeper.
+    const w = world()
+    const errs: string[] = []
+    const orig = console.error
+    console.error = (...a: unknown[]) => { errs.push(a.map(String).join(' ')) }
+    const res = await runDeleteMyAccount({ sessionUserId: async () => A.user, store: fakeStore(w, { failStorage: true }), signOut: async () => {}, now: NOW })
+    console.error = orig
+    eq(res, { ok: true }, 'post-commit storage failure still completes the deletion')
+    eq(w.users.has(A.user), false, 'account gone')
+    ok(errs.some((e) => /storage cleanup incomplete/.test(e)), 'leftover files are logged')
   }
   {
     const w = world()
@@ -280,6 +300,11 @@ async function main() {
   // ── Migration 059: the SQL keeps its promises ────────────────────────────
   {
     const sql = readFileSync(join(ROOT, 'supabase/migrations/059_account_deletion.sql'), 'utf8')
+    // REGRESSION: search_path '' made the pre-existing, unqualified
+    // partnership_photos DELETE triggers fail (42P01). 060 pins it.
+    const fix = readFileSync(join(ROOT, 'supabase/migrations/060_account_deletion_search_path.sql'), 'utf8')
+    ok(/alter function public\.delete_member_account\(uuid, jsonb, timestamptz\)\s+set search_path = public, pg_temp;/.test(fix),
+      '060 pins delete_member_account search_path to public, pg_temp (pg_temp last)')
     const body = sql.slice(sql.indexOf('create or replace function public.delete_member_account'))
     const anon = body.indexOf('insert into public.anonymized_survey_responses')
     const firstDelete = body.search(/\bdelete from\b/)
