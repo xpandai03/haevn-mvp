@@ -1,7 +1,8 @@
 /**
  * Seed two QA members (A, B) on PRODUCTION for the account-deletion browser test.
  *
- *   npx tsx scripts/qa/seed-deletion-qa.ts            # seed + print credentials
+ *   npx tsx scripts/qa/seed-deletion-qa.ts            # seed + print credentials (pair A,B)
+ *   npx tsx scripts/qa/seed-deletion-qa.ts --pair C,D # seed a differently-labelled pair
  *   npx tsx scripts/qa/seed-deletion-qa.ts --verify   # isolation check for existing QA accounts
  *   npx tsx scripts/qa/seed-deletion-qa.ts --links    # mint fresh 15-min handoff links
  *
@@ -40,7 +41,7 @@ const COMPLETED_SECTIONS = [
 
 /** scripts/seed-synthetic-users.ts baseAnswers(): passes every gate, scores high.
  *  Includes free-text answers on purpose — the anonymizer must drop them. */
-function answers(i: number): Record<string, unknown> {
+function answers(i: number, label = i === 0 ? 'A' : 'B'): Record<string, unknown> {
   return {
     q1_age: '1990-05-15', q2_gender_identity: 'Non-binary', q2a_pronouns: 'they/them',
     q3_sexual_orientation: ['Bisexual', 'Pansexual'], q3a_fidelity: 'open_communication', q3b_kinsey_scale: '3',
@@ -53,7 +54,7 @@ function answers(i: number): Record<string, unknown> {
     q11_love_languages: ['Quality time', 'Physical touch', 'Words of affirmation'],
     q12_conflict_resolution: 'collaborative', q12a_messaging_pace: 'moderate', q13_lifestyle_alignment: 'important',
     q13a_languages: 'English', q14a_cultural_alignment: 7,
-    q14b_cultural_identity: `QA free text ${i === 0 ? 'A' : 'B'}: TEST-DELQA should never be retained`,
+    q14b_cultural_identity: `QA free text ${label}: TEST-DELQA should never be retained`,
     q15_time_availability: 'weekly', q16_typical_availability: ['Weekday evenings', 'Weekends'],
     q16a_first_meet_preference: 'Walk or coffee', Q17: 'no_children', Q17a: ['omnivore'], Q17b: 'has_pets',
     q18_substances: 'social_drinker', q19a_max_distance: 'within_30_miles', q19b_distance_priority: 'moderate',
@@ -65,7 +66,7 @@ function answers(i: number): Record<string, unknown> {
     q28_hard_boundaries: ['Degradation'], q29_maybe_boundaries: ['Exhibitionism'],
     q30_safer_sex: ['Regular testing', 'Discussion before intimacy'], q30a_fluid_bonding: 'open_to_it',
     q31_health_testing: 'quarterly',
-    q32_looking_for: `QA free text ${i === 0 ? 'A' : 'B'}: reach TEST-DELQA at test-delqa@qa.haevn.invalid`,
+    q32_looking_for: `QA free text ${label}: reach TEST-DELQA at test-delqa@qa.haevn.invalid`,
     q33_kinks: ['Sensory play', 'Role play', 'Bondage'], q33a_experience_level: 'experienced',
     q34_exploration: 7, q34a_variety: 7, q35_agreements: 7, q35a_structure: 5, q36_social_energy: 'ambivert',
     q36a_outgoing: 'ambivert', q37_empathy: 'very_high', q37a_harmony: 'high', q38_jealousy: 'very_low',
@@ -115,7 +116,7 @@ async function mintLink(userId: string, email: string) {
   return { token, expires }
 }
 
-async function seedMember(label: 'A' | 'B', i: number, runTag: string) {
+async function seedMember(label: string, i: number, runTag: string) {
   const email = `test-delqa-${label.toLowerCase()}-${runTag}@qa.haevn.invalid`
   const password = `Qa-${randomBytes(9).toString('base64url')}`
   const fullName = `Quinn TEST-${label}`
@@ -146,7 +147,7 @@ async function seedMember(label: 'A' | 'B', i: number, runTag: string) {
   }), 'partnership_members')
 
   must(await admin.from('user_survey_responses').upsert({
-    user_id: userId, partnership_id: pid, answers_json: answers(i), completion_pct: 100, current_step: 0,
+    user_id: userId, partnership_id: pid, answers_json: answers(i, label), completion_pct: 100, current_step: 0,
     completed_sections: COMPLETED_SECTIONS,
   }, { onConflict: 'user_id' }), 'user_survey_responses')
 
@@ -196,17 +197,20 @@ async function main() {
 
   // Score ONLY this pair, exactly as computeMatches does — BEFORE any write, so
   // a below-threshold pair aborts with nothing seeded.
-  const withLoc = (i: number) => ({ ...answers(i), _latitude: LOC[i].lat, _longitude: LOC[i].lng })
+  const pairArg = process.argv.indexOf('--pair')
+  const [L1, L2] = (pairArg > 0 ? process.argv[pairArg + 1] : 'A,B').split(',').map((x) => x.trim().toUpperCase())
+  if (!L1 || !L2 || L1 === L2) throw new Error('--pair needs two distinct labels, e.g. --pair C,D')
+  const withLoc = (i: number) => ({ ...answers(i, i === 0 ? L1 : L2), _latitude: LOC[i].lat, _longitude: LOC[i].lng })
   const result = calculateCompatibilityFromRaw(withLoc(0) as never, withLoc(1) as never, false, false)
   if (!result.constraints.passed) throw new Error(`pair failed constraints: ${result.constraints.reason}`)
   if (result.overallScore < MATCH_MIN_SCORE) throw new Error(`pair scored ${result.overallScore} < ${MATCH_MIN_SCORE}`)
   if (!['Platinum', 'Gold', 'Silver', 'Bronze'].includes(result.tier)) throw new Error(`unexpected tier ${result.tier}`)
   console.log(`pair score ${result.overallScore} (${result.tier}) — seeding`)
-  if (arg === '--dry') return
+  if (process.argv.includes('--dry')) return
 
   const runTag = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  const A = await seedMember('A', 0, runTag)
-  const B = await seedMember('B', 1, runTag)
+  const A = await seedMember(L1, 0, runTag)
+  const B = await seedMember(L2, 1, runTag)
 
   const nowIso = new Date().toISOString()
   const released = new Date(Date.now() - 60_000).toISOString()
@@ -224,10 +228,10 @@ async function main() {
   }).select('id').single(), 'handshakes') as { id: string }
 
   const script: Array<[typeof A, string]> = [
-    [A, 'Hi! QA test message 1 from TEST-A.'], [B, 'Hey — QA reply 1 from TEST-B.'],
-    [A, 'QA message 2 from TEST-A: coffee this week?'], [B, 'QA reply 2 from TEST-B: sounds good.'],
-    [A, 'QA message 3 from TEST-A: Thursday works.'], [B, 'QA reply 3 from TEST-B: Thursday it is.'],
-    [A, 'QA message 4 from TEST-A: see you then.'], [B, 'QA reply 4 from TEST-B: 👋'],
+    [A, `Hi! QA test message 1 from TEST-${A.label}.`], [B, `Hey — QA reply 1 from TEST-${B.label}.`],
+    [A, `QA message 2 from TEST-${A.label}: coffee this week?`], [B, `QA reply 2 from TEST-${B.label}: sounds good.`],
+    [A, `QA message 3 from TEST-${A.label}: Thursday works.`], [B, `QA reply 3 from TEST-${B.label}: Thursday it is.`],
+    [A, `QA message 4 from TEST-${A.label}: see you then.`], [B, `QA reply 4 from TEST-${B.label}: 👋`],
   ]
   const t0 = Date.now() - script.length * 60_000
   must(await admin.from('messages').insert(script.map(([who, content], k) => ({
@@ -244,8 +248,8 @@ async function main() {
   const linkB = await mintLink(B.userId, B.email)
   console.log(JSON.stringify({
     score: result.overallScore, tier: result.tier, handshakeId: hs.id,
-    A: { email: A.email, password: A.password, partnershipId: A.pid, userId: A.userId, loginPath: `/login-link/${linkA.token}`, linkExpires: linkA.expires },
-    B: { email: B.email, password: B.password, partnershipId: B.pid, userId: B.userId, loginPath: `/login-link/${linkB.token}`, linkExpires: linkB.expires },
+    [A.label]: { email: A.email, password: A.password, partnershipId: A.pid, userId: A.userId, loginPath: `/login-link/${linkA.token}`, linkExpires: linkA.expires },
+    [B.label]: { email: B.email, password: B.password, partnershipId: B.pid, userId: B.userId, loginPath: `/login-link/${linkB.token}`, linkExpires: linkB.expires },
   }, null, 2))
   await verify()
 }
