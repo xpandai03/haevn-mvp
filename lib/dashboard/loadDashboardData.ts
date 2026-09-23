@@ -40,7 +40,9 @@ export async function loadDashboardData(): Promise<DashboardData | null> {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (!user || authError) {
-    console.error('[loadDashboardData] No authenticated user')
+    // A missing session is expected right after sign-out / account deletion
+    // (the action clears cookies and Next re-renders the page); only log real auth failures.
+    if (authError?.name !== 'AuthSessionMissingError') console.error('[loadDashboardData] No authenticated user', authError?.message ?? '')
     return null
   }
 
