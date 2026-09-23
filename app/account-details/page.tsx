@@ -276,7 +276,7 @@ export default function AccountDetailsPage() {
             <div>
               <p className="text-sm font-medium text-gray-900 mb-0.5">More Features Coming Soon</p>
               <p className="text-xs text-gray-600">
-                Password changes, email updates, and account deletion.
+                Password changes and email updates. To delete your account, go to Profile and scroll to the bottom.
               </p>
             </div>
           </div>

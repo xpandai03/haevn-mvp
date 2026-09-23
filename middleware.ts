@@ -184,7 +184,10 @@ export async function middleware(request: NextRequest) {
     '/auth/signup/step-2',
     '/auth/signup/step-3',
     '/auth/login',
-    '/auth/callback'
+    '/auth/callback',
+    // Landing page after a member deletes their account — they have no
+    // session by then, so it must not bounce them to sign-in.
+    '/goodbye'
   ]
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith('/auth/'))
 

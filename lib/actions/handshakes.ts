@@ -126,7 +126,9 @@ export async function sendHandshakeRequest(
 
     if (insertError) {
       console.error('[sendHandshakeRequest] Insert error:', insertError)
-      return { success: false, error: insertError.message }
+      // 23503 = the other partnership no longer exists (member deleted their
+      // account). Say that, not the raw foreign-key message.
+      return { success: false, error: insertError.code === '23503' ? 'This member is no longer available.' : insertError.message }
     }
 
     console.log('[sendHandshakeRequest] Handshake created:', handshake.id)

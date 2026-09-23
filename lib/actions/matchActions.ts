@@ -149,7 +149,9 @@ export async function passOnMatch(
 
     if (insertError) {
       console.error('[passOnMatch] Insert error:', insertError)
-      return { success: false, error: insertError.message }
+      // 23503 = the other partnership no longer exists (member deleted their
+      // account). Say that, not the raw foreign-key message.
+      return { success: false, error: insertError.code === '23503' ? 'This member is no longer available.' : insertError.message }
     }
 
     // Clear saved flag if match was saved (dismissed overrides saved)
