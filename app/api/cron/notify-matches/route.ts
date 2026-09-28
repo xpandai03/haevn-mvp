@@ -66,7 +66,7 @@ interface MatchPhaseResult {
     sent: number; skipped: number; errors: number
     /** Provider-throttle retries consumed (pacing working under load). */
     throttleRetried: number
-    /** Sends abandoned because the email plan's daily quota was exhausted. */
+    /** Sends abandoned because the email plan's daily or monthly quota was exhausted. */
     quotaDead: number
     /** Channels skipped as permanently invalid — NOT failures. */
     invalidSkipped: { sms: number; email: number }

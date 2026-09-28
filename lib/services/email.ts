@@ -7,10 +7,13 @@ import {
   type SendFailureKind,
 } from './sendRate'
 
-// haevn.app is the Resend-verified sending domain. haevn.co was NOT verified
-// and 403'd every send ("domain is not verified"), so all notification email
-// silently failed. Must stay on a verified domain.
-const FROM_ADDRESS = 'HAEVN <notifications@haevn.app>'
+// MUST be a domain verified in the Resend account RESEND_API_KEY belongs to —
+// an unverified one 403s every send ("domain is not verified"), silently.
+// 2026-09-28: sending moved to the client's paid Resend account, where
+// updates.haevn.co is verified and haevn.app is not. (Earlier, on the old
+// account, it was the reverse: haevn.app verified, haevn.co 403'd.) Change the
+// domain and the account together, never one without the other.
+export const FROM_ADDRESS = 'HAEVN <notifications@updates.haevn.co>'
 
 function getResendClient(): Resend | null {
   if (!process.env.RESEND_API_KEY) return null
@@ -110,7 +113,7 @@ export async function sendEmail(
       // a generic failure, so the readout can tell it apart from our-layer skip.
       const msg = typeof error === 'string' ? error : (error as any)?.message || ''
       const resendSuppressed = /suppress|suppression/i.test(msg)
-      if (kind === 'quota') console.error('[Email] DAILY QUOTA EXHAUSTED — remaining sends this run will fail:', msg)
+      if (kind === 'quota') console.error('[Email] QUOTA EXHAUSTED (daily or monthly plan cap) — remaining sends will fail:', msg)
       else console.error('[Email] Send error:', error)
       return { success: false, error, resendSuppressed, failureKind: kind, retries }
     } catch (error) {

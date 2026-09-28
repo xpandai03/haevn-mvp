@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/services/email'
 import { requestLoginLink, LOGIN_LINK_TTL_MINUTES, RATE_LIMIT } from '@/lib/auth/loginLink'
 import { loginLinkEmail } from '@/lib/auth/loginLinkEmail'
+import { hashEmail } from '@/lib/auth/handoff'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,20 @@ export async function POST(request: NextRequest) {
       const { subject, html } = loginLinkEmail(url)
       // scope 'critical' — a suppressed member must still be able to sign in.
       // Same rule as match notifications; see lib/services/email.ts.
-      await sendEmail(to, subject, html, { scope: 'critical' })
+      const res = await sendEmail(to, subject, html, { scope: 'critical' })
+      if (!res.success) {
+        // A member is locked out right now. Loud, and greppable, but the address
+        // itself never reaches the logs — only a prefix of its hash, which
+        // matches login_links.email_hash for support to look up.
+        const dest = hashEmail(to).slice(0, 12)
+        console.error(`[login-link] SEND FAILED kind=${res.failureKind ?? 'unknown'} dest=${dest}`)
+      }
+      return { ok: res.success }
+    },
+
+    markSent: async (tokenHash) => {
+      const { error } = await admin.from('login_links').update({ sent: true }).eq('token_hash', tokenHash)
+      if (error) console.error(`[login-link] markSent failed: ${error.message}`)
     },
   })
 

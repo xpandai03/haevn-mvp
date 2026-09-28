@@ -94,8 +94,11 @@ export interface LoginLinkDeps {
   countAttempts: (emailHash: string, ip: string | null) => Promise<AttemptCounts>
   /** one row per request, always */
   record: (row: LoginLinkRow) => Promise<void>
-  /** branded Resend send, scope 'critical' so suppression never blocks sign-in */
-  sendLink: (email: string, url: string) => Promise<void>
+  /** branded Resend send, scope 'critical' so suppression never blocks sign-in.
+   *  Reports whether the provider ACCEPTED the message — never throws for a refusal. */
+  sendLink: (email: string, url: string) => Promise<{ ok: boolean }>
+  /** flip the row to sent=true, only after the provider accepted it */
+  markSent: (tokenHash: string) => Promise<void>
   randomToken?: () => string
   now?: () => number
 }
@@ -103,8 +106,10 @@ export interface LoginLinkDeps {
 /**
  * What actually happened. The ROUTE MUST NOT VARY ITS RESPONSE ON THIS — it is
  * for logging and tests only. Every outcome renders the same "check your email".
+ * 'send_failed' = link minted, provider refused it (quota, outage): the row stays
+ * sent=false and the member got nothing.
  */
-export type LoginLinkOutcome = 'sent' | 'no_account' | 'rate_limited' | 'invalid_email'
+export type LoginLinkOutcome = 'sent' | 'send_failed' | 'no_account' | 'rate_limited' | 'invalid_email'
 
 export async function requestLoginLink(
   rawEmail: string,
@@ -145,14 +150,21 @@ export async function requestLoginLink(
   const token = (deps.randomToken ?? newHandoffToken)()
   const expiresAt = new Date(nowMs + LOGIN_LINK_TTL_MS).toISOString()
 
+  // Recorded BEFORE the send so the token exists the instant the email can land,
+  // but as NOT sent: `sent` becomes true only once the provider accepts it. On
+  // 2026-09-28 four quota-refused links were written sent=true, and the table
+  // could not show that any member was locked out.
+  const tokenHash = hashHandoffToken(token)
   await deps.record({
     ...base,
-    token_hash: hashHandoffToken(token),
+    token_hash: tokenHash,
     user_id: userId,
-    sent: true,
+    sent: false,
     expires_at: expiresAt,
   })
 
-  await deps.sendLink(email, loginLinkUrl(token))
+  const delivery = await deps.sendLink(email, loginLinkUrl(token))
+  if (!delivery.ok) return 'send_failed'
+  await deps.markSent(tokenHash)
   return 'sent'
 }

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendNotification, buildSignInUrl, serializeNotifyError } from '@/lib/services/notifications'
+import { FROM_ADDRESS } from '@/lib/services/email'
 
 export const maxDuration = 300
 
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     skipped,
     remainingBeforeBatch: allRemaining.length,
     remainingAfterBatch: dry ? allRemaining.length : Math.max(0, allRemaining.length - accepted - skipped),
-    fromAddress: 'HAEVN <notifications@haevn.app>',
+    fromAddress: FROM_ADDRESS,
     results,
   })
 }
