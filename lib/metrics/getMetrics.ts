@@ -12,7 +12,8 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { MATCH_MIN_SCORE, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
+import { weeklyBandFilter } from '@/lib/admin/weeklyPairs'
+import { loadMarketIndex, resolveMarket } from '@/lib/markets/releaseGate'
 import { currentReportingWeek, type ReportingWeek } from './reportingWeek'
 import { resolvePartnershipScope, userIdsForPartnerships } from './scope'
 import { getLastSignInMap } from './authLogins'
@@ -28,21 +29,8 @@ import type {
 
 type Admin = ReturnType<typeof createAdminClient>
 
-const BLOCKED = {
-  plusMembers: {
-    blocked: true as const,
-    reason:
-      'Tier data is known-broken (Lemonsqueezy webhook writes an invalid tier). Deferred to a separate fix.',
-  },
-  plusConversion: {
-    blocked: true as const,
-    reason: 'Depends on plusMembers, which is blocked.',
-  },
-  meetupShares: {
-    blocked: true as const,
-    reason: 'No meetup-share event is captured anywhere today. Needs instrumentation.',
-  },
-}
+/** A founding membership expiring within this many days counts as "expiring soon". */
+export const FOUNDING_EXPIRY_WINDOW_DAYS = 30
 
 /** True if id is in scope. scopeIds === null means network (everything passes). */
 function inScope(id: string | null | undefined, scopeIds: Set<string> | null): boolean {
@@ -70,7 +58,7 @@ export async function getMetrics(args: {
   const isCurrentWeek = week.weekEnding === currentReportingWeek().weekEnding
 
   // ── Snapshot section ──────────────────────────────────────────────────────
-  const snapshotP = resolveSnapshot(admin, scopeIds)
+  const snapshotP = resolveSnapshot(admin, scopeIds, resolution.isNetwork ? null : resolution.marketName)
 
   // ── Weekly section ────────────────────────────────────────────────────────
   const weeklyP = resolveWeekly(admin, scopeIds, scopeUserIds, startIso, endIso)
@@ -202,9 +190,10 @@ async function resolveEngagement(
 
 async function resolveSnapshot(
   admin: Admin,
-  scopeIds: Set<string> | null
+  scopeIds: Set<string> | null,
+  marketName: string | null
 ): Promise<SnapshotMetrics> {
-  const [totalMembers, membersFree, surveys, matchedSet] = await Promise.all([
+  const [totalMembers, membersFree, surveys, matchedSet, founding, departures] = await Promise.all([
     // totalMembers — partnerships in scope
     scopeIds === null
       ? headCount(admin, 'partnerships')
@@ -224,6 +213,9 @@ async function resolveSnapshot(
 
     // matched partnership ids (from computed_matches, any score/time) — for noCurrentMatch
     matchedPartnershipIds(admin),
+
+    foundingCounts(admin, scopeIds),
+    departureCount(admin, marketName),
   ])
 
   const matchedInScope =
@@ -239,10 +231,61 @@ async function resolveSnapshot(
     incompleteSurveys: surveys.incomplete,
     membersFree,
     noCurrentMatch,
-    plusMembers: BLOCKED.plusMembers,
-    plusConversion: BLOCKED.plusConversion,
-    meetupShares: BLOCKED.meetupShares,
+    activeFoundingMembers: founding.active,
+    foundingExpiringSoon: founding.expiringSoon,
+    departures,
   }
+}
+
+/**
+ * Founding-promo partnerships, unexpired, and how many of those expire within
+ * FOUNDING_EXPIRY_WINDOW_DAYS. The population is the Founding Members page's
+ * 'founding' group (plus_source = 'founding_member_promo'); comps are excluded
+ * there and here.
+ */
+export function summarizeFoundingActive(
+  rows: { id: string; membership_expires_at: string | null }[],
+  scopeIds: Set<string> | null,
+  now: Date = new Date()
+): { active: number; expiringSoon: number } {
+  const nowMs = now.getTime()
+  const soonMs = nowMs + FOUNDING_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  let active = 0
+  let expiringSoon = 0
+  for (const r of rows) {
+    if (scopeIds !== null && !scopeIds.has(r.id)) continue
+    const exp = r.membership_expires_at ? Date.parse(r.membership_expires_at) : null
+    if (exp !== null && exp <= nowMs) continue
+    active++
+    if (exp !== null && exp <= soonMs) expiringSoon++
+  }
+  return { active, expiringSoon }
+}
+
+async function foundingCounts(admin: Admin, scopeIds: Set<string> | null) {
+  const { data, error } = await admin
+    .from('partnerships')
+    .select('id, membership_expires_at')
+    .eq('plus_source', 'founding_member_promo')
+    .limit(100000)
+  if (error) throw new Error(`founding counts: ${error.message}`)
+  return summarizeFoundingActive((data ?? []) as any[], scopeIds)
+}
+
+/**
+ * account_deletions keeps only city + a hashed id — a deleted member has no
+ * partnership left to scope on — so a market scope resolves each row's city with
+ * the same resolver the partnership scope uses.
+ */
+async function departureCount(admin: Admin, marketName: string | null): Promise<number> {
+  if (marketName === null) return headCount(admin, 'account_deletions')
+  const [{ data, error }, idx] = await Promise.all([
+    admin.from('account_deletions').select('city').limit(100000),
+    loadMarketIndex(),
+  ])
+  if (error) throw new Error(`account_deletions: ${error.message}`)
+  if (!idx.ok) return 0
+  return ((data ?? []) as { city: string | null }[]).filter((r) => resolveMarket(r.city, idx) === marketName).length
 }
 
 async function resolveWeekly(
@@ -260,18 +303,14 @@ async function resolveWeekly(
     newConnections,
     conversationsStarted,
   ] = await Promise.all([
-    // Matches: computed_matches score >= 80, computed_at in week, scoped on partnership_a
-    countFetchedInScope(admin, 'computed_matches', 'partnership_a', scopeIds, (q) =>
-      q.gte('score', MATCH_MIN_SCORE).gte('computed_at', startIso).lte('computed_at', endIso)
-    ),
+    // Matches: computed_matches score >= 80, computed_at in week, scoped on
+    // partnership_a. One row per DIRECTION — a pair counts once for each side.
+    // weeklyBandFilter is shared with the drill-down list so the two cannot drift.
+    countFetchedInScope(admin, 'computed_matches', 'partnership_a', scopeIds,
+      weeklyBandFilter('match', startIso, endIso)),
     // Recommendations: score in [77, 79], computed_at in week
-    countFetchedInScope(admin, 'computed_matches', 'partnership_a', scopeIds, (q) =>
-      q
-        .gte('score', REC_MIN_SCORE)
-        .lte('score', REC_MAX_SCORE)
-        .gte('computed_at', startIso)
-        .lte('computed_at', endIso)
-    ),
+    countFetchedInScope(admin, 'computed_matches', 'partnership_a', scopeIds,
+      weeklyBandFilter('rec', startIso, endIso)),
     // Nudges: user-keyed (sender_id), created_at in week
     countFetchedInScope(admin, 'nudges', 'sender_id', scopeUserIds, (q) =>
       q.gte('created_at', startIso).lte('created_at', endIso)

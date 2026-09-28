@@ -8,12 +8,6 @@
 /** Query scope: the whole network, or one market by exact `market_name`. */
 export type Scope = 'network' | { market: string }
 
-/** A metric that cannot be sourced yet, with a human reason (never a fake 0). */
-export interface BlockedMetric {
-  blocked: true
-  reason: string
-}
-
 /** Snapshot (point-in-time) metrics. Counts are partnership-level unless noted. */
 export interface SnapshotMetrics {
   /** Partnerships in scope. */
@@ -33,12 +27,21 @@ export interface SnapshotMetrics {
    * rewritten weekly, so lifetime-never is unknowable without history retention.
    */
   noCurrentMatch: number
-  /** Deferred — tier data is known-broken (Lemonsqueezy webhook), separate fix. */
-  plusMembers: BlockedMetric
-  /** Deferred — depends on plusMembers. */
-  plusConversion: BlockedMetric
-  /** Deferred — no meetup-share event is captured anywhere today. */
-  meetupShares: BlockedMetric
+  /**
+   * Founding-promo partnerships whose membership has not expired
+   * (plus_source = 'founding_member_promo', membership_expires_at null or in the
+   * future). Same population as the Founding Members page, minus the expired.
+   * Replaced plusMembers/plusConversion (2026-09-28): those read a Lemonsqueezy
+   * tier nothing writes, and sat on the dashboard as "Unavailable".
+   */
+  activeFoundingMembers: number
+  /** Of those, how many expire within the next 30 days (the page's amber window). */
+  foundingExpiringSoon: number
+  /**
+   * Member-initiated account deletions, all time (account_deletions — one row
+   * per deletion, city + hashed id only). Market scope matches on that city.
+   */
+  departures: number
 }
 
 /** Weekly-activity metrics, bucketed by the reporting week (Sun–Sat, UTC). */

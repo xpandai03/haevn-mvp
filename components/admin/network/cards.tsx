@@ -1,6 +1,7 @@
 'use client'
 
-import { Lock, type LucideIcon } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, type LucideIcon } from 'lucide-react'
 import { InfoTip, Sparkline, WowDelta } from './primitives'
 
 /** Small icon in a tinted rounded square, accent-colored. */
@@ -17,8 +18,9 @@ function IconSquare({ icon: Icon, accent }: { icon: LucideIcon; accent: string }
 
 /**
  * A sourceable KPI. Icon square (per-metric accent), label, large value, WoW,
- * and a sparkline colored to match the accent. No cursor-pointer — drill-down is
- * a later phase, so the card promises nothing it can't do yet.
+ * and a sparkline colored to match the accent. With `href` the whole card links
+ * to the list behind its number (the Founding Activations pattern); without it
+ * the card has no pointer affordance, so it promises nothing it can't do.
  */
 export function KpiCard({
   label,
@@ -31,6 +33,7 @@ export function KpiCard({
   footnote,
   unavailableNote,
   id,
+  href,
 }: {
   label: string
   /** null = no data for the selected (past) week — render a muted placeholder. */
@@ -44,10 +47,12 @@ export function KpiCard({
   footnote?: string
   unavailableNote?: string
   id?: string
+  /** Drill-down target. The card becomes a link to the rows behind its number. */
+  href?: string
 }) {
-  return (
-    <div id={id} className="rounded-xl border bg-white px-5 py-4 scroll-mt-24">
-      <div className="mb-2 flex items-center gap-2">
+  const body = (
+    <>
+      <div className="relative z-10 mb-2 flex w-fit items-center gap-2">
         <IconSquare icon={icon} accent={accent} />
         <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
         <InfoTip text={tooltip} />
@@ -70,39 +75,25 @@ export function KpiCard({
           {footnote && <p className="mt-1 text-[10px] italic text-gray-400">{footnote}</p>}
         </>
       )}
-    </div>
-  )
-}
-
-/**
- * A metric that cannot be sourced yet. Keeps the dashed-amber treatment but
- * adopts the same icon-square layout — explicit "Unavailable" + the honest
- * reason, never a fabricated number.
- */
-export function BlockedCard({
-  label,
-  reason,
-  icon,
-}: {
-  label: string
-  reason: string
-  icon: LucideIcon
-}) {
-  const Icon = icon
-  return (
-    <div className="rounded-xl border-2 border-dashed border-haevn-orange/50 bg-haevn-orange/5 px-5 py-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-haevn-orange/15 text-haevn-orange">
-          <Icon className="h-4 w-4" />
-        </span>
-        <p className="flex items-center gap-1 text-xs uppercase tracking-wide text-haevn-orange">
-          <Lock className="h-3 w-3" />
-          {label}
+      {href && (
+        <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-haevn-teal">
+          View list <ArrowRight className="h-3 w-3" />
         </p>
-        <InfoTip text={reason} />
-      </div>
-      <p className="text-base font-semibold text-amber-800">Unavailable</p>
-      <p className="mt-1 text-[11px] leading-snug text-amber-700/80">{reason}</p>
+      )}
+    </>
+  )
+
+  // Stretched link, not a wrapping <a>: the info tip is a <button>, which may not
+  // nest inside a link, and tapping it must open the tip rather than navigate.
+  return (
+    <div
+      id={id}
+      className={`relative rounded-xl border bg-white px-5 py-4 scroll-mt-24${
+        href ? ' transition hover:border-haevn-teal/40 hover:bg-black/[0.02]' : ''
+      }`}
+    >
+      {href && <Link href={href} aria-label={`${label} — view list`} className="absolute inset-0 rounded-xl" />}
+      {body}
     </div>
   )
 }

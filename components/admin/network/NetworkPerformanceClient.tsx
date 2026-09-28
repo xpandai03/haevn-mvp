@@ -12,22 +12,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
   ArrowDownToLine,
+  Award,
+  CalendarClock,
   Bell,
   Camera,
   CircleUser,
   ClipboardCheck,
   ClipboardList,
   Download,
+  DoorOpen,
   HeartCrack,
   Info,
   Link2,
   ListFilter,
   MessageCircle,
-  Percent,
   RefreshCw,
-  Share2,
   Sparkles,
-  Star,
   ThumbsUp,
   Users,
   Zap,
@@ -47,11 +47,11 @@ import {
   formatReportingWeek,
   recentWeeks,
 } from '@/lib/metrics/reportingWeek'
-import type { BlockedMetric, WeeklyMetrics } from '@/lib/metrics/types'
+import type { WeeklyMetrics } from '@/lib/metrics/types'
 import type { MarketOption, NetworkMetricsPayload } from './types'
 import { snapshotMetric, weeklyMetric } from './derive'
 import { TOOLTIPS } from './tooltips'
-import { KpiCard, BlockedCard } from './cards'
+import { KpiCard } from './cards'
 import { CompositionChart } from './CompositionChart'
 import { EngagementStrip } from './EngagementStrip'
 import { FoundingPromoRow } from './FoundingPromoRow'
@@ -292,7 +292,7 @@ export function NetworkPerformanceClient() {
 
       {data && data.metrics.partnershipsInScope > 0 && (
         <>
-          <Sections data={data} onExport={exportMembers} onViewNeverMatched={viewNeverMatched} />
+          <Sections data={data} scope={scope} onExport={exportMembers} onViewNeverMatched={viewNeverMatched} />
           {generatedAt && (
             <footer className="rounded-xl border bg-haevn-gray-50 px-5 py-3 text-[11px] leading-relaxed text-gray-500">
               Data refreshed <span className="font-medium text-gray-600">{relativeTime(generatedAt)}</span> ago
@@ -356,17 +356,32 @@ const WEEKLY_ORDER: Array<keyof WeeklyMetrics> = [
   'conversationsStarted',
 ]
 
+/** Weekly cards that open the list of rows behind their number. */
+const DRILL_PATHS: Partial<Record<keyof WeeklyMetrics, string>> = {
+  matchesGenerated: '/admin/network-performance/matches',
+  recommendationsGenerated: '/admin/network-performance/recommendations',
+}
+
 function Sections({
   data,
+  scope,
   onExport,
   onViewNeverMatched,
 }: {
   data: NetworkMetricsPayload
+  /** the dashboard's scope selector value — carried into the drill-downs */
+  scope: string
   onExport: () => void
   onViewNeverMatched: () => void
 }) {
-  const snap = data.metrics.snapshot
   const sel = data.selectedWeek
+  const drillHref = (key: keyof WeeklyMetrics) => {
+    const path = DRILL_PATHS[key]
+    if (!path) return undefined
+    const q = new URLSearchParams({ week: sel.weekEnding })
+    if (scope !== NETWORK) q.set('scope', scope)
+    return `${path}?${q.toString()}`
+  }
   const surveyed = data.surveyedInScope
 
   const totalMembers = snapshotMetric(data, 'totalMembers')
@@ -374,6 +389,9 @@ function Sections({
   const completed = snapshotMetric(data, 'completedSurveys')
   const free = snapshotMetric(data, 'membersFree')
   const noMatch = snapshotMetric(data, 'noCurrentMatch')
+  const activeFounding = snapshotMetric(data, 'activeFoundingMembers')
+  const expiringSoon = snapshotMetric(data, 'foundingExpiringSoon')
+  const departures = snapshotMetric(data, 'departures')
 
   const ageBuckets = [...data.composition.age].sort(
     (a, b) => AGE_ORDER.indexOf(a.bucket) - AGE_ORDER.indexOf(b.bucket)
@@ -400,8 +418,10 @@ function Sections({
           <KpiCard label="Incomplete Surveys" {...incomplete} icon={ClipboardList} accent={ORANGE} tooltip={TOOLTIPS.incompleteSurveys} />
           <KpiCard label="Completed Surveys" {...completed} icon={ClipboardCheck} accent={GREEN} tooltip={TOOLTIPS.completedSurveys} />
           <KpiCard label="Members (Free)" {...free} icon={CircleUser} accent={NAVY} tooltip={TOOLTIPS.membersFree} />
-          <BlockedCard label="Plus Members" icon={Star} reason={(snap.plusMembers as BlockedMetric).reason} />
-          <BlockedCard label="Plus Conversion" icon={Percent} reason={(snap.plusConversion as BlockedMetric).reason} />
+          {/* Replaced Plus Members / Plus Conversion (2026-09-28): those read a
+              Lemonsqueezy tier nothing writes and sat here as "Unavailable". */}
+          <KpiCard label="Active Founding Members" {...activeFounding} icon={Award} accent={TEAL} tooltip={TOOLTIPS.activeFoundingMembers} footnote="Unexpired promo activations" />
+          <KpiCard label="Founding Expiring (30d)" {...expiringSoon} icon={CalendarClock} accent={ORANGE} tooltip={TOOLTIPS.foundingExpiringSoon} />
           <KpiCard
             id="never-matched-card"
             label="Never Matched"
@@ -411,7 +431,9 @@ function Sections({
             tooltip={TOOLTIPS.noCurrentMatch}
             footnote="Currently: no current match"
           />
-          <BlockedCard label="Meetup Shares" icon={Share2} reason={(snap.meetupShares as BlockedMetric).reason} />
+          {/* Replaced Meetup Shares, which had no source at all (no share event
+              is captured) and could only ever read "Unavailable". */}
+          <KpiCard label="Departures" {...departures} icon={DoorOpen} accent={NAVY} tooltip={TOOLTIPS.departures} footnote="Account deletions, all time" />
         </div>
 
         {/* Founding promo — headline totals only. The funnel (came back /
@@ -444,6 +466,7 @@ function Sections({
                 tooltip={TOOLTIPS[key]}
                 footnote={m.value !== null ? meta.footnote : undefined}
                 unavailableNote="No activity recorded for this reporting week."
+                href={drillHref(key)}
               />
             )
           })}
