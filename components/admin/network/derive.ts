@@ -30,9 +30,14 @@ export function snapshotMetric(
   key: NumericSnapshotKey
 ): DerivedMetric {
   const value = data.metrics.snapshot[key]
+  // TOLERANT of snapshot rows written before a key existed (the founding and
+  // departure cards arrived 2026-09-28): a missing key is "no history yet" —
+  // never an undefined prior or a hole in the sparkline.
+  const num = (v: unknown): v is number => typeof v === 'number'
   const priorRow = data.history.find((h) => h.snapshot_date === data.currentPriorWeekEnding)
-  const prior = priorRow ? (priorRow.metrics.snapshot[key] as number) : null
-  const series = data.history.map((h) => h.metrics.snapshot[key] as number)
+  const priorVal = priorRow?.metrics.snapshot?.[key]
+  const prior = num(priorVal) ? priorVal : null
+  const series = data.history.map((h) => h.metrics.snapshot?.[key]).filter(num)
   const newest = data.history[data.history.length - 1]
   if (!newest || newest.snapshot_date !== data.currentWeekEnding) series.push(value)
   return { value, prior, series }

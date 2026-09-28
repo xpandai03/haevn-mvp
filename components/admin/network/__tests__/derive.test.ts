@@ -50,9 +50,9 @@ function makePayload(opts: {
         completedSurveys: 0,
         membersFree: 0,
         noCurrentMatch: 0,
-        plusMembers: { blocked: true, reason: '' },
-        plusConversion: { blocked: true, reason: '' },
-        meetupShares: { blocked: true, reason: '' },
+        activeFoundingMembers: 0,
+        foundingExpiringSoon: 0,
+        departures: 0,
       },
       weekly: {
         matchesGenerated,
@@ -79,9 +79,9 @@ function makePayload(opts: {
           completedSurveys: 0,
           membersFree: 0,
           noCurrentMatch: 0,
-          plusMembers: { blocked: true, reason: '' },
-          plusConversion: { blocked: true, reason: '' },
-          meetupShares: { blocked: true, reason: '' },
+          activeFoundingMembers: 0,
+          foundingExpiringSoon: 0,
+          departures: 0,
         },
         weekly: {
           matchesGenerated: h.matches,
@@ -180,6 +180,21 @@ function makePayload(opts: {
   })
   const w = weeklyMetric(p, 'matchesGenerated')
   eq(w.value, null, 'past-week without snapshot → null (renders "no activity")')
+}
+
+// ── Legacy snapshot rows (written before a snapshot key existed) ─────────────
+// The founding/departure cards arrived 2026-09-28; every earlier snapshot row
+// lacks their keys. That must read as "no history yet", never undefined/NaN.
+{
+  const p = makePayload({ history: [{ date: '2026-07-11', total: 590, matches: 8 }] })
+  p.metrics.snapshot.departures = 4
+  delete (p.history[0].metrics.snapshot as any).departures
+  const d = snapshotMetric(p, 'departures')
+  eq(d.value, 4, 'legacy: live value is used')
+  eq(d.prior, null, 'legacy: a prior row WITHOUT the key → prior null (collecting history), not undefined')
+  eq(d.series, [4], 'legacy: the keyless row is skipped, no undefined hole in the sparkline')
+  const t = snapshotMetric(p, 'totalMembers')
+  eq(t.prior, 590, 'legacy: keys that DO exist on old rows still give a prior')
 }
 
 report('derive')
