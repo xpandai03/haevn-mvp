@@ -90,10 +90,19 @@ export function __resetEmailPacer(): void {
 export type SendFailureKind = 'throttled' | 'quota' | 'invalid' | 'other'
 
 export function classifyEmailError(err: unknown): SendFailureKind {
-  const m = errText(err)
-  if (/daily_quota_exceeded|daily quota/i.test(m)) return 'quota'
+  const m = emailErrText(err)
+  // Daily AND monthly: both mean "this plan is done", neither can succeed again
+  // today, so both are quota-dead. 2026-09-28 hit the daily cap at ~14:09 and the
+  // monthly cap at 16:00 on the same account; the monthly one read as 'other'.
+  if (/(daily|monthly)_quota_exceeded|(daily|monthly) (email sending )?quota/i.test(m)) return 'quota'
   if (/rate_limit_exceeded|too many requests|\b429\b/i.test(m)) return 'throttled'
-  if (/validation_error|invalid `?to`?|invalid recipient|invalid email/i.test(m)) return 'invalid'
+  // ACCOUNT-LEVEL refusals are NOT the recipient's fault. Resend reports an
+  // unverified sending domain and a bad API key as `validation_error` too; if
+  // those classified as 'invalid', one misconfiguration would permanently mark
+  // every member's address unusable. They must stay 'other' (retried next run).
+  if (/domain is not verified|verify your domain|api key|restricted_api_key|missing_api_key|invalid_api_key|not authorized/i.test(m)) return 'other'
+  // Only a problem with THIS destination is 'invalid'.
+  if (/invalid `?to`?|invalid recipient|invalid email/i.test(m)) return 'invalid'
   return 'other'
 }
 
@@ -103,6 +112,24 @@ export function classifySmsError(err: unknown): SendFailureKind {
   if (/invalid ['"]?to['"]? phone number|21211|21614|not a valid phone number/i.test(m)) return 'invalid'
   if (/rate limit|too many requests|\b429\b|20429/i.test(m)) return 'throttled'
   return 'other'
+}
+
+/**
+ * Everything Resend tells us, not just the prose. Its SDK error is
+ * `{ name: 'daily_quota_exceeded', message: 'You have reached your daily email
+ * sending quota.', statusCode: 429 }` — the machine code lives in `name`, and the
+ * message alone matches none of the patterns above. Reading message-first is how
+ * every quota failure on 2026-09-28 was counted as 'other'. Email-only on
+ * purpose: SMS classification keeps its existing text source.
+ */
+function emailErrText(err: unknown): string {
+  if (!err) return ''
+  if (typeof err === 'string') return err
+  const e = err as any
+  const parts = [e?.name, e?.message, e?.error?.name, e?.error?.message, e?.statusCode]
+    .filter((x) => x !== undefined && x !== null && x !== '')
+    .map(String)
+  return parts.length ? parts.join(' ') : String(JSON.stringify(e) ?? '')
 }
 
 function errText(err: unknown): string {

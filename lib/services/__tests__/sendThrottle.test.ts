@@ -68,6 +68,28 @@ eq(classifyEmailError({ message: 'something else entirely' }), 'other', 'unknown
 eq(classifyEmailError(null), 'other', 'null error -> other, never a crash')
 eq(classifyEmailError('rate_limit_exceeded'), 'throttled', 'a bare string error still classifies')
 
+// THE SHAPES RESEND ACTUALLY RETURNS, copied from the 2026-09-28 production logs.
+// The code is in `name`; the message alone matches nothing. The synthetic cases
+// above passed while every one of these was being counted as 'other'.
+eq(classifyEmailError({ statusCode: 429, message: 'You have reached your daily email sending quota.', name: 'daily_quota_exceeded' }),
+  'quota', 'real Resend daily-quota error object -> quota')
+eq(classifyEmailError({ statusCode: 429, message: 'You have reached your monthly email sending quota.', name: 'monthly_quota_exceeded' }),
+  'quota', 'real Resend MONTHLY-quota error object -> quota (was other)')
+eq(classifyEmailError({ message: 'monthly_quota_exceeded: You have reached your monthly email sending quota. (429)' }),
+  'quota', 'monthly quota as flattened text -> quota')
+eq(classifyEmailError({ statusCode: 429, message: 'Too many requests. You can only make 10 requests per second.', name: 'rate_limit_exceeded' }),
+  'throttled', 'real Resend rate-limit error object -> throttled')
+eq(classifyEmailError({ statusCode: 422, message: 'Invalid `to` field.', name: 'validation_error' }),
+  'invalid', 'real Resend validation error object -> invalid')
+eq(classifyEmailError({ statusCode: 403, name: 'validation_error', message: 'The haevn.app domain is not verified. Please, add and verify your domain on https://resend.com/domains' }),
+  'other', 'UNVERIFIED SENDING DOMAIN is account-level -> other, NEVER invalid (would mark every member unusable)')
+eq(classifyEmailError({ statusCode: 400, name: 'validation_error', message: 'API key is invalid' }),
+  'other', 'bad API key -> other, never invalid')
+eq(classifyEmailError({ statusCode: 401, name: 'restricted_api_key', message: 'This API key is restricted to only send emails' }),
+  'other', 'restricted key -> other')
+eq(classifyEmailError({ statusCode: 500, message: 'Internal server error', name: 'application_error' }),
+  'other', 'a real non-quota, non-throttle error stays other')
+
 // The distinction that matters: both are 429s, but only one can succeed on retry.
 ok(classifyEmailError({ message: 'daily_quota_exceeded (429)' }) !== 'throttled',
   'a quota 429 must NOT be treated as a throttle — retrying it burns the run budget for nothing')

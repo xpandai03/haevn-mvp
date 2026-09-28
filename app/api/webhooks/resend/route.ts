@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic'
  * Resend webhook receiver (bounces / complaints).
  * ================================================
  * DASHBOARD REGISTRATION (manual, cannot be done from code):
- *   URL:    https://haevn.app/api/webhooks/resend
+ *   URL:    https://www.haevn.app/api/webhooks/resend  — WWW, never the apex.
+ *           The apex 307-redirects, which drops the Svix headers and 401s
+ *           every event (cost hours on 2026-08-04).
  *   Events: email.bounced, email.complained  (+ email.delivery_delayed for
  *           soft-bounce visibility — logged, never suppressed)
  *   Copy the signing secret (whsec_…) into Vercel env RESEND_WEBHOOK_SECRET.

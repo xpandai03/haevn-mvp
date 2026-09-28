@@ -92,7 +92,7 @@ export interface PingRunResult {
   byVariant: Record<NoMatchVariant, number>
   /** Sends retried past a provider throttle and then succeeded. */
   throttleRetried: number
-  /** Sends abandoned because the email plan's daily quota was exhausted. */
+  /** Sends abandoned because the email plan's daily or monthly quota was exhausted. */
   quotaDead: number
   /** Channels skipped because the provider already rejected them as invalid. */
   invalidSkipped: { sms: number; email: number }

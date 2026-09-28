@@ -18,16 +18,18 @@ const TOKEN = 'b'.repeat(64)
 function deps(over?: Partial<LoginLinkDeps>) {
   const rows: LoginLinkRow[] = []
   const sends: { to: string; url: string }[] = []
+  const marked: string[] = []
   const d: LoginLinkDeps = {
     findUserByEmail: async (e) => (e === 'member@haevn.co' ? 'user-1' : null),
     countAttempts: async () => ({ email: 0, ip: 0 }),
     record: async (r) => { rows.push(r) },
-    sendLink: async (to, url) => { sends.push({ to, url }) },
+    sendLink: async (to, url) => { sends.push({ to, url }); return { ok: true } },
+    markSent: async (h) => { marked.push(h) },
     randomToken: () => TOKEN,
     now: () => T0,
     ...over,
   }
-  return { d, rows, sends }
+  return { d, rows, sends, marked }
 }
 
 async function main() {
@@ -63,7 +65,7 @@ async function main() {
     const { d } = deps({
       findUserByEmail: async () => { order.push('lookup'); return null },
       record: async () => { order.push('record') },
-      sendLink: async () => { order.push('send') },
+      sendLink: async () => { order.push('send'); return { ok: true } },
     })
     await requestLoginLink('nobody@haevn.co', null, d)
     eq(order, ['lookup', 'record'], 'unknown email: lookup then record, never a send')
@@ -108,6 +110,32 @@ async function main() {
     ok(loginLinkUrlIsSafe(sends[0].url), 'emailed URL is https and on www')
     ok(!loginLinkUrlIsSafe(loginLinkUrl(TOKEN, 'https://haevn.app')), 'apex host is rejected')
     ok(!loginLinkUrlIsSafe(loginLinkUrl(TOKEN, 'http://www.haevn.app')), 'plain http is rejected')
+  }
+
+  // ── sent reflects what the PROVIDER did, not what we intended ──
+  // 2026-09-28: four quota-refused links were written sent=true and nobody could
+  // tell from the table that members were locked out.
+  {
+    const ok1 = deps()
+    eq(await requestLoginLink('member@haevn.co', null, ok1.d), 'sent', 'accepted send → sent')
+    eq(ok1.rows[0].sent, false, 'the row is written BEFORE the send, as not-sent')
+    eq(ok1.marked, [hashHandoffToken(TOKEN)], 'accepted send flips exactly that row to sent')
+
+    const refused = deps({ sendLink: async () => ({ ok: false }) })
+    eq(await requestLoginLink('member@haevn.co', null, refused.d), 'send_failed', 'refused send → send_failed, not sent')
+    eq(refused.rows.length, 1, 'a refused send still writes exactly one row (counters stay honest)')
+    eq(refused.rows[0].sent, false, 'a refused send leaves the row sent=false')
+    eq(refused.marked.length, 0, 'a refused send never marks the row sent')
+    ok(refused.rows[0].token_hash !== null, 'the token is still recorded, so a late delivery would still redeem')
+
+    const order: string[] = []
+    const seq = deps({
+      record: async () => { order.push('record') },
+      sendLink: async () => { order.push('send'); return { ok: true } },
+      markSent: async () => { order.push('mark') },
+    })
+    await requestLoginLink('member@haevn.co', null, seq.d)
+    eq(order, ['record', 'send', 'mark'], 'record, then send, then mark — the token exists before the email can land')
   }
 
   // ── rate limits ──

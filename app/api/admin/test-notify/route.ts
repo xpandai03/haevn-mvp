@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { sendNotification, buildSignInUrl } from '@/lib/services/notifications'
+import { FROM_ADDRESS } from '@/lib/services/email'
 
 export const maxDuration = 60
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     resendApiKeyPresent: !!process.env.RESEND_API_KEY,
-    fromAddress: 'HAEVN <notifications@haevn.co>',
+    fromAddress: FROM_ADDRESS,
     magicLinkMintedFor: magicfor || null,
     signInUrl: signInUrl || null,
     sms: { sent: result.sms.sent, error: serialize(result.sms.error) },

@@ -34,6 +34,10 @@ function main() {
   ok(!/generateLink/.test(send), 'send route never calls generateLink — it CREATES users on unknown emails')
   ok(/findUserByEmail/.test(send), 'the account is resolved first')
   ok(/scope: 'critical'/.test(send), 'the send is critical scope, so a suppressed member can still sign in')
+  ok(/return \{ ok: res\.success \}/.test(send), 'the route reports the PROVIDER outcome, not an unconditional success')
+  ok(/SEND FAILED/.test(send), 'a refused sign-in email is logged loudly')
+  ok(/hashEmail\(to\)\.slice\(0, 12\)/.test(send), 'the failure log identifies the destination by hash prefix only')
+  ok(/update\(\{ sent: true \}\)/.test(send), 'sent=true is written only by markSent, after acceptance')
 
   // ── the landing page is inert ──
   ok(/export async function GET/.test(landing), 'landing page is a GET')
