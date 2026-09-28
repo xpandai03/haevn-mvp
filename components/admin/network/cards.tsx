@@ -31,7 +31,7 @@ export function KpiCard({
   icon,
   accent = '#008080',
   footnote,
-  unavailableNote,
+  emptyNote,
   id,
   href,
 }: {
@@ -45,7 +45,7 @@ export function KpiCard({
   /** Hex accent color for the icon square + sparkline. */
   accent?: string
   footnote?: string
-  unavailableNote?: string
+  emptyNote?: string
   id?: string
   /** Drill-down target. The card becomes a link to the rows behind its number. */
   href?: string
@@ -62,7 +62,7 @@ export function KpiCard({
         <>
           <p className="text-2xl font-bold tabular-nums text-gray-300">—</p>
           <p className="mt-1 text-[11px] text-gray-400">
-            {unavailableNote ?? 'No snapshot for this reporting week.'}
+            {emptyNote ?? 'No snapshot for this reporting week.'}
           </p>
         </>
       ) : (
