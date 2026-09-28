@@ -179,10 +179,16 @@ export function toPairRows(
   })
 }
 
-/** Newest first; within the same computation, strongest score first; then name. */
+/**
+ * Newest first by DAY, then strongest score, then name. By day, not timestamp:
+ * a recompute stamps each row a few milliseconds apart, so ordering on the raw
+ * timestamp let arbitrary write order beat the score (77, 77, 78, 77 on the
+ * first live render).
+ */
 export function sortPairRows(rows: PairRow[]): PairRow[] {
+  const day = (r: PairRow) => (r.computedAt ?? '').slice(0, 10)
   return [...rows].sort((x, y) =>
-    (y.computedAt ?? '').localeCompare(x.computedAt ?? '') ||
+    day(y).localeCompare(day(x)) ||
     (y.score ?? -1) - (x.score ?? -1) ||
     (x.memberName ?? '').localeCompare(y.memberName ?? '') ||
     x.key.localeCompare(y.key)

@@ -162,7 +162,12 @@ eq(reconcile(10, 12).kind, 'mismatch', 'more rows than the card → mismatch, su
   const rows = toPairRows([
     r('A', 'B', 80, '2026-09-28T12:00:00Z'), r('C', 'D', 95, '2026-09-28T12:00:00Z'), r('E', 'F', 99, '2026-09-27T12:00:00Z'),
   ], new Map(), new Map(), { band: 'match', isCurrent: true, now: NOW })
-  eq(sortPairRows(rows).map((x) => x.score), [95, 80, 99], 'newest first; within a computation, strongest first')
+  eq(sortPairRows(rows).map((x) => x.score), [95, 80, 99], 'newest day first; within a day, strongest first')
+  // One recompute stamps rows milliseconds apart — write order must not beat score.
+  const jitter = toPairRows([
+    r('A', 'B', 77, '2026-09-21T12:00:17.900Z'), r('C', 'D', 78, '2026-09-21T12:00:17.100Z'), r('E', 'F', 79, '2026-09-21T12:00:17.500Z'),
+  ], new Map(), new Map(), { band: 'rec', isCurrent: true, now: NOW })
+  eq(sortPairRows(jitter).map((x) => x.score), [79, 78, 77], 'millisecond jitter within one recompute does not reorder scores')
 
   const many = Array.from({ length: 1260 }, (_, i) => i)
   const p1 = paginate(many, 1)
@@ -207,7 +212,10 @@ eq(parseBand('plus'), null, 'anything else is refused')
   const types = code('lib/metrics/types.ts')
   ok(!/Plus Members|Plus Conversion|Meetup Shares/.test(dash), 'the Plus Members, Plus Conversion and Meetup Shares cards are gone')
   ok(!/BlockedCard/.test(dash + cards), 'BlockedCard no longer exists, so no card can render "Unavailable"')
-  ok(!/Unavailable/.test(dash + cards), 'the word "Unavailable" appears nowhere in the dashboard code')
+  // Case-insensitive, and over the rendered copy (comments stripped): the first
+  // live render still carried "Three metrics are temporarily unavailable" in the
+  // info banner, which a capitalised-only check missed.
+  ok(!/unavailable/i.test(dash + cards), 'the word "unavailable" (any case) appears nowhere the dashboard renders')
   ok(!/plusMembers|plusConversion|meetupShares|BlockedMetric/.test(types), 'the blocked metrics are gone from the payload type')
   for (const label of ['Active Founding Members', 'Founding Expiring (30d)', 'Departures']) {
     ok(dash.includes(`label="${label}"`), `new card rendered: ${label}`)

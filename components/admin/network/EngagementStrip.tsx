@@ -63,7 +63,7 @@ export function EngagementStrip({ data }: { data: NetworkMetricsPayload }) {
           icon={Activity}
           accent={GREEN}
           tooltip={activeTooltip}
-          unavailableNote="Available from weekly snapshots (past weeks aren't computable live)."
+          emptyNote="Available from weekly snapshots (past weeks aren't computable live)."
         />
         <div className="lg:col-span-2">
           <ReNotifyCard status={data.renotifyStatus} />

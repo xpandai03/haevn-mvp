@@ -257,7 +257,7 @@ export function NetworkPerformanceClient() {
           <p className="mt-0.5">
             The Snapshot section is cumulative-current; Weekly Activity is bucketed by the selected
             reporting week (UTC, Sunday–Saturday). Week-over-week fills in as weekly snapshots
-            accumulate. Three metrics are temporarily unavailable — each card explains why.
+            accumulate. Matches and Recommendations Generated open the list of pairs behind them.
           </p>
         </div>
       </div>
@@ -465,7 +465,7 @@ function Sections({
                 accent={meta.accent}
                 tooltip={TOOLTIPS[key]}
                 footnote={m.value !== null ? meta.footnote : undefined}
-                unavailableNote="No activity recorded for this reporting week."
+                emptyNote="No activity recorded for this reporting week."
                 href={drillHref(key)}
               />
             )
