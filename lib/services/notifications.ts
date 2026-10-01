@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendScopeForNotificationType } from '@/lib/suppression/scope'
 import { noMatchSms, noMatchEmail, type NoMatchVariant } from '@/lib/notify/noMatchCopy'
 import { withChannel } from '@/lib/auth/notifySignIn'
+import { isMatchingExcluded } from '@/lib/matching/exclusion'
 
 // ─── Base URL (never hardcode a domain) ────────────────────────
 
@@ -161,6 +162,17 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
     email: { sent: false } as { sent: boolean; error?: any; failureKind?: SendFailureKind; retries?: number; skipped?: boolean },
   }
 
+  // BACKSTOP: an operator account (partnerships.matching_excluded) never
+  // receives a match-driven or bulk message. Every audience already filters it
+  // out upstream; this catches any caller that forgets to. Fails OPEN on a read
+  // error: a guard hiccup must not silence a real member's Monday notification.
+  if (opts.partnershipId && (await isExcludedRecipient(opts.partnershipId))) {
+    console.warn(`[Notification] SKIP type=${opts.type} partnership=${opts.partnershipId}: matching_excluded`)
+    result.sms.skipped = true
+    result.email.skipped = true
+    return result
+  }
+
   const senderName = opts.senderName || 'Someone'
 
   // Build messages based on type. Match CTA = the per-user magic sign-in URL
@@ -268,6 +280,24 @@ export async function sendNotification(opts: NotificationOptions): Promise<{
   logNotificationEvent(opts, result).catch(() => {})
 
   return result
+}
+
+async function isExcludedRecipient(partnershipId: string): Promise<boolean> {
+  try {
+    const { data, error } = await createAdminClient()
+      .from('partnerships')
+      .select('matching_excluded')
+      .eq('id', partnershipId)
+      .maybeSingle()
+    if (error) {
+      console.error('[Notification] exclusion check failed, sending anyway:', error.message)
+      return false
+    }
+    return isMatchingExcluded(data as { matching_excluded?: boolean } | null)
+  } catch (e) {
+    console.error('[Notification] exclusion check threw, sending anyway:', e)
+    return false
+  }
 }
 
 // ─── Event Logging ──────────────────────────────────────────────

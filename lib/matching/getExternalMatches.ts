@@ -259,6 +259,7 @@ export async function getExternalMatches(
     .not('display_name', 'is', null)
     .neq('id', currentPartnershipId)
     .eq('profile_state', 'live')
+    .eq('matching_excluded', false)
 
   if (matchesError || !potentialMatches) {
     console.error('[getExternalMatches] Failed to fetch potential matches:', matchesError)

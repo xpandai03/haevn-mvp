@@ -17,8 +17,9 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { loadMarketIndex, isCityLive } from '@/lib/markets/releaseGate'
+import { loadMarketIndex, isCityLive, type MarketIndex } from '@/lib/markets/releaseGate'
 import { getRenotifySuppressedEmails } from '@/lib/suppression/emailSuppressions'
+import { isMatchingExcluded } from '@/lib/matching/exclusion'
 import type { RenotifyVariant } from './copy'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -127,7 +128,9 @@ export interface BuildAudienceResult {
 export async function buildAudience(
   admin: Admin,
   loggedIn: Set<string>,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** Pre-built market index; tests inject one. Production leaves it unset. */
+  marketIdxOverride?: MarketIndex
 ): Promise<BuildAudienceResult> {
   const nowIso = now.toISOString()
   // UTC midnight of the run day — the floor that keeps today's notifies out of
@@ -140,8 +143,8 @@ export async function buildAudience(
     fetchAll(admin, 'computed_matches', 'partnership_a, release_at, sms_notified_at'),
     fetchAll(admin, 'partnership_members', 'partnership_id, user_id'),
     fetchAll(admin, 'profiles', 'user_id, email'),
-    fetchAll(admin, 'partnerships', 'id, city, phone'),
-    loadMarketIndex(true),
+    fetchAll(admin, 'partnerships', 'id, city, phone, matching_excluded'),
+    marketIdxOverride ? Promise.resolve(marketIdxOverride) : loadMarketIndex(true),
     getRenotifySuppressedEmails(admin),
   ])
 
@@ -176,7 +179,10 @@ export async function buildAudience(
 
   const audience: AudienceEntry[] = []
   const emailSuppressed: string[] = []
-  for (const p of partnerships as { id: string; city: string | null; phone: string | null }[]) {
+  for (const p of partnerships as { id: string; city: string | null; phone: string | null; matching_excluded?: boolean | null }[]) {
+    // Operator accounts never receive a re-notify. They have no released rows
+    // either, but this send path bypasses sendNotification, so check here too.
+    if (isMatchingExcluded(p)) continue
     const memberIds = membersByP.get(p.id) ?? []
     const eligible = isEligible({
       released: released.has(p.id),

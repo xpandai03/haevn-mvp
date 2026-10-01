@@ -21,7 +21,6 @@ export default function IdentityPage() {
 
   const [profileType, setProfileType] = useState<ProfileType | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [userCity, setUserCity] = useState<string>('Austin') // Default city
 
   // Debug: log state changes
   useEffect(() => {
@@ -40,19 +39,6 @@ export default function IdentityPage() {
 
       try {
         console.log('[Identity] Loading existing data for user:', user.id)
-
-        // Load user's city from profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('city')
-          .eq('user_id', user.id)
-          .maybeSingle() // Use maybeSingle to avoid errors if no profile
-
-        if (profile?.city) {
-          setUserCity(profile.city)
-        } else {
-          console.log('[Identity] No profile city found, using default')
-        }
 
         // Load existing partnership data
         const { data: partnership, error } = await supabase
@@ -104,7 +90,6 @@ export default function IdentityPage() {
         },
         body: JSON.stringify({
           profileType,
-          city: userCity,
           phone: localStorage.getItem('haevn_signup_phone') || undefined
         })
       })

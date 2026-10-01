@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateSurveyCompletion } from '@/lib/survey/questions'
+import { partnershipLocationFields } from '@/lib/location/signupLocation'
+import { UNKNOWN_CITY } from '@/lib/ingest/completionV1'
 
 export async function POST(request: NextRequest) {
   console.log('[API /survey/save] ===== SAVE REQUEST =====')
@@ -98,12 +100,22 @@ export async function POST(request: NextRequest) {
         console.log('[API /survey/save] ✍️ Using adminClient for DB WRITE: partnerships insert')
         console.log('[API /survey/save] Attempting partnership insert with user.id:', user.id)
 
+        // city is NOT NULL. Use the member's own signup city; an unknown
+        // location stays 'Unknown' rather than being relabelled as Austin.
+        const { data: profileRow } = await adminClient
+          .from('profiles')
+          .select('city')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        const city = (profileRow as { city?: string | null } | null)?.city?.trim() || UNKNOWN_CITY
+
         // ✅ Corrected partnership insert - using owner_id (schema-aligned)
         const { data: newPartnership, error: insertError } = await adminClient
           .from('partnerships')
           .insert({
             owner_id: user.id,        // ✅ correct field
-            city: 'Austin',           // ✅ default to Austin to satisfy NOT NULL constraint
+            city,
+            ...partnershipLocationFields(user.user_metadata),
             membership_tier: 'free',
             advocate_mode: false
           })

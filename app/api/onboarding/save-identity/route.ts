@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { phoneForStorage } from '@/lib/utils/phone'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { partnershipLocationFields } from '@/lib/location/signupLocation'
+import { UNKNOWN_CITY } from '@/lib/ingest/completionV1'
 
 export async function POST(request: NextRequest) {
   console.log('[API /onboarding/save-identity] ===== SAVE IDENTITY REQUEST =====')
@@ -26,7 +28,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[API /onboarding/save-identity] Incoming payload:', body)
 
-    const { profileType, relationshipOrientation, city = 'Austin', phone } = body
+    // body.city is ignored: the client used to default it to 'Austin', which
+    // relabelled members from anywhere as Austin. The city comes from the
+    // member's profile, written by signup step 3.
+    const { profileType, relationshipOrientation, phone } = body
     // Normalize server-side. A member who mistypes their phone still completes
     // onboarding — the number is simply not stored, and they keep email.
     // Never block the submission on it.
@@ -115,10 +120,20 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Location exactly as the member gave it at signup step 3. No default
+      // city: an unknown location stays unknown rather than becoming Austin.
+      const { data: profileRow } = await adminClient
+        .from('profiles')
+        .select('city')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const city = (profileRow as { city?: string | null } | null)?.city?.trim() || UNKNOWN_CITY
+
       // Build insert object - only include relationship_orientation if provided
       const insertData: any = {
         owner_id: user.id,
-        city: city,
+        city,
+        ...partnershipLocationFields(user.user_metadata),
         profile_type: profileType,
         membership_tier: 'free'
       }

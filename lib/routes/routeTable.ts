@@ -91,7 +91,6 @@ export const STATIC_ROUTES: readonly string[] = [
   '/api/matches/hide',
   '/api/matches/ready-to-meet',
   '/api/matches/restore',
-  '/api/msa-check',
   '/api/onboarding/resume-step',
   '/api/onboarding/save-identity',
   '/api/partnerships/debug-info',

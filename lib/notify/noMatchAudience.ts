@@ -34,6 +34,7 @@ import {
   loadMarketIndex, isCityLive, releaseAllMarkets, normalizeCity, type MarketIndex,
 } from '@/lib/markets/releaseGate'
 import { getRenotifySuppressedEmails } from '@/lib/suppression/emailSuppressions'
+import { isMatchingExcluded } from '@/lib/matching/exclusion'
 import { variantForMarket, type NoMatchVariant } from './noMatchCopy'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -169,6 +170,7 @@ export function visiblePartnerships(
 export interface CityDensityRow {
   city: string | null
   profile_state: string | null
+  matching_excluded?: boolean | null
 }
 
 /**
@@ -190,6 +192,7 @@ export function liveMembersByCity(rows: CityDensityRow[]): Map<string, number> {
   const byCity = new Map<string, number>()
   for (const r of rows) {
     if (r.profile_state !== 'live') continue
+    if (isMatchingExcluded(r)) continue // operator accounts are not network presence
     const key = normalizeCity(r.city)
     if (!key) continue
     byCity.set(key, (byCity.get(key) ?? 0) + 1)
@@ -309,7 +312,7 @@ export async function buildNoMatchAudience(
   const exclude = opts.excludePartnershipIds ?? new Set<string>()
 
   const [partnerships, cm, members, profiles, marketIdx, suppressedEmails] = await Promise.all([
-    fetchAll(admin, 'partnerships', 'id, city, phone, profile_state, no_match_notified_at'),
+    fetchAll(admin, 'partnerships', 'id, city, phone, profile_state, no_match_notified_at, matching_excluded'),
     fetchAll(admin, 'computed_matches', 'partnership_a, partnership_b, score, release_at, expires_at, saved'),
     fetchAll(admin, 'partnership_members', 'partnership_id, user_id'),
     fetchAll(admin, 'profiles', 'user_id, email'),
@@ -351,10 +354,12 @@ export async function buildNoMatchAudience(
     phone: string | null
     profile_state: string | null
     no_match_notified_at: string | null
+    matching_excluded?: boolean | null
   }
 
   for (const p of partnerships as Row[]) {
     if (p.profile_state !== 'live') continue
+    if (isMatchingExcluded(p)) continue
     if (exclude.has(p.id)) continue
     if (visible.has(p.id)) { hasMatch++; continue }
     if (!isDueForPing(p.no_match_notified_at, now, everyN)) { notDue++; continue }

@@ -331,6 +331,7 @@ export async function getComputedMatchCards(
       'id, owner_id, display_name, short_bio, connection_summary, identity, city, age, membership_tier, orientation, structure, latitude, longitude, is_verified'
     )
     .in('id', partnerIds)
+    .eq('matching_excluded', false) // operator accounts never surface as a match
 
   const partnershipMap = new Map(
     (partnerships || []).map(p => [p.id, p])

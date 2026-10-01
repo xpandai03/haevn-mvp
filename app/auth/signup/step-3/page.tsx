@@ -7,19 +7,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth/context'
-import { updateProfile } from '@/lib/actions/profile'
-import { checkCityStatus } from '@/lib/data/cities'
+import { previewSignupZip, saveSignupLocation } from '@/lib/actions/signupLocation'
 import { AlertCircle, ChevronLeft } from 'lucide-react'
 import { HaevnLoader } from '@/components/ui/haevn-loader'
+
+// Every US ZIP is accepted: all markets are released. The lookup only fills in
+// the city name; when it misses, the member types their city instead.
+type ZipLookup = { status: 'idle' | 'checking' | 'missed' } | { status: 'found'; label: string }
 
 export default function SignupStep3() {
   const router = useRouter()
   const { user } = useAuth()
 
   const [zipCode, setZipCode] = useState('')
+  const [typedCity, setTypedCity] = useState('')
+  const [lookup, setLookup] = useState<ZipLookup>({ status: 'idle' })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [detectedCity, setDetectedCity] = useState<string | null>(null)
 
   // Check if user is authenticated
   useEffect(() => {
@@ -29,22 +33,22 @@ export default function SignupStep3() {
     }
   }, [user, router])
 
-  // Validate ZIP in real-time
+  // Resolve the city name for display once 5 digits are in
   useEffect(() => {
-    if (zipCode.length === 5) {
-      const cityData = checkCityStatus(zipCode)
-      if (cityData) {
-        setDetectedCity(cityData.name)
-        setError('')
-      } else {
-        setDetectedCity(null)
-        setError('Sorry, HAEVN is not available in this area yet.')
-        window.open('https://www.haevn.co/waitlist', '_blank')
-      }
-    } else {
-      setDetectedCity(null)
-      setError('')
+    setError('')
+    if (zipCode.length !== 5) {
+      setLookup({ status: 'idle' })
+      return
     }
+    let cancelled = false
+    setLookup({ status: 'checking' })
+    previewSignupZip(zipCode)
+      .then((place) => {
+        if (cancelled) return
+        setLookup(place ? { status: 'found', label: `${place.city}, ${place.state}` } : { status: 'missed' })
+      })
+      .catch(() => { if (!cancelled) setLookup({ status: 'missed' }) })
+    return () => { cancelled = true }
   }, [zipCode])
 
   const handleBack = () => {
@@ -60,33 +64,23 @@ export default function SignupStep3() {
       return
     }
 
-    const cityData = checkCityStatus(zipCode)
-
-    if (!cityData) {
-      setError('Sorry, HAEVN is not available in this area yet.')
-      return
-    }
-
     setIsLoading(true)
 
     try {
-      // Update profile with ZIP and city data
-      const result = await updateProfile({
-        city: cityData.name,
-        msa_status: cityData.status
-      })
+      const result = await saveSignupLocation({ zip: zipCode, typedCity })
 
-      if (!result.success) {
-        setError(result.error || 'Failed to update profile')
+      if (!result.ok) {
+        if (result.reason === 'city_required') {
+          setLookup({ status: 'missed' })
+          setError('Please enter your city to continue.')
+        } else if (result.reason === 'invalid_zip') {
+          setError('Please enter a valid 5-digit ZIP code')
+        } else {
+          setError('Something went wrong. Please try again.')
+        }
         setIsLoading(false)
         return
       }
-
-      // Store city data in localStorage
-      localStorage.setItem('haevn_city_data', JSON.stringify({
-        city: cityData.name,
-        cityStatus: cityData.status
-      }))
 
       // Navigate to phone number collection
       router.push('/auth/signup/step-4')
@@ -96,7 +90,11 @@ export default function SignupStep3() {
     }
   }
 
-  const isValid = zipCode.length === 5 && detectedCity !== null
+  const needsCity = lookup.status === 'missed'
+  const isValid =
+    zipCode.length === 5 &&
+    lookup.status !== 'checking' &&
+    (!needsCity || typedCity.trim().length > 0)
 
   return (
     <div className="survey-layout min-h-screen flex flex-col bg-white">
@@ -162,11 +160,11 @@ export default function SignupStep3() {
             </Alert>
           )}
 
-          {/* Success indicator */}
-          {detectedCity && !error && (
+          {/* Resolved city */}
+          {lookup.status === 'found' && !error && (
             <Alert className="border-haevn-teal/50 bg-haevn-teal/10">
               <AlertDescription className="text-haevn-teal font-medium">
-                ✓ {detectedCity} - Available!
+                ✓ {lookup.label}
               </AlertDescription>
             </Alert>
           )}
@@ -212,6 +210,39 @@ export default function SignupStep3() {
                 5-digit US ZIP code
               </p>
             </div>
+
+            {needsCity && (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="city"
+                  className="text-haevn-charcoal"
+                  style={{
+                    fontWeight: 500,
+                    fontSize: '14px'
+                  }}
+                >
+                  City
+                </Label>
+                <Input
+                  id="city"
+                  type="text"
+                  autoComplete="address-level2"
+                  maxLength={80}
+                  value={typedCity}
+                  onChange={(e) => setTypedCity(e.target.value)}
+                  placeholder="Your city or town"
+                  className="h-12 text-base"
+                />
+                <p
+                  className="text-haevn-charcoal opacity-70 text-sm"
+                  style={{
+                    fontSize: '12px'
+                  }}
+                >
+                  We couldn&apos;t look up that ZIP. Tell us your city instead.
+                </p>
+              </div>
+            )}
           </form>
         </div>
       </main>

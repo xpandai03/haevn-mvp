@@ -106,6 +106,7 @@ export async function getDiscoveryProfiles(userId: string, city?: string, partne
       `)
       .in('id', matchPartnershipIds)
       .eq('profile_state', 'live')
+      .eq('matching_excluded', false)
 
     if (city) {
       query = query.eq('city', city)

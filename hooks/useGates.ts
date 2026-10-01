@@ -116,19 +116,9 @@ export function useCityGate(): GateResult {
           return
         }
 
-        // Check if city is live from profile
-        const isLive = profile.msa_status === 'live'
-
-        if (!isLive) {
-          setResult({
-            isLoading: false,
-            isValid: false,
-            error: `${profile.city || 'Your city'} is not yet available. You're on the waitlist!`,
-            data: profile
-          })
-          // Don't redirect, just show message
-          return
-        }
+        // All markets are released: every city is available. This used to
+        // require msa_status === 'live', which blocked every member whose
+        // msa_status was null (most in-app signups and the imported cohort).
 
         setResult({
           isLoading: false,

@@ -18,6 +18,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isMatchingExcluded } from '@/lib/matching/exclusion'
 import {
   calculateCompatibilityFromRaw,
   type RawAnswers,
@@ -170,6 +171,7 @@ export async function buildRecomputeContext(
     .from('partnerships')
     .select('id, profile_type, city, msa, display_name, latitude, longitude')
     .eq('profile_state', 'live')
+    .eq('matching_excluded', false) // operator accounts: never in the pool or the loop
   if (error || !partnerships) {
     throw new Error(`buildRecomputeContext: partnerships fetch failed: ${error?.message || 'unknown'}`)
   }
@@ -365,10 +367,27 @@ export async function computeMatchesForPartnership(
     } else {
       const res = await adminClient
         .from('partnerships')
-        .select('id, profile_type, city, msa, display_name, latitude, longitude')
+        .select('id, profile_type, city, msa, display_name, latitude, longitude, matching_excluded')
         .eq('id', partnershipId)
         .single()
-      currentPartnership = (res.data as PartnershipRow | null) ?? null
+      // An excluded account is never matched, even right after its own survey
+      // save. Batch mode needs no check: ctx never contains it.
+      if (isMatchingExcluded(res.data as { matching_excluded?: boolean } | null)) {
+        console.log(`[computeMatches] SKIP partnership=${partnershipId}: matching_excluded`)
+        await updateRunStatus(adminClient, runId, {
+          status: 'success',
+          finished_at: new Date().toISOString(),
+          candidates_evaluated: 0,
+          matches_written: 0,
+        })
+        return { success: true, matchesComputed: 0, candidatesEvaluated: 0, errors: 0 }
+      }
+      if (res.data) {
+        const { matching_excluded: _excluded, ...row } = res.data as PartnershipRow & { matching_excluded?: boolean }
+        currentPartnership = row
+      } else {
+        currentPartnership = null
+      }
       currentError = res.error
     }
 
@@ -464,6 +483,7 @@ export async function computeMatchesForPartnership(
         .select('id, profile_type, city, msa, display_name, latitude, longitude')
         .neq('id', partnershipId)
         .eq('profile_state', 'live')
+        .eq('matching_excluded', false)
       allPartnerships = (res.data as PartnershipRow[] | null) ?? null
       partnershipsError = res.error
     }

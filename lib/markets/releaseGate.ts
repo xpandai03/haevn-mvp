@@ -27,6 +27,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isMatchingExcluded } from '@/lib/matching/exclusion'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODE CONTROL — the (C) <-> (B) switch for already-released rows
@@ -152,8 +153,9 @@ export interface EligibilityResult {
   /** partnership ids release/notify may touch */
   eligible: Set<string>
   /**
-   * Partnership ids excluded (non-live market OR unresolved city).
-   * ALWAYS EMPTY when RELEASE_ALL_MARKETS is on — nothing is withheld.
+   * Partnership ids excluded (non-live market OR unresolved city), plus every
+   * `matching_excluded` operator account. With RELEASE_ALL_MARKETS on, those
+   * operator accounts are the ONLY members withheld.
    */
   excluded: Set<string>
   /**
@@ -179,7 +181,7 @@ export async function getReleaseEligibility(ids?: string[]): Promise<Eligibility
   const idx = await loadMarketIndex()
   const admin = createAdminClient()
 
-  let q = admin.from('partnerships').select('id, city')
+  let q = admin.from('partnerships').select('id, city, matching_excluded')
   if (ids && ids.length > 0) q = q.in('id', ids)
   const { data, error } = await q.limit(10000)
 
@@ -203,7 +205,13 @@ export async function getReleaseEligibility(ids?: string[]): Promise<Eligibility
   const excluded = new Set<string>()
   const excludedByCity: Record<string, number> = {}
 
-  for (const p of (data ?? []) as { id: string; city: string | null }[]) {
+  for (const p of (data ?? []) as { id: string; city: string | null; matching_excluded?: boolean | null }[]) {
+    // Operator accounts are never released or notified, in any market and under
+    // any flag. Kept out of the city tally: they are not a market signal.
+    if (isMatchingExcluded(p)) {
+      excluded.add(p.id)
+      continue
+    }
     const live = isCityLive(p.city, idx)
     // Everyone is eligible under the flag. The tally below still runs so the
     // Monday readout keeps its city spread — reporting, no longer a gate.
