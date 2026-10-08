@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkSyntheticAutoAccept } from '@/lib/synthetic/autoAccept'
 import { getUnreadCountsForUser } from '@/lib/actions/connections'
+import { fetchPrimaryPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 export interface HandshakeData {
   id: string
@@ -403,23 +404,8 @@ export async function getIncomingRequestCards(): Promise<IncomingRequestCard[]> 
 
       if (!senderPartnership) continue
 
-      // Get photo for the sender partnership
-      const { data: photoData } = await adminClient
-        .from('partnership_photos')
-        .select('storage_path')
-        .eq('partnership_id', senderPartnership.id)
-        .eq('is_primary', true)
-        .eq('photo_type', 'public')
-        .maybeSingle()
-
-      let photoUrl: string | null = null
-      if (photoData?.storage_path) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photoData.storage_path)
-        photoUrl = publicUrl
-      }
+      // Get photo for the sender partnership (stored photo_url, used as-is)
+      const photoUrl = await fetchPrimaryPhotoUrl(adminClient, senderPartnership.id)
 
       requestCards.push({
         handshakeId: handshake.id,
@@ -511,23 +497,8 @@ export async function getConnectionCards(): Promise<ConnectionCardData[]> {
 
       if (!otherPartnership) continue
 
-      // Get photo for the other partnership
-      const { data: photoData } = await adminClient
-        .from('partnership_photos')
-        .select('storage_path')
-        .eq('partnership_id', otherPartnership.id)
-        .eq('is_primary', true)
-        .eq('photo_type', 'public')
-        .maybeSingle()
-
-      let photoUrl: string | null = null
-      if (photoData?.storage_path) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photoData.storage_path)
-        photoUrl = publicUrl
-      }
+      // Get photo for the other partnership (stored photo_url, used as-is)
+      const photoUrl = await fetchPrimaryPhotoUrl(adminClient, otherPartnership.id)
 
       // Determine top compatibility factor based on score
       const score = handshake.match_score || 0

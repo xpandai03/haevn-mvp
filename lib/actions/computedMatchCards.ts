@@ -17,6 +17,7 @@ import { parseSections, type Section } from '@/lib/matches/sectionMapping'
 import type { ReadyToMeetUiState } from '@/lib/types/readyToMeet'
 import { scoreBounds, REC_MIN_SCORE, REC_MAX_SCORE } from '@/lib/matching/scoreBands'
 import { loadMarketIndex, isCityLive, isRowVisibleForNonLiveMarket, releaseAllMarkets } from '@/lib/markets/releaseGate'
+import { fetchPrimaryPhotoUrls } from '@/lib/photos/primaryPhoto'
 
 // =============================================================================
 // TYPES
@@ -381,27 +382,8 @@ export async function getComputedMatchCards(
     }
   }
 
-  // 4. Fetch photo URLs in one query
-  const supabase = await createClient()
-  const { data: photos } = await adminClient
-    .from('partnership_photos')
-    .select('partnership_id, storage_path')
-    .in('partnership_id', partnerIds)
-    .eq('is_primary', true)
-    .eq('photo_type', 'public')
-
-  const photoMap = new Map<string, string>()
-  if (photos) {
-    for (const photo of photos) {
-      if (photo.storage_path) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photo.storage_path)
-        photoMap.set(photo.partnership_id, publicUrl)
-      }
-    }
-  }
+  // 4. Fetch photo URLs in one query (stored photo_url, used as-is)
+  const photoMap = await fetchPrimaryPhotoUrls(adminClient, partnerIds)
 
   // 5. Assemble results, sorted by score desc, limited
   const results: ComputedMatchCard[] = []

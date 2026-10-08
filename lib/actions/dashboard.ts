@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import { isMembershipExpired } from '@/lib/partnership/membershipExpiry'
+import { fetchPrimaryPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 /**
  * Get dashboard stats for the current user
@@ -132,26 +133,8 @@ export async function getUserProfilePhoto(): Promise<string | null> {
 
     const partnership = { partnership_id: membership.partnership_id }
 
-    // Get primary photo for partnership
-    const { data: photo } = await supabase
-      .from('partnership_photos')
-      .select('storage_path')
-      .eq('partnership_id', partnership.partnership_id)
-      .eq('is_primary', true)
-      .eq('photo_type', 'public')
-      .single()
-
-    if (!photo) {
-      return null
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('partnership-photos')
-      .getPublicUrl(photo.storage_path)
-
-    return publicUrl
+    // Primary photo: the stored photo_url, used as-is
+    return await fetchPrimaryPhotoUrl(supabase, partnership.partnership_id)
   } catch (error) {
     console.error('[getUserProfilePhoto] Error:', error)
     return null

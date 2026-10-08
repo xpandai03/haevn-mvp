@@ -6,6 +6,7 @@ import { selectBestPartnership } from '@/lib/partnership/selectPartnership'
 import {
   firstNameFromDisplayName,
 } from '@/lib/utils/matchCardDisplay'
+import { fetchPrimaryPhotoUrls } from '@/lib/photos/primaryPhoto'
 
 export interface HiddenMatchCard {
   partnershipId: string
@@ -168,25 +169,8 @@ export async function getHiddenMatches(): Promise<HiddenMatchCard[]> {
     if (ids.includes(other)) scoreMap.set(other, m.score)
   }
 
-  // Primary photos
-  const supabase = await createClient()
-  const { data: photos } = await admin
-    .from('partnership_photos')
-    .select('partnership_id, storage_path')
-    .in('partnership_id', ids)
-    .eq('is_primary', true)
-    .eq('photo_type', 'public')
-  const photoMap = new Map<string, string>()
-  for (const photo of photos || []) {
-    if (photo.storage_path) {
-      const {
-        data: { publicUrl },
-      } = supabase.storage
-        .from('partnership-photos')
-        .getPublicUrl(photo.storage_path)
-      photoMap.set(photo.partnership_id, publicUrl)
-    }
-  }
+  // Primary photos (stored photo_url, used as-is)
+  const photoMap = await fetchPrimaryPhotoUrls(admin, ids)
 
   const cards: HiddenMatchCard[] = []
   for (const row of hiddenRows) {

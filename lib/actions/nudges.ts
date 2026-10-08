@@ -12,6 +12,7 @@
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchPrimaryPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 export type NudgeItem = Nudge
 
@@ -116,23 +117,8 @@ export async function getReceivedNudges(): Promise<Nudge[]> {
         console.error('[getReceivedNudges] RLS or query error:', partnershipError.code, partnershipError.message, partnershipError.details)
         continue
       }
-      // Get primary photo for sender's partnership
-      const { data: photoData } = await supabase
-        .from('partnership_photos')
-        .select('storage_path')
-        .eq('partnership_id', partnership.id)
-        .eq('is_primary', true)
-        .eq('photo_type', 'public')
-        .single()
-
-      let photoUrl: string | undefined
-      if (photoData) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photoData.storage_path)
-        photoUrl = publicUrl
-      }
+      // Get primary photo for sender's partnership (stored photo_url, used as-is)
+      const photoUrl = (await fetchPrimaryPhotoUrl(supabase, partnership.id)) ?? undefined
 
       // TODO: Calculate actual compatibility from survey responses
       // For now, use stub values
@@ -249,23 +235,8 @@ export async function getSentNudges(): Promise<Nudge[]> {
         continue
       }
 
-      // Get primary photo for recipient's partnership
-      const { data: photoData } = await supabase
-        .from('partnership_photos')
-        .select('storage_path')
-        .eq('partnership_id', partnership.id)
-        .eq('is_primary', true)
-        .eq('photo_type', 'public')
-        .single()
-
-      let photoUrl: string | undefined
-      if (photoData) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photoData.storage_path)
-        photoUrl = publicUrl
-      }
+      // Get primary photo for recipient's partnership (stored photo_url, used as-is)
+      const photoUrl = (await fetchPrimaryPhotoUrl(supabase, partnership.id)) ?? undefined
 
       // TODO: Calculate actual compatibility from survey responses
       const compatibilityPercentage = 80
