@@ -7,6 +7,10 @@
  *   npx tsx scripts/qa/seed-goose-cohort.ts --n 8         # population size (default 6)
  *   npx tsx scripts/qa/seed-goose-cohort.ts --cleanup     # remove every QA cohort, member, file, event
  *   npx tsx scripts/qa/seed-goose-cohort.ts --parity 200  # READ-ONLY: cohort scorer vs stored weekly scores
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --http https://www.haevn.app
+ *       # seed 6, drive the full lifecycle over the REAL HTTPS API with
+ *       # GOOSE_SHARED_SECRET from .env.local (never printed), plus negative
+ *       # proofs; prints a redacted transcript. Follow with --cleanup.
  *
  * Isolation — nothing here touches a real member:
  *   - synthetic members only: TEST- surnames, .invalid emails (undeliverable,
@@ -343,8 +347,89 @@ async function parity(limit: number) {
   console.log(JSON.stringify({ compared: rows.length, same, differ, unscorable, asymmetric }, null, 2))
 }
 
+/** Redact anything email-shaped and the bearer token from a transcript value. */
+function redact(v: unknown, secret: string): unknown {
+  return JSON.parse(JSON.stringify(v).split(secret).join('***').replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '<email redacted>'))
+}
+
+/** Full lifecycle over real HTTPS — the joint-test path the event partner will use. */
+async function http(baseUrl: string, n = 6) {
+  const secret = process.env.GOOSE_SHARED_SECRET
+  if (!secret) throw new Error('GOOSE_SHARED_SECRET not in .env.local')
+  const existing = await qaUsers()
+  if (existing.length > 0) throw new Error(`QA goose accounts already exist (${existing.length}); run --cleanup first`)
+  const api = `${baseUrl.replace(/\/+$/, '')}/api/goose`
+  const transcript: unknown[] = []
+  async function call(method: string, path: string, body?: unknown, token: string | null = secret!) {
+    const headers: Record<string, string> = { 'content-type': 'application/json' }
+    if (token !== null) headers.authorization = `Bearer ${token}`
+    const t0 = Date.now()
+    const res = await fetch(`${api}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    const text = await res.text()
+    const parsed = text ? (() => { try { return JSON.parse(text) } catch { return text } })() : ''
+    transcript.push(redact({ request: `${method} /api/goose${path}`, auth: token === null ? 'none' : token === secret ? 'Bearer ***' : 'Bearer <wrong>', body, status: res.status, ms: Date.now() - t0, response: parsed }, secret!))
+    return { status: res.status, body: parsed as any }
+  }
+
+  const before = await computedMatchesFingerprint()
+  const runTag = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12)
+  const members = []
+  for (let i = 0; i < n; i++) members.push(await seedMember(String.fromCharCode(65 + i), i, runTag, { gated: i === n - 1, photo: i < 2 }))
+  const eventId = `${EVENT_PREFIX}http-${runTag}`
+  const startsAt = new Date(Date.now() + 2 * 3600_000).toISOString().replace('Z', '+00:00')
+
+  const c1 = await call('POST', '/cohorts', { goose_event_id: eventId, event_name: 'TEST Goose HTTPS proof', event_starts_at: startsAt })
+  const c2 = await call('POST', '/cohorts', { goose_event_id: eventId, event_name: 'TEST Goose HTTPS proof', event_starts_at: startsAt })
+  const id = c1.body.haevn_cohort_id as string
+  for (const m of members) await call('POST', `/cohorts/${id}/members`, { member_email: m.email })
+  await call('POST', `/cohorts/${id}/members`, { member_email: members[0].email }) // idempotent repeat
+  const fin = await call('POST', `/cohorts/${id}/finalize`, { member_ids: members.map((m) => m.pid) })
+  let st = await call('GET', `/cohorts/${id}/status`)
+  for (let i = 0; i < 20 && st.body.status === 'processing'; i++) {
+    await new Promise((r) => setTimeout(r, 1500))
+    st = await call('GET', `/cohorts/${id}/status`)
+  }
+  const res = await call('GET', `/cohorts/${id}/results`)
+  // Keep the transcript readable: the results entry shows 2 sample rows.
+  const resEntry = transcript[transcript.length - 1] as any
+  resEntry.response = { status: resEntry.response.status, pairs_count: resEntry.response.pairs?.length, sample_pairs: resEntry.response.pairs?.slice(0, 2), gated_sample: resEntry.response.pairs?.find((p: any) => p.compatibility_pct === 0) }
+
+  // Negative proofs.
+  const noTok = await call('GET', `/cohorts/${id}/status`, undefined, null)
+  const wrongTok = await call('GET', `/cohorts/${id}/status`, undefined, 'definitely-not-the-secret')
+  const c3 = await call('POST', '/cohorts', { goose_event_id: eventId, event_name: 'TEST Goose HTTPS proof', event_starts_at: startsAt })
+  const unknownCohort = await call('GET', `/cohorts/${randomUUID()}/status`)
+  const stray = randomUUID()
+  const badFinalize = await call('POST', `/cohorts/${id}/finalize`, { member_ids: [...members.map((m) => m.pid), stray] })
+  const stillReady = await call('GET', `/cohorts/${id}/status`)
+  const unknownMember = await call('POST', `/cohorts/${id}/members`, { member_email: `nobody-${runTag}@qa.haevn.invalid` })
+  const malformed = await call('POST', '/cohorts', { goose_event_id: eventId, event_starts_at: '2026-12-31T20:00:00' })
+  const after = await computedMatchesFingerprint()
+
+  const pairs = res.body.pairs as any[]
+  console.log(JSON.stringify({ transcript }, null, 2))
+  console.log(JSON.stringify({
+    summary: {
+      same_cohort_id_on_repeat_create: c1.body.haevn_cohort_id === c2.body.haevn_cohort_id && c2.body.haevn_cohort_id === c3.body.haevn_cohort_id,
+      finalize: fin.body,
+      final_status: st.body,
+      results: { status: res.body.status, pairs: pairs.length, every_row_exactly_8_contract_keys: pairs.every((p) => Object.keys(p).join() === GOOSE_RESULT_KEYS.join()), forbidden_keys: findForbiddenGooseKeys(res.body) },
+      negatives: {
+        no_token: [noTok.status, noTok.body], wrong_token: [wrongTok.status, wrongTok.body],
+        unknown_cohort: [unknownCohort.status, unknownCohort.body],
+        never_associated_finalize: [badFinalize.status, badFinalize.body.error, badFinalize.body.unknown_member_ids?.length === 1 && badFinalize.body.unknown_member_ids[0] === stray],
+        population_unchanged_after_rejection: [stillReady.body.status, stillReady.body.expected_pairs],
+        unknown_member: [unknownMember.status, unknownMember.body], malformed_timestamp: [malformed.status, malformed.body],
+      },
+      computed_matches: { before, after, untouched: JSON.stringify(before) === JSON.stringify(after) },
+    },
+  }, null, 2))
+}
+
 async function main() {
   const argv = process.argv
+  const h = argv.indexOf('--http')
+  if (h > 0) return http(argv[h + 1] ?? 'https://www.haevn.app')
   if (argv.includes('--cleanup')) return cleanup()
   const p = argv.indexOf('--parity')
   if (p > 0) return parity(Number(argv[p + 1] ?? 200))

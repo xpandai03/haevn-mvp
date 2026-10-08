@@ -83,6 +83,7 @@ export const STATIC_ROUTES: readonly string[] = [
   '/api/dev/seed',
   '/api/dev/setup-database',
   '/api/dev/setup-storage',
+  '/api/goose/cohorts',
   '/api/health/supabase',
   '/api/impersonate/consume',
   '/api/ingest/survey',
@@ -164,6 +165,10 @@ export const STATIC_ROUTES: readonly string[] = [
  * non-empty path segment — the same thing Next's `[param]` matches.
  */
 export const DYNAMIC_ROUTES: readonly string[] = [
+  '/api/goose/cohorts/:seg/finalize',
+  '/api/goose/cohorts/:seg/members',
+  '/api/goose/cohorts/:seg/results',
+  '/api/goose/cohorts/:seg/status',
   '/chat/:seg',
   '/connections/:seg',
   '/dashboard/matches/:seg',
