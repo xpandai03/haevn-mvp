@@ -11,7 +11,9 @@ import { GOOSE_ENGINE_VERSION } from '../score'
 
 const ROOT = join(__dirname, '..', '..', '..')
 const GOOSE = join(ROOT, 'lib', 'goose')
-const sources = readdirSync(GOOSE).filter((f) => f.endsWith('.ts')).map((f) => [f, readFileSync(join(GOOSE, f), 'utf8')] as const)
+const sources = ['', 'http']
+  .flatMap((dir) => readdirSync(join(GOOSE, dir)).filter((f) => f.endsWith('.ts')).map((f) => join(dir, f)))
+  .map((f) => [f, readFileSync(join(GOOSE, f), 'utf8')] as const)
 ok(sources.length >= 8, `found ${sources.length} goose source files`)
 
 const FORBIDDEN = [
