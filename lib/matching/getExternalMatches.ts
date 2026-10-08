@@ -18,6 +18,7 @@ import {
   type CompatibilityTier,
   type CategoryScore,
 } from '@/lib/matching'
+import { fetchPrimaryPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 // =============================================================================
 // TYPES
@@ -77,7 +78,6 @@ interface SurveyResponse {
  */
 interface PartnershipPhoto {
   partnership_id: string
-  storage_path: string | null
   photo_url: string | null
 }
 
@@ -189,23 +189,8 @@ async function getPartnershipPhotoUrl(
   supabase: Awaited<ReturnType<typeof createClient>>,
   partnershipId: string
 ): Promise<string | undefined> {
-  const { data: photoData } = await adminClient
-    .from('partnership_photos')
-    .select('storage_path')
-    .eq('partnership_id', partnershipId)
-    .eq('is_primary', true)
-    .eq('photo_type', 'public')
-    .maybeSingle()
-
-  if (photoData?.storage_path) {
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('partnership-photos')
-      .getPublicUrl(photoData.storage_path)
-    return publicUrl
-  }
-
-  return undefined
+  // Stored photo_url, used as-is.
+  return (await fetchPrimaryPhotoUrl(adminClient, partnershipId)) ?? undefined
 }
 
 // =============================================================================

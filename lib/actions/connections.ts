@@ -20,6 +20,7 @@ import { isMessagingEnabled } from '@/lib/promo/config'
 import { getUserMembershipTier } from '@/lib/actions/dashboard'
 import { messageNotifyCooldownMinutes, shouldNotifyRecipient } from '@/lib/messaging/notifyCooldown'
 import { UPGRADE_REQUIRED_ERROR } from '@/lib/messaging/constants'
+import { fetchPrimaryPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 function relationshipLabelFromStructure(
   structure: { type?: string | null; open_to?: string[] | null } | null
@@ -237,23 +238,8 @@ export async function getMyConversations(): Promise<ConversationItem[]> {
 
       if (!otherPartnership) continue
 
-      // Get photo for other partnership
-      const { data: photoData } = await adminClient
-        .from('partnership_photos')
-        .select('storage_path')
-        .eq('partnership_id', otherPartnership.id)
-        .eq('is_primary', true)
-        .eq('photo_type', 'public')
-        .maybeSingle()
-
-      let photoUrl: string | null = null
-      if (photoData?.storage_path) {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photoData.storage_path)
-        photoUrl = publicUrl
-      }
+      // Get photo for other partnership (stored photo_url, used as-is)
+      const photoUrl = await fetchPrimaryPhotoUrl(adminClient, otherPartnership.id)
 
       // Get last message
       const messages = (handshake.messages as any[]) || []

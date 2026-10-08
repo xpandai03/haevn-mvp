@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { storedPhotoUrl } from '@/lib/photos/primaryPhoto'
 
 export interface SurveyDisplayData {
   goals?: Record<string, any>
@@ -72,28 +73,20 @@ export async function getProfileData(partnershipId: string): Promise<ProfileData
     // Get all photos for this partnership (using admin client)
     const { data: photosData } = await adminClient
       .from('partnership_photos')
-      .select('storage_path, is_primary')
+      .select('photo_url, is_primary')
       .eq('partnership_id', partnershipId)
       .eq('photo_type', 'public')
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true })
 
-    let photos: string[] = []
+    // Stored photo_url, used as-is.
+    const photos: string[] = []
     let primaryPhoto: string | undefined
-
-    if (photosData && photosData.length > 0) {
-      photos = photosData.map(photo => {
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('partnership-photos')
-          .getPublicUrl(photo.storage_path)
-
-        if (photo.is_primary) {
-          primaryPhoto = publicUrl
-        }
-
-        return publicUrl
-      })
+    for (const photo of photosData ?? []) {
+      const url = storedPhotoUrl(photo)
+      if (!url) continue
+      photos.push(url)
+      if (photo.is_primary) primaryPhoto = url
     }
 
     // Get survey responses for this partnership (using admin client)
