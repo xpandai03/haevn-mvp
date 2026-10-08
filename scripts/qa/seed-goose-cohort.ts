@@ -7,6 +7,11 @@
  *   npx tsx scripts/qa/seed-goose-cohort.ts --n 8         # population size (default 6)
  *   npx tsx scripts/qa/seed-goose-cohort.ts --cleanup     # remove every QA cohort, member, file, event
  *   npx tsx scripts/qa/seed-goose-cohort.ts --parity 200  # READ-ONLY: cohort scorer vs stored weekly scores
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --seed-joint     # 6 singles + 1 couple for the partner's
+ *                                                            # conformance run; NO cohort; prints emails
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --verify-joint   # re-check every seeded email resolves
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --drill-drop <member_id>     # joint-test failure drill:
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --drill-restore <member_id>  #   survey 100→99→100
  *   npx tsx scripts/qa/seed-goose-cohort.ts --http https://www.haevn.app
  *       # seed 6, drive the full lifecycle over the REAL HTTPS API with
  *       # GOOSE_SHARED_SECRET from .env.local (never printed), plus negative
@@ -99,8 +104,8 @@ async function qaUsers() {
   return users.sort((a, b) => a.label.localeCompare(b.label))
 }
 
-async function seedMember(label: string, i: number, runTag: string, opts: { gated?: boolean; photo?: boolean }) {
-  const email = `test-goose-${label.toLowerCase()}-${runTag}@qa.haevn.invalid`
+async function seedMember(label: string, i: number, runTag: string, opts: { gated?: boolean; photo?: boolean; couple?: boolean; emailOverride?: string }) {
+  const email = opts.emailOverride ?? `test-goose-${label.toLowerCase()}-${runTag}@qa.haevn.invalid`
   const fullName = `Gus TEST-GOOSE-${label}`
   const password = `Qa-${randomBytes(12).toString('base64url')}`
   const created = await admin.auth.admin.createUser({
@@ -112,7 +117,7 @@ async function seedMember(label: string, i: number, runTag: string, opts: { gate
   const now = new Date().toISOString()
   must(await admin.from('profiles').upsert({ user_id: userId, email, full_name: fullName, city: 'Austin' }, { onConflict: 'user_id' }), 'profiles')
   const p = must(await admin.from('partnerships').insert({
-    owner_id: userId, profile_type: 'solo', profile_state: 'draft', membership_tier: 'free', city: 'Austin',
+    owner_id: userId, profile_type: opts.couple ? 'couple' : 'solo', profile_state: 'draft', membership_tier: 'free', city: 'Austin',
     display_name: fullName, phone: null, notify_phone_invalid_at: now, notify_email_invalid_at: now,
   }).select('id').single(), 'partnerships') as { id: string }
   must(await admin.from('partnership_members').insert({ partnership_id: p.id, user_id: userId, role: 'owner' }), 'partnership_members')
@@ -347,6 +352,88 @@ async function parity(limit: number) {
   console.log(JSON.stringify({ compared: rows.length, same, differ, unscorable, asymmetric }, null, 2))
 }
 
+// ── Joint test (partner conformance run) ──────────────────────────────────────
+
+const JOINT_TAG = 'joint'
+
+/**
+ * 6 singles + 1 couple = 8 emails, 7 member_ids. Stable, readable emails. Single
+ * S6 is deliberately hard-gated (no shared connection intent) so the partner
+ * sees a real 0% / long-shot pair; S1 and the couple carry a primary photo so
+ * both photo_url states appear. No cohort is created — the partner drives that.
+ */
+async function seedJoint() {
+  const existing = await qaUsers()
+  if (existing.length > 0) throw new Error(`QA goose accounts already exist (${existing.length}); run --cleanup first`)
+  const singles = []
+  for (let i = 1; i <= 6; i++) {
+    singles.push(await seedMember(`S${i}`, i, JOINT_TAG, { gated: i === 6, photo: i === 1, emailOverride: `test-goose-joint-s${i}@qa.haevn.invalid` }))
+  }
+  const owner = await seedMember('C1A', 7, JOINT_TAG, { photo: true, couple: true, emailOverride: 'test-goose-joint-c1a@qa.haevn.invalid' })
+  const partner = await addCouplePartner(owner.pid, 'C1B', 'test-goose-joint-c1b@qa.haevn.invalid')
+  console.log(JSON.stringify({
+    singles: singles.map((m) => ({ email: m.email, member_id: m.pid, ...(m.label === 'S6' ? { note: 'hard-gated: every pair with S6 scores 0' } : {}), ...(m.label === 'S1' ? { note: 'has a primary photo' } : {}) })),
+    couple: { member_id: owner.pid, emails: [owner.email, partner.email], note: 'one partnership, two people; both emails resolve to this member_id; has a primary photo' },
+  }, null, 2))
+  await verifyJoint()
+}
+
+/** Second person of a couple: own login + profile, joined to the owner's partnership as 'member'. */
+async function addCouplePartner(pid: string, label: string, email: string) {
+  const fullName = `Gus TEST-GOOSE-${label}`
+  const created = await admin.auth.admin.createUser({
+    email, password: `Qa-${randomBytes(12).toString('base64url')}`, email_confirm: true,
+    user_metadata: { full_name: fullName, qa_test: QA_TAG, qa_label: label },
+  })
+  if (created.error) throw new Error(`createUser ${label}: ${created.error.message}`)
+  const userId = created.data.user.id
+  must(await admin.from('profiles').upsert({ user_id: userId, email, full_name: fullName }, { onConflict: 'user_id' }), 'profiles')
+  must(await admin.from('partnership_members').insert({ partnership_id: pid, user_id: userId, role: 'member' }), 'partnership_members')
+  return { label, userId, email }
+}
+
+/** Every seeded email through the exact resolution association uses (no cohort written). */
+async function verifyJoint() {
+  const repo = createSupabaseGooseRepo(admin as never)
+  const users = await qaUsers()
+  const rows = []
+  for (const u of users) {
+    const memberId = await repo.findMemberIdByEmail(u.email)
+    const upper = await repo.findMemberIdByEmail(u.email.toUpperCase())
+    rows.push({
+      email: u.email,
+      member_id: memberId,
+      resolves: !!memberId && (await repo.partnershipExists(memberId)),
+      case_insensitive: upper === memberId,
+      survey_complete: memberId ? await repo.hasCompletedSurvey(memberId) : false,
+    })
+  }
+  const ids = [...new Set(rows.map((r) => r.member_id))]
+  const photos = await repo.primaryPhotos(ids.filter(Boolean) as string[])
+  const couple = rows.filter((r) => /-c1[ab]@/.test(r.email))
+  console.log(JSON.stringify({
+    verify: rows,
+    emails: rows.length,
+    distinct_member_ids: ids.length,
+    all_resolve: rows.every((r) => r.resolves && r.case_insensitive && r.survey_complete),
+    couple_shares_one_member_id: couple.length === 2 && couple[0].member_id === couple[1].member_id,
+    members_with_photo: photos.size,
+    expected_pairs_if_all_7_finalized: (ids.length * (ids.length - 1)) / 2,
+  }, null, 2))
+}
+
+/** Joint-test failure drill: survey completion 100 → 99 (drop) or back to 100 (restore). QA members only. */
+async function drill(kind: 'drop' | 'restore', memberId: string) {
+  const users = await qaUsers()
+  const links = must(await admin.from('partnership_members').select('user_id, role').eq('partnership_id', memberId), 'links') as Array<{ user_id: string; role: string }>
+  const owner = links.find((l) => l.role === 'owner')
+  if (!owner || !users.some((u) => u.id === owner.user_id)) throw new Error('refusing: not a QA goose member')
+  const pct = kind === 'drop' ? 99 : 100
+  must(await admin.from('user_survey_responses').update({ completion_pct: pct }).eq('user_id', owner.user_id), 'survey update')
+  const repo = createSupabaseGooseRepo(admin as never)
+  console.log(JSON.stringify({ drill: kind, member_id: memberId, completion_pct: pct, survey_complete_now: await repo.hasCompletedSurvey(memberId), at: new Date().toISOString() }))
+}
+
 /** Redact anything email-shaped and the bearer token from a transcript value. */
 function redact(v: unknown, secret: string): unknown {
   return JSON.parse(JSON.stringify(v).split(secret).join('***').replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '<email redacted>'))
@@ -428,6 +515,12 @@ async function http(baseUrl: string, n = 6) {
 
 async function main() {
   const argv = process.argv
+  if (argv.includes('--seed-joint')) return seedJoint()
+  if (argv.includes('--verify-joint')) return verifyJoint()
+  for (const kind of ['drop', 'restore'] as const) {
+    const i = argv.indexOf(`--drill-${kind}`)
+    if (i > 0) return drill(kind, argv[i + 1])
+  }
   const h = argv.indexOf('--http')
   if (h > 0) return http(argv[h + 1] ?? 'https://www.haevn.app')
   if (argv.includes('--cleanup')) return cleanup()
