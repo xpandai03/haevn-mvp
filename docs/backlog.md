@@ -5,6 +5,42 @@ Anything with a hard external deadline carries it in the heading.
 
 ---
 
+## Photo data reconciliation + upload path audit — before any photo-nudge campaign
+
+**Raised:** 2026-10-08, from the photo read-path fix (PR #61). No action taken yet.
+Most urgent before a photo-nudge or "add a photo" campaign, because new uploads land
+on the path questioned below.
+
+PR #61 made every surface read `partnership_photos.photo_url` as-is. Before it, every
+member photo showed a silhouette. That made three pre-existing data/write-path
+problems visible:
+
+1. **Files with no rows.** A few folders in the `public-photos` bucket hold image files
+   that no `partnership_photos` row points to. Those photos are invisible to every
+   surface. Re-derive the list by comparing the bucket's top-level folders with the
+   distinct `partnership_id`s in `partnership_photos`.
+2. **Files in the old bucket.** A few folders sit in `partnership-photos`, and no row
+   references them; every stored `photo_url` points at `public-photos`. The likely
+   writer is `lib/actions/uploadProfilePhoto.ts`, which still uploads to
+   `partnership-photos`. Open questions:
+   - Does any live UI still call it?
+   - Does the row it writes carry a working `photo_url`?
+   - Should it move to `public-photos`, like `app/api/photos/upload` and survey ingest?
+3. **Rows pointing at deleted files.** At least one member had a primary row whose file
+   was gone from storage (400). It was hot-fixed 2026-10-08 by re-pointing the primary
+   to the newest surviving file. The dead row is still there as a non-primary photo, so
+   the profile gallery (`lib/actions/profiles.ts` lists every public photo) can show one
+   broken thumbnail. Sweep for this: every row whose `photo_url` doesn't return 200.
+
+**When picking this up:**
+- Decide per case: backfill rows for orphan files (only if the member intended them),
+  delete dead rows, and move or retire the old-bucket writer.
+- Keep `lib/photos/__tests__/photoReadPath.test.ts` green. It pins `getPublicUrl` to
+  the upload paths, so an upload-path change will need its allowlist updated
+  deliberately.
+
+---
+
 ## ⚠️ Next 15.5.12 App Router loop on unmatched routes — MITIGATED, root cause open
 
 **Raised:** 2026-09-10. **Mitigated by PR #40.** Revisit on the next Next upgrade.
