@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/warm-interpretations",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/goose-backstop",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
