@@ -66,6 +66,7 @@ export const STATIC_ROUTES: readonly string[] = [
   '/api/auth/login-link/consume',
   '/api/auth/signup',
   '/api/cron/downgrade-expired',
+  '/api/cron/goose-backstop',
   '/api/cron/meetup-feed',
   '/api/cron/notify-matches',
   '/api/cron/recompute-matches',
