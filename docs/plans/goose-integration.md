@@ -76,11 +76,16 @@ kept for their reasoning.
   finalization overwrite in place.
 - **Finalize** is an atomic SQL function (`goose_finalize_cohort`): population swap + wipe +
   new finalization in one transaction.
-- **Contract gaps PR 2 must flag rather than invent:**
-  - the response for finalize with unknown member ids
-  - the response for an unknown `haevn_cohort_id` on any endpoint
+- **Contract addendum (2026-10-07), effective now:**
+  - An unknown cohort id on any route → `404 {error: "cohort_not_found"}`.
+  - Finalize that lists any member_id never associated with the cohort →
+    `400 {error: "unknown_members", unknown_member_ids: [...]}`. Nothing is finalized and the
+    population is unchanged: all-or-nothing.
 
-  Internally, both return typed errors (`unknown_members`, `cohort_not_found`).
+  `finalizeCohort` implements the addendum (checked before the atomic swap; association only
+  ever adds, so the check cannot race into a partial freeze). This **replaces** this
+  proposal's "implicit association on finalize". PR 2 maps the typed errors to those status
+  codes.
 
 ---
 

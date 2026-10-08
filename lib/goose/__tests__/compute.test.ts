@@ -9,7 +9,7 @@ import { eq, ok, report } from '@/lib/metrics/__tests__/_assert'
 import { associateMember, createCohort, deriveStatus, finalizeCohort, getCohortResults, getCohortStatus } from '../cohorts'
 import { computeGooseCohortOnce } from '../compute'
 import { GOOSE_RESULT_KEYS } from '../serialize'
-import { base, gatedAgainstBase, mid, solo } from './fixtures'
+import { associateAll, base, gatedAgainstBase, mid, solo } from './fixtures'
 import { createMemoryRepo, type MemoryRepo } from './memoryRepo'
 
 const STARTS = '2026-12-31T20:00:00-05:00'
@@ -19,6 +19,7 @@ async function cohortWith(repo: MemoryRepo, eventId: string, n: number, offset =
   const c = await createCohort(repo, { goose_event_id: eventId, event_name: 'TEST event', event_starts_at: STARTS })
   if (!c.ok) throw new Error('create failed')
   const ids = Array.from({ length: n }, (_, i) => mid(offset + i))
+  await associateAll(repo, c.haevn_cohort_id, ids)
   return { id: c.haevn_cohort_id, ids }
 }
 
@@ -50,6 +51,7 @@ async function main() {
     repo.seed(solo(3, gatedAgainstBase(3)))
     const c = await createCohort(repo, { goose_event_id: 'evt-gate', event_starts_at: STARTS })
     const id = c.ok ? c.haevn_cohort_id : ''
+    await associateAll(repo, id, [mid(1), mid(2), mid(3)])
     await finalizeCohort(repo, id, [mid(1), mid(2), mid(3)])
     eq((await computeGooseCohortOnce(repo, id)).kind, 'ready', 'gated cohort still reaches ready')
     const rows = [...repo.results.values()]
@@ -123,6 +125,7 @@ async function main() {
     const repo = createMemoryRepo()
     const { id, ids } = await cohortWith(repo, 'evt-miss', 3)
     repo.seed(solo(3, null)) // associated guest whose survey never reached HAEVN
+    await associateAll(repo, id, [mid(3)])
     await finalizeCohort(repo, id, [...ids, mid(3)])
     const out = await computeGooseCohortOnce(repo, id)
     ok(out.kind === 'failed' && out.code === 'members_missing_survey', 'missing survey → members_missing_survey')
@@ -166,7 +169,16 @@ async function main() {
     eq(await associateMember(repo, mid(999), { member_id: mid(50) }), { ok: false, error: 'cohort_not_found' }, 'unknown cohort')
     const fin = await finalizeCohort(repo, id, [mid(50), mid(50)])
     ok(fin.ok && fin.expected_pairs === 0, 'couple listed twice → one member, 0 pairs')
-    eq((await finalizeCohort(repo, id, [mid(50), mid(88)])).ok, false, 'finalize with an unknown member id rejected')
+    // Contract addendum: never-associated ids → unknown_members, all-or-nothing.
+    repo.seed(solo(52)) // a real member, just never associated with this cohort
+    const finBefore = repo.cohorts.get(id)!
+    const rej = await finalizeCohort(repo, id, [mid(50), mid(51), mid(88), mid(52), 'junk'])
+    eq(rej, { ok: false, error: 'unknown_members', unknown_member_ids: [mid(88), mid(52), 'junk'] }, 'finalize lists every never-associated id (incl. non-existent + malformed)')
+    const finAfter = repo.cohorts.get(id)!
+    eq([finAfter.finalization_id, finAfter.population_hash, finAfter.expected_pairs], [finBefore.finalization_id, finBefore.population_hash, finBefore.expected_pairs], 'rejected finalize leaves the population unchanged')
+    eq([...repo.members.values()].filter((m) => m.finalized).map((m) => m.member_id), [mid(50)], 'finalized flags untouched by a rejected finalize')
+    eq(repo.members.has(`${id}|${mid(52)}`), false, 'a rejected finalize associates nobody')
+    eq(await finalizeCohort(repo, mid(999), [mid(50)]), { ok: false, error: 'cohort_not_found' }, 'finalize on unknown cohort → cohort_not_found')
     eq(deriveStatus({ status: 'open', finalization_id: null, finalized_at: null, ready_at: null }, null).status, 'processing', 'open (never finalized) reads processing')
   }
 

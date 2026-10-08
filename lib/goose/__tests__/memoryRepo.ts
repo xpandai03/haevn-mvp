@@ -171,6 +171,10 @@ export function createMemoryRepo(): MemoryRepo {
       return finalizedIds(cohortId)
     },
 
+    async associatedMemberIds(cohortId) {
+      return [...members.values()].filter((m) => m.cohort_id === cohortId).map((m) => m.member_id).sort()
+    },
+
     async claimLease(cohortId, fid, nowIso, untilIso) {
       maybeFail('claimLease')
       const c = cohorts.get(cohortId)

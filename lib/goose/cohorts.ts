@@ -92,21 +92,30 @@ export async function associateMember(repo: GooseRepo, cohortId: string, input: 
 
 export type FinalizeResult =
   | { ok: true; status: 'processing'; expected_pairs: number; finalization_id: string }
-  | { ok: false; error: 'cohort_not_found' | 'unknown_members' | 'invalid_input'; detail?: string }
+  | { ok: false; error: 'unknown_members'; unknown_member_ids: string[] }
+  | { ok: false; error: 'cohort_not_found' | 'invalid_input'; detail?: string }
 
 /**
  * Replace the frozen population (atomically) and reset to processing. The
  * caller starts the compute: `after(() => runGooseCompute(repo, id))` in the
  * route; directly in the harness and tests.
+ *
+ * ALL-OR-NOTHING (contract addendum, 2026-10-07): every listed id must already
+ * be associated with this cohort. If any is not, nothing is finalized, the
+ * population is unchanged, and every offending id is returned — the partner
+ * owns the frozen list, so a mismatch means its state drifted and it must know.
+ * (Association only ever adds, so a check-then-finalize cannot race into a
+ * partial freeze.)
  */
 export async function finalizeCohort(repo: GooseRepo, cohortId: string, memberIds: unknown): Promise<FinalizeResult> {
-  if (!UUID_RE.test(cohortId)) return { ok: false, error: 'cohort_not_found' }
+  if (!UUID_RE.test(cohortId) || !(await repo.getCohort(cohortId))) return { ok: false, error: 'cohort_not_found' }
   if (!Array.isArray(memberIds) || !memberIds.every((m) => typeof m === 'string')) {
     return { ok: false, error: 'invalid_input', detail: 'member_ids must be an array of strings' }
   }
   const ids = [...new Set((memberIds as string[]).map((m) => m.trim()))]
-  const malformed = ids.filter((m) => !UUID_RE.test(m)).length
-  if (malformed > 0) return { ok: false, error: 'unknown_members', detail: `${malformed} malformed id(s)` }
+  const associated = new Set(await repo.associatedMemberIds(cohortId))
+  const unknown = ids.filter((m) => !UUID_RE.test(m) || !associated.has(m))
+  if (unknown.length > 0) return { ok: false, error: 'unknown_members', unknown_member_ids: unknown }
 
   try {
     const r = await repo.finalize(cohortId, ids, populationHash(ids))
@@ -115,7 +124,13 @@ export async function finalizeCohort(repo: GooseRepo, cohortId: string, memberId
     })
     return { ok: true, status: 'processing', expected_pairs: r.expected_pairs, finalization_id: r.finalization_id }
   } catch (e) {
-    if (e instanceof GooseFinalizeError) return { ok: false, error: e.code, detail: e.message }
+    if (e instanceof GooseFinalizeError && e.code === 'unknown_members') {
+      // A member was deleted between the check and the swap (its association
+      // cascaded away). The swap rolled back; report exactly who vanished.
+      const still = new Set(await repo.associatedMemberIds(cohortId))
+      return { ok: false, error: 'unknown_members', unknown_member_ids: ids.filter((m) => !still.has(m)) }
+    }
+    if (e instanceof GooseFinalizeError) return { ok: false, error: 'cohort_not_found', detail: e.message }
     throw e
   }
 }

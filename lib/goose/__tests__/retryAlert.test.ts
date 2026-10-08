@@ -8,7 +8,7 @@ import { eq, ok, report } from '@/lib/metrics/__tests__/_assert'
 import { buildAlertEmail, parseAlertRecipients } from '../alerts'
 import { createCohort, finalizeCohort } from '../cohorts'
 import { runGooseBackstop, runGooseCompute } from '../run'
-import { mid, solo } from './fixtures'
+import { associateAll, mid, solo } from './fixtures'
 import { createMemoryRepo } from './memoryRepo'
 
 const RECIPIENTS = 'rik@qa.haevn.invalid, raunek@qa.haevn.invalid'
@@ -19,6 +19,7 @@ async function readyCohort(n = 4, startsAt = '2099-01-01T00:00:00Z') {
   for (let i = 0; i < n; i++) repo.seed(solo(i))
   const c = await createCohort(repo, { goose_event_id: `evt-${Math.random()}`, event_name: 'TEST <b>event</b>', event_starts_at: startsAt })
   const id = c.ok ? c.haevn_cohort_id : ''
+  await associateAll(repo, id, Array.from({ length: n }, (_, i) => mid(i)))
   await finalizeCohort(repo, id, Array.from({ length: n }, (_, i) => mid(i)))
   return { repo, id }
 }
@@ -92,6 +93,7 @@ async function main() {
     repo.seed(solo(3, null))
     const c = await createCohort(repo, { goose_event_id: 'evt-short', event_starts_at: '2099-01-01T00:00:00Z' })
     const id = c.ok ? c.haevn_cohort_id : ''
+    await associateAll(repo, id, [mid(0), mid(1), mid(2), mid(3)])
     await finalizeCohort(repo, id, [mid(0), mid(1), mid(2), mid(3)])
     const sends: string[] = []
     const r = await runGooseCompute(repo, id, { transport: async (_to, s) => (sends.push(s), true), recipients: RECIPIENTS, sleep: noSleep, delays: [] })

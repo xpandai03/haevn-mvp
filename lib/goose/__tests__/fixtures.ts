@@ -7,7 +7,13 @@
  * hard gate blocks every pair with a base member (engine returns 0).
  */
 
+import type { GooseRepo } from '../repo'
 import type { SeedMember } from './memoryRepo'
+
+/** Associate ids with a cohort (finalize requires prior association). */
+export async function associateAll(repo: GooseRepo, cohortId: string, ids: readonly string[]): Promise<void> {
+  for (const id of ids) await repo.associate(cohortId, id)
+}
 
 export function base(i: number): Record<string, unknown> {
   return {

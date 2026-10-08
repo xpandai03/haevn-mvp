@@ -23,7 +23,7 @@
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { associateMember, createCohort, finalizeCohort, getCohortResults, getCohortStatus } from '@/lib/goose/cohorts'
 import { createSupabaseGooseRepo, type GooseRepo } from '@/lib/goose/repo'
@@ -98,8 +98,9 @@ async function qaUsers() {
 async function seedMember(label: string, i: number, runTag: string, opts: { gated?: boolean; photo?: boolean }) {
   const email = `test-goose-${label.toLowerCase()}-${runTag}@qa.haevn.invalid`
   const fullName = `Gus TEST-GOOSE-${label}`
+  const password = `Qa-${randomBytes(12).toString('base64url')}`
   const created = await admin.auth.admin.createUser({
-    email, password: `Qa-${randomBytes(12).toString('base64url')}`, email_confirm: true,
+    email, password, email_confirm: true,
     user_metadata: { full_name: fullName, qa_test: QA_TAG, qa_label: label },
   })
   if (created.error) throw new Error(`createUser ${label}: ${created.error.message}`)
@@ -122,7 +123,7 @@ async function seedMember(label: string, i: number, runTag: string, opts: { gate
     const url = admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
     must(await admin.from('partnership_photos').insert({ partnership_id: p.id, photo_url: url, photo_type: 'public', order_index: 0, is_primary: true }), 'partnership_photos')
   }
-  return { label, userId, email, pid: p.id }
+  return { label, userId, email, password, pid: p.id }
 }
 
 async function computedMatchesFingerprint() {
@@ -130,6 +131,43 @@ async function computedMatchesFingerprint() {
   if (error) throw new Error(error.message)
   const { data } = await admin.from('computed_matches').select('computed_at').order('computed_at', { ascending: false }).limit(1)
   return { rows: count ?? 0, newest_computed_at: data?.[0]?.computed_at ?? null }
+}
+
+/**
+ * Member-block proof: sign in as a seeded QA member and query as the real
+ * `authenticated` role (the access token in Authorization is what PostgREST
+ * authorizes on). Every Goose table must read empty and refuse writes, and
+ * both functions must refuse execution.
+ */
+async function memberRlsCheck(email: string, password: string, cohortId: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const signer = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+  const { data: session, error } = await signer.auth.signInWithPassword({ email, password })
+  if (error || !session.session) throw new Error(`member sign-in failed: ${error?.message}`)
+  const member = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${session.session.access_token}` } },
+  })
+  const rows = async (t: string) => {
+    const r = await member.from(t).select('*').limit(5)
+    return r.error ? `error: ${r.error.code}` : `${r.data.length} rows`
+  }
+  const svcProfiles = (await admin.from('profiles').select('*', { count: 'exact', head: true })).count ?? 0
+  const memberProfiles = (await member.from('profiles').select('*', { count: 'exact', head: true })).count ?? 0
+  const ins = await member.from('goose_cohorts').insert({ goose_event_id: `${EVENT_PREFIX}rls-${randomUUID()}`, event_starts_at: new Date().toISOString() })
+  const cov = await member.rpc('goose_cohort_coverage', { p_cohort: cohortId })
+  const fin = await member.rpc('goose_finalize_cohort', { p_cohort: cohortId, p_member_ids: [], p_population_hash: 'x' })
+  await signer.auth.signOut().catch(() => {})
+  return {
+    role_is_member_scoped: memberProfiles < svcProfiles, // sanity: this client is NOT service role
+    goose_cohorts: await rows('goose_cohorts'),
+    goose_cohort_members: await rows('goose_cohort_members'),
+    goose_pair_results: await rows('goose_pair_results'),
+    insert_cohort: ins.error ? `refused (${ins.error.code})` : 'ACCEPTED — RLS FAILURE',
+    rpc_coverage: cov.error ? `refused (${cov.error.code})` : 'EXECUTED — GRANT FAILURE',
+    rpc_finalize: fin.error ? `refused (${fin.error.code})` : 'EXECUTED — GRANT FAILURE',
+  }
 }
 
 /** Console transport: records alerts instead of emailing during a drill. */
@@ -169,6 +207,9 @@ async function run(n: number) {
   const reassoc = await associateMember(repo, cohortId, { member_id: seeded[1].pid })
   const notFound = await associateMember(repo, cohortId, { member_email: `nobody-${runTag}@qa.haevn.invalid` })
 
+  const strayId = randomUUID()
+  const rejected = await finalizeCohort(repo, cohortId, [...population.map((m) => m.pid), strayId])
+  const afterReject = await repo.getCohort(cohortId)
   const fin = await finalizeCohort(repo, cohortId, population.map((m) => m.pid))
   if (!fin.ok) throw new Error(`finalize: ${fin.error}`)
   const t0 = Date.now()
@@ -204,6 +245,7 @@ async function run(n: number) {
   const afterWipe = await repo.coverage(cohortId)
   const drill = await runGooseCompute(drillRepo, cohortId, process.argv.includes('--live-alerts') ? {} : { transport: consoleTransport(alerts), recipients: 'ops-a@qa.haevn.invalid,ops-b@qa.haevn.invalid' })
   const status2 = await getCohortStatus(repo, cohortId)
+  const rls = await memberRlsCheck(population[0].email, population[0].password, cohortId)
   const after = await computedMatchesFingerprint()
 
   console.log(JSON.stringify({
@@ -215,7 +257,11 @@ async function run(n: number) {
       unknown_email: notFound,
       late_guest_associated_not_finalized: true,
     },
-    finalize: { expected_pairs: fin.expected_pairs },
+    finalize: {
+      expected_pairs: fin.expected_pairs,
+      never_associated_rejected: !rejected.ok && rejected.error === 'unknown_members' && JSON.stringify(rejected.unknown_member_ids) === JSON.stringify([strayId]),
+      rejected_left_cohort_unfinalized: afterReject?.finalization_id === null && afterReject?.status === 'open',
+    },
     compute: { outcome: first.outcome.kind, attempts: first.attempts, wall_ms_incl_io: wallMs, compute_ms: cohortRow?.last_compute_ms, pairs_written: cohortRow?.last_compute_pairs },
     status: status1,
     results: {
@@ -242,6 +288,7 @@ async function run(n: number) {
       alerts_logged: alerts,
       status_after: status2,
     },
+    member_rls: rls,
     computed_matches: { before, after, untouched: JSON.stringify(before) === JSON.stringify(after) },
   }, null, 2))
 }

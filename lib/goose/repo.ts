@@ -53,6 +53,8 @@ export interface GooseRepo {
   /** Atomic population swap (goose_finalize_cohort). Throws GooseFinalizeError. */
   finalize(cohortId: string, memberIds: string[], populationHash: string): Promise<{ finalization_id: string; expected_pairs: number }>
   finalizedMemberIds(cohortId: string): Promise<string[]>
+  /** Every member ever associated with the cohort (finalized or not). */
+  associatedMemberIds(cohortId: string): Promise<string[]>
 
   /** Take the single-flight compute lease for this finalization; false if held or superseded. */
   claimLease(cohortId: string, finalizationId: string, nowIso: string, untilIso: string): Promise<boolean>
@@ -205,6 +207,22 @@ export function createSupabaseGooseRepo(admin: Admin = createAdminClient()): Goo
           .select('member_id')
           .eq('cohort_id', cohortId)
           .eq('finalized', true)
+          .order('member_id')
+          .range(from, from + PAGE - 1)
+        if (error) throw new Error(error.message)
+        out.push(...(data ?? []).map((r: { member_id: string }) => r.member_id))
+        if ((data?.length ?? 0) < PAGE) break
+      }
+      return out
+    },
+
+    async associatedMemberIds(cohortId) {
+      const out: string[] = []
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await admin
+          .from('goose_cohort_members')
+          .select('member_id')
+          .eq('cohort_id', cohortId)
           .order('member_id')
           .range(from, from + PAGE - 1)
         if (error) throw new Error(error.message)
