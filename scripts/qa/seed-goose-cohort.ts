@@ -7,8 +7,10 @@
  *   npx tsx scripts/qa/seed-goose-cohort.ts --n 8         # population size (default 6)
  *   npx tsx scripts/qa/seed-goose-cohort.ts --cleanup     # remove every QA cohort, member, file, event
  *   npx tsx scripts/qa/seed-goose-cohort.ts --parity 200  # READ-ONLY: cohort scorer vs stored weekly scores
- *   npx tsx scripts/qa/seed-goose-cohort.ts --seed-joint     # 6 singles + 1 couple for the partner's
- *                                                            # conformance run; NO cohort; prints emails
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --seed-joint [--domain qa.haevn.co]
+ *       # 6 singles + 1 couple for the partner's conformance run; NO cohort; prints emails.
+ *       # Default domain qa.haevn.invalid. Use a real-TLD domain with NO MX record when
+ *       # the partner's validator rejects .invalid (qa.haevn.co: no MX, no A, no wildcard).
  *   npx tsx scripts/qa/seed-goose-cohort.ts --verify-joint   # re-check every seeded email resolves
  *   npx tsx scripts/qa/seed-goose-cohort.ts --drill-drop <member_id>     # joint-test failure drill:
  *   npx tsx scripts/qa/seed-goose-cohort.ts --drill-restore <member_id>  #   survey 100→99→100
@@ -362,15 +364,16 @@ const JOINT_TAG = 'joint'
  * sees a real 0% / long-shot pair; S1 and the couple carry a primary photo so
  * both photo_url states appear. No cohort is created — the partner drives that.
  */
-async function seedJoint() {
+async function seedJoint(domain = 'qa.haevn.invalid') {
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error(`bad --domain ${domain}`)
   const existing = await qaUsers()
   if (existing.length > 0) throw new Error(`QA goose accounts already exist (${existing.length}); run --cleanup first`)
   const singles = []
   for (let i = 1; i <= 6; i++) {
-    singles.push(await seedMember(`S${i}`, i, JOINT_TAG, { gated: i === 6, photo: i === 1, emailOverride: `test-goose-joint-s${i}@qa.haevn.invalid` }))
+    singles.push(await seedMember(`S${i}`, i, JOINT_TAG, { gated: i === 6, photo: i === 1, emailOverride: `test-goose-joint-s${i}@${domain}` }))
   }
-  const owner = await seedMember('C1A', 7, JOINT_TAG, { photo: true, couple: true, emailOverride: 'test-goose-joint-c1a@qa.haevn.invalid' })
-  const partner = await addCouplePartner(owner.pid, 'C1B', 'test-goose-joint-c1b@qa.haevn.invalid')
+  const owner = await seedMember('C1A', 7, JOINT_TAG, { photo: true, couple: true, emailOverride: `test-goose-joint-c1a@${domain}` })
+  const partner = await addCouplePartner(owner.pid, 'C1B', `test-goose-joint-c1b@${domain}`)
   console.log(JSON.stringify({
     singles: singles.map((m) => ({ email: m.email, member_id: m.pid, ...(m.label === 'S6' ? { note: 'hard-gated: every pair with S6 scores 0' } : {}), ...(m.label === 'S1' ? { note: 'has a primary photo' } : {}) })),
     couple: { member_id: owner.pid, emails: [owner.email, partner.email], note: 'one partnership, two people; both emails resolve to this member_id; has a primary photo' },
@@ -515,7 +518,8 @@ async function http(baseUrl: string, n = 6) {
 
 async function main() {
   const argv = process.argv
-  if (argv.includes('--seed-joint')) return seedJoint()
+  const dom = argv.indexOf('--domain')
+  if (argv.includes('--seed-joint')) return seedJoint(dom > 0 ? argv[dom + 1] : undefined)
   if (argv.includes('--verify-joint')) return verifyJoint()
   for (const kind of ['drop', 'restore'] as const) {
     const i = argv.indexOf(`--drill-${kind}`)
