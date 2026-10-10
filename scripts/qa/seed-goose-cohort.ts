@@ -7,7 +7,7 @@
  *   npx tsx scripts/qa/seed-goose-cohort.ts --n 8         # population size (default 6)
  *   npx tsx scripts/qa/seed-goose-cohort.ts --cleanup     # remove every QA cohort, member, file, event
  *   npx tsx scripts/qa/seed-goose-cohort.ts --parity 200  # READ-ONLY: cohort scorer vs stored weekly scores
- *   npx tsx scripts/qa/seed-goose-cohort.ts --seed-joint [--domain qa.haevn.co]
+ *   npx tsx scripts/qa/seed-goose-cohort.ts --seed-joint [--domain qa.haevn.co] [--prefix final --singles 4 --no-couple]
  *       # 6 singles + 1 couple for the partner's conformance run; NO cohort; prints emails.
  *       # Default domain qa.haevn.invalid. Use a real-TLD domain with NO MX record when
  *       # the partner's validator rejects .invalid (qa.haevn.co: no MX, no A, no wildcard).
@@ -364,19 +364,29 @@ const JOINT_TAG = 'joint'
  * sees a real 0% / long-shot pair; S1 and the couple carry a primary photo so
  * both photo_url states appear. No cohort is created — the partner drives that.
  */
-async function seedJoint(domain = 'qa.haevn.invalid') {
+async function seedJoint(domain = 'qa.haevn.invalid', opts: { prefix?: string; singles?: number; couple?: boolean } = {}) {
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error(`bad --domain ${domain}`)
+  const prefix = opts.prefix ?? 'joint'
+  const n = opts.singles ?? 6
+  const withCouple = opts.couple ?? true
+  if (!/^[a-z0-9]+$/.test(prefix) || n < 2 || n > 20) throw new Error('bad --prefix / --singles')
   const existing = await qaUsers()
   if (existing.length > 0) throw new Error(`QA goose accounts already exist (${existing.length}); run --cleanup first`)
   const singles = []
-  for (let i = 1; i <= 6; i++) {
-    singles.push(await seedMember(`S${i}`, i, JOINT_TAG, { gated: i === 6, photo: i === 1, emailOverride: `test-goose-joint-s${i}@${domain}` }))
+  for (let i = 1; i <= n; i++) {
+    // S1 carries a photo; the LAST single is hard-gated (every pair with it scores 0).
+    singles.push(await seedMember(`S${i}`, i, JOINT_TAG, { gated: i === n, photo: i === 1, emailOverride: `test-goose-${prefix}-s${i}@${domain}` }))
   }
-  const owner = await seedMember('C1A', 7, JOINT_TAG, { photo: true, couple: true, emailOverride: `test-goose-joint-c1a@${domain}` })
-  const partner = await addCouplePartner(owner.pid, 'C1B', `test-goose-joint-c1b@${domain}`)
+  let couple: Record<string, unknown> | undefined
+  if (withCouple) {
+    const owner = await seedMember('C1A', n + 1, JOINT_TAG, { photo: true, couple: true, emailOverride: `test-goose-${prefix}-c1a@${domain}` })
+    const partner = await addCouplePartner(owner.pid, 'C1B', `test-goose-${prefix}-c1b@${domain}`)
+    couple = { member_id: owner.pid, emails: [owner.email, partner.email], note: 'one partnership, two people; both emails resolve to this member_id; has a primary photo' }
+  }
   console.log(JSON.stringify({
-    singles: singles.map((m) => ({ email: m.email, member_id: m.pid, ...(m.label === 'S6' ? { note: 'hard-gated: every pair with S6 scores 0' } : {}), ...(m.label === 'S1' ? { note: 'has a primary photo' } : {}) })),
-    couple: { member_id: owner.pid, emails: [owner.email, partner.email], note: 'one partnership, two people; both emails resolve to this member_id; has a primary photo' },
+    seeded_at: new Date().toISOString(),
+    singles: singles.map((m) => ({ email: m.email, member_id: m.pid, ...(m.label === `S${n}` ? { note: `hard-gated: every pair with S${n} scores 0` } : {}), ...(m.label === 'S1' ? { note: 'has a primary photo' } : {}) })),
+    ...(couple ? { couple } : {}),
   }, null, 2))
   await verifyJoint()
 }
@@ -419,9 +429,9 @@ async function verifyJoint() {
     emails: rows.length,
     distinct_member_ids: ids.length,
     all_resolve: rows.every((r) => r.resolves && r.case_insensitive && r.survey_complete),
-    couple_shares_one_member_id: couple.length === 2 && couple[0].member_id === couple[1].member_id,
+    couple_shares_one_member_id: couple.length === 0 ? 'n/a (no couple)' : couple.length === 2 && couple[0].member_id === couple[1].member_id,
     members_with_photo: photos.size,
-    expected_pairs_if_all_7_finalized: (ids.length * (ids.length - 1)) / 2,
+    expected_pairs_if_all_finalized: (ids.length * (ids.length - 1)) / 2,
   }, null, 2))
 }
 
@@ -519,7 +529,14 @@ async function http(baseUrl: string, n = 6) {
 async function main() {
   const argv = process.argv
   const dom = argv.indexOf('--domain')
-  if (argv.includes('--seed-joint')) return seedJoint(dom > 0 ? argv[dom + 1] : undefined)
+  const arg = (flag: string) => { const i = argv.indexOf(flag); return i > 0 ? argv[i + 1] : undefined }
+  if (argv.includes('--seed-joint')) {
+    return seedJoint(dom > 0 ? argv[dom + 1] : undefined, {
+      prefix: arg('--prefix'),
+      singles: arg('--singles') ? Number(arg('--singles')) : undefined,
+      couple: !argv.includes('--no-couple'),
+    })
+  }
   if (argv.includes('--verify-joint')) return verifyJoint()
   for (const kind of ['drop', 'restore'] as const) {
     const i = argv.indexOf(`--drill-${kind}`)
